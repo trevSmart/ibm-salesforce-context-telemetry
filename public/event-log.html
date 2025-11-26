@@ -1836,7 +1836,7 @@
 										<th style="width: 40px;"></th>
 										<th class="time-column">Time</th>
 										<th style="width: 130px;">Event</th>
-										<th style="width: 160px;">Client</th>
+										<th style="width: 200px;">Company Name</th>
 										<th>Payload</th>
 										<th style="width: 50px;"></th>
 									</tr>
@@ -2862,7 +2862,23 @@
 				return '-';
 			}
 			try {
-				if (eventData.companyDetails && typeof eventData.companyDetails.Name === 'string' && eventData.companyDetails.Name.trim() !== '') {
+				// New format: data.state.org.companyDetails.Name
+				const nestedCompanyName = eventData.state
+					&& eventData.state.org
+					&& eventData.state.org.companyDetails
+					&& typeof eventData.state.org.companyDetails.Name === 'string'
+					&& eventData.state.org.companyDetails.Name.trim() !== ''
+					? eventData.state.org.companyDetails.Name.trim()
+					: null;
+
+				if (nestedCompanyName) {
+					return nestedCompanyName;
+				}
+
+				// Legacy format: data.companyDetails.Name
+				if (eventData.companyDetails
+					&& typeof eventData.companyDetails.Name === 'string'
+					&& eventData.companyDetails.Name.trim() !== '') {
 					return eventData.companyDetails.Name.trim();
 				}
 			} catch (_error) {
