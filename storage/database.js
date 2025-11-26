@@ -338,26 +338,44 @@ async function getEvents(options = {}) {
  * Get event type statistics
  * @returns {Array} Statistics by event type
  */
-async function getEventTypeStats() {
+async function getEventTypeStats(options = {}) {
+	const { sessionId } = options || {};
 	if (!db) {
 		throw new Error('Database not initialized. Call init() first.');
 	}
 
 	if (dbType === 'sqlite') {
-		const result = db.prepare(`
+		let query = `
 			SELECT event, COUNT(*) as count
 			FROM telemetry_events
+		`;
+		const params = [];
+		if (sessionId) {
+			query += ' WHERE session_id = ?';
+			params.push(sessionId);
+		}
+		query += `
 			GROUP BY event
 			ORDER BY count DESC
-		`).all();
+		`;
+		const stmt = db.prepare(query);
+		const result = params.length ? stmt.all(...params) : stmt.all();
 		return result;
 	} else {
-		const result = await db.query(`
+		let query = `
 			SELECT event, COUNT(*) as count
 			FROM telemetry_events
+		`;
+		const params = [];
+		if (sessionId) {
+			params.push(sessionId);
+			query += ` WHERE session_id = $${params.length}`;
+		}
+		query += `
 			GROUP BY event
 			ORDER BY count DESC
-		`);
+		`;
+		const result = await db.query(query, params);
 		return result.rows.map(row => ({
 			event: row.event,
 			count: parseInt(row.count)

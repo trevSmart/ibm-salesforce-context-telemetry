@@ -233,7 +233,8 @@ app.get('/api/stats', async (req, res) => {
 
 app.get('/api/event-types', async (req, res) => {
 	try {
-		const stats = await db.getEventTypeStats();
+		const { sessionId } = req.query;
+		const stats = await db.getEventTypeStats({ sessionId });
 		res.json(stats);
 	} catch (error) {
 		console.error('Error fetching event type stats:', error);

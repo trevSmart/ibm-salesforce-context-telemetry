@@ -42,6 +42,7 @@
 			--brand-700: #0369a1;
 			--brand-800: #075985;
 			--brand-900: #0c4a6e;
+			--sidebar-width: 310px;
 		}
 
 		html.dark {
@@ -88,7 +89,7 @@
 			font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 			background: linear-gradient(45deg, #7fa7ff, #c18bff);
 			min-height: 100vh;
-			padding: 20px;
+			padding: 20px 12px;
 			position: relative;
 		}
 
@@ -117,15 +118,16 @@
 		.main-container {
 			position: relative;
 			z-index: 10;
-			max-width: 1600px;
 			margin: 0 auto;
+			width: calc(100vw - 58px);
+			max-width: none;
 			background: #f4f4f5;
 			border-radius: 16px;
 			box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
 			overflow: hidden;
 			display: flex;
 			flex-direction: column;
-			height: calc(100vh - 40px);
+			height: calc(100vh - 50px);
 		}
 
 		html.dark .main-container {
@@ -185,23 +187,15 @@
 			display: inline-flex;
 			align-items: center;
 			gap: 6px;
-			padding: 6px 12px;
+			padding: 5px 11px;
 			border: 1px solid;
 			border-radius: 6px;
-			font-size: 0.875rem;
+			font-size: 0.8125rem;
 			line-height: 1.25rem;
 			font-weight: 500;
 			cursor: pointer;
-			transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.15s ease;
+			transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
 			position: relative;
-		}
-
-		.level-filter-btn:hover {
-			transform: translateY(-1px);
-		}
-
-		.level-filter-btn:active {
-			transform: translateY(0);
 		}
 
 		.level-filter-btn input[type="checkbox"] {
@@ -446,9 +440,9 @@
 
 		.level-filter-btn .level-count {
 			background: rgba(0, 0, 0, 0.08);
-			padding: 2px 6px;
+			padding: 1px 5px;
 			border-radius: 10px;
-			font-size: 0.75rem;
+			font-size: 0.6875rem;
 			line-height: 1rem;
 			font-weight: 600;
 			margin-left: 2px;
@@ -634,14 +628,14 @@
 
 		html.dark .delete-all-btn:hover {
 			background: rgba(220, 38, 38, 0.2);
-			color: #f87171;
+			color: #c64545;
 		}
 
 		.content-wrapper {
 			display: flex;
 			flex: 1;
 			overflow: hidden;
-			gap: 10px;
+			gap: 0;
 			padding: 0 16px;
 		}
 
@@ -650,7 +644,7 @@
 		}
 
 		.sidebar {
-			width: 310px;
+			width: var(--sidebar-width);
 			background: transparent;
 			border-right: none;
 			overflow: hidden;
@@ -662,6 +656,39 @@
 
 		html.dark .sidebar {
 			background: #19181a;
+		}
+
+		.sidebar-resizer {
+			width: 10px;
+			cursor: col-resize;
+			position: relative;
+			z-index: 10;
+			margin: 0 6px;
+		}
+
+		.sidebar-resizer::after {
+			content: '';
+			position: absolute;
+			top: 24px;
+			bottom: 24px;
+			left: 50%;
+			transform: translateX(-50%);
+			width: 2px;
+			background: transparent;
+			border-radius: 999px;
+			transition: background 0.15s ease;
+		}
+
+		.sidebar-resizer:hover::after,
+		.sidebar-resizer:focus-visible::after,
+		body.sidebar-resizing .sidebar-resizer::after {
+			background: rgba(14, 165, 233, 0.6);
+		}
+
+		body.sidebar-resizing,
+		body.sidebar-resizing * {
+			user-select: none !important;
+			cursor: col-resize !important;
 		}
 
 		.sidebar-header {
@@ -993,7 +1020,7 @@
 		.logs-table th {
 			padding: 12px 4px;
 			text-align: left;
-			font-weight: 600;
+			font-weight: 700;
 			color: #52525b;
 			border-bottom: 2px solid #f4f4f5;
 			font-size: 0.84375rem;
@@ -1010,7 +1037,7 @@
 			padding: 8px 4px;
 			border-bottom: 2px solid #f4f4f5;
 			color: #18181b;
-			font-size: 0.79rem;
+			font-size: 0.75rem;
 			line-height: 1.2;
 			transition: background-color 0.15s ease;
 		}
@@ -1082,7 +1109,7 @@
 			padding: 4px 10px;
 			border-radius: 6px;
 			transition: opacity 0.2s ease, transform 0.15s ease;
-			font-size: 0.625rem;
+			font-size: 0.64375rem;
 			line-height: 1rem;
 			font-weight: 800;
 			text-transform: uppercase;
@@ -1091,40 +1118,28 @@
 		}
 
 		.level-badge.debug {
-			background: var(--level-info-bg);
-			color: var(--level-info);
+			background: #8e81ea;
+			color: white;
 		}
 
 		.level-badge.info {
-			background: var(--level-info-bg);
-			color: var(--level-info);
+			background: #2195cf;
+			color: white;
 		}
 
 		.level-badge.warning {
-			background: var(--level-warning-bg);
-			color: #b45309;
-		}
-
-		html.dark .level-badge.warning {
-			color: var(--level-warning);
+			background: #DB9139;
+			color: white;
 		}
 
 		.level-badge.error {
-			background: var(--level-error-bg);
-			color: #be123c;
-		}
-
-		html.dark .level-badge.error {
-			color: var(--level-error);
+			background: #ea6280;
+			color: white;
 		}
 
 		.level-badge.success {
-			background: var(--level-success-bg);
-			color: #047857;
-		}
-
-		html.dark .level-badge.success {
-			color: var(--level-success);
+			background: #a7f3d0;
+			color: #065f46;
 		}
 
 		.level-badge-icon {
@@ -1299,7 +1314,7 @@
 		}
 
 		html.dark .status-indicator.ok {
-			background-color: #10b981;
+			background-color: #007a52;
 		}
 
 		.status-indicator.ko {
@@ -1307,7 +1322,7 @@
 		}
 
 		html.dark .status-indicator.ko {
-			background-color: #f87171;
+			background-color: #c64545;
 		}
 
 		.pagination {
@@ -1409,11 +1424,15 @@
 
 		.loading {
 			text-align: center;
-			padding: 60px 20px;
 			color: #52525b;
 			font-size: 1rem;
 			line-height: 1.5rem;
 			font-weight: 500;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			height: 100%;
+			min-height: 120px;
 		}
 
 		html.dark .loading {
@@ -1616,6 +1635,8 @@
 				</div>
 			</div>
 
+			<div class="sidebar-resizer" id="sidebarResizer" aria-hidden="true"></div>
+
 			<div class="main-content">
 				<div class="main-content-header">
 					<div class="level-filters">
@@ -1649,19 +1670,6 @@
 					</div>
 				</div>
 				<div class="main-content-body">
-					<div class="table-controls" id="tableControls" style="display: none;">
-						<div class="table-controls-right">
-							<select class="control-select" id="sortSelect">
-								<option value="DESC">Newest first</option>
-								<option value="ASC">Oldest first</option>
-							</select>
-							<select class="control-select" id="limitSelect">
-								<option value="25">25 items per page</option>
-								<option value="50" selected>50 items per page</option>
-								<option value="100">100 items per page</option>
-							</select>
-						</div>
-					</div>
 					<div id="sessionActivityCard" class="session-activity-card hidden">
 						<div class="session-activity-header">
 							<div>
@@ -1680,6 +1688,19 @@
 							</div>
 						</div>
 						<div id="sessionActivityChart"></div>
+					</div>
+					<div class="table-controls" id="tableControls" style="display: none;">
+						<div class="table-controls-right">
+							<select class="control-select" id="sortSelect">
+								<option value="DESC">Newest first</option>
+								<option value="ASC">Oldest first</option>
+							</select>
+							<select class="control-select" id="limitSelect">
+								<option value="25">25 items per page</option>
+								<option value="50" selected>50 items per page</option>
+								<option value="100">100 items per page</option>
+							</select>
+						</div>
 					</div>
 					<div class="logs-table-container" id="logsTableContainer">
 						<div id="loadingMessage" class="loading">Loading events...</div>
@@ -1740,6 +1761,9 @@
 		const SESSION_ACTIVITY_MARGIN_MINUTES = 30;
 		const OFFICE_START = { hour: 8, minute: 30 };
 		const OFFICE_END = { hour: 18, minute: 30 };
+		let isResizingSidebar = false;
+		let sidebarResizeStartX = 0;
+		let sidebarResizeStartWidth = 0;
 
 		// Theme management - using .dark class like Laravel Log Viewer
 		// Detects system theme by default, but allows manual override
@@ -1829,6 +1853,53 @@
 			});
 		}
 
+		function setupSidebarResizer() {
+			const resizer = document.getElementById('sidebarResizer');
+			const sidebar = document.querySelector('.sidebar');
+			if (!resizer || !sidebar) {
+				return;
+			}
+
+			const startResize = (event) => {
+				const point = event.touches ? event.touches[0] : event;
+				isResizingSidebar = true;
+				sidebarResizeStartX = point.clientX;
+				sidebarResizeStartWidth = sidebar.offsetWidth;
+				document.body.classList.add('sidebar-resizing');
+				document.addEventListener('mousemove', handleResize);
+				document.addEventListener('mouseup', stopResize);
+				document.addEventListener('touchmove', handleResize, { passive: false });
+				document.addEventListener('touchend', stopResize);
+				event.preventDefault();
+			};
+
+			const handleResize = (event) => {
+				if (!isResizingSidebar) {
+					return;
+				}
+				const point = event.touches ? event.touches[0] : event;
+				const delta = point.clientX - sidebarResizeStartX;
+				let newWidth = sidebarResizeStartWidth + delta;
+				newWidth = Math.max(220, Math.min(500, newWidth));
+				document.documentElement.style.setProperty('--sidebar-width', `${newWidth}px`);
+			};
+
+			const stopResize = () => {
+				if (!isResizingSidebar) {
+					return;
+				}
+				isResizingSidebar = false;
+				document.body.classList.remove('sidebar-resizing');
+				document.removeEventListener('mousemove', handleResize);
+				document.removeEventListener('mouseup', stopResize);
+				document.removeEventListener('touchmove', handleResize);
+				document.removeEventListener('touchend', stopResize);
+			};
+
+			resizer.addEventListener('mousedown', startResize);
+			resizer.addEventListener('touchstart', startResize, { passive: false });
+		}
+
 		function initSessionActivityChart() {
 			if (sessionActivityChart) {
 				return sessionActivityChart;
@@ -1866,15 +1937,23 @@
 			}
 		}
 
-		async function updateSessionActivityChart() {
-			if (selectedSession === 'all') {
+		async function updateSessionActivityChart(options = {}) {
+			const eventsOverride = Array.isArray(options.events) ? options.events : null;
+			const targetSession = typeof options.sessionId !== 'undefined' ? options.sessionId : selectedSession;
+
+			if (eventsOverride && eventsOverride.length > 0) {
+				renderSessionActivityChart(eventsOverride);
+				return;
+			}
+
+			if (targetSession === 'all') {
 				hideSessionActivityCard();
 				return;
 			}
 
 			try {
 				const params = new URLSearchParams({
-					sessionId: selectedSession,
+					sessionId: targetSession,
 					orderBy: 'created_at',
 					order: 'ASC',
 					limit: SESSION_ACTIVITY_FETCH_LIMIT.toString()
@@ -1922,7 +2001,9 @@
 			const areaColor = themeIsDark ? 'rgba(14,165,233,0.18)' : 'rgba(14,165,233,0.28)';
 			const axisColor = themeIsDark ? '#a1a1aa' : '#52525b';
 			const splitLineColor = themeIsDark ? 'rgba(63, 63, 70, 0.35)' : 'rgba(228, 228, 231, 0.35)';
+			const gradientCap = 70;
 			const yAxisMax = Math.max(30, maxBucketCount || 0);
+			const warmOffset = Math.min(gradientCap / Math.max(yAxisMax, 1), 1);
 
 			chartInstance.setOption({
 				grid: { left: 45, right: 20, top: 15, bottom: 30 },
@@ -1960,7 +2041,15 @@
 					type: 'line',
 					smooth: true,
 					showSymbol: false,
-					lineStyle: { width: 3, color: lineColor },
+					lineStyle: {
+						width: 3,
+						color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+							{ offset: 0, color: themeIsDark ? '#fbbf24' : '#fdba74' },
+							{ offset: Math.min(1, warmOffset * 0.5), color: themeIsDark ? '#fbbf24' : '#f97316' },
+							{ offset: warmOffset, color: themeIsDark ? '#38bdf8' : '#0ea5e9' },
+							{ offset: 1, color: themeIsDark ? '#0ea5e9' : '#0369a1' }
+						])
+					},
 					areaStyle: { color: areaColor },
 					data: seriesData
 				}],
@@ -2060,9 +2149,12 @@
 			}
 		}
 
-		async function loadEventTypeStats() {
+		async function loadEventTypeStats(sessionId = null) {
 			try {
-				const response = await fetch('/api/event-types');
+				const params = sessionId && sessionId !== 'all'
+					? `?sessionId=${encodeURIComponent(sessionId)}`
+					: '';
+				const response = await fetch(`/api/event-types${params}`);
 				const stats = await response.json();
 
 				stats.forEach(stat => {
@@ -2074,7 +2166,10 @@
 
 				// Update total size
 				const total = stats.reduce((sum, stat) => sum + (stat.count || 0), 0);
-				document.getElementById('totalSize').textContent = formatSize(total);
+				const totalSizeEl = document.getElementById('totalSize');
+				if (totalSizeEl) {
+					totalSizeEl.textContent = total;
+				}
 			} catch (error) {
 				console.error('Error loading event type stats:', error);
 			}
@@ -2186,6 +2281,7 @@
 							}
 							currentOffset = 0;
 							loadEvents();
+							loadEventTypeStats(selectedSession);
 						});
 
 						sessionList.appendChild(li);
@@ -2288,7 +2384,7 @@
 					if (selectedSession !== 'all') {
 						updateSessionActivityChart();
 					} else {
-						hideSessionActivityCard();
+						updateSessionActivityChart({ events: data.events, sessionId: 'all' });
 					}
 				} else {
 					document.getElementById('emptyState').style.display = 'block';
@@ -2306,6 +2402,20 @@
 			}
 		}
 
+		function normalizeEventData(rawData) {
+			if (!rawData) {
+				return {};
+			}
+			if (typeof rawData === 'object') {
+				return rawData;
+			}
+			try {
+				return JSON.parse(rawData);
+			} catch (_error) {
+				return {};
+			}
+		}
+
 		function displayEvents(events) {
 			const tbody = document.getElementById('logsBody');
 			tbody.innerHTML = '';
@@ -2314,7 +2424,17 @@
 				const levelClass = getLevelClass(event.event);
 				const description = formatDescription(event);
 				const descriptionPretty = formatDescriptionPretty(event);
-				const isError = event.event === 'tool_error' || event.event === 'error';
+				const eventData = normalizeEventData(event.data);
+				const dataStatus = typeof eventData.status === 'string'
+					? eventData.status.toLowerCase()
+					: null;
+				const isToolFailure = event.event === 'tool_call' && (
+					dataStatus === 'error' ||
+					dataStatus === 'failed' ||
+					eventData.success === false ||
+					Boolean(eventData.error)
+				);
+				const isError = event.event === 'tool_error' || event.event === 'error' || isToolFailure;
 				const statusClass = isError ? 'ko' : 'ok';
 				const statusLabel = isError ? 'KO' : 'OK';
 
@@ -2524,7 +2644,7 @@
 				event.preventDefault();
 			}
 			currentOffset = 0;
-			loadEventTypeStats();
+			loadEventTypeStats(selectedSession);
 			loadSessions();
 			loadEvents({ skipUiReset: true });
 		}
@@ -2569,7 +2689,7 @@
 
 				// Refresh the view
 				currentOffset = 0;
-				loadEventTypeStats();
+				loadEventTypeStats(selectedSession);
 				loadSessions();
 				loadEvents();
 			} catch (error) {
@@ -2782,6 +2902,7 @@
 				document.getElementById('sortSelect').value = 'DESC';
 				currentOffset = 0;
 				loadEvents();
+				loadEventTypeStats(selectedSession);
 			});
 		});
 
@@ -2860,7 +2981,7 @@
 				});
 
 				// Refresh the view
-				loadEventTypeStats();
+				loadEventTypeStats(selectedSession);
 				loadSessions();
 				loadEvents();
 			} catch (error) {
@@ -2910,7 +3031,7 @@
 				}
 
 				// Refresh the view
-				loadEventTypeStats();
+				loadEventTypeStats(selectedSession);
 				loadSessions();
 				loadEvents();
 			} catch (error) {
@@ -2923,7 +3044,8 @@
 		updateNotificationButtonState();
 		initTheme();
 		setupLevelFilters();
-		loadEventTypeStats();
+		setupSidebarResizer();
+		loadEventTypeStats(selectedSession);
 		loadSessions();
 		loadEvents();
 	</script>
