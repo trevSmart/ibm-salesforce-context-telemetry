@@ -631,6 +631,33 @@
 			color: #c64545;
 		}
 
+		.global-error-banner {
+			display: none;
+			margin: 10px 14px 0;
+			padding: 10px 14px;
+			border-radius: 10px;
+			background: #fee2e2;
+			border: 1px solid #fecaca;
+			color: #7f1d1d;
+			font-size: 0.875rem;
+			font-weight: 600;
+			box-shadow: 0 10px 30px rgba(190, 18, 60, 0.08);
+			line-height: 1.4;
+			display: flex;
+			flex-direction: column;
+			gap: 4px;
+		}
+
+		html.dark .global-error-banner {
+			background: rgba(127, 29, 29, 0.3);
+			border-color: rgba(248, 113, 113, 0.4);
+			color: #fecaca;
+		}
+
+		.global-error-banner.hidden {
+			display: none;
+		}
+
 		.content-wrapper {
 			display: flex;
 			flex: 1;
@@ -673,7 +700,7 @@
 			bottom: 24px;
 			left: 50%;
 			transform: translateX(-50%);
-			width: 2px;
+			width: 3px;
 			background: transparent;
 			border-radius: 999px;
 			transition: background 0.15s ease;
@@ -1759,11 +1786,23 @@
 		const SESSION_ACTIVITY_FETCH_LIMIT = 1000;
 		const SESSION_ACTIVITY_SLOT_MINUTES = 10;
 		const SESSION_ACTIVITY_MARGIN_MINUTES = 30;
+		const SESSION_SERIES_COLORS = [
+			'#53cf98',
+			'#38bdf8',
+			'#f97316',
+			'#a78bfa',
+			'#fb7185',
+			'#22d3ee',
+			'#c084fc',
+			'#f472b6'
+		];
 		const OFFICE_START = { hour: 8, minute: 30 };
 		const OFFICE_END = { hour: 18, minute: 30 };
 		let isResizingSidebar = false;
 		let sidebarResizeStartX = 0;
 		let sidebarResizeStartWidth = 0;
+		const globalErrorMessages = [];
+		const MAX_GLOBAL_ERROR_MESSAGES = 3;
 
 		// Theme management - using .dark class like Laravel Log Viewer
 		// Detects system theme by default, but allows manual override
@@ -1942,7 +1981,7 @@
 			const targetSession = typeof options.sessionId !== 'undefined' ? options.sessionId : selectedSession;
 
 			if (eventsOverride && eventsOverride.length > 0) {
-				renderSessionActivityChart(eventsOverride);
+				renderSessionActivityChart(eventsOverride, { sessionId: targetSession });
 				return;
 			}
 
@@ -1967,14 +2006,14 @@
 					hideSessionActivityCard();
 					return;
 				}
-				renderSessionActivityChart(data.events);
+				renderSessionActivityChart(data.events, { sessionId: targetSession });
 			} catch (error) {
 				console.error('Error loading session activity chart:', error);
 				hideSessionActivityCard();
 			}
 		}
 
-		function renderSessionActivityChart(events) {
+		function renderSessionActivityChart(events, options = {}) {
 			if (!Array.isArray(events) || events.length === 0) {
 				hideSessionActivityCard();
 				return;
@@ -1986,24 +2025,72 @@
 			}
 
 			lastSessionActivityEvents = events.slice();
-			const { seriesData, windowStart, windowEnd, referenceDate, officeStart, officeEnd, maxBucketCount } = buildSessionActivitySeries(events);
+			const targetSession = options.sessionId || selectedSession;
+			const uniqueSessions = Array.from(new Set(events.map(evt => evt.session_id || 'Unknown session')));
+			const isAllSessionsView = targetSession === 'all' && uniqueSessions.length > 0;
+
+			let seriesData = [];
+			let windowStart;
+			let windowEnd;
+			let referenceDate;
+			let officeStart;
+			let officeEnd;
+			let maxBucketCount;
+			let multiSeriesEntries = [];
+
+			if (isAllSessionsView) {
+				const multiSeries = buildMultiSessionActivitySeries(events);
+				windowStart = multiSeries.windowStart;
+				windowEnd = multiSeries.windowEnd;
+				referenceDate = multiSeries.referenceDate;
+				officeStart = multiSeries.officeStart;
+				officeEnd = multiSeries.officeEnd;
+				maxBucketCount = multiSeries.maxBucketCount;
+				multiSeriesEntries = multiSeries.seriesList;
+			} else {
+				const singleSeries = buildSessionActivitySeries(events);
+				({
+					seriesData,
+					windowStart,
+					windowEnd,
+					referenceDate,
+					officeStart,
+					officeEnd,
+					maxBucketCount
+				} = singleSeries);
+			}
+
 			const totalEvents = events.length;
+			const sessionCount = uniqueSessions.length;
 			const subtitle = document.getElementById('sessionActivitySubtitle');
 			if (subtitle) {
 				const formattedDate = formatHumanDate(referenceDate);
 				const eventLabel = totalEvents === 1 ? 'event' : 'events';
-				subtitle.textContent = `${formattedDate} · ${totalEvents} ${eventLabel}`;
+				if (isAllSessionsView) {
+					const sessionLabel = sessionCount === 1 ? 'session' : 'sessions';
+					subtitle.textContent = `${formattedDate} · ${sessionCount} ${sessionLabel} · ${totalEvents} ${eventLabel}`;
+				} else {
+					subtitle.textContent = `${formattedDate} · ${totalEvents} ${eventLabel}`;
+				}
 			}
 			showSessionActivityCard();
 
 			const themeIsDark = document.documentElement.classList.contains('dark');
-			const lineColor = themeIsDark ? '#38bdf8' : '#0ea5e9';
-			const areaColor = themeIsDark ? 'rgba(14,165,233,0.18)' : 'rgba(14,165,233,0.28)';
 			const axisColor = themeIsDark ? '#a1a1aa' : '#52525b';
 			const splitLineColor = themeIsDark ? 'rgba(63, 63, 70, 0.35)' : 'rgba(228, 228, 231, 0.35)';
 			const gradientCap = 70;
 			const yAxisMax = Math.max(30, maxBucketCount || 0);
 			const warmOffset = Math.min(gradientCap / Math.max(yAxisMax, 1), 1);
+
+			let chartSeries = [];
+			if (isAllSessionsView) {
+				chartSeries = multiSeriesEntries.map((entry, index) => {
+					const color = SESSION_SERIES_COLORS[index % SESSION_SERIES_COLORS.length];
+					return createMultiSessionSeriesOption(entry.sessionId, entry.seriesData, color);
+				});
+			} else {
+				chartSeries = [createSingleSessionSeriesOption(seriesData, warmOffset)];
+			}
 
 			chartInstance.setOption({
 				grid: { left: 45, right: 20, top: 15, bottom: 30 },
@@ -2036,23 +2123,7 @@
 					axisPointer: { type: 'line' },
 					valueFormatter: value => `${value} ${value === 1 ? 'event' : 'events'}`
 				},
-				series: [{
-					name: 'Events',
-					type: 'line',
-					smooth: true,
-					showSymbol: false,
-					lineStyle: {
-						width: 3,
-						color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-							{ offset: 0, color: themeIsDark ? '#fbbf24' : '#fdba74' },
-							{ offset: Math.min(1, warmOffset * 0.5), color: themeIsDark ? '#fbbf24' : '#f97316' },
-							{ offset: warmOffset, color: themeIsDark ? '#38bdf8' : '#0ea5e9' },
-							{ offset: 1, color: themeIsDark ? '#0ea5e9' : '#0369a1' }
-						])
-					},
-					areaStyle: { color: areaColor },
-					data: seriesData
-				}],
+				series: chartSeries,
 				markArea: {
 					itemStyle: { color: 'rgba(16,185,129,0.12)' },
 					data: [
@@ -2065,8 +2136,20 @@
 			}, true);
 
 			chartInstance.resize();
+			renderSessionActivityLegend(isAllSessionsView ? chartSeries.map(series => ({
+				name: series.name,
+				color: series.lineStyle?.color || '#53cf98'
+			})) : null);
 		}
 
+		function buildMultiSessionActivitySeries(events) {
+			const referenceDate = new Date(events[0].timestamp);
+			const eventTimes = events
+				.map(event => Date.parse(event.timestamp))
+				.filter(time => !Number.isNaN(time));
+			const minEventTime = eventTimes.length ? Math.min(...eventTimes) : null;
+			const maxEventTime = eventTimes.length ? Math.max(...eventTimes) : null;
+			const { start: windowStart, end: windowEnd } = getExtendedWindow(referenceDate, minEventTime, maxEventTime);
 		function buildSessionActivitySeries(events) {
 			const referenceDate = new Date(events[0].timestamp);
 			const eventTimes = events
@@ -2104,6 +2187,57 @@
 			return { seriesData, windowStart, windowEnd, referenceDate, officeStart, officeEnd, maxBucketCount };
 		}
 
+		function buildMultiSessionActivitySeries(events) {
+			const referenceDate = new Date(events[0].timestamp);
+			const eventTimes = events
+				.map(event => Date.parse(event.timestamp))
+				.filter(time => !Number.isNaN(time));
+			const minEventTime = eventTimes.length ? Math.min(...eventTimes) : null;
+			const maxEventTime = eventTimes.length ? Math.max(...eventTimes) : null;
+			const { start: windowStart, end: windowEnd } = getExtendedWindow(referenceDate, minEventTime, maxEventTime);
+			const officeStart = new Date(referenceDate);
+			officeStart.setHours(OFFICE_START.hour, OFFICE_START.minute, 0, 0);
+			const officeEnd = new Date(referenceDate);
+			officeEnd.setHours(OFFICE_END.hour, OFFICE_END.minute, 0, 0);
+			const slotMs = SESSION_ACTIVITY_SLOT_MINUTES * 60 * 1000;
+			const slotCount = Math.floor((windowEnd.getTime() - windowStart.getTime()) / slotMs) + 1;
+
+			const sessionBuckets = new Map();
+
+			events.forEach(event => {
+				const time = Date.parse(event.timestamp);
+				if (Number.isNaN(time)) {
+					return;
+				}
+				const sessionId = event.session_id || 'Unknown session';
+				if (!sessionBuckets.has(sessionId)) {
+					sessionBuckets.set(sessionId, Array.from({ length: slotCount }, () => 0));
+				}
+				const bucketIndex = Math.floor((time - windowStart.getTime()) / slotMs);
+				if (bucketIndex >= 0 && bucketIndex < slotCount) {
+					const buckets = sessionBuckets.get(sessionId);
+					buckets[bucketIndex] += 1;
+				}
+			});
+
+			const seriesList = [];
+			let maxBucketCount = 0;
+
+			sessionBuckets.forEach((buckets, sessionId) => {
+				const seriesData = buckets.map((count, index) => {
+					const ts = windowStart.getTime() + (index * slotMs);
+					return [ts, count];
+				});
+				maxBucketCount = Math.max(maxBucketCount, ...buckets, maxBucketCount);
+				seriesList.push({
+					sessionId,
+					seriesData
+				});
+			});
+
+			return { seriesList, windowStart, windowEnd, referenceDate, officeStart, officeEnd, maxBucketCount };
+		}
+
 		function getExtendedWindow(referenceDate, minEventTime, maxEventTime) {
 			const start = new Date(referenceDate);
 			start.setHours(OFFICE_START.hour, OFFICE_START.minute, 0, 0);
@@ -2139,6 +2273,163 @@
 
 		function padNumber(value) {
 			return String(value).padStart(2, '0');
+		}
+
+		function showGlobalError(message) {
+			const banner = document.getElementById('globalErrorBanner');
+			if (!banner || !message) {
+				return;
+			}
+			const formattedMessage = typeof message === 'string'
+				? message
+				: (message?.message || 'Unexpected error');
+			globalErrorMessages.unshift(formattedMessage);
+			if (globalErrorMessages.length > MAX_GLOBAL_ERROR_MESSAGES) {
+				globalErrorMessages.length = MAX_GLOBAL_ERROR_MESSAGES;
+			}
+			banner.innerHTML = globalErrorMessages
+				.map(msg => `<div>${escapeHtml(msg)}</div>`)
+				.join('');
+			banner.classList.remove('hidden');
+		}
+
+		function handleInitializationError(context, error) {
+			const details = error?.message || error || 'Unknown error';
+			console.error(`Initialization error (${context}):`, error);
+			showGlobalError(`Initialization error (${context}): ${details}`);
+		}
+
+		function runSafeInitStep(label, fn) {
+			try {
+				if (typeof fn === 'function') {
+					fn();
+				}
+			} catch (error) {
+				handleInitializationError(label, error);
+			}
+		}
+
+		function runSafeAsyncInitStep(label, fn) {
+			try {
+				const result = typeof fn === 'function' ? fn() : null;
+				if (result && typeof result.catch === 'function') {
+					result.catch(error => handleInitializationError(label, error));
+				}
+			} catch (error) {
+				handleInitializationError(label, error);
+			}
+		}
+
+		function createSingleSessionSeriesOption(seriesData, warmOffset) {
+			return {
+				name: 'Events',
+				type: 'line',
+				smooth: 0.6,
+				showSymbol: false,
+				lineStyle: { width: 3, color: '#53cf98' },
+				areaStyle: {
+					color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+						{ offset: 0, color: 'rgba(133,230,185,0.45)' },
+						{ offset: warmOffset, color: 'rgba(197,241,221,0.35)' },
+						{ offset: 1, color: 'rgba(216,247,232,0.16)' }
+					])
+				},
+				data: seriesData
+			};
+		}
+
+		function createMultiSessionSeriesOption(sessionId, seriesData, color) {
+			const startColor = hexToRgba(color, 0.35);
+			const endColor = hexToRgba(color, 0.05);
+			return {
+				name: formatSessionLabel(sessionId),
+				type: 'line',
+				smooth: 0.6,
+				showSymbol: false,
+				lineStyle: { width: 2.5, color },
+				areaStyle: {
+					color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+						{ offset: 0, color: startColor },
+						{ offset: 1, color: endColor }
+					])
+				},
+				data: seriesData
+			};
+		}
+
+		function hexToRgba(hex, alpha = 1) {
+			if (typeof hex !== 'string') {
+				return `rgba(83, 207, 152, ${alpha})`;
+			}
+			let sanitized = hex.replace('#', '');
+			if (sanitized.length === 3) {
+				sanitized = sanitized.split('').map(ch => ch + ch).join('');
+			}
+			const bigint = parseInt(sanitized, 16);
+			if (Number.isNaN(bigint)) {
+				return `rgba(83, 207, 152, ${alpha})`;
+			}
+			const r = (bigint >> 16) & 255;
+			const g = (bigint >> 8) & 255;
+			const b = bigint & 255;
+			return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+		}
+
+		function formatSessionLabel(sessionId) {
+			if (!sessionId) {
+				return 'Unknown session';
+			}
+			if (sessionId.length <= 22) {
+				return sessionId;
+			}
+			return `${sessionId.slice(0, 10)}…${sessionId.slice(-6)}`;
+		}
+
+		function escapeHtml(str) {
+			return String(str ?? '')
+				.replace(/&/g, '&amp;')
+				.replace(/</g, '&lt;')
+				.replace(/>/g, '&gt;')
+				.replace(/"/g, '&quot;')
+				.replace(/'/g, '&#39;');
+		}
+
+		function renderSessionActivityLegend(seriesEntries) {
+			const legendEl = document.getElementById('sessionActivityLegend');
+			if (!legendEl) {
+				return;
+			}
+
+			legendEl.innerHTML = '';
+
+			if (Array.isArray(seriesEntries) && seriesEntries.length > 0) {
+				seriesEntries.forEach(entry => {
+					const safeName = escapeHtml(entry.name);
+					const item = document.createElement('span');
+					item.className = 'legend-item';
+					item.innerHTML = `
+						<span class="legend-dot" style="background: ${entry.color};"></span>
+						<span>${safeName}</span>
+					`;
+					legendEl.appendChild(item);
+				});
+			} else {
+				const defaultItem = document.createElement('span');
+				defaultItem.className = 'legend-item';
+				defaultItem.innerHTML = `
+					<span class="legend-dot" style="background: #53cf98;"></span>
+					<span>Events per slot</span>
+				`;
+				legendEl.appendChild(defaultItem);
+			}
+
+			const officeItem = document.createElement('span');
+			officeItem.className = 'legend-item';
+			officeItem.innerHTML = `
+				<span class="legend-dot" style="background: rgba(16,185,129,0.7); border: 1px solid rgba(16,185,129,0.8);"></span>
+				<span>Office window</span>
+			`;
+			legendEl.appendChild(officeItem);
 		}
 
 		function refreshSessionActivityTheme() {
@@ -2869,28 +3160,43 @@
 
 		// Search with debounce
 		let searchDebounceTimer;
-		document.getElementById('searchInput').addEventListener('input', (e) => {
-			clearTimeout(searchDebounceTimer);
-			searchDebounceTimer = setTimeout(() => {
-				searchQuery = e.target.value;
-				currentOffset = 0;
-				loadEvents();
-			}, 500);
-		});
+		const searchInputEl = document.getElementById('searchInput');
+		if (searchInputEl) {
+			searchInputEl.addEventListener('input', (e) => {
+				clearTimeout(searchDebounceTimer);
+				searchDebounceTimer = setTimeout(() => {
+					searchQuery = e.target.value;
+					currentOffset = 0;
+					loadEvents();
+				}, 500);
+			});
+		} else {
+			handleInitializationError('search input binding', new Error('Search input not found'));
+		}
 
 		// Sort order change
-		document.getElementById('sortSelect').addEventListener('change', (e) => {
-			sortOrder = e.target.value;
-			currentOffset = 0;
-			loadEvents();
-		});
+		const sortSelectEl = document.getElementById('sortSelect');
+		if (sortSelectEl) {
+			sortSelectEl.addEventListener('change', (e) => {
+				sortOrder = e.target.value;
+				currentOffset = 0;
+				loadEvents();
+			});
+		} else {
+			handleInitializationError('sort select binding', new Error('Sort select not found'));
+		}
 
 		// Limit change
-		document.getElementById('limitSelect').addEventListener('change', (e) => {
-			limit = parseInt(e.target.value);
-			currentOffset = 0;
-			loadEvents();
-		});
+		const limitSelectEl = document.getElementById('limitSelect');
+		if (limitSelectEl) {
+			limitSelectEl.addEventListener('change', (e) => {
+				limit = parseInt(e.target.value);
+				currentOffset = 0;
+				loadEvents();
+			});
+		} else {
+			handleInitializationError('limit select binding', new Error('Items-per-page select not found'));
+		}
 
 		// Session selection (for "All Sessions" item)
 		document.querySelectorAll('[data-session="all"]').forEach(item => {
@@ -3040,14 +3346,33 @@
 			}
 		}
 
-		// Initialize
-		updateNotificationButtonState();
-		initTheme();
-		setupLevelFilters();
-		setupSidebarResizer();
-		loadEventTypeStats(selectedSession);
-		loadSessions();
-		loadEvents();
+		window.addEventListener('error', (event) => {
+			if (!event) {
+				return;
+			}
+			const message = event.message || 'Unexpected runtime error';
+			showGlobalError(`Runtime error: ${message}`);
+		});
+
+		window.addEventListener('unhandledrejection', (event) => {
+			if (!event) {
+				return;
+			}
+			const reason = event.reason?.message || event.reason || 'Unhandled promise rejection';
+			showGlobalError(`Unhandled error: ${reason}`);
+		});
+
+		function initializeApp() {
+			runSafeInitStep('notification button state', updateNotificationButtonState);
+			runSafeInitStep('theme initialization', initTheme);
+			runSafeInitStep('level filters setup', setupLevelFilters);
+			runSafeInitStep('sidebar resizer setup', setupSidebarResizer);
+			runSafeAsyncInitStep('event type stats', () => loadEventTypeStats(selectedSession));
+			runSafeAsyncInitStep('sessions list', () => loadSessions());
+			runSafeAsyncInitStep('events table', () => loadEvents());
+		}
+
+		initializeApp();
 	</script>
 </body>
 </html>
