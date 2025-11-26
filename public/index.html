@@ -229,21 +229,21 @@
 			transform: rotate(45deg);
 		}
 
-		/* Checkbox mark color matches button text color when active */
+		/* Checkbox mark color matches button background when active */
 		.level-filter-btn.level-debug.active input[type="checkbox"]:checked::after {
-			border-color: #6b21a8;
+			border-color: #8e81ea;
 		}
 
 		.level-filter-btn.level-info.active input[type="checkbox"]:checked::after {
-			border-color: #1e40af;
+			border-color: #2195cf;
 		}
 
 		.level-filter-btn.level-warning.active input[type="checkbox"]:checked::after {
-			border-color: #92400e;
+			border-color: #DB9139;
 		}
 
 		.level-filter-btn.level-error.active input[type="checkbox"]:checked::after {
-			border-color: #991b1b;
+			border-color: #ea6280;
 		}
 
 		.level-filter-btn.level-success.active input[type="checkbox"]:checked::after {
@@ -265,19 +265,19 @@
 		}
 
 		html.dark .level-filter-btn.level-debug.active input[type="checkbox"]:checked::after {
-			border-color: #6b21a8;
+			border-color: #8e81ea;
 		}
 
 		html.dark .level-filter-btn.level-info.active input[type="checkbox"]:checked::after {
-			border-color: #1e40af;
+			border-color: #2195cf;
 		}
 
 		html.dark .level-filter-btn.level-warning.active input[type="checkbox"]:checked::after {
-			border-color: #92400e;
+			border-color: #DB9139;
 		}
 
 		html.dark .level-filter-btn.level-error.active input[type="checkbox"]:checked::after {
-			border-color: #991b1b;
+			border-color: #ea6280;
 		}
 
 		html.dark .level-filter-btn.level-success.active input[type="checkbox"]:checked::after {
@@ -369,55 +369,55 @@
 		}
 
 		.level-filter-btn.active {
-			color: #18181b;
+			color: white;
 		}
 
 		.level-filter-btn.level-debug.active {
-			background: #ddd6fe;
-			border-color: #c4b5fd;
-			color: #6b21a8;
+			background: #8e81ea;
+			border-color: #8e81ea;
+			color: white;
 		}
 
 		.level-filter-btn.level-info.active {
-			background: #bfdbfe;
-			border-color: #93c5fd;
-			color: #1e40af;
+			background: #2195cf;
+			border-color: #2195cf;
+			color: white;
 		}
 
 		html.dark .level-filter-btn.level-debug.active {
-			background: #ddd6fe;
-			border-color: #c4b5fd;
-			color: #6b21a8;
+			background: #8e81ea;
+			border-color: #8e81ea;
+			color: white;
 		}
 
 		html.dark .level-filter-btn.level-info.active {
-			background: #bfdbfe;
-			border-color: #93c5fd;
-			color: #1e40af;
+			background: #2195cf;
+			border-color: #2195cf;
+			color: white;
 		}
 
 		.level-filter-btn.level-warning.active {
-			background: #fde68a;
-			border-color: #fcd34d;
-			color: #92400e;
+			background: #DB9139;
+			border-color: #DB9139;
+			color: white;
 		}
 
 		html.dark .level-filter-btn.level-warning.active {
-			background: #fde68a;
-			border-color: #fcd34d;
-			color: #92400e;
+			background: #DB9139;
+			border-color: #DB9139;
+			color: white;
 		}
 
 		.level-filter-btn.level-error.active {
-			background: #fecaca;
-			border-color: #fca5a5;
-			color: #991b1b;
+			background: #ea6280;
+			border-color: #ea6280;
+			color: white;
 		}
 
 		html.dark .level-filter-btn.level-error.active {
-			background: #fecaca;
-			border-color: #fca5a5;
-			color: #991b1b;
+			background: #ea6280;
+			border-color: #ea6280;
+			color: white;
 		}
 
 		.level-filter-btn.level-success.active {
@@ -453,11 +453,11 @@
 		}
 
 		.level-filter-btn.active .level-count {
-			background: rgba(0, 0, 0, 0.1);
+			background: rgba(255, 255, 255, 0.3);
 		}
 
 		html.dark .level-filter-btn.active .level-count {
-			background: rgba(0, 0, 0, 0.2);
+			background: rgba(255, 255, 255, 0.3);
 		}
 
 		.level-filter-btn:hover .level-count {
@@ -503,11 +503,11 @@
 		}
 
 		.search-input::placeholder {
-			color: #52525b;
+			color: #a1a1aa;
 		}
 
 		html.dark .search-input::placeholder {
-			color: #a1a1aa;
+			color: #71717a;
 		}
 
 		.search-input:focus {
@@ -624,7 +624,7 @@
 			display: flex;
 			flex: 1;
 			overflow: hidden;
-			gap: 16px;
+			gap: 10px;
 			padding: 0 16px;
 		}
 
@@ -942,7 +942,7 @@
 			line-height: 1rem;
 			font-weight: 600;
 			text-transform: uppercase;
-			width: 150px;
+			width: auto;
 			box-sizing: border-box;
 		}
 
@@ -1311,8 +1311,8 @@
 								<thead>
 									<tr>
 										<th style="width: 40px;"></th>
-										<th style="width: 180px;">Event</th>
 										<th>Time</th>
+										<th style="width: 130px;">Event</th>
 										<th>Description</th>
 									</tr>
 								</thead>
@@ -1347,27 +1347,31 @@
 		let startTime = performance.now();
 
 		// Theme management - using .dark class like Laravel Log Viewer
-		function initTheme() {
-			const savedTheme = localStorage.getItem('theme') || 'light';
-			if (savedTheme === 'dark') {
+		// Detects system theme by default, but allows manual override
+		function getSystemTheme() {
+			return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+		}
+
+		function applyTheme(theme) {
+			if (theme === 'dark') {
 				document.documentElement.classList.add('dark');
 			} else {
 				document.documentElement.classList.remove('dark');
 			}
-			updateThemeIcon(savedTheme);
+			updateThemeIcon(theme);
+		}
+
+		function initTheme() {
+			const savedTheme = localStorage.getItem('theme');
+			const theme = savedTheme || getSystemTheme();
+			applyTheme(theme);
 		}
 
 		function toggleTheme() {
 			const isDark = document.documentElement.classList.contains('dark');
-			if (isDark) {
-				document.documentElement.classList.remove('dark');
-				localStorage.setItem('theme', 'light');
-				updateThemeIcon('light');
-			} else {
-				document.documentElement.classList.add('dark');
-				localStorage.setItem('theme', 'dark');
-				updateThemeIcon('dark');
-			}
+			const newTheme = isDark ? 'light' : 'dark';
+			localStorage.setItem('theme', newTheme);
+			applyTheme(newTheme);
 		}
 
 		function updateThemeIcon(theme) {
@@ -1375,6 +1379,18 @@
 			if (iconBtn) {
 				iconBtn.textContent = theme === 'dark' ? '☀️' : '🌙';
 			}
+		}
+
+		// Listen for system theme changes and update if no manual preference is set
+		if (window.matchMedia) {
+			const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+			mediaQuery.addEventListener('change', (e) => {
+				// Only update if user hasn't manually set a preference
+				if (!localStorage.getItem('theme')) {
+					const newTheme = e.matches ? 'dark' : 'light';
+					applyTheme(newTheme);
+				}
+			});
 		}
 
 		// Level filter management
@@ -1472,15 +1488,17 @@
 						let sessionDisplay = '';
 						if (session.first_event) {
 							const date = new Date(session.first_event);
-							const dateStr = date.toLocaleDateString('en-US', {
-								month: 'short',
-								day: 'numeric',
-								year: 'numeric',
-								hour: '2-digit',
-								minute: '2-digit'
-							});
+							const day = date.getDate();
+							const month = date.getMonth() + 1;
+							const year = date.getFullYear().toString().slice(-2);
+							const hours = String(date.getHours()).padStart(2, '0');
+							const minutes = String(date.getMinutes()).padStart(2, '0');
+							const dateStr = `${day}/${month}/${year} ${hours}:${minutes}`;
 							sessionDisplay = dateStr;
-							if (session.user_id) {
+							// Prefer user_name (full name) over user_id
+							if (session.user_name) {
+								sessionDisplay += ` • ${session.user_name}`;
+							} else if (session.user_id) {
 								sessionDisplay += ` • ${session.user_id}`;
 							}
 						} else {
@@ -1597,25 +1615,23 @@
 			events.forEach(event => {
 				const row = document.createElement('tr');
 				const levelClass = getLevelClass(event.event);
-				const levelIcon = getLevelIcon(event.event);
 				const description = formatDescription(event);
 				const isError = event.event === 'tool_error' || event.event === 'error';
 				const statusClass = isError ? 'ko' : 'ok';
 
-				row.className = `log-item-${levelClass}`;
-				row.innerHTML = `
-					<td style="text-align: center; padding: 2px 8px;">
-						<span class="status-indicator ${statusClass}" title="${isError ? 'Error' : 'OK'}"></span>
-					</td>
-					<td>
-						<span class="level-badge ${levelClass}">
-							<span class="level-badge-icon">${levelIcon}</span>
-							${event.event.replace('_', ' ')}
-						</span>
-					</td>
-					<td class="log-time">${formatDate(event.timestamp)}</td>
-					<td class="log-description">${description}</td>
-				`;
+			row.className = `log-item-${levelClass}`;
+			row.innerHTML = `
+				<td style="text-align: center; padding: 2px 8px;">
+					<span class="status-indicator ${statusClass}" title="${isError ? 'Error' : 'OK'}"></span>
+				</td>
+				<td class="log-time">${formatDate(event.timestamp)}</td>
+				<td>
+					<span class="level-badge ${levelClass}">
+						${event.event.replace('_', ' ')}
+					</span>
+				</td>
+				<td class="log-description">${description}</td>
+			`;
 				tbody.appendChild(row);
 			});
 		}
@@ -1655,14 +1671,12 @@
 		function formatDate(dateString) {
 			if (!dateString) return '-';
 			const date = new Date(dateString);
-			return date.toLocaleString('en-US', {
-				year: 'numeric',
-				month: '2-digit',
-				day: '2-digit',
-				hour: '2-digit',
-				minute: '2-digit',
-				second: '2-digit'
-			});
+			const day = date.getDate();
+			const month = date.getMonth() + 1;
+			const year = date.getFullYear().toString().slice(-2);
+			const hours = String(date.getHours()).padStart(2, '0');
+			const minutes = String(date.getMinutes()).padStart(2, '0');
+			return `${day}/${month}/${year} ${hours}:${minutes}`;
 		}
 
 		function formatSize(bytes) {

@@ -383,19 +383,36 @@ async function getSessions() {
 				MAX(s.created_at) as last_event,
 				(SELECT user_id FROM telemetry_events
 				 WHERE session_id = s.session_id
-				 ORDER BY created_at ASC LIMIT 1) as user_id
+				 ORDER BY created_at ASC LIMIT 1) as user_id,
+				(SELECT data FROM telemetry_events
+				 WHERE session_id = s.session_id AND event = 'session_start'
+				 ORDER BY created_at ASC LIMIT 1) as session_start_data
 			FROM telemetry_events s
 			WHERE s.session_id IS NOT NULL
 			GROUP BY s.session_id
 			ORDER BY last_event DESC
 		`).all();
-		return result.map(row => ({
-			session_id: row.session_id,
-			count: parseInt(row.count),
-			first_event: row.first_event,
-			last_event: row.last_event,
-			user_id: row.user_id
-		}));
+		return result.map(row => {
+			let user_name = null;
+			if (row.session_start_data) {
+				try {
+					const data = JSON.parse(row.session_start_data);
+					if (data && data.user && data.user.name) {
+						user_name = data.user.name;
+					}
+				} catch (e) {
+					// If parsing fails, ignore and use user_id
+				}
+			}
+			return {
+				session_id: row.session_id,
+				count: parseInt(row.count),
+				first_event: row.first_event,
+				last_event: row.last_event,
+				user_id: row.user_id,
+				user_name: user_name
+			};
+		});
 	} else {
 		const result = await db.query(`
 			SELECT
@@ -405,19 +422,38 @@ async function getSessions() {
 				MAX(s.created_at) as last_event,
 				(SELECT user_id FROM telemetry_events
 				 WHERE session_id = s.session_id
-				 ORDER BY created_at ASC LIMIT 1) as user_id
+				 ORDER BY created_at ASC LIMIT 1) as user_id,
+				(SELECT data FROM telemetry_events
+				 WHERE session_id = s.session_id AND event = 'session_start'
+				 ORDER BY created_at ASC LIMIT 1) as session_start_data
 			FROM telemetry_events s
 			WHERE s.session_id IS NOT NULL
 			GROUP BY s.session_id
 			ORDER BY last_event DESC
 		`);
-		return result.rows.map(row => ({
-			session_id: row.session_id,
-			count: parseInt(row.count),
-			first_event: row.first_event,
-			last_event: row.last_event,
-			user_id: row.user_id
-		}));
+		return result.rows.map(row => {
+			let user_name = null;
+			if (row.session_start_data) {
+				try {
+					const data = typeof row.session_start_data === 'string'
+						? JSON.parse(row.session_start_data)
+						: row.session_start_data;
+					if (data && data.user && data.user.name) {
+						user_name = data.user.name;
+					}
+				} catch (e) {
+					// If parsing fails, ignore and use user_id
+				}
+			}
+			return {
+				session_id: row.session_id,
+				count: parseInt(row.count),
+				first_event: row.first_event,
+				last_event: row.last_event,
+				user_id: row.user_id,
+				user_name: user_name
+			};
+		});
 	}
 }
 
