@@ -1907,7 +1907,7 @@
 			}
 
 			lastSessionActivityEvents = events.slice();
-			const { seriesData, windowStart, windowEnd, referenceDate, officeStart, officeEnd } = buildSessionActivitySeries(events);
+			const { seriesData, windowStart, windowEnd, referenceDate, officeStart, officeEnd, maxBucketCount } = buildSessionActivitySeries(events);
 			const totalEvents = events.length;
 			const subtitle = document.getElementById('sessionActivitySubtitle');
 			if (subtitle) {
@@ -1922,6 +1922,7 @@
 			const areaColor = themeIsDark ? 'rgba(14,165,233,0.18)' : 'rgba(14,165,233,0.28)';
 			const axisColor = themeIsDark ? '#a1a1aa' : '#52525b';
 			const splitLineColor = themeIsDark ? 'rgba(63, 63, 70, 0.35)' : 'rgba(228, 228, 231, 0.35)';
+			const yAxisMax = Math.max(30, maxBucketCount || 0);
 
 			chartInstance.setOption({
 				grid: { left: 45, right: 20, top: 15, bottom: 30 },
@@ -1940,6 +1941,7 @@
 				yAxis: {
 					type: 'value',
 					min: 0,
+					max: yAxisMax,
 					minInterval: 1,
 					name: 'Events',
 					nameGap: 22,
@@ -2008,7 +2010,9 @@
 				return [ts, count];
 			});
 
-			return { seriesData, windowStart, windowEnd, referenceDate, officeStart, officeEnd };
+			const maxBucketCount = buckets.length ? Math.max(...buckets) : 0;
+
+			return { seriesData, windowStart, windowEnd, referenceDate, officeStart, officeEnd, maxBucketCount };
 		}
 
 		function getExtendedWindow(referenceDate, minEventTime, maxEventTime) {
