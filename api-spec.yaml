@@ -12,7 +12,7 @@ info:
 servers:
   - url: https://ibm-salesforce-context-telemetry.onrender.com
     description: Production server
-  - url: http://localhost:3100
+  - url: http://localhost:3000
     description: Local development server
 
 paths:

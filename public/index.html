@@ -3,8 +3,96 @@
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Telemetry Dashboard - IBM Salesforce Context</title>
+	<title>Telemetry Log Viewer - IBM Salesforce Context</title>
+	<script src="https://cdn.tailwindcss.com"></script>
+	<script>
+		tailwind.config = {
+			darkMode: 'class',
+			theme: {
+				extend: {
+					colors: {
+						brand: {
+							500: '#0ea5e9',
+							600: '#0284c7',
+							700: '#0369a1',
+							800: '#075985',
+							900: '#0c4a6e',
+						}
+					}
+				}
+			}
+		}
+	</script>
 	<style>
+		:root {
+			/* Light mode colors - matching Laravel Log Viewer */
+			--bg-primary: #ffffff;
+			--bg-secondary: #fafafa;
+			--bg-sidebar: #fafafa;
+			--bg-table-header: #f4f4f5;
+			--text-primary: #18181b;
+			--text-secondary: #52525b;
+			--text-muted: #a1a1aa;
+			--border-color: #e4e4e7;
+			--hover-bg: #f4f4f5;
+
+			/* Level colors - matching Laravel Log Viewer */
+			--level-success: #10b981;
+			--level-success-bg: #ecfdf5;
+			--level-success-hover: #d1fae5;
+			--level-info: #0ea5e9;
+			--level-info-bg: #f0f9ff;
+			--level-info-hover: #e0f2fe;
+			--level-warning: #f59e0b;
+			--level-warning-bg: #fffbeb;
+			--level-warning-hover: #fef3c7;
+			--level-error: #ef4444;
+			--level-error-bg: #fef2f2;
+			--level-error-hover: #fee2e2;
+			--level-debug: #0ea5e9;
+
+			/* Brand color (sky) */
+			--brand-500: #0ea5e9;
+			--brand-600: #0284c7;
+			--brand-700: #0369a1;
+			--brand-800: #075985;
+			--brand-900: #0c4a6e;
+		}
+
+		html.dark {
+			/* Dark mode colors - matching Laravel Log Viewer */
+			--bg-primary: #27272a;
+			--bg-secondary: #18181b;
+			--bg-sidebar: #27272a;
+			--bg-table-header: #18181b;
+			--text-primary: #e4e4e7;
+			--text-secondary: #a1a1aa;
+			--text-muted: #71717a;
+			--border-color: #3f3f46;
+			--hover-bg: #3f3f46;
+
+			/* Dark mode level colors */
+			--level-success: #10b981;
+			--level-success-bg: rgba(6, 78, 59, 0.4);
+			--level-success-hover: rgba(6, 78, 59, 0.75);
+			--level-info: #0ea5e9;
+			--level-info-bg: rgba(12, 74, 110, 0.4);
+			--level-info-hover: rgba(12, 74, 110, 0.75);
+			--level-warning: #fbbf24;
+			--level-warning-bg: rgba(120, 53, 15, 0.4);
+			--level-warning-hover: rgba(120, 53, 15, 0.75);
+			--level-error: #fb7185;
+			--level-error-bg: rgba(136, 19, 55, 0.4);
+			--level-error-hover: rgba(136, 19, 55, 0.75);
+
+			/* Dark mode brand */
+			--brand-500: #0ea5e9;
+			--brand-600: #0284c7;
+			--brand-700: #0369a1;
+			--brand-800: #075985;
+			--brand-900: #0c4a6e;
+		}
+
 		* {
 			margin: 0;
 			padding: 0;
@@ -12,279 +100,1032 @@
 		}
 
 		body {
-			font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-			background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+			background: linear-gradient(135deg, #a8c0ff 0%, #b8a8ff 50%, #c8a8ff 100%);
 			min-height: 100vh;
 			padding: 20px;
+			position: relative;
 		}
 
-		.container {
-			max-width: 1400px;
+		body::before {
+			content: '';
+			position: fixed;
+			top: 0;
+			left: 0;
+			right: 0;
+			bottom: 0;
+			background:
+				radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.3) 0%, transparent 50%),
+				radial-gradient(circle at 80% 70%, rgba(255, 255, 255, 0.2) 0%, transparent 50%);
+			pointer-events: none;
+			z-index: 0;
+		}
+
+		html.dark {
+			color-scheme: dark;
+		}
+
+		.main-container {
+			position: relative;
+			z-index: 10;
+			max-width: 1600px;
 			margin: 0 auto;
 			background: white;
+			border-radius: 16px;
+			box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+			overflow: hidden;
+			display: flex;
+			flex-direction: column;
+			height: calc(100vh - 40px);
+		}
+
+		html.dark .main-container {
+			background: #27272a;
+		}
+
+		.header-bar {
+			padding: 20px 32px;
+			border-bottom: 1px solid #e4e4e7;
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			background: white;
+			flex-wrap: wrap;
+			gap: 16px;
+		}
+
+		html.dark .header-bar {
+			border-color: #3f3f46;
+			background: #27272a;
+		}
+
+		.header-left {
+			display: flex;
+			align-items: center;
+			gap: 16px;
+		}
+
+		.log-viewer-title {
+			font-size: 1.5rem;
+			line-height: 2rem;
+			font-weight: 700;
+			color: #10b981;
+			display: flex;
+			align-items: center;
+			gap: 10px;
+		}
+
+		html.dark .log-viewer-title {
+			color: #10b981;
+		}
+
+		.log-viewer-title::before {
+			content: '📋';
+			font-size: 1.875rem;
+		}
+
+		.back-link {
+			font-size: 0.875rem;
+			line-height: 1.25rem;
+			color: #52525b;
+			text-decoration: none;
+			margin-left: 10px;
+		}
+
+		html.dark .back-link {
+			color: #a1a1aa;
+		}
+
+		.back-link:hover {
+			color: #18181b;
+		}
+
+		html.dark .back-link:hover {
+			color: #e4e4e7;
+		}
+
+		.header-controls {
+			display: flex;
+			align-items: center;
+			gap: 16px;
+			flex-wrap: wrap;
+		}
+
+		.level-filters {
+			display: flex;
+			gap: 10px;
+			flex-wrap: wrap;
+		}
+
+		.level-filter-btn {
+			display: inline-flex;
+			align-items: center;
+			gap: 8px;
+			padding: 4px 12px;
+			border: 1px solid;
+			border-radius: 6px;
+			font-size: 0.875rem;
+			line-height: 1.25rem;
+			font-weight: 600;
+			cursor: pointer;
+			transition: all 0.2s;
+			position: relative;
+		}
+
+		.level-filter-btn input[type="checkbox"] {
+			accent-color: rgba(255, 255, 255, 0.8);
+		}
+
+		.level-filter-btn.level-debug {
+			background: var(--level-info-bg);
+			border-color: #bae6fd;
+			color: var(--text-secondary);
+		}
+
+		html.dark .level-filter-btn.level-debug {
+			background: rgba(12, 74, 110, 0.4);
+			border-color: #075985;
+			color: var(--text-secondary);
+		}
+
+		.level-filter-btn.level-info {
+			background: var(--level-info-bg);
+			border-color: #bae6fd;
+			color: var(--text-secondary);
+		}
+
+		html.dark .level-filter-btn.level-info {
+			background: rgba(12, 74, 110, 0.4);
+			border-color: #075985;
+			color: var(--text-secondary);
+		}
+
+		.level-filter-btn.level-warning {
+			background: var(--level-warning-bg);
+			border-color: #fde68a;
+			color: #b45309;
+		}
+
+		html.dark .level-filter-btn.level-warning {
+			background: rgba(120, 53, 15, 0.4);
+			border-color: #92400e;
+			color: var(--level-warning);
+		}
+
+		.level-filter-btn.level-error {
+			background: var(--level-error-bg);
+			border-color: #fecdd3;
+			color: #be123c;
+		}
+
+		html.dark .level-filter-btn.level-error {
+			background: rgba(136, 19, 55, 0.4);
+			border-color: #9f1239;
+			color: var(--level-error);
+		}
+
+		.level-filter-btn.level-success {
+			background: var(--level-success-bg);
+			border-color: #a7f3d0;
+			color: #047857;
+		}
+
+		html.dark .level-filter-btn.level-success {
+			background: rgba(6, 78, 59, 0.4);
+			border-color: #065f46;
+			color: var(--level-success);
+		}
+
+		.level-filter-btn:hover {
+			opacity: 1;
+		}
+
+		.level-filter-btn.level-debug:hover,
+		.level-filter-btn.level-info:hover {
+			background: var(--level-info-hover);
+		}
+
+		.level-filter-btn.level-warning:hover {
+			background: var(--level-warning-hover);
+		}
+
+		.level-filter-btn.level-error:hover {
+			background: var(--level-error-hover);
+		}
+
+		.level-filter-btn.level-success:hover {
+			background: var(--level-success-hover);
+		}
+
+		.level-filter-btn.active {
+			color: white;
+		}
+
+		.level-filter-btn.level-debug.active,
+		.level-filter-btn.level-info.active {
+			background: var(--level-info);
+			border-color: var(--level-info);
+		}
+
+		.level-filter-btn.level-warning.active {
+			background: #d97706;
+			border-color: #d97706;
+		}
+
+		.level-filter-btn.level-error.active {
+			background: #e11d48;
+			border-color: #e11d48;
+		}
+
+		.level-filter-btn.level-success.active {
+			background: #059669;
+			border-color: #059669;
+		}
+
+		.level-filter-btn .level-icon {
+			font-size: 1rem;
+			line-height: 1.5rem;
+		}
+
+		.level-filter-btn .level-count {
+			background: rgba(0, 0, 0, 0.1);
+			padding: 2px 8px;
 			border-radius: 12px;
-			box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+			font-size: 0.75rem;
+			line-height: 1rem;
+			font-weight: 700;
+		}
+
+		html.dark .level-filter-btn .level-count {
+			background: rgba(255, 255, 255, 0.1);
+		}
+
+		.level-filter-btn.active .level-count {
+			background: rgba(255, 255, 255, 0.25);
+		}
+
+		.search-controls {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+		}
+
+		.search-input {
+			padding: 10px 16px;
+			border: 1px solid #d4d4d8;
+			border-radius: 8px;
+			font-size: 0.875rem;
+			line-height: 1.25rem;
+			width: 250px;
+			background: white;
+			color: #18181b;
+			transition: all 0.2s;
+		}
+
+		html.dark .search-input {
+			border-color: #52525b;
+			background: #27272a;
+			color: #f4f4f5;
+		}
+
+		.search-input::placeholder {
+			color: #52525b;
+		}
+
+		html.dark .search-input::placeholder {
+			color: #a1a1aa;
+		}
+
+		.search-input:focus {
+			outline: none;
+			border-color: #0ea5e9;
+			box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
+		}
+
+		html.dark .search-input:focus {
+			border-color: #0369a1;
+			box-shadow: 0 0 0 3px rgba(3, 105, 161, 0.3);
+		}
+
+		.control-select {
+			padding: 10px 16px;
+			border: 1px solid #d4d4d8;
+			border-radius: 8px;
+			font-size: 0.875rem;
+			line-height: 1.25rem;
+			background: #fafafa;
+			color: #18181b;
+			cursor: pointer;
+			transition: all 0.2s;
+		}
+
+		html.dark .control-select {
+			border-color: #52525b;
+			background: #18181b;
+			color: #e4e4e7;
+		}
+
+		.control-select:hover {
+			background: #f4f4f5;
+		}
+
+		html.dark .control-select:hover {
+			background: #27272a;
+		}
+
+		.control-select:focus {
+			outline: none;
+			border-color: #0ea5e9;
+			box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
+		}
+
+		html.dark .control-select:focus {
+			border-color: #0369a1;
+			box-shadow: 0 0 0 3px rgba(3, 105, 161, 0.3);
+		}
+
+		.icon-btn {
+			width: 40px;
+			height: 40px;
+			border: none;
+			border-radius: 8px;
+			background: #f4f4f5;
+			cursor: pointer;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			font-size: 1.125rem;
+			line-height: 1.75rem;
+			transition: all 0.2s;
+			color: #a1a1aa;
+		}
+
+		html.dark .icon-btn {
+			background: #3f3f46;
+			color: #71717a;
+		}
+
+		.icon-btn:hover {
+			background: #e4e4e7;
+			color: #52525b;
+		}
+
+		html.dark .icon-btn:hover {
+			background: #52525b;
+			color: #a1a1aa;
+		}
+
+		.content-wrapper {
+			display: flex;
+			flex: 1;
 			overflow: hidden;
 		}
 
-		.header {
-			background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-			color: white;
-			padding: 30px;
-			text-align: center;
+		.sidebar {
+			width: 280px;
+			background: #fafafa;
+			border-right: 1px solid #e4e4e7;
+			overflow-y: auto;
+			padding: 20px 12px;
 		}
 
-		.header h1 {
-			font-size: 2.5em;
-			margin-bottom: 10px;
+		html.dark .sidebar {
+			background: #27272a;
+			border-color: #3f3f46;
 		}
 
-		.header p {
-			opacity: 0.9;
-			font-size: 1.1em;
+		@media (min-width: 768px) {
+			.sidebar {
+				padding: 20px;
+			}
 		}
 
-		.stats-grid {
-			display: grid;
-			grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-			gap: 20px;
-			padding: 30px;
-			background: #f8f9fa;
+		.sidebar-title {
+			font-size: 0.75rem;
+			line-height: 1rem;
+			font-weight: 600;
+			color: #52525b;
+			margin-bottom: 16px;
+			text-transform: uppercase;
+			letter-spacing: 0.05em;
 		}
 
-		.stat-card {
-			background: white;
-			padding: 20px;
-			border-radius: 8px;
-			box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-			text-align: center;
+		html.dark .sidebar-title {
+			color: #a1a1aa;
 		}
 
-		.stat-card h3 {
-			color: #667eea;
-			font-size: 2em;
-			margin-bottom: 5px;
+		.server-list {
+			list-style: none;
 		}
 
-		.stat-card p {
-			color: #666;
-			font-size: 0.9em;
-		}
-
-		.filters {
-			padding: 20px 30px;
-			background: white;
-			border-bottom: 1px solid #e0e0e0;
+		.server-item {
+			padding: 8px 12px;
+			margin-bottom: 8px;
+			border-radius: 6px;
+			cursor: pointer;
+			transition: all 0.2s;
 			display: flex;
-			gap: 15px;
-			flex-wrap: wrap;
+			align-items: center;
+			justify-content: space-between;
+			background: white;
+			border: 1px solid transparent;
+		}
+
+		html.dark .server-item {
+			background: #27272a;
+		}
+
+		.server-item:hover {
+			background: #e0f2fe;
+			border-color: #0284c7;
+		}
+
+		html.dark .server-item:hover {
+			background: rgba(12, 74, 110, 0.4);
+			border-color: #0369a1;
+		}
+
+		.server-item.active {
+			background: #e0f2fe;
+			border-color: #0ea5e9;
+		}
+
+		html.dark .server-item.active {
+			background: rgba(12, 74, 110, 0.4);
+			border-color: #075985;
+		}
+
+		.server-item.active .server-name {
+			color: #18181b;
+			font-weight: 600;
+		}
+
+		html.dark .server-item.active .server-name {
+			color: #e4e4e7;
+		}
+
+		.server-name {
+			font-size: 0.875rem;
+			line-height: 1.25rem;
+			color: #18181b;
+			flex: 1;
+		}
+
+		html.dark .server-name {
+			color: #e4e4e7;
+		}
+
+		.server-size {
+			font-size: 0.75rem;
+			line-height: 1rem;
+			color: #52525b;
+			margin-left: 10px;
+		}
+
+		html.dark .server-size {
+			color: #a1a1aa;
+		}
+
+		.main-content {
+			flex: 1;
+			display: flex;
+			flex-direction: column;
+			overflow: hidden;
+			background: white;
+			position: relative;
+		}
+
+		html.dark .main-content {
+			background: #27272a;
+		}
+
+		.logs-table-container {
+			flex: 1;
+			overflow-y: auto;
+			position: relative;
+		}
+
+		.logs-table {
+			width: 100%;
+			border-collapse: collapse;
+			font-size: 0.875rem;
+			line-height: 1.25rem;
+		}
+
+		.logs-table thead {
+			position: sticky;
+			top: 0;
+			z-index: 10;
+			background: #f4f4f5;
+		}
+
+		html.dark .logs-table thead {
+			background: #18181b;
+		}
+
+		.logs-table th {
+			padding: 12px 16px;
+			text-align: left;
+			font-weight: 600;
+			color: #52525b;
+			border-bottom: 2px solid #e4e4e7;
+			font-size: 0.75rem;
+			line-height: 1rem;
+			text-transform: uppercase;
+			letter-spacing: 0.05em;
+		}
+
+		html.dark .logs-table th {
+			color: #a1a1aa;
+			border-color: #3f3f46;
+		}
+
+		.logs-table td {
+			padding: 12px 16px;
+			border-bottom: 1px solid #e4e4e7;
+			color: #18181b;
+		}
+
+		html.dark .logs-table td {
+			border-color: #3f3f46;
+			color: #e4e4e7;
+		}
+
+		.logs-table tbody tr {
+			transition: background-color 0.15s;
+			background: white;
+		}
+
+		html.dark .logs-table tbody tr {
+			background: #27272a;
+		}
+
+		.logs-table tbody tr:hover {
+			background: #fafafa;
+		}
+
+		html.dark .logs-table tbody tr:hover {
+			background: rgba(63, 63, 70, 0.5);
+		}
+
+		/* Level-specific row hover colors */
+		.logs-table tbody tr.log-item-success:hover {
+			background: #d1fae5;
+		}
+
+		html.dark .logs-table tbody tr.log-item-success:hover {
+			background: rgba(6, 78, 59, 0.4);
+		}
+
+		.logs-table tbody tr.log-item-info:hover {
+			background: #e0f2fe;
+		}
+
+		html.dark .logs-table tbody tr.log-item-info:hover {
+			background: rgba(12, 74, 110, 0.4);
+		}
+
+		.logs-table tbody tr.log-item-warning:hover {
+			background: #fef3c7;
+		}
+
+		html.dark .logs-table tbody tr.log-item-warning:hover {
+			background: rgba(120, 53, 15, 0.4);
+		}
+
+		.logs-table tbody tr.log-item-error:hover {
+			background: #fee2e2;
+		}
+
+		html.dark .logs-table tbody tr.log-item-error:hover {
+			background: rgba(136, 19, 55, 0.4);
+		}
+
+		.level-badge {
+			display: inline-flex;
+			align-items: center;
+			gap: 6px;
+			padding: 4px 10px;
+			border-radius: 6px;
+			font-size: 0.75rem;
+			line-height: 1rem;
+			font-weight: 600;
+			text-transform: uppercase;
+		}
+
+		.level-badge.debug {
+			background: var(--level-info-bg);
+			color: var(--level-info);
+		}
+
+		.level-badge.info {
+			background: var(--level-info-bg);
+			color: var(--level-info);
+		}
+
+		.level-badge.warning {
+			background: var(--level-warning-bg);
+			color: #b45309;
+		}
+
+		html.dark .level-badge.warning {
+			color: var(--level-warning);
+		}
+
+		.level-badge.error {
+			background: var(--level-error-bg);
+			color: #be123c;
+		}
+
+		html.dark .level-badge.error {
+			color: var(--level-error);
+		}
+
+		.level-badge.success {
+			background: var(--level-success-bg);
+			color: #047857;
+		}
+
+		html.dark .level-badge.success {
+			color: var(--level-success);
+		}
+
+		.level-badge-icon {
+			font-size: 0.875rem;
+			line-height: 1.25rem;
+		}
+
+		.log-time {
+			font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+			font-size: 0.75rem;
+			line-height: 1rem;
+			color: #18181b;
+		}
+
+		html.dark .log-time {
+			color: #e4e4e7;
+		}
+
+		.log-description {
+			font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+			font-size: 0.875rem;
+			line-height: 1.5;
+			max-width: 600px;
+			word-break: break-word;
+			color: #52525b;
+		}
+
+		html.dark .log-description {
+			color: #e4e4e7;
+			opacity: 0.9;
+		}
+
+		.pagination {
+			padding: 20px 32px;
+			border-top: 1px solid #e4e4e7;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			gap: 10px;
+			background: white;
+		}
+
+		html.dark .pagination {
+			border-color: #3f3f46;
+			background: #27272a;
+		}
+
+		.pagination-btn {
+			padding: 8px 16px;
+			border: 2px solid transparent;
+			border-top: 2px solid transparent;
+			border-radius: 0;
+			background: transparent;
+			color: #52525b;
+			cursor: pointer;
+			font-size: 0.875rem;
+			line-height: 1.25rem;
+			font-weight: 500;
+			transition: all 0.2s;
+			display: inline-flex;
 			align-items: center;
 		}
 
-		.filters select,
-		.filters input {
-			padding: 10px;
-			border: 1px solid #ddd;
+		html.dark .pagination-btn {
+			color: #a1a1aa;
+		}
+
+		.pagination-btn:hover:not(:disabled) {
+			color: #18181b;
+			border-top-color: #d4d4d8;
+		}
+
+		html.dark .pagination-btn:hover:not(:disabled) {
+			color: #e4e4e7;
+			border-top-color: #52525b;
+		}
+
+		.pagination-btn:disabled {
+			opacity: 0.5;
+			cursor: not-allowed;
+		}
+
+		.pagination-btn:focus {
+			outline: none;
 			border-radius: 6px;
-			font-size: 14px;
+			box-shadow: 0 0 0 2px #0ea5e9;
 		}
 
-		.filters button {
-			padding: 10px 20px;
-			background: #667eea;
-			color: white;
-			border: none;
-			border-radius: 6px;
-			cursor: pointer;
-			font-size: 14px;
-			transition: background 0.3s;
+		html.dark .pagination-btn:focus {
+			box-shadow: 0 0 0 2px #0369a1;
 		}
 
-		.filters button:hover {
-			background: #5568d3;
+		.pagination-info {
+			color: #52525b;
+			font-size: 0.875rem;
+			line-height: 1.25rem;
+			font-weight: 500;
+			padding: 8px 16px;
+			border-top: 2px solid transparent;
 		}
 
-		.events-container {
-			padding: 30px;
+		html.dark .pagination-info {
+			color: #a1a1aa;
 		}
 
-		.events-table {
-			width: 100%;
-			border-collapse: collapse;
-			background: white;
+		.footer-info {
+			position: absolute;
+			bottom: 20px;
+			right: 32px;
+			display: flex;
+			gap: 20px;
+			font-size: 0.75rem;
+			line-height: 1rem;
+			color: #52525b;
 		}
 
-		.events-table th {
-			background: #f8f9fa;
-			padding: 15px;
-			text-align: left;
-			font-weight: 600;
-			color: #333;
-			border-bottom: 2px solid #e0e0e0;
-		}
-
-		.events-table td {
-			padding: 15px;
-			border-bottom: 1px solid #f0f0f0;
-		}
-
-		.events-table tr:hover {
-			background: #f8f9fa;
-		}
-
-		.event-badge {
-			display: inline-block;
-			padding: 4px 12px;
-			border-radius: 12px;
-			font-size: 0.85em;
-			font-weight: 600;
-		}
-
-		.event-tool_call {
-			background: #d4edda;
-			color: #155724;
-		}
-
-		.event-tool_error {
-			background: #f8d7da;
-			color: #721c24;
-		}
-
-		.event-session_start {
-			background: #d1ecf1;
-			color: #0c5460;
-		}
-
-		.event-session_end {
-			background: #d1ecf1;
-			color: #0c5460;
-		}
-
-		.event-custom {
-			background: #fff3cd;
-			color: #856404;
-		}
-
-		.data-preview {
-			font-family: 'Courier New', monospace;
-			font-size: 0.85em;
-			color: #666;
-			max-width: 300px;
-			overflow: hidden;
-			text-overflow: ellipsis;
-			white-space: nowrap;
+		html.dark .footer-info {
+			color: #a1a1aa;
 		}
 
 		.loading {
 			text-align: center;
-			padding: 40px;
-			color: #666;
+			padding: 60px 20px;
+			color: #52525b;
+			font-size: 1rem;
+			line-height: 1.5rem;
+			font-weight: 500;
 		}
 
-		.error {
-			background: #f8d7da;
-			color: #721c24;
-			padding: 15px;
-			border-radius: 6px;
-			margin: 20px 30px;
+		html.dark .loading {
+			color: #a1a1aa;
 		}
 
-		.pagination {
-			display: flex;
-			justify-content: center;
-			align-items: center;
-			gap: 10px;
-			padding: 20px;
+		.error-message {
+			background: #fef2f2;
+			color: #be123c;
+			padding: 16px 20px;
+			border-radius: 8px;
+			margin: 20px 32px;
+			border-left: 4px solid #ef4444;
 		}
 
-		.pagination button {
-			padding: 8px 16px;
-			background: #667eea;
-			color: white;
-			border: none;
-			border-radius: 6px;
-			cursor: pointer;
+		html.dark .error-message {
+			background: rgba(136, 19, 55, 0.4);
+			color: #fb7185;
+			border-color: #fb7185;
 		}
 
-		.pagination button:disabled {
-			background: #ccc;
-			cursor: not-allowed;
+		.empty-state {
+			text-align: center;
+			padding: 60px 20px;
+			color: #52525b;
 		}
 
-		.pagination span {
-			color: #666;
+		html.dark .empty-state {
+			color: #a1a1aa;
+		}
+
+		.empty-state > div:last-child {
+			font-weight: 600;
+			margin-top: 10px;
+		}
+
+		.empty-state-icon {
+			font-size: 3rem;
+			line-height: 1;
+			margin-bottom: 16px;
+			opacity: 0.5;
+		}
+
+		/* Scrollbar styling */
+		.sidebar::-webkit-scrollbar,
+		.logs-table-container::-webkit-scrollbar {
+			width: 8px;
+		}
+
+		.sidebar::-webkit-scrollbar-track,
+		.logs-table-container::-webkit-scrollbar-track {
+			background: var(--bg-secondary);
+		}
+
+		.sidebar::-webkit-scrollbar-thumb,
+		.logs-table-container::-webkit-scrollbar-thumb {
+			background: var(--border-color);
+			border-radius: 4px;
+		}
+
+		.sidebar::-webkit-scrollbar-thumb:hover,
+		.logs-table-container::-webkit-scrollbar-thumb:hover {
+			background: var(--text-secondary);
+		}
+
+		@media (max-width: 1200px) {
+			.header-controls {
+				width: 100%;
+			}
+			.level-filters {
+				width: 100%;
+			}
+			.search-controls {
+				width: 100%;
+			}
+			.search-input {
+				width: 100%;
+			}
 		}
 	</style>
 </head>
 <body>
-	<div class="container">
-		<div class="header">
-			<h1>📊 Telemetry Dashboard</h1>
-			<p>IBM Salesforce Context MCP Server</p>
-		</div>
-
-		<div class="stats-grid" id="statsGrid">
-			<div class="stat-card">
-				<h3 id="totalEvents">-</h3>
-				<p>Total Events</p>
+	<div class="main-container">
+		<div class="header-bar">
+			<div class="header-left">
+				<div class="log-viewer-title">Log Viewer</div>
+				<a href="/" class="back-link text-sm">← Back to Dashboard</a>
 			</div>
-			<div class="stat-card" id="eventTypeStats">
-				<h3>-</h3>
-				<p>Loading...</p>
+			<div class="header-controls">
+				<div class="level-filters">
+					<button class="level-filter-btn level-debug" data-level="tool_call">
+						<input type="checkbox" checked id="filter-tool_call" class="w-[18px] h-[18px] cursor-pointer">
+						<span class="level-icon text-base">🐛</span>
+						<span class="text-sm">Tool Call</span>
+						<span class="level-count text-xs font-bold" id="count-tool_call">0</span>
+					</button>
+					<button class="level-filter-btn level-info" data-level="session_start">
+						<input type="checkbox" checked id="filter-session_start" class="w-[18px] h-[18px] cursor-pointer">
+						<span class="level-icon text-base">ℹ️</span>
+						<span class="text-sm">Session</span>
+						<span class="level-count text-xs font-bold" id="count-session_start">0</span>
+					</button>
+					<button class="level-filter-btn level-warning" data-level="custom">
+						<input type="checkbox" checked id="filter-custom" class="w-[18px] h-[18px] cursor-pointer">
+						<span class="level-icon text-base">⚠️</span>
+						<span class="text-sm">Custom</span>
+						<span class="level-count text-xs font-bold" id="count-custom">0</span>
+					</button>
+					<button class="level-filter-btn level-error" data-level="tool_error">
+						<input type="checkbox" checked id="filter-tool_error" class="w-[18px] h-[18px] cursor-pointer">
+						<span class="level-icon text-base">❌</span>
+						<span class="text-sm">Error</span>
+						<span class="level-count text-xs font-bold" id="count-tool_error">0</span>
+					</button>
+				</div>
+				<div class="search-controls">
+					<input type="text" class="search-input" id="searchInput" placeholder="Search... RegEx welcome!">
+					<select class="control-select" id="sortSelect">
+						<option value="DESC">Newest first</option>
+						<option value="ASC">Oldest first</option>
+					</select>
+					<select class="control-select" id="limitSelect">
+						<option value="25">25 items per page</option>
+						<option value="50" selected>50 items per page</option>
+						<option value="100">100 items per page</option>
+					</select>
+					<button class="icon-btn" onclick="refreshLogs()" title="Refresh">🔄</button>
+					<button class="icon-btn theme-toggle" onclick="toggleTheme()" title="Toggle theme">🌙</button>
+				</div>
 			</div>
 		</div>
 
-		<div class="filters">
-			<select id="eventTypeFilter">
-				<option value="">All Event Types</option>
-			</select>
-			<input type="text" id="serverIdFilter" placeholder="Server ID">
-			<input type="date" id="startDateFilter" placeholder="Start Date">
-			<input type="date" id="endDateFilter" placeholder="End Date">
-			<button onclick="loadEvents()">Apply Filters</button>
-			<button onclick="clearFilters()">Clear</button>
-		</div>
+		<div class="content-wrapper">
+			<div class="sidebar">
+				<div class="sidebar-title">Servers</div>
+				<ul class="server-list list-none" id="serverList">
+					<li class="server-item active" data-server="all">
+						<span class="server-name">All Servers</span>
+						<span class="server-size" id="totalSize">-</span>
+					</li>
+				</ul>
+			</div>
 
-		<div class="events-container">
-			<div id="errorMessage" class="error" style="display: none;"></div>
-			<div id="loadingMessage" class="loading">Loading events...</div>
-			<table class="events-table" id="eventsTable" style="display: none;">
-				<thead>
-					<tr>
-						<th>ID</th>
-						<th>Event</th>
-						<th>Timestamp</th>
-						<th>Server ID</th>
-						<th>Version</th>
-						<th>Data</th>
-						<th>Received At</th>
-					</tr>
-				</thead>
-				<tbody id="eventsBody">
-				</tbody>
-			</table>
-			<div class="pagination" id="pagination" style="display: none;">
-				<button onclick="previousPage()" id="prevBtn">Previous</button>
-				<span id="pageInfo"></span>
-				<button onclick="nextPage()" id="nextBtn">Next</button>
+			<div class="main-content">
+				<div class="logs-table-container">
+					<div id="loadingMessage" class="loading">Loading events...</div>
+					<div id="errorMessage" class="error-message" style="display: none;"></div>
+					<div id="emptyState" class="empty-state" style="display: none;">
+						<div class="empty-state-icon">📭</div>
+						<div class="font-semibold mt-2.5">No events found</div>
+					</div>
+					<table class="logs-table" id="logsTable" style="display: none;">
+						<thead>
+							<tr>
+								<th>Level</th>
+								<th>Time</th>
+								<th>Server</th>
+								<th>Description</th>
+							</tr>
+						</thead>
+						<tbody id="logsBody">
+						</tbody>
+					</table>
+				</div>
+				<div class="pagination" id="pagination" style="display: none;">
+					<button class="pagination-btn" onclick="previousPage()" id="prevBtn">← Previous</button>
+					<span class="pagination-info" id="pageInfo"></span>
+					<button class="pagination-btn" onclick="nextPage()" id="nextBtn">Next →</button>
+				</div>
+				<div class="footer-info">
+					<span class="text-xs">Memory: <span id="memoryInfo" class="font-semibold">-</span></span>
+					<span class="text-xs">Duration: <span id="durationInfo" class="font-semibold">-</span></span>
+					<span class="text-xs">Version: <span class="font-semibold">v1.0.0</span></span>
+				</div>
 			</div>
 		</div>
 	</div>
 
 	<script>
 		let currentOffset = 0;
-		const limit = 50;
+		let limit = 50;
 		let totalEvents = 0;
+		let selectedServer = 'all';
+		let activeFilters = new Set(['tool_call', 'session_start', 'custom', 'tool_error']);
+		let searchQuery = '';
+		let sortOrder = 'DESC';
+		let startTime = performance.now();
 
-		async function loadStats() {
-			try {
-				const response = await fetch('/api/stats');
-				const stats = await response.json();
-				document.getElementById('totalEvents').textContent = stats.total || 0;
-				totalEvents = stats.total || 0;
-			} catch (error) {
-				console.error('Error loading stats:', error);
+		// Theme management - using .dark class like Laravel Log Viewer
+		function initTheme() {
+			const savedTheme = localStorage.getItem('theme') || 'light';
+			if (savedTheme === 'dark') {
+				document.documentElement.classList.add('dark');
+			} else {
+				document.documentElement.classList.remove('dark');
 			}
+			updateThemeIcon(savedTheme);
+		}
+
+		function toggleTheme() {
+			const isDark = document.documentElement.classList.contains('dark');
+			if (isDark) {
+				document.documentElement.classList.remove('dark');
+				localStorage.setItem('theme', 'light');
+				updateThemeIcon('light');
+			} else {
+				document.documentElement.classList.add('dark');
+				localStorage.setItem('theme', 'dark');
+				updateThemeIcon('dark');
+			}
+		}
+
+		function updateThemeIcon(theme) {
+			const iconBtn = document.querySelector('.theme-toggle');
+			if (iconBtn) {
+				iconBtn.textContent = theme === 'dark' ? '☀️' : '🌙';
+			}
+		}
+
+		// Level filter management
+		function setupLevelFilters() {
+			document.querySelectorAll('.level-filter-btn').forEach(btn => {
+				const checkbox = btn.querySelector('input[type="checkbox"]');
+				const level = btn.dataset.level;
+
+				function updateButtonState() {
+					if (checkbox.checked) {
+						btn.classList.add('active');
+						activeFilters.add(level);
+					} else {
+						btn.classList.remove('active');
+						activeFilters.delete(level);
+					}
+				}
+
+				checkbox.addEventListener('change', () => {
+					updateButtonState();
+					currentOffset = 0;
+					loadEvents();
+				});
+
+				btn.addEventListener('click', (e) => {
+					if (e.target !== checkbox) {
+						checkbox.checked = !checkbox.checked;
+						updateButtonState();
+						checkbox.dispatchEvent(new Event('change'));
+					}
+				});
+
+				// Initialize button state
+				updateButtonState();
+			});
 		}
 
 		async function loadEventTypeStats() {
@@ -292,36 +1133,39 @@
 				const response = await fetch('/api/event-types');
 				const stats = await response.json();
 
-				// Populate filter dropdown
-				const filter = document.getElementById('eventTypeFilter');
 				stats.forEach(stat => {
-					const option = document.createElement('option');
-					option.value = stat.event;
-					option.textContent = `${stat.event} (${stat.count})`;
-					filter.appendChild(option);
+					const countEl = document.getElementById(`count-${stat.event}`);
+					if (countEl) {
+						countEl.textContent = stat.count || 0;
+					}
 				});
 
-				// Update stats card
-				if (stats.length > 0) {
-					const topEvent = stats[0];
-					const statsCard = document.getElementById('eventTypeStats');
-					statsCard.querySelector('h3').textContent = topEvent.count;
-					statsCard.querySelector('p').textContent = `Most common: ${topEvent.event}`;
-				}
+				// Update total size
+				const total = stats.reduce((sum, stat) => sum + (stat.count || 0), 0);
+				document.getElementById('totalSize').textContent = formatSize(total);
 			} catch (error) {
 				console.error('Error loading event type stats:', error);
 			}
 		}
 
-		async function loadEvents() {
-			const eventType = document.getElementById('eventTypeFilter').value;
-			const serverId = document.getElementById('serverIdFilter').value;
-			const startDate = document.getElementById('startDateFilter').value;
-			const endDate = document.getElementById('endDateFilter').value;
+		async function loadServers() {
+			try {
+				// For now, we'll just show "All Servers"
+				// In the future, this could fetch unique server IDs
+				const response = await fetch('/api/stats');
+				const stats = await response.json();
+				// Server list can be expanded later
+			} catch (error) {
+				console.error('Error loading servers:', error);
+			}
+		}
 
+		async function loadEvents() {
+			startTime = performance.now();
 			document.getElementById('loadingMessage').style.display = 'block';
-			document.getElementById('eventsTable').style.display = 'none';
+			document.getElementById('logsTable').style.display = 'none';
 			document.getElementById('errorMessage').style.display = 'none';
+			document.getElementById('emptyState').style.display = 'none';
 			document.getElementById('pagination').style.display = 'none';
 
 			try {
@@ -329,24 +1173,37 @@
 					limit: limit.toString(),
 					offset: currentOffset.toString(),
 					orderBy: 'created_at',
-					order: 'DESC'
+					order: sortOrder
 				});
 
-				if (eventType) params.append('eventType', eventType);
-				if (serverId) params.append('serverId', serverId);
-				if (startDate) params.append('startDate', startDate);
-				if (endDate) params.append('endDate', endDate);
+				// Apply level filters
+				if (activeFilters.size > 0 && activeFilters.size < 4) {
+					Array.from(activeFilters).forEach(level => {
+						params.append('eventType', level);
+					});
+				}
+
+				if (selectedServer !== 'all') {
+					params.append('serverId', selectedServer);
+				}
+
+				if (searchQuery) {
+					params.append('search', searchQuery);
+				}
 
 				const response = await fetch(`/api/events?${params}`);
 				const data = await response.json();
 
+				const duration = Math.round(performance.now() - startTime);
+				document.getElementById('durationInfo').textContent = `${duration}ms`;
+
 				if (data.events && data.events.length > 0) {
 					displayEvents(data.events);
 					updatePagination(data);
-					document.getElementById('eventsTable').style.display = 'table';
+					document.getElementById('logsTable').style.display = 'table';
 					document.getElementById('pagination').style.display = 'flex';
 				} else {
-					document.getElementById('loadingMessage').textContent = 'No events found';
+					document.getElementById('emptyState').style.display = 'block';
 				}
 			} catch (error) {
 				console.error('Error loading events:', error);
@@ -358,24 +1215,83 @@
 		}
 
 		function displayEvents(events) {
-			const tbody = document.getElementById('eventsBody');
+			const tbody = document.getElementById('logsBody');
 			tbody.innerHTML = '';
 
 			events.forEach(event => {
 				const row = document.createElement('tr');
-				const eventClass = `event-${event.event.replace('_', '-')}`;
+				const levelClass = getLevelClass(event.event);
+				const levelIcon = getLevelIcon(event.event);
+				const description = formatDescription(event);
 
+				row.className = `log-item-${levelClass}`;
 				row.innerHTML = `
-					<td>${event.id}</td>
-					<td><span class="event-badge ${eventClass}">${event.event}</span></td>
-					<td>${formatDate(event.timestamp)}</td>
+					<td>
+						<span class="level-badge ${levelClass}">
+							<span class="level-badge-icon">${levelIcon}</span>
+							${event.event.replace('_', ' ')}
+						</span>
+					</td>
+					<td class="log-time">${formatDate(event.timestamp)}</td>
 					<td>${event.server_id || '-'}</td>
-					<td>${event.version || '-'}</td>
-					<td class="data-preview" title="${JSON.stringify(event.data)}">${JSON.stringify(event.data).substring(0, 50)}...</td>
-					<td>${formatDate(event.received_at)}</td>
+					<td class="log-description">${description}</td>
 				`;
 				tbody.appendChild(row);
 			});
+		}
+
+		function getLevelClass(eventType) {
+			const levelMap = {
+				'tool_call': 'debug',
+				'session_start': 'info',
+				'session_end': 'info',
+				'tool_error': 'error',
+				'error': 'error',
+				'custom': 'warning'
+			};
+			return levelMap[eventType] || 'info';
+		}
+
+		function getLevelIcon(eventType) {
+			const iconMap = {
+				'tool_call': '🐛',
+				'session_start': 'ℹ️',
+				'session_end': 'ℹ️',
+				'tool_error': '❌',
+				'error': '❌',
+				'custom': '⚠️'
+			};
+			return iconMap[eventType] || 'ℹ️';
+		}
+
+		function formatDescription(event) {
+			if (event.data) {
+				const dataStr = JSON.stringify(event.data, null, 2);
+				if (dataStr.length > 200) {
+					return dataStr.substring(0, 200) + '...';
+				}
+				return dataStr;
+			}
+			return '-';
+		}
+
+		function formatDate(dateString) {
+			if (!dateString) return '-';
+			const date = new Date(dateString);
+			return date.toLocaleString('en-US', {
+				year: 'numeric',
+				month: '2-digit',
+				day: '2-digit',
+				hour: '2-digit',
+				minute: '2-digit',
+				second: '2-digit'
+			});
+		}
+
+		function formatSize(bytes) {
+			if (bytes < 1024) return bytes + ' B';
+			if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
+			return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
 		}
 
 		function updatePagination(data) {
@@ -400,29 +1316,57 @@
 			loadEvents();
 		}
 
-		function clearFilters() {
-			document.getElementById('eventTypeFilter').value = '';
-			document.getElementById('serverIdFilter').value = '';
-			document.getElementById('startDateFilter').value = '';
-			document.getElementById('endDateFilter').value = '';
+		function refreshLogs() {
 			currentOffset = 0;
+			loadEventTypeStats();
 			loadEvents();
 		}
 
-		function formatDate(dateString) {
-			if (!dateString) return '-';
-			const date = new Date(dateString);
-			return date.toLocaleString();
-		}
+		// Search with debounce
+		let searchDebounceTimer;
+		document.getElementById('searchInput').addEventListener('input', (e) => {
+			clearTimeout(searchDebounceTimer);
+			searchDebounceTimer = setTimeout(() => {
+				searchQuery = e.target.value;
+				currentOffset = 0;
+				loadEvents();
+			}, 500);
+		});
 
-		// Load data on page load
-		loadStats();
+		// Sort order change
+		document.getElementById('sortSelect').addEventListener('change', (e) => {
+			sortOrder = e.target.value;
+			currentOffset = 0;
+			loadEvents();
+		});
+
+		// Limit change
+		document.getElementById('limitSelect').addEventListener('change', (e) => {
+			limit = parseInt(e.target.value);
+			currentOffset = 0;
+			loadEvents();
+		});
+
+		// Server selection
+		document.querySelectorAll('.server-item').forEach(item => {
+			item.addEventListener('click', () => {
+				document.querySelectorAll('.server-item').forEach(i => i.classList.remove('active'));
+				item.classList.add('active');
+				selectedServer = item.dataset.server;
+				currentOffset = 0;
+				loadEvents();
+			});
+		});
+
+		// Initialize
+		initTheme();
+		setupLevelFilters();
 		loadEventTypeStats();
+		loadServers();
 		loadEvents();
 
 		// Auto-refresh every 30 seconds
 		setInterval(() => {
-			loadStats();
 			loadEventTypeStats();
 			if (currentOffset === 0) {
 				loadEvents();

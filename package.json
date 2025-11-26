@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "prestart": "lsof -ti :3100 | xargs kill -9 2>/dev/null || true",
     "start": "node index.js"
   },
   "keywords": [],
@@ -12,6 +13,7 @@
   "type": "commonjs",
   "dependencies": {
     "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
     "better-sqlite3": "^12.4.6",
     "cors": "^2.8.5",
     "express": "^5.1.0"

@@ -318,6 +318,25 @@ async function getEventTypeStats() {
 }
 
 /**
+ * Delete all events from the database
+ * @returns {Promise<number>} Number of deleted events
+ */
+async function deleteAllEvents() {
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
+
+	if (dbType === 'sqlite') {
+		const stmt = db.prepare('DELETE FROM telemetry_events');
+		const result = stmt.run();
+		return result.changes;
+	} else if (dbType === 'postgresql') {
+		const result = await db.query('DELETE FROM telemetry_events');
+		return result.rowCount;
+	}
+}
+
+/**
  * Close database connection
  */
 async function close() {
@@ -337,5 +356,6 @@ module.exports = {
 	getStats,
 	getEvents,
 	getEventTypeStats,
+	deleteAllEvents,
 	close
 };

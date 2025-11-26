@@ -15,7 +15,7 @@ npm install
 npm start
 
 # Test the server
-curl http://localhost:3000/
+curl http://localhost:3100/
 ```
 
 ## Overview
@@ -34,6 +34,7 @@ This telemetry server receives telemetry events from IBM Salesforce Context MCP 
 │   ├── INTEGRATION.md     # Integration guide for MCP servers
 │   ├── API_SPECIFICATION.md # Complete API documentation
 │   ├── DATABASE.md        # Database configuration guide
+│   ├── LOG_FORMATS.md     # Standard log formats documentation
 │   └── AGENTS.md          # Instructions for AI agents
 ├── examples/               # Code examples
 │   └── telemetry-client.js # Reference telemetry client
@@ -50,6 +51,8 @@ This telemetry server receives telemetry events from IBM Salesforce Context MCP 
 * **Telemetry Collection**: Receives telemetry events via REST API
 * **Web Dashboard**: Beautiful web interface to view and analyze telemetry data
 * **Database Storage**: Stores events in SQLite (default) or PostgreSQL
+* **Standard Log Format**: Export logs in JSON Lines (JSONL) format - the industry standard
+* **Third-Party Integration**: Compatible with ELK Stack, Splunk, Datadog, Grafana Loki, BigQuery, and more
 * **Health Monitoring**: Provides health check endpoints for monitoring
 * **Scalable Architecture**: Built with Express.js for easy deployment
 * **Privacy-First**: Designed with data privacy and security in mind
@@ -116,6 +119,44 @@ Serves the JSON Schema for validation.
 
 **Response:**
 JSON Schema object
+
+### GET `/api/export/logs`
+
+Exports telemetry events in JSON Lines (JSONL) format - the industry standard for structured logging.
+
+**Query Parameters:**
+- `startDate` - Filter events from this date (ISO 8601 or YYYY-MM-DD)
+- `endDate` - Filter events until this date (ISO 8601 or YYYY-MM-DD)
+- `eventType` - Filter by event type
+- `serverId` - Filter by server ID
+- `limit` (default: 10000) - Maximum number of events to export
+
+**Format:**
+JSON Lines (JSONL) - Each line is a valid JSON object. This format is compatible with:
+- ELK Stack (Elasticsearch, Logstash, Kibana)
+- Splunk Enterprise/Cloud
+- Datadog
+- AWS CloudWatch
+- Grafana Loki
+- Google BigQuery
+- MongoDB
+- PostgreSQL
+- Apache Kafka
+- And many other tools
+
+**Example:**
+```bash
+# Export all logs
+curl "http://localhost:3100/api/export/logs" -o logs.jsonl
+
+# Export with filters
+curl "http://localhost:3100/api/export/logs?startDate=2024-01-01&eventType=tool_call" -o logs.jsonl
+```
+
+**Response:**
+Returns a downloadable JSONL file (Content-Type: `application/x-ndjson`)
+
+For detailed information about JSON Lines format and integration with third-party tools, see [LOG_FORMATS.md](./docs/LOG_FORMATS.md).
 
 ### GET `/api/events`
 
@@ -189,13 +230,13 @@ npm install
 npm start
 ```
 
-The server will start on port 3000 by default, or the port specified in the `PORT` environment variable.
+The server will start on port 3100 by default, or the port specified in the `PORT` environment variable.
 
 ### Environment Variables
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `PORT` | Server port | `3000` |
+| `PORT` | Server port | `3100` |
 | `DB_TYPE` | Database type (`sqlite` or `postgresql`) | `sqlite` |
 | `DB_PATH` | Path to SQLite database file (SQLite only) | `./data/telemetry.db` |
 | `DATABASE_URL` | PostgreSQL connection string (PostgreSQL only) | - |

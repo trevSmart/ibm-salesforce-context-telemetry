@@ -1,16 +1,19 @@
 const express = require('express');
 const cors = require('cors');
 const Ajv = require('ajv');
+const addFormats = require('ajv-formats');
 const fs = require('fs');
 const path = require('path');
 const db = require('./storage/database');
+const logFormatter = require('./storage/log-formatter');
 const app = express();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 3100;
 
 // Load and compile JSON schema for validation
 const schemaPath = path.join(__dirname, 'api', 'telemetry-schema.json');
 const schema = JSON.parse(fs.readFileSync(schemaPath, 'utf8'));
 const ajv = new Ajv({ allErrors: true, strict: false }); // strict: false allows additional properties in 'data'
+addFormats(ajv); // Add support for date-time and other formats
 const validate = ajv.compile(schema);
 
 // Middleware
@@ -161,6 +164,64 @@ app.get('/schema', (_req, res) => {
 	res.json(schema);
 });
 
+// Export logs in JSON Lines (JSONL) format
+app.get('/api/export/logs', async (req, res) => {
+	try {
+		const {
+			startDate,
+			endDate,
+			eventType,
+			serverId,
+			limit = 10000
+		} = req.query;
+
+		// Get events from database
+		const result = await db.getEvents({
+			limit: parseInt(limit),
+			offset: 0,
+			eventType,
+			serverId,
+			startDate,
+			endDate,
+			orderBy: 'created_at',
+			order: 'ASC'
+		});
+
+		// Format events as JSON Lines (JSONL)
+		const formattedLogs = logFormatter.formatEvents(result.events);
+
+		const filename = `telemetry-logs-${new Date().toISOString().split('T')[0]}.jsonl`;
+
+		res.setHeader('Content-Type', 'application/x-ndjson');
+		res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+		res.send(formattedLogs);
+	} catch (error) {
+		console.error('Error exporting logs:', error);
+		res.status(500).json({
+			status: 'error',
+			message: 'Failed to export logs'
+		});
+	}
+});
+
+// Delete all events from database
+app.delete('/api/events', async (req, res) => {
+	try {
+		const deletedCount = await db.deleteAllEvents();
+		res.json({
+			status: 'ok',
+			message: `Successfully deleted ${deletedCount} events`,
+			deletedCount
+		});
+	} catch (error) {
+		console.error('Error deleting events:', error);
+		res.status(500).json({
+			status: 'error',
+			message: 'Failed to delete events'
+		});
+	}
+});
+
 // Initialize database and start server
 async function startServer() {
 	try {
@@ -168,7 +229,15 @@ async function startServer() {
 		console.log('Database initialized successfully');
 
 		app.listen(port, () => {
-			console.log(`Telemetry server listening on port ${port}`);
+			console.log('\n' + '='.repeat(60));
+			console.log('✅ Telemetry server is running!');
+			console.log('='.repeat(60));
+			console.log(`🌐 Server URL: http://localhost:${port}`);
+			console.log(`📊 Dashboard:  http://localhost:${port}/`);
+			console.log(`❤️  Health:     http://localhost:${port}/health`);
+			console.log(`📡 API:        http://localhost:${port}/api/events`);
+			console.log(`📋 Schema:     http://localhost:${port}/schema`);
+			console.log('='.repeat(60) + '\n');
 		});
 	} catch (error) {
 		console.error('Failed to initialize database:', error);

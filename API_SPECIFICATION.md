@@ -4,15 +4,15 @@ Aquesta documentació especifica l'API del servidor de telemetria per a l'equip 
 
 ## 📋 Especificacions Disponibles
 
-- **OpenAPI/Swagger**: [`../api/api-spec.yaml`](../api/api-spec.yaml) - Especificació completa en format OpenAPI 3.0
-- **JSON Schema**: [`../api/telemetry-schema.json`](../api/telemetry-schema.json) - Schema JSON per validació de dades
+- **OpenAPI/Swagger**: [`api-spec.yaml`](./api-spec.yaml) - Especificació completa en format OpenAPI 3.0
+- **JSON Schema**: [`telemetry-schema.json`](./telemetry-schema.json) - Schema JSON per validació de dades
 
 ## 🔗 Endpoints
 
 ### Base URL
 
 - **Production**: `https://ibm-salesforce-context-telemetry.onrender.com`
-- **Development**: `http://localhost:3100`
+- **Development**: `http://localhost:3000`
 
 ## 📤 POST /telemetry
 
@@ -202,7 +202,7 @@ Sirve el JSON Schema para validación.
 
 ## ✅ Validación
 
-El servidor valida automáticamente todas las peticiones usando el JSON Schema definido en [`../api/telemetry-schema.json`](../api/telemetry-schema.json).
+El servidor valida automáticamente todas las peticiones usando el JSON Schema definido en [`telemetry-schema.json`](./telemetry-schema.json).
 
 ### Validaciones Realizadas
 
@@ -302,9 +302,9 @@ console.log(result); // { status: 'ok', receivedAt: '...' }
 
 ## 📚 Recursos Adicionales
 
-- **OpenAPI Spec**: Visualiza la especificación completa en [Swagger Editor](https://editor.swagger.io/) o importa [`../api/api-spec.yaml`](../api/api-spec.yaml)
-- **JSON Schema**: Usa [`../api/telemetry-schema.json`](../api/telemetry-schema.json) para validación programática
-- **Ejemplo de Cliente**: Ver [`../examples/telemetry-client.js`](../examples/telemetry-client.js)
+- **OpenAPI Spec**: Visualiza la especificación completa en [Swagger Editor](https://editor.swagger.io/) o importa `api-spec.yaml`
+- **JSON Schema**: Usa `telemetry-schema.json` para validación programática
+- **Ejemplo de Cliente**: Ver [`examples/telemetry-client.js`](./examples/telemetry-client.js)
 - **Guía de Integración**: Ver [`INTEGRATION.md`](./INTEGRATION.md)
 
 ## 🔄 Versionado
@@ -315,4 +315,4 @@ La API actual es la versión **1.0.0**. Cualquier cambio breaking será versiona
 
 Para preguntas o problemas con la integración, consulta:
 - [INTEGRATION.md](./INTEGRATION.md) - Guía completa de integración
-- [../examples/telemetry-client.js](../examples/telemetry-client.js) - Implementación de referencia
+- [examples/telemetry-client.js](./examples/telemetry-client.js) - Implementación de referencia

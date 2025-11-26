@@ -262,7 +262,7 @@ curl -X POST https://ibm-salesforce-context-telemetry.onrender.com/telemetry \
 Si tens el servidor de telemetria corrent localment:
 
 ```bash
-curl -X POST http://localhost:3100/telemetry \
+curl -X POST http://localhost:3000/telemetry \
   -H "Content-Type: application/json" \
   -d '{
     "event": "test",

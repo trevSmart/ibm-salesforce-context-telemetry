@@ -33,7 +33,7 @@ npm start
 
 Hauries de veure un missatge com:
 ```
-Telemetry server listening on port 3100
+Telemetry server listening on port 3000
 ```
 
 ### Provar que funciona
@@ -42,21 +42,21 @@ Obre una altra terminal i prova els endpoints:
 
 **1. Provar l'endpoint principal:**
 ```bash
-curl http://localhost:3100/
+curl http://localhost:3000/
 ```
 
 Hauries de veure: `MCP Telemetry server is running ✅`
 
 **2. Provar l'endpoint de health:**
 ```bash
-curl http://localhost:3100/health
+curl http://localhost:3000/health
 ```
 
 Hauries de veure: `ok`
 
 **3. Provar l'endpoint de telemetria (POST):**
 ```bash
-curl -X POST http://localhost:3100/telemetry \
+curl -X POST http://localhost:3000/telemetry \
   -H "Content-Type: application/json" \
   -d '{"event":"test","timestamp":"2024-01-15T10:30:00.000Z"}'
 ```
@@ -102,7 +102,7 @@ Omple aquests camps:
 
 Si vols canviar el port, afegeix una variable d'entorn:
 - **Key**: `PORT`
-- **Value**: `3100` (o el port que vulguis)
+- **Value**: `3000` (o el port que vulguis)
 
 ### 3.5. Desplegar
 
@@ -157,11 +157,11 @@ pm2 stop index.js  # Aturar
 
 ### Error: "Port already in use"
 
-Si el port 3100 està ocupat:
+Si el port 3000 està ocupat:
 
 1. Troba quin procés l'està usant:
    ```bash
-   lsof -i :3100
+   lsof -i :3000
    ```
 2. Mata el procés o canvia el port:
    ```bash
