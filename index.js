@@ -17,6 +17,10 @@ app.get('/health', (_req, res) => {
 	res.status(200).send('ok');
 });
 
+app.get('/', (_req, res) => {
+	res.status(200).send('MCP Telemetry server is running ✅');
+});
+
 app.listen(port, () => {
 	console.log(`Telemetry server listening on port ${port}`);
 });
