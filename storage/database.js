@@ -397,8 +397,9 @@ async function getSessions() {
 			if (row.session_start_data) {
 				try {
 					const data = JSON.parse(row.session_start_data);
-					if (data && data.user && data.user.name) {
-						user_name = data.user.name;
+					// Try multiple paths: userName (camelCase), user_name (snake_case), or data.user.name (nested)
+					if (data) {
+						user_name = data.userName || data.user_name || (data.user && data.user.name) || null;
 					}
 				} catch (e) {
 					// If parsing fails, ignore and use user_id
@@ -438,8 +439,9 @@ async function getSessions() {
 					const data = typeof row.session_start_data === 'string'
 						? JSON.parse(row.session_start_data)
 						: row.session_start_data;
-					if (data && data.user && data.user.name) {
-						user_name = data.user.name;
+					// Try multiple paths: userName (camelCase), user_name (snake_case), or data.user.name (nested)
+					if (data) {
+						user_name = data.userName || data.user_name || (data.user && data.user.name) || null;
 					}
 				} catch (e) {
 					// If parsing fails, ignore and use user_id
