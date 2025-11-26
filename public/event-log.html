@@ -5,7 +5,7 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>Telemetry Log Viewer - IBM Salesforce Context</title>
 	<link href="/css/output.css" rel="stylesheet">
-	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+	<script src="https://kit.fontawesome.com/3991db92c8.js" crossorigin="anonymous"></script>
 	<style>
 		:root {
 			/* Light mode colors - matching Laravel Log Viewer */
@@ -638,7 +638,7 @@
 		}
 
 		.sidebar {
-			width: 280px;
+			width: 310px;
 			background: transparent;
 			border-right: none;
 			overflow: hidden;
@@ -710,6 +710,11 @@
 			justify-content: space-between;
 			background: white;
 			border: 2px solid transparent;
+			position: relative;
+		}
+
+		.server-item:hover .server-item-actions {
+			z-index: 1001;
 		}
 
 		.server-item:hover {
@@ -762,6 +767,9 @@
 			flex: 1;
 			font-weight: 500;
 			transition: color 0.2s ease, font-weight 0.2s ease;
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
 		}
 
 		html.dark .server-name {
@@ -795,6 +803,24 @@
 
 		html.dark .server-size {
 			color: #a1a1aa;
+		}
+
+		.server-item-actions {
+			position: relative;
+			margin-left: 8px;
+			z-index: 10;
+		}
+
+		.server-item-actions .actions-dropdown {
+			z-index: 1000;
+		}
+
+		.server-item .server-item-actions .actions-dropdown.show {
+			z-index: 10000;
+		}
+
+		.server-item.dropdown-open {
+			z-index: 100;
 		}
 
 		.session-active-indicator {
@@ -1049,16 +1075,137 @@
 		}
 
 		.log-description {
-			font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-			max-width: 600px;
+			font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
+			font-size: 0.75rem;
+			line-height: 1.4;
+			max-width: 800px;
 			overflow: hidden;
 			text-overflow: ellipsis;
 			white-space: nowrap;
 			color: #71717a;
+			padding: 4px 0;
 		}
 
 		html.dark .log-description {
-			color: #8c8c8c;
+			color: #a1a1aa;
+		}
+
+		.expand-btn {
+			background: transparent;
+			border: none;
+			cursor: pointer;
+			padding: 4px 8px;
+			border-radius: 4px;
+			color: #a1a1aa;
+			font-size: 0.75rem;
+			transition: background-color 0.2s ease, color 0.2s ease, transform 0.15s ease;
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+		}
+
+		.expand-btn i {
+			transition: transform 0.1s ease;
+		}
+
+		.expand-btn.expanded i {
+			transform: rotate(90deg);
+		}
+
+		.expand-btn:hover {
+			background: var(--hover-bg);
+			color: var(--text-primary);
+			transform: scale(1.1);
+		}
+
+		html.dark .expand-btn {
+			color: #71717a;
+		}
+
+		html.dark .expand-btn:hover {
+			color: #e4e4e7;
+		}
+
+		.log-item-expanded {
+			background: var(--bg-secondary) !important;
+			display: table-row;
+			transform: scaleY(0);
+			transform-origin: top;
+			height: 0;
+			overflow: hidden;
+			transition: transform 0.26s ease-out, height 0.26s ease-out;
+		}
+
+		.log-item-expanded.expanded {
+			transform: scaleY(1);
+			height: auto;
+			transition: transform 0.34s cubic-bezier(0.25, 0.46, 0.45, 0.94), height 0.34s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+		}
+
+		html.dark .log-item-expanded {
+			background: #18181b !important;
+		}
+
+		.log-item-expanded td {
+			padding: 0 !important;
+			border: none !important;
+		}
+
+		.log-item-expanded.expanded .log-description-expanded {
+			padding: 12px 16px !important;
+			font-size: 0.75rem !important;
+		}
+
+		.log-description-expanded {
+			padding: 0 !important;
+			border-top: 1px solid transparent;
+			max-height: 0;
+			overflow: hidden;
+			opacity: 0;
+			transition: max-height 0.26s ease-out, opacity 0.2s ease-out, padding 0.26s ease-out, border-color 0.2s ease-out, font-size 0.26s ease-out;
+		}
+
+		.log-item-expanded.expanded .log-description-expanded {
+			max-height: 5000px;
+			opacity: 1;
+			padding: 12px 16px !important;
+			border-top-color: var(--border-color);
+			transition: max-height 0.34s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94), padding 0.34s cubic-bezier(0.25, 0.46, 0.45, 0.94), border-color 0.2s ease-in, font-size 0.34s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+		}
+
+		.log-item-expanded .json-pretty {
+			margin: 0;
+			padding: 0;
+			height: 0;
+			line-height: 0;
+			font-size: 0;
+			opacity: 0;
+			overflow: hidden;
+			transition: height 0.26s ease-out, line-height 0.26s ease-out, font-size 0.26s ease-out, padding 0.26s ease-out, opacity 0.2s ease-out;
+		}
+
+		.log-item-expanded.expanded .json-pretty {
+			height: auto;
+			line-height: 1.6;
+			font-size: 0.75rem;
+			opacity: 1;
+			padding: 0;
+			transition: height 0.34s cubic-bezier(0.25, 0.46, 0.45, 0.94), line-height 0.34s cubic-bezier(0.25, 0.46, 0.45, 0.94), font-size 0.34s cubic-bezier(0.25, 0.46, 0.45, 0.94), padding 0.34s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+		}
+
+		.json-pretty {
+			font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
+			line-height: 1.6;
+			color: var(--text-primary);
+			margin: 0;
+			padding: 0;
+			white-space: pre-wrap;
+			word-break: break-word;
+			overflow-x: auto;
+		}
+
+		html.dark .json-pretty {
+			color: #e4e4e7;
 		}
 
 		.status-indicator {
@@ -1447,6 +1594,7 @@
 								<thead>
 									<tr>
 										<th style="width: 40px;"></th>
+										<th style="width: 40px;"></th>
 										<th>Time</th>
 										<th style="width: 130px;">Event</th>
 										<th>Description</th>
@@ -1658,9 +1806,28 @@
 							<span class="server-name text-sm">${sessionDisplay}</span>
 						</div>
 						<span class="server-size text-xs">${session.count || 0}</span>
+						<div class="server-item-actions">
+							<button class="actions-btn" onclick="event.stopPropagation(); toggleSessionActionsDropdown(event, '${session.session_id}')" title="Actions">
+								<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+									<circle cx="8" cy="3" r="1.5"/>
+									<circle cx="8" cy="8" r="1.5"/>
+									<circle cx="8" cy="13" r="1.5"/>
+								</svg>
+							</button>
+							<div class="actions-dropdown" id="session-dropdown-${session.session_id}">
+								<div class="actions-dropdown-item delete" onclick="event.stopPropagation(); confirmDeleteSession('${session.session_id}')">
+									<span>🗑️</span>
+									<span>Eliminar</span>
+								</div>
+							</div>
+						</div>
 					`;
 
-						li.addEventListener('click', () => {
+						li.addEventListener('click', (e) => {
+							// Don't activate session if clicking on actions button
+							if (e.target.closest('.server-item-actions')) {
+								return;
+							}
 							document.querySelectorAll('.server-item').forEach(i => i.classList.remove('active'));
 							li.classList.add('active');
 							selectedSession = session.session_id;
@@ -1760,41 +1927,67 @@
 			tbody.innerHTML = '';
 
 			events.forEach(event => {
-				const row = document.createElement('tr');
 				const levelClass = getLevelClass(event.event);
 				const description = formatDescription(event);
+				const descriptionPretty = formatDescriptionPretty(event);
 				const isError = event.event === 'tool_error' || event.event === 'error';
 				const statusClass = isError ? 'ko' : 'ok';
 
-			row.className = `log-item-${levelClass}`;
-			row.innerHTML = `
-				<td style="text-align: center; padding: 2px 8px;">
-					<span class="status-indicator ${statusClass}" title="${isError ? 'Error' : 'OK'}"></span>
-				</td>
-				<td class="log-time">${formatDate(event.timestamp)}</td>
-				<td>
-					<span class="level-badge ${levelClass}">
-						${event.event.replace('_', ' ')}
-					</span>
-				</td>
-				<td class="log-description">${description}</td>
-				<td class="actions-cell">
-					<button class="actions-btn" onclick="toggleActionsDropdown(event, ${event.id})" title="Actions">
-						<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-							<circle cx="8" cy="3" r="1.5"/>
-							<circle cx="8" cy="8" r="1.5"/>
-							<circle cx="8" cy="13" r="1.5"/>
-						</svg>
-					</button>
-					<div class="actions-dropdown" id="dropdown-${event.id}">
-						<div class="actions-dropdown-item delete" onclick="confirmDeleteEvent(${event.id})">
-							<span>🗑️</span>
-							<span>Eliminar</span>
+				// Main row
+				const row = document.createElement('tr');
+				row.className = `log-item-${levelClass}`;
+				row.setAttribute('data-event-id', event.id);
+				row.innerHTML = `
+					<td style="text-align: center; padding: 2px 8px;">
+						<button class="expand-btn" id="expand-btn-${event.id}" onclick="toggleRowExpand(${event.id})" title="Expand/Collapse">
+							<i class="fa-solid fa-chevron-right"></i>
+						</button>
+					</td>
+					<td style="text-align: center; padding: 2px 8px;">
+						<span class="status-indicator ${statusClass}" title="${isError ? 'Error' : 'OK'}"></span>
+					</td>
+					<td class="log-time">${formatDate(event.timestamp)}</td>
+					<td>
+						<span class="level-badge ${levelClass}">
+							${event.event.replace('_', ' ')}
+						</span>
+					</td>
+					<td class="log-description">${description}</td>
+					<td class="actions-cell">
+						<button class="actions-btn" onclick="toggleActionsDropdown(event, ${event.id})" title="Actions">
+							<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+								<circle cx="8" cy="3" r="1.5"/>
+								<circle cx="8" cy="8" r="1.5"/>
+								<circle cx="8" cy="13" r="1.5"/>
+							</svg>
+						</button>
+						<div class="actions-dropdown" id="dropdown-${event.id}">
+							<div class="actions-dropdown-item delete" onclick="confirmDeleteEvent(${event.id})">
+								<span>🗑️</span>
+								<span>Eliminar</span>
+							</div>
 						</div>
-					</div>
-				</td>
-			`;
+					</td>
+				`;
 				tbody.appendChild(row);
+
+				// Expanded row
+				const expandedRow = document.createElement('tr');
+				expandedRow.className = `log-item-expanded log-item-${levelClass}`;
+				expandedRow.id = `expanded-${event.id}`;
+
+				const expandedTd = document.createElement('td');
+				expandedTd.colSpan = 5;
+				expandedTd.className = 'log-description-expanded';
+
+				const pre = document.createElement('pre');
+				pre.className = 'json-pretty';
+				pre.textContent = descriptionPretty;
+
+				expandedTd.appendChild(pre);
+				expandedRow.appendChild(document.createElement('td')); // Empty first cell
+				expandedRow.appendChild(expandedTd);
+				tbody.appendChild(expandedRow);
 			});
 		}
 
@@ -1823,11 +2016,67 @@
 		}
 
 		function formatDescription(event) {
-			if (event.data) {
-				const dataStr = JSON.stringify(event.data);
-				return dataStr;
+			// Reconstruct the full payload as it was received
+			const payload = {
+				event: event.event,
+				timestamp: event.timestamp,
+				serverId: event.server_id || null,
+				version: event.version || null,
+				sessionId: event.session_id || null,
+				userId: event.user_id || null,
+				data: event.data || {}
+			};
+
+			// Remove null values to keep the JSON clean
+			Object.keys(payload).forEach(key => {
+				if (payload[key] === null) {
+					delete payload[key];
+				}
+			});
+
+			// Return as single line JSON (no indentation)
+			return JSON.stringify(payload);
+		}
+
+		function formatDescriptionPretty(event) {
+			// Reconstruct the full payload as it was received
+			const payload = {
+				event: event.event,
+				timestamp: event.timestamp,
+				serverId: event.server_id || null,
+				version: event.version || null,
+				sessionId: event.session_id || null,
+				userId: event.user_id || null,
+				data: event.data || {}
+			};
+
+			// Remove null values to keep the JSON clean
+			Object.keys(payload).forEach(key => {
+				if (payload[key] === null) {
+					delete payload[key];
+				}
+			});
+
+			// Return as pretty formatted JSON (with indentation)
+			return JSON.stringify(payload, null, 2);
+		}
+
+		function toggleRowExpand(eventId) {
+			const expandedRow = document.getElementById(`expanded-${eventId}`);
+			const mainRow = document.querySelector(`tr[data-event-id="${eventId}"]`);
+			const expandBtn = document.getElementById(`expand-btn-${eventId}`);
+
+			if (expandedRow.classList.contains('expanded')) {
+				// Collapse
+				expandedRow.classList.remove('expanded');
+				expandBtn.classList.remove('expanded');
+				mainRow.classList.remove('expanded');
+			} else {
+				// Expand
+				expandedRow.classList.add('expanded');
+				expandBtn.classList.add('expanded');
+				mainRow.classList.add('expanded');
 			}
-			return '-';
 		}
 
 		function formatDate(dateString) {
@@ -1966,9 +2215,12 @@
 
 		// Close dropdowns when clicking outside
 		document.addEventListener('click', (e) => {
-			if (!e.target.closest('.actions-cell')) {
+			if (!e.target.closest('.actions-cell') && !e.target.closest('.server-item-actions')) {
 				document.querySelectorAll('.actions-dropdown').forEach(dropdown => {
 					dropdown.classList.remove('show');
+				});
+				document.querySelectorAll('.server-item').forEach(item => {
+					item.classList.remove('dropdown-open');
 				});
 			}
 		});
@@ -1986,6 +2238,29 @@
 			// Toggle this dropdown
 			if (!isShowing) {
 				dropdown.classList.add('show');
+			}
+		}
+
+		function toggleSessionActionsDropdown(e, sessionId) {
+			e.stopPropagation();
+			const dropdown = document.getElementById(`session-dropdown-${sessionId}`);
+			const isShowing = dropdown.classList.contains('show');
+			const serverItem = dropdown.closest('.server-item');
+
+			// Close all other dropdowns and remove their classes
+			document.querySelectorAll('.actions-dropdown').forEach(d => {
+				d.classList.remove('show');
+			});
+			document.querySelectorAll('.server-item').forEach(item => {
+				item.classList.remove('dropdown-open');
+			});
+
+			// Toggle this dropdown
+			if (!isShowing) {
+				dropdown.classList.add('show');
+				if (serverItem) {
+					serverItem.classList.add('dropdown-open');
+				}
 			}
 		}
 
@@ -2019,6 +2294,56 @@
 			} catch (error) {
 				console.error('Error deleting event:', error);
 				alert('Error eliminant l\'event: ' + error.message);
+			}
+		}
+
+		function confirmDeleteSession(sessionId) {
+			const confirmed = confirm('Estàs segur que vols eliminar tots els events d\'aquesta sessió? Aquesta acció no es pot desfer.');
+			if (confirmed) {
+				deleteSession(sessionId);
+			}
+		}
+
+		async function deleteSession(sessionId) {
+			try {
+				const response = await fetch(`/api/events?sessionId=${sessionId}`, {
+					method: 'DELETE'
+				});
+
+				if (!response.ok) {
+					const data = await response.json();
+					throw new Error(data.message || `HTTP error! status: ${response.status}`);
+				}
+
+				const data = await response.json();
+
+				// Close dropdown
+				document.querySelectorAll('.actions-dropdown').forEach(d => {
+					d.classList.remove('show');
+				});
+				document.querySelectorAll('.server-item').forEach(item => {
+					item.classList.remove('dropdown-open');
+				});
+
+				// If we were viewing this session, switch to "all"
+				if (selectedSession === sessionId) {
+					selectedSession = 'all';
+					document.querySelectorAll('.server-item').forEach(i => i.classList.remove('active'));
+					const allSessionsItem = document.querySelector('[data-session="all"]');
+					if (allSessionsItem) {
+						allSessionsItem.classList.add('active');
+					}
+					sortOrder = 'DESC';
+					document.getElementById('sortSelect').value = 'DESC';
+				}
+
+				// Refresh the view
+				loadEventTypeStats();
+				loadSessions();
+				loadEvents();
+			} catch (error) {
+				console.error('Error deleting session:', error);
+				alert('Error eliminant la sessió: ' + error.message);
 			}
 		}
 
