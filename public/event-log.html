@@ -846,22 +846,10 @@
 			background-color: #10b981;
 			margin-right: 8px;
 			flex-shrink: 0;
-			box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
-			animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-		}
-
-		@keyframes pulse {
-			0%, 100% {
-				opacity: 1;
-			}
-			50% {
-				opacity: 0.7;
-			}
 		}
 
 		html.dark .session-active-indicator {
 			background-color: #10b981;
-			box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.3);
 		}
 
 		.main-content {
@@ -1008,7 +996,7 @@
 			font-weight: 600;
 			color: #52525b;
 			border-bottom: 2px solid #f4f4f5;
-			font-size: 0.8125rem;
+			font-size: 0.84375rem;
 			line-height: 1;
 			letter-spacing: 0.05em;
 		}
@@ -1292,11 +1280,18 @@
 		}
 
 		.status-indicator {
-			display: inline-block;
-			width: 10px;
-			height: 10px;
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			width: 22px;
+			height: 22px;
 			border-radius: 50%;
 			flex-shrink: 0;
+			font-size: 0.6rem;
+			font-weight: 700;
+			text-transform: uppercase;
+			color: white;
+			box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.15);
 		}
 
 		.status-indicator.ok {
@@ -1308,11 +1303,11 @@
 		}
 
 		.status-indicator.ko {
-			background-color: #ef4444;
+			background-color: #dc2626;
 		}
 
 		html.dark .status-indicator.ko {
-			background-color: #fb7185;
+			background-color: #f87171;
 		}
 
 		.pagination {
@@ -2317,6 +2312,7 @@
 				const descriptionPretty = formatDescriptionPretty(event);
 				const isError = event.event === 'tool_error' || event.event === 'error';
 				const statusClass = isError ? 'ko' : 'ok';
+				const statusLabel = isError ? 'KO' : 'OK';
 
 				// Main row
 				const row = document.createElement('tr');
@@ -2329,7 +2325,7 @@
 						</button>
 					</td>
 					<td style="text-align: center; padding: 2px 8px;">
-						<span class="status-indicator ${statusClass}" title="${isError ? 'Error' : 'OK'}"></span>
+						<span class="status-indicator ${statusClass}" title="${isError ? 'Error' : 'OK'}">${statusLabel}</span>
 					</td>
 					<td class="log-time">${formatDate(event.timestamp)}</td>
 					<td>
