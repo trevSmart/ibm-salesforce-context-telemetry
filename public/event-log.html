@@ -1,0 +1,1822 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Telemetry Log Viewer - IBM Salesforce Context</title>
+	<link href="/css/output.css" rel="stylesheet">
+	<style>
+		:root {
+			/* Light mode colors - matching Laravel Log Viewer */
+			--bg-primary: #ffffff;
+			--bg-secondary: #fafafa;
+			--bg-sidebar: #fafafa;
+			--bg-table-header: #f4f4f5;
+			--text-primary: #18181b;
+			--text-secondary: #52525b;
+			--text-muted: #a1a1aa;
+			--border-color: #e4e4e7;
+			--hover-bg: #f4f4f5;
+
+			/* Level colors - matching Laravel Log Viewer */
+			--level-success: #10b981;
+			--level-success-bg: #ecfdf5;
+			--level-success-hover: #d1fae5;
+			--level-info: #0ea5e9;
+			--level-info-bg: #f0f9ff;
+			--level-info-hover: #e0f2fe;
+			--level-warning: #f59e0b;
+			--level-warning-bg: #fffbeb;
+			--level-warning-hover: #fef3c7;
+			--level-error: #ef4444;
+			--level-error-bg: #fef2f2;
+			--level-error-hover: #fee2e2;
+			--level-debug: #0ea5e9;
+
+			/* Brand color (sky) */
+			--brand-500: #0ea5e9;
+			--brand-600: #0284c7;
+			--brand-700: #0369a1;
+			--brand-800: #075985;
+			--brand-900: #0c4a6e;
+		}
+
+		html.dark {
+			/* Dark mode colors - matching Laravel Log Viewer */
+			--bg-primary: #27272a;
+			--bg-secondary: #18181b;
+			--bg-sidebar: #27272a;
+			--bg-table-header: #18181b;
+			--text-primary: #e4e4e7;
+			--text-secondary: #a1a1aa;
+			--text-muted: #71717a;
+			--border-color: #3f3f46;
+			--hover-bg: #3f3f46;
+
+			/* Dark mode level colors */
+			--level-success: #10b981;
+			--level-success-bg: rgba(6, 78, 59, 0.4);
+			--level-success-hover: rgba(6, 78, 59, 0.75);
+			--level-info: #0ea5e9;
+			--level-info-bg: rgba(12, 74, 110, 0.4);
+			--level-info-hover: rgba(12, 74, 110, 0.75);
+			--level-warning: #fbbf24;
+			--level-warning-bg: rgba(120, 53, 15, 0.4);
+			--level-warning-hover: rgba(120, 53, 15, 0.75);
+			--level-error: #fb7185;
+			--level-error-bg: rgba(136, 19, 55, 0.4);
+			--level-error-hover: rgba(136, 19, 55, 0.75);
+
+			/* Dark mode brand */
+			--brand-500: #0ea5e9;
+			--brand-600: #0284c7;
+			--brand-700: #0369a1;
+			--brand-800: #075985;
+			--brand-900: #0c4a6e;
+		}
+
+		* {
+			margin: 0;
+			padding: 0;
+			box-sizing: border-box;
+		}
+
+		body {
+			font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+			background: linear-gradient(135deg, #a8c0ff 0%, #b8a8ff 50%, #c8a8ff 100%);
+			min-height: 100vh;
+			padding: 20px;
+			position: relative;
+		}
+
+		body::before {
+			content: '';
+			position: fixed;
+			top: 0;
+			left: 0;
+			right: 0;
+			bottom: 0;
+			background:
+				radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.3) 0%, transparent 50%),
+				radial-gradient(circle at 80% 70%, rgba(255, 255, 255, 0.2) 0%, transparent 50%);
+			pointer-events: none;
+			z-index: 0;
+		}
+
+		html.dark {
+			color-scheme: dark;
+		}
+
+		.main-container {
+			position: relative;
+			z-index: 10;
+			max-width: 1600px;
+			margin: 0 auto;
+			background: #f4f4f5;
+			border-radius: 16px;
+			box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+			overflow: hidden;
+			display: flex;
+			flex-direction: column;
+			height: calc(100vh - 40px);
+		}
+
+		html.dark .main-container {
+			background: #27272a;
+		}
+
+
+		.log-viewer-title {
+			font-size: 1.25rem;
+			line-height: 1.75rem;
+			font-weight: 600;
+			color: #10b981;
+			display: flex;
+			align-items: center;
+			gap: 8px;
+			transition: opacity 0.2s ease;
+		}
+
+		.log-viewer-title:hover {
+			opacity: 0.8;
+		}
+
+		html.dark .log-viewer-title {
+			color: #10b981;
+		}
+
+
+		.back-link {
+			font-size: 0.875rem;
+			line-height: 1.25rem;
+			color: #52525b;
+			text-decoration: none;
+			margin-left: 0;
+			transition: color 0.2s ease;
+		}
+
+		html.dark .back-link {
+			color: #a1a1aa;
+		}
+
+		.back-link:hover {
+			color: #18181b;
+		}
+
+		html.dark .back-link:hover {
+			color: #e4e4e7;
+		}
+
+
+		.level-filters {
+			display: flex;
+			gap: 10px;
+			flex-wrap: wrap;
+		}
+
+		.level-filter-btn {
+			display: inline-flex;
+			align-items: center;
+			gap: 6px;
+			padding: 6px 12px;
+			border: 1px solid;
+			border-radius: 6px;
+			font-size: 0.875rem;
+			line-height: 1.25rem;
+			font-weight: 500;
+			cursor: pointer;
+			transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.15s ease;
+			position: relative;
+		}
+
+		.level-filter-btn:hover {
+			transform: translateY(-1px);
+		}
+
+		.level-filter-btn:active {
+			transform: translateY(0);
+		}
+
+		.level-filter-btn input[type="checkbox"] {
+			appearance: none;
+			-webkit-appearance: none;
+			-moz-appearance: none;
+			width: 16px;
+			height: 16px;
+			margin-right: 2px;
+			cursor: pointer;
+			background-color: white;
+			border: 1px solid #d1d5db;
+			border-radius: 3px;
+			position: relative;
+			flex-shrink: 0;
+		}
+
+		.level-filter-btn input[type="checkbox"]:checked {
+			background-color: white;
+			border-color: #6b7280;
+		}
+
+		.level-filter-btn input[type="checkbox"]:checked::after {
+			content: '';
+			position: absolute;
+			left: 4px;
+			top: 1px;
+			width: 5px;
+			height: 9px;
+			border: solid #6b7280;
+			border-width: 0 2px 2px 0;
+			transform: rotate(45deg);
+		}
+
+		/* Checkbox mark color matches button background when active */
+		.level-filter-btn.level-debug.active input[type="checkbox"]:checked::after {
+			border-color: #8e81ea;
+		}
+
+		.level-filter-btn.level-info.active input[type="checkbox"]:checked::after {
+			border-color: #2195cf;
+		}
+
+		.level-filter-btn.level-warning.active input[type="checkbox"]:checked::after {
+			border-color: #DB9139;
+		}
+
+		.level-filter-btn.level-error.active input[type="checkbox"]:checked::after {
+			border-color: #ea6280;
+		}
+
+		.level-filter-btn.level-success.active input[type="checkbox"]:checked::after {
+			border-color: #065f46;
+		}
+
+		html.dark .level-filter-btn input[type="checkbox"] {
+			background-color: white;
+			border-color: #9ca3af;
+		}
+
+		html.dark .level-filter-btn input[type="checkbox"]:checked {
+			background-color: white;
+			border-color: #6b7280;
+		}
+
+		html.dark .level-filter-btn input[type="checkbox"]:checked::after {
+			border-color: #6b7280;
+		}
+
+		html.dark .level-filter-btn.level-debug.active input[type="checkbox"]:checked::after {
+			border-color: #8e81ea;
+		}
+
+		html.dark .level-filter-btn.level-info.active input[type="checkbox"]:checked::after {
+			border-color: #2195cf;
+		}
+
+		html.dark .level-filter-btn.level-warning.active input[type="checkbox"]:checked::after {
+			border-color: #DB9139;
+		}
+
+		html.dark .level-filter-btn.level-error.active input[type="checkbox"]:checked::after {
+			border-color: #ea6280;
+		}
+
+		html.dark .level-filter-btn.level-success.active input[type="checkbox"]:checked::after {
+			border-color: #065f46;
+		}
+
+		.level-filter-btn.level-debug {
+			background: #f0f9ff;
+			border-color: #dbeafe;
+			color: #0c4a6e;
+		}
+
+		html.dark .level-filter-btn.level-debug {
+			background: rgba(12, 74, 110, 0.25);
+			border-color: #075985;
+			color: #7dd3fc;
+		}
+
+		.level-filter-btn.level-info {
+			background: #f0f9ff;
+			border-color: #dbeafe;
+			color: #0c4a6e;
+		}
+
+		html.dark .level-filter-btn.level-info {
+			background: rgba(12, 74, 110, 0.25);
+			border-color: #075985;
+			color: #7dd3fc;
+		}
+
+		.level-filter-btn.level-warning {
+			background: #fffbeb;
+			border-color: #fef3c7;
+			color: #92400e;
+		}
+
+		html.dark .level-filter-btn.level-warning {
+			background: rgba(120, 53, 15, 0.25);
+			border-color: #92400e;
+			color: #fbbf24;
+		}
+
+		.level-filter-btn.level-error {
+			background: #fef2f2;
+			border-color: #fee2e2;
+			color: #991b1b;
+		}
+
+		html.dark .level-filter-btn.level-error {
+			background: rgba(136, 19, 55, 0.25);
+			border-color: #9f1239;
+			color: #fb7185;
+		}
+
+		.level-filter-btn.level-success {
+			background: #d1fae5;
+			border-color: #a7f3d0;
+			color: #065f46;
+		}
+
+		html.dark .level-filter-btn.level-success {
+			background: rgba(6, 78, 59, 0.3);
+			border-color: #065f46;
+			color: #10b981;
+		}
+
+		.level-filter-btn:hover {
+			opacity: 1;
+		}
+
+		.level-filter-btn.level-debug:hover {
+			background: #e9d5ff;
+		}
+
+		.level-filter-btn.level-info:hover {
+			background: var(--level-info-hover);
+		}
+
+		.level-filter-btn.level-warning:hover {
+			background: var(--level-warning-hover);
+		}
+
+		.level-filter-btn.level-error:hover {
+			background: var(--level-error-hover);
+		}
+
+		.level-filter-btn.level-success:hover {
+			background: var(--level-success-hover);
+		}
+
+		.level-filter-btn.active {
+			color: white;
+		}
+
+		.level-filter-btn.level-debug.active {
+			background: #8e81ea;
+			border-color: #8e81ea;
+			color: white;
+		}
+
+		.level-filter-btn.level-info.active {
+			background: #2195cf;
+			border-color: #2195cf;
+			color: white;
+		}
+
+		html.dark .level-filter-btn.level-debug.active {
+			background: #8e81ea;
+			border-color: #8e81ea;
+			color: white;
+		}
+
+		html.dark .level-filter-btn.level-info.active {
+			background: #2195cf;
+			border-color: #2195cf;
+			color: white;
+		}
+
+		.level-filter-btn.level-warning.active {
+			background: #DB9139;
+			border-color: #DB9139;
+			color: white;
+		}
+
+		html.dark .level-filter-btn.level-warning.active {
+			background: #DB9139;
+			border-color: #DB9139;
+			color: white;
+		}
+
+		.level-filter-btn.level-error.active {
+			background: #ea6280;
+			border-color: #ea6280;
+			color: white;
+		}
+
+		html.dark .level-filter-btn.level-error.active {
+			background: #ea6280;
+			border-color: #ea6280;
+			color: white;
+		}
+
+		.level-filter-btn.level-success.active {
+			background: #a7f3d0;
+			border-color: #6ee7b7;
+			color: #065f46;
+		}
+
+		html.dark .level-filter-btn.level-success.active {
+			background: #a7f3d0;
+			border-color: #6ee7b7;
+			color: #065f46;
+		}
+
+		.level-filter-btn .level-icon {
+			font-size: 0.875rem;
+			line-height: 1.25rem;
+		}
+
+		.level-filter-btn .level-count {
+			background: rgba(0, 0, 0, 0.08);
+			padding: 2px 6px;
+			border-radius: 10px;
+			font-size: 0.75rem;
+			line-height: 1rem;
+			font-weight: 600;
+			margin-left: 2px;
+			transition: background-color 0.2s ease, transform 0.2s ease;
+		}
+
+		html.dark .level-filter-btn .level-count {
+			background: rgba(255, 255, 255, 0.15);
+		}
+
+		.level-filter-btn.active .level-count {
+			background: rgba(255, 255, 255, 0.3);
+		}
+
+		html.dark .level-filter-btn.active .level-count {
+			background: rgba(255, 255, 255, 0.3);
+		}
+
+		.level-filter-btn:hover .level-count {
+			transform: scale(1.05);
+		}
+
+		.search-controls {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+		}
+
+		.table-controls {
+			padding: 0 16px;
+			display: flex;
+			justify-content: flex-end;
+			align-items: center;
+			flex-shrink: 0;
+		}
+
+		.table-controls-right {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+		}
+
+		.search-input {
+			padding: 6px 12px;
+			border: 1px solid #d4d4d8;
+			border-radius: 6px;
+			font-size: 0.875rem;
+			line-height: 1.25rem;
+			width: 250px;
+			background: white;
+			color: #18181b;
+			transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+		}
+
+		html.dark .search-input {
+			border-color: #52525b;
+			background: #27272a;
+			color: #f4f4f5;
+		}
+
+		.search-input::placeholder {
+			color: #a1a1aa;
+		}
+
+		html.dark .search-input::placeholder {
+			color: #71717a;
+		}
+
+		.search-input:focus {
+			outline: none;
+			border-color: #0ea5e9;
+			box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
+		}
+
+		html.dark .search-input:focus {
+			border-color: #0369a1;
+			box-shadow: 0 0 0 3px rgba(3, 105, 161, 0.3);
+		}
+
+		.control-select {
+			padding: 6px 24px 6px 8px;
+			border: none;
+			border-radius: 0;
+			font-size: 0.875rem;
+			line-height: 1.25rem;
+			background: transparent;
+			color: #a1a1aa;
+			cursor: pointer;
+			transition: color 0.2s ease, opacity 0.2s ease;
+			appearance: none;
+			background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%23a1a1aa' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+			background-repeat: no-repeat;
+			background-position: right 4px center;
+			background-size: 16px;
+			padding-right: 24px;
+		}
+
+		.control-select:hover {
+			opacity: 0.8;
+		}
+
+		.control-select:focus {
+			outline: none;
+			opacity: 1;
+		}
+
+		html.dark .control-select {
+			color: #71717a;
+			background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%2371717a' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+		}
+
+		.control-select:hover {
+			color: #52525b;
+		}
+
+		html.dark .control-select:hover {
+			color: #a1a1aa;
+		}
+
+		.control-select:focus {
+			outline: none;
+			color: #52525b;
+		}
+
+		html.dark .control-select:focus {
+			color: #a1a1aa;
+		}
+
+		.icon-btn {
+			width: 40px;
+			height: 40px;
+			border: none;
+			border-radius: 8px;
+			background: #f4f4f5;
+			cursor: pointer;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			font-size: 1.125rem;
+			line-height: 1.75rem;
+			transition: background-color 0.2s ease, color 0.2s ease, transform 0.15s ease;
+			color: #a1a1aa;
+		}
+
+		.icon-btn:hover {
+			transform: scale(1.1);
+		}
+
+		.icon-btn:active {
+			transform: scale(0.95);
+		}
+
+		html.dark .icon-btn {
+			background: #3f3f46;
+			color: #71717a;
+		}
+
+		.icon-btn:hover {
+			background: #e4e4e7;
+			color: #52525b;
+		}
+
+		html.dark .icon-btn:hover {
+			background: #52525b;
+			color: #a1a1aa;
+		}
+
+		.delete-all-btn:hover {
+			background: #fee2e2;
+			color: #dc2626;
+			transform: scale(1.1) rotate(5deg);
+		}
+
+		html.dark .delete-all-btn:hover {
+			background: rgba(220, 38, 38, 0.2);
+			color: #f87171;
+		}
+
+		.content-wrapper {
+			display: flex;
+			flex: 1;
+			overflow: hidden;
+			gap: 10px;
+			padding: 0 16px;
+		}
+
+		.sidebar {
+			width: 280px;
+			background: transparent;
+			border-right: none;
+			overflow: hidden;
+			display: flex;
+			flex-direction: column;
+			flex-shrink: 0;
+			align-items: stretch;
+		}
+
+		html.dark .sidebar {
+			background: #27272a;
+		}
+
+		.sidebar-header {
+			padding: 20px 12px;
+			border-bottom: none;
+			flex-shrink: 0;
+		}
+
+		@media (min-width: 768px) {
+			.sidebar-header {
+				padding: 20px;
+			}
+		}
+
+		.sidebar-content {
+			flex: 1;
+			overflow-y: auto;
+			padding: 0 12px 20px 12px;
+			padding-top: 20px;
+		}
+
+		@media (min-width: 768px) {
+			.sidebar-content {
+				padding: 0 20px 20px 20px;
+				padding-top: 20px;
+			}
+		}
+
+
+		.sidebar-title {
+			font-size: 0.75rem;
+			line-height: 1rem;
+			font-weight: 600;
+			color: #52525b;
+			margin-bottom: 12px;
+			margin-top: 0;
+			padding-top: 0;
+			text-transform: uppercase;
+			letter-spacing: 0.05em;
+		}
+
+		html.dark .sidebar-title {
+			color: #a1a1aa;
+		}
+
+		.server-list {
+			list-style: none;
+		}
+
+		.server-item {
+			padding: 10px 12px;
+			margin-bottom: 6px;
+			border-radius: 6px;
+			cursor: pointer;
+			transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			background: white;
+			border: 2px solid transparent;
+		}
+
+		.server-item:hover {
+			transform: translateX(2px);
+		}
+
+		.server-item:active {
+			transform: translateX(0);
+		}
+
+		html.dark .server-item {
+			background: #27272a;
+		}
+
+		.server-item:hover {
+			background: #e0f2fe;
+			border-color: #0284c7;
+		}
+
+		html.dark .server-item:hover {
+			background: rgba(12, 74, 110, 0.4);
+			border-color: #0369a1;
+		}
+
+		.server-item.active {
+			background: #e0f2fe;
+			border-color: #0ea5e9;
+		}
+
+		html.dark .server-item.active {
+			background: rgba(12, 74, 110, 0.4);
+			border-color: #0ea5e9;
+		}
+
+		.server-item.active .server-name {
+			color: #18181b;
+			font-weight: 600;
+		}
+
+		html.dark .server-item.active .server-name {
+			color: #e4e4e7;
+		}
+
+		.server-name {
+			font-size: 0.875rem;
+			line-height: 1.25rem;
+			color: #18181b;
+			flex: 1;
+			font-weight: 500;
+			transition: color 0.2s ease, font-weight 0.2s ease;
+		}
+
+		html.dark .server-name {
+			color: #e4e4e7;
+		}
+
+		.server-item.active .server-name {
+			font-weight: 600;
+		}
+
+		.server-size {
+			font-size: 0.75rem;
+			line-height: 1rem;
+			color: #52525b;
+			margin-left: 8px;
+		}
+
+		html.dark .server-size {
+			color: #a1a1aa;
+		}
+
+		.main-content {
+			flex: 1;
+			display: flex;
+			flex-direction: column;
+			overflow: hidden;
+			background: #f4f4f5;
+			position: relative;
+			min-width: 0;
+		}
+
+		html.dark .main-content {
+			background: #27272a;
+		}
+
+		.main-content-header {
+			padding: 20px 16px;
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 16px;
+			border-bottom: none;
+			flex-shrink: 0;
+		}
+
+		.main-content-body {
+			flex: 1;
+			display: flex;
+			flex-direction: column;
+			overflow: hidden;
+			min-height: 0;
+		}
+
+		.logs-table-container {
+			flex: 1;
+			overflow: hidden;
+			position: relative;
+			min-height: 0;
+			display: flex;
+			flex-direction: column;
+		}
+
+		.logs-table-container > div:last-child {
+			flex: 1;
+			overflow-y: auto;
+			min-height: 0;
+		}
+
+		.logs-table {
+			width: 100%;
+			border-collapse: separate;
+			border-spacing: 0;
+			font-size: 0.875rem;
+			line-height: 1.25rem;
+			border: none;
+			border-radius: 0;
+			overflow: visible;
+		}
+
+		.logs-table thead {
+			display: table-header-group;
+			position: sticky;
+			top: 0;
+			z-index: 10;
+			background: #f4f4f5;
+		}
+
+		html.dark .logs-table thead {
+			background: #27272a;
+		}
+
+		.logs-table tbody {
+			display: table-row-group;
+		}
+
+		.logs-table th {
+			padding: 12px 4px;
+			text-align: left;
+			font-weight: 600;
+			color: #52525b;
+			border-bottom: 2px solid #f4f4f5;
+			font-size: 0.75rem;
+			line-height: 1;
+			text-transform: uppercase;
+			letter-spacing: 0.05em;
+		}
+
+		html.dark .logs-table th {
+			color: #a1a1aa;
+			border-bottom: 2px solid #27272a;
+		}
+
+		.logs-table td {
+			padding: 8px 4px;
+			border-bottom: 2px solid #f4f4f5;
+			color: #18181b;
+			font-size: 0.79rem;
+			line-height: 1.2;
+			transition: background-color 0.15s ease;
+		}
+
+		html.dark .logs-table td {
+			border-bottom: 2px solid #27272a;
+		}
+
+		.logs-table tbody tr {
+			transition: background-color 0.15s ease;
+			background: white;
+		}
+
+		html.dark .logs-table tbody tr {
+			background: #272729;
+		}
+
+		.logs-table tbody tr:hover {
+			background-color: rgba(14, 165, 233, 0.05);
+		}
+
+		html.dark .logs-table tbody tr:hover {
+			background-color: rgba(14, 165, 233, 0.1);
+		}
+
+		html.dark .logs-table td {
+			color: #e4e4e7;
+		}
+
+		/* Level-specific row hover colors */
+		.logs-table tbody tr.log-item-success:hover {
+			background-color: rgba(16, 185, 129, 0.05);
+		}
+
+		html.dark .logs-table tbody tr.log-item-success:hover {
+			background-color: rgba(16, 185, 129, 0.1);
+		}
+
+		.logs-table tbody tr.log-item-info:hover {
+			background-color: rgba(14, 165, 233, 0.05);
+		}
+
+		html.dark .logs-table tbody tr.log-item-info:hover {
+			background-color: rgba(14, 165, 233, 0.1);
+		}
+
+		.logs-table tbody tr.log-item-warning:hover {
+			background-color: rgba(245, 158, 11, 0.05);
+		}
+
+		html.dark .logs-table tbody tr.log-item-warning:hover {
+			background-color: rgba(245, 158, 11, 0.1);
+		}
+
+		.logs-table tbody tr.log-item-error:hover {
+			background-color: rgba(239, 68, 68, 0.05);
+		}
+
+		html.dark .logs-table tbody tr.log-item-error:hover {
+			background-color: rgba(239, 68, 68, 0.1);
+		}
+
+		.level-badge {
+			display: inline-flex;
+			align-items: center;
+			justify-content: flex-start;
+			gap: 6px;
+			padding: 4px 10px;
+			border-radius: 6px;
+			transition: opacity 0.2s ease, transform 0.15s ease;
+			font-size: 0.75rem;
+			line-height: 1rem;
+			font-weight: 600;
+			text-transform: uppercase;
+			width: auto;
+			box-sizing: border-box;
+		}
+
+		.level-badge.debug {
+			background: var(--level-info-bg);
+			color: var(--level-info);
+		}
+
+		.level-badge.info {
+			background: var(--level-info-bg);
+			color: var(--level-info);
+		}
+
+		.level-badge.warning {
+			background: var(--level-warning-bg);
+			color: #b45309;
+		}
+
+		html.dark .level-badge.warning {
+			color: var(--level-warning);
+		}
+
+		.level-badge.error {
+			background: var(--level-error-bg);
+			color: #be123c;
+		}
+
+		html.dark .level-badge.error {
+			color: var(--level-error);
+		}
+
+		.level-badge.success {
+			background: var(--level-success-bg);
+			color: #047857;
+		}
+
+		html.dark .level-badge.success {
+			color: var(--level-success);
+		}
+
+		.level-badge-icon {
+			font-size: 0.75rem;
+			line-height: 1rem;
+		}
+
+		.log-time {
+			font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+			color: #18181b;
+		}
+
+		html.dark .log-time {
+			color: #e4e4e7;
+		}
+
+		.log-description {
+			font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+			max-width: 600px;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			white-space: nowrap;
+			color: #a1a1aa;
+		}
+
+		html.dark .log-description {
+			color: #71717a;
+		}
+
+		.status-indicator {
+			display: inline-block;
+			width: 10px;
+			height: 10px;
+			border-radius: 50%;
+			flex-shrink: 0;
+		}
+
+		.status-indicator.ok {
+			background-color: #10b981;
+		}
+
+		html.dark .status-indicator.ok {
+			background-color: #10b981;
+		}
+
+		.status-indicator.ko {
+			background-color: #ef4444;
+		}
+
+		html.dark .status-indicator.ko {
+			background-color: #fb7185;
+		}
+
+		.pagination {
+			padding: 20px 32px;
+			border-top: 1px solid #e4e4e7;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			gap: 10px;
+			background: transparent;
+		}
+
+		html.dark .pagination {
+			border-color: #3f3f46;
+			background: transparent;
+		}
+
+		.pagination-btn {
+			padding: 8px 16px;
+			border: 2px solid transparent;
+			border-top: 2px solid transparent;
+			border-radius: 0;
+			background: transparent;
+			color: #52525b;
+			cursor: pointer;
+			font-size: 0.875rem;
+			line-height: 1.25rem;
+			font-weight: 500;
+			transition: color 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+			display: inline-flex;
+			align-items: center;
+		}
+
+		.pagination-btn:hover:not(:disabled) {
+			transform: translateY(-1px);
+		}
+
+		.pagination-btn:active:not(:disabled) {
+			transform: translateY(0);
+		}
+
+		html.dark .pagination-btn {
+			color: #a1a1aa;
+		}
+
+		.pagination-btn:hover:not(:disabled) {
+			color: #18181b;
+			border-top-color: #d4d4d8;
+		}
+
+		html.dark .pagination-btn:hover:not(:disabled) {
+			color: #e4e4e7;
+			border-top-color: #52525b;
+		}
+
+		.pagination-btn:disabled {
+			opacity: 0.5;
+			cursor: not-allowed;
+		}
+
+		.pagination-btn:focus {
+			outline: none;
+			border-radius: 6px;
+			box-shadow: 0 0 0 2px #0ea5e9;
+		}
+
+		html.dark .pagination-btn:focus {
+			box-shadow: 0 0 0 2px #0369a1;
+		}
+
+		.pagination-info {
+			color: #52525b;
+			font-size: 0.875rem;
+			line-height: 1.25rem;
+			font-weight: 500;
+			padding: 8px 16px;
+			border-top: 2px solid transparent;
+		}
+
+		html.dark .pagination-info {
+			color: #a1a1aa;
+		}
+
+		.footer-info {
+			position: absolute;
+			bottom: 20px;
+			right: 32px;
+			display: flex;
+			gap: 20px;
+			font-size: 0.75rem;
+			line-height: 1rem;
+			color: #52525b;
+			background: transparent;
+		}
+
+		html.dark .footer-info {
+			color: #a1a1aa;
+			background: transparent;
+		}
+
+		.loading {
+			text-align: center;
+			padding: 60px 20px;
+			color: #52525b;
+			font-size: 1rem;
+			line-height: 1.5rem;
+			font-weight: 500;
+		}
+
+		html.dark .loading {
+			color: #a1a1aa;
+		}
+
+		.error-message {
+			background: #fef2f2;
+			color: #be123c;
+			padding: 16px 20px;
+			border-radius: 8px;
+			margin: 20px 32px;
+			border-left: 4px solid #ef4444;
+		}
+
+		html.dark .error-message {
+			background: rgba(136, 19, 55, 0.4);
+			color: #fb7185;
+			border-color: #fb7185;
+		}
+
+		.empty-state {
+			text-align: center;
+			padding: 60px 20px;
+			color: #52525b;
+		}
+
+		html.dark .empty-state {
+			color: #a1a1aa;
+		}
+
+		.empty-state > div:last-child {
+			font-weight: 600;
+			margin-top: 10px;
+		}
+
+		.empty-state-icon {
+			font-size: 3rem;
+			line-height: 1;
+			margin-bottom: 16px;
+			opacity: 0.5;
+		}
+
+		/* Scrollbar styling */
+		.sidebar-content::-webkit-scrollbar {
+			width: 8px;
+		}
+
+		.sidebar-content::-webkit-scrollbar-track {
+			background: var(--bg-secondary);
+		}
+
+		.sidebar-content::-webkit-scrollbar-thumb {
+			background: var(--border-color);
+			border-radius: 4px;
+		}
+
+		.sidebar-content::-webkit-scrollbar-thumb:hover {
+			background: var(--text-secondary);
+		}
+
+		/* Table scrollbar - hidden by default, shown on hover (Mac-like behavior) */
+		.logs-table-container > div:last-child::-webkit-scrollbar {
+			width: 8px;
+		}
+
+		.logs-table-container > div:last-child::-webkit-scrollbar-track {
+			background: transparent;
+		}
+
+		.logs-table-container > div:last-child::-webkit-scrollbar-thumb {
+			background: transparent;
+			border-radius: 4px;
+		}
+
+		.logs-table-container:hover > div:last-child::-webkit-scrollbar-thumb {
+			background: var(--border-color);
+		}
+
+		.logs-table-container:hover > div:last-child::-webkit-scrollbar-thumb:hover {
+			background: var(--text-secondary);
+		}
+
+		@media (max-width: 1200px) {
+			.level-filters {
+				width: 100%;
+			}
+			.search-controls {
+				width: 100%;
+			}
+			.search-input {
+				width: 100%;
+			}
+		}
+	</style>
+</head>
+	<body>
+	<div class="main-container">
+		<div class="content-wrapper">
+			<div class="sidebar">
+				<div class="sidebar-header">
+					<div class="log-viewer-title text-xl font-semibold">Event log</div>
+					<a href="/" class="back-link text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200">← Back to Home</a>
+				</div>
+				<div class="sidebar-content">
+					<div class="sidebar-title text-xs font-semibold uppercase tracking-wider">Sessions</div>
+					<ul class="server-list list-none" id="sessionList">
+						<li class="server-item active" data-session="all">
+							<span class="server-name text-sm">All Sessions</span>
+							<span class="server-size text-xs" id="totalSize">-</span>
+						</li>
+					</ul>
+				</div>
+			</div>
+
+			<div class="main-content">
+				<div class="main-content-header">
+					<div class="level-filters">
+						<button class="level-filter-btn level-debug" data-level="tool_call">
+							<input type="checkbox" checked id="filter-tool_call" class="w-4 h-4 cursor-pointer">
+							<span class="text-sm font-medium">Tool Call</span>
+							<span class="level-count text-xs font-semibold" id="count-tool_call">0</span>
+						</button>
+						<button class="level-filter-btn level-info" data-level="session_start">
+							<input type="checkbox" checked id="filter-session_start" class="w-4 h-4 cursor-pointer">
+							<span class="text-sm font-medium">Session</span>
+							<span class="level-count text-xs font-semibold" id="count-session_start">0</span>
+						</button>
+						<button class="level-filter-btn level-warning" data-level="custom">
+							<input type="checkbox" checked id="filter-custom" class="w-4 h-4 cursor-pointer">
+							<span class="text-sm font-medium">Custom</span>
+							<span class="level-count text-xs font-semibold" id="count-custom">0</span>
+						</button>
+						<button class="level-filter-btn level-error" data-level="tool_error">
+							<input type="checkbox" checked id="filter-tool_error" class="w-4 h-4 cursor-pointer">
+							<span class="text-sm font-medium">Error</span>
+							<span class="level-count text-xs font-semibold" id="count-tool_error">0</span>
+						</button>
+					</div>
+					<div class="search-controls">
+						<input type="text" class="search-input" id="searchInput" placeholder="Search">
+						<button class="icon-btn" onclick="refreshLogs()" title="Refresh">🔄</button>
+						<button class="icon-btn delete-all-btn" onclick="confirmDeleteAll()" title="Delete all events">🗑️</button>
+						<button class="icon-btn theme-toggle" onclick="toggleTheme()" title="Toggle theme">🌙</button>
+					</div>
+				</div>
+				<div class="main-content-body">
+					<div class="table-controls" id="tableControls" style="display: none;">
+						<div class="table-controls-right">
+							<select class="control-select" id="sortSelect">
+								<option value="DESC">Newest first</option>
+								<option value="ASC">Oldest first</option>
+							</select>
+							<select class="control-select" id="limitSelect">
+								<option value="25">25 items per page</option>
+								<option value="50" selected>50 items per page</option>
+								<option value="100">100 items per page</option>
+							</select>
+						</div>
+					</div>
+					<div class="logs-table-container" id="logsTableContainer">
+						<div id="loadingMessage" class="loading">Loading events...</div>
+						<div id="errorMessage" class="error-message" style="display: none;"></div>
+						<div id="emptyState" class="empty-state" style="display: none;">
+							<div class="empty-state-icon">📭</div>
+							<div class="font-semibold mt-2.5">No events found</div>
+						</div>
+						<div style="flex: 1; overflow-y: auto; min-height: 0;">
+							<table class="logs-table" id="logsTable" style="display: none;">
+								<thead>
+									<tr>
+										<th style="width: 40px;"></th>
+										<th>Time</th>
+										<th style="width: 130px;">Event</th>
+										<th>Description</th>
+									</tr>
+								</thead>
+								<tbody id="logsBody">
+								</tbody>
+							</table>
+						</div>
+					</div>
+					<div class="pagination" id="pagination" style="display: none;">
+						<button class="pagination-btn" onclick="previousPage()" id="prevBtn">← Previous</button>
+						<span class="pagination-info" id="pageInfo"></span>
+						<button class="pagination-btn" onclick="nextPage()" id="nextBtn">Next →</button>
+					</div>
+					<div class="footer-info">
+						<span class="text-xs">Memory: <span id="memoryInfo" class="font-semibold">-</span></span>
+						<span class="text-xs">Duration: <span id="durationInfo" class="font-semibold">-</span></span>
+						<span class="text-xs">Version: <span class="font-semibold">v1.0.0</span></span>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<script>
+		let currentOffset = 0;
+		let limit = 50;
+		let totalEvents = 0;
+		let selectedSession = 'all';
+		let activeFilters = new Set(['tool_call', 'session_start', 'custom', 'tool_error']);
+		let searchQuery = '';
+		let sortOrder = 'DESC';
+		let startTime = performance.now();
+
+		// Theme management - using .dark class like Laravel Log Viewer
+		// Detects system theme by default, but allows manual override
+		function getSystemTheme() {
+			return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+		}
+
+		function applyTheme(theme) {
+			if (theme === 'dark') {
+				document.documentElement.classList.add('dark');
+			} else {
+				document.documentElement.classList.remove('dark');
+			}
+			updateThemeIcon(theme);
+		}
+
+		function initTheme() {
+			const savedTheme = localStorage.getItem('theme');
+			const theme = savedTheme || getSystemTheme();
+			applyTheme(theme);
+		}
+
+		function toggleTheme() {
+			const isDark = document.documentElement.classList.contains('dark');
+			const newTheme = isDark ? 'light' : 'dark';
+			localStorage.setItem('theme', newTheme);
+			applyTheme(newTheme);
+		}
+
+		function updateThemeIcon(theme) {
+			const iconBtn = document.querySelector('.theme-toggle');
+			if (iconBtn) {
+				iconBtn.textContent = theme === 'dark' ? '☀️' : '🌙';
+			}
+		}
+
+		// Listen for system theme changes and update if no manual preference is set
+		if (window.matchMedia) {
+			const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+			mediaQuery.addEventListener('change', (e) => {
+				// Only update if user hasn't manually set a preference
+				if (!localStorage.getItem('theme')) {
+					const newTheme = e.matches ? 'dark' : 'light';
+					applyTheme(newTheme);
+				}
+			});
+		}
+
+		// Level filter management
+		function setupLevelFilters() {
+			document.querySelectorAll('.level-filter-btn').forEach(btn => {
+				const checkbox = btn.querySelector('input[type="checkbox"]');
+				const level = btn.dataset.level;
+
+				function updateButtonState() {
+					if (checkbox.checked) {
+						btn.classList.add('active');
+						activeFilters.add(level);
+					} else {
+						btn.classList.remove('active');
+						activeFilters.delete(level);
+					}
+				}
+
+				checkbox.addEventListener('change', () => {
+					updateButtonState();
+					currentOffset = 0;
+					loadEvents();
+				});
+
+				btn.addEventListener('click', (e) => {
+					if (e.target !== checkbox) {
+						checkbox.checked = !checkbox.checked;
+						updateButtonState();
+						checkbox.dispatchEvent(new Event('change'));
+					}
+				});
+
+				// Initialize button state
+				updateButtonState();
+			});
+		}
+
+		async function loadEventTypeStats() {
+			try {
+				const response = await fetch('/api/event-types');
+				const stats = await response.json();
+
+				stats.forEach(stat => {
+					const countEl = document.getElementById(`count-${stat.event}`);
+					if (countEl) {
+						countEl.textContent = stat.count || 0;
+					}
+				});
+
+				// Update total size
+				const total = stats.reduce((sum, stat) => sum + (stat.count || 0), 0);
+				document.getElementById('totalSize').textContent = formatSize(total);
+			} catch (error) {
+				console.error('Error loading event type stats:', error);
+			}
+		}
+
+		async function loadSessions() {
+			try {
+				const response = await fetch('/api/sessions');
+				if (!response.ok) {
+					throw new Error(`HTTP error! status: ${response.status}`);
+				}
+				const sessions = await response.json();
+				const sessionList = document.getElementById('sessionList');
+
+				if (!sessionList) {
+					console.error('sessionList element not found');
+					return;
+				}
+
+				// Keep the "All Sessions" item
+				const allSessionsItem = sessionList.querySelector('[data-session="all"]');
+				if (!allSessionsItem) {
+					console.error('All sessions item not found');
+					return;
+				}
+
+				sessionList.innerHTML = '';
+				sessionList.appendChild(allSessionsItem);
+
+				// Add each session
+				if (Array.isArray(sessions) && sessions.length > 0) {
+					sessions.forEach(session => {
+						if (!session || !session.session_id) {
+							console.warn('Invalid session data:', session);
+							return;
+						}
+
+						const li = document.createElement('li');
+						li.className = 'server-item';
+						li.setAttribute('data-session', session.session_id);
+
+						// Format session display: date and user
+						let sessionDisplay = '';
+						if (session.first_event) {
+							const date = new Date(session.first_event);
+							const day = date.getDate();
+							const month = date.getMonth() + 1;
+							const year = date.getFullYear().toString().slice(-2);
+							const hours = String(date.getHours()).padStart(2, '0');
+							const minutes = String(date.getMinutes()).padStart(2, '0');
+							const dateStr = `${day}/${month}/${year} ${hours}:${minutes}`;
+							sessionDisplay = dateStr;
+							// Prefer user_name (full name) over user_id
+							if (session.user_name) {
+								sessionDisplay += ` • ${session.user_name}`;
+							} else if (session.user_id) {
+								sessionDisplay += ` • ${session.user_id}`;
+							}
+						} else {
+							// Fallback to session ID if no date
+							sessionDisplay = session.session_id.length > 12
+								? session.session_id.substring(0, 12) + '...'
+								: session.session_id;
+						}
+
+						li.innerHTML = `
+							<span class="server-name text-sm">${sessionDisplay}</span>
+							<span class="server-size text-xs">${session.count || 0}</span>
+						`;
+
+						li.addEventListener('click', () => {
+							document.querySelectorAll('.server-item').forEach(i => i.classList.remove('active'));
+							li.classList.add('active');
+							selectedSession = session.session_id;
+							// When a session is selected, default to ASC order (oldest first)
+							if (selectedSession !== 'all') {
+								sortOrder = 'ASC';
+								document.getElementById('sortSelect').value = 'ASC';
+							} else {
+								sortOrder = 'DESC';
+								document.getElementById('sortSelect').value = 'DESC';
+							}
+							currentOffset = 0;
+							loadEvents();
+						});
+
+						sessionList.appendChild(li);
+					});
+
+					// Update total size
+					const total = sessions.reduce((sum, session) => sum + (session.count || 0), 0);
+					const totalSizeEl = document.getElementById('totalSize');
+					if (totalSizeEl) {
+						totalSizeEl.textContent = total;
+					}
+				} else {
+					// Update total size to 0 if no sessions
+					const totalSizeEl = document.getElementById('totalSize');
+					if (totalSizeEl) {
+						totalSizeEl.textContent = '0';
+					}
+				}
+			} catch (error) {
+				console.error('Error loading sessions:', error);
+				// Show error in console but don't break the UI
+			}
+		}
+
+		async function loadEvents() {
+			startTime = performance.now();
+			document.getElementById('loadingMessage').style.display = 'block';
+			document.getElementById('logsTable').style.display = 'none';
+			document.getElementById('errorMessage').style.display = 'none';
+			document.getElementById('emptyState').style.display = 'none';
+			document.getElementById('pagination').style.display = 'none';
+			document.getElementById('tableControls').style.display = 'none';
+
+			try {
+				const params = new URLSearchParams({
+					limit: limit.toString(),
+					offset: currentOffset.toString(),
+					orderBy: 'created_at',
+					order: sortOrder
+				});
+
+				// Apply level filters
+				if (activeFilters.size > 0 && activeFilters.size < 4) {
+					Array.from(activeFilters).forEach(level => {
+						params.append('eventType', level);
+					});
+				}
+
+				if (selectedSession !== 'all') {
+					params.append('sessionId', selectedSession);
+				}
+
+				if (searchQuery) {
+					params.append('search', searchQuery);
+				}
+
+				const response = await fetch(`/api/events?${params}`);
+				const data = await response.json();
+
+				const duration = Math.round(performance.now() - startTime);
+				document.getElementById('durationInfo').textContent = `${duration}ms`;
+
+				if (data.events && data.events.length > 0) {
+					displayEvents(data.events);
+					updatePagination(data);
+					document.getElementById('logsTable').style.display = 'table';
+					document.getElementById('pagination').style.display = 'flex';
+					document.getElementById('tableControls').style.display = 'flex';
+				} else {
+					document.getElementById('emptyState').style.display = 'block';
+					document.getElementById('tableControls').style.display = 'none';
+				}
+			} catch (error) {
+				console.error('Error loading events:', error);
+				document.getElementById('errorMessage').textContent = 'Error loading events: ' + error.message;
+				document.getElementById('errorMessage').style.display = 'block';
+			} finally {
+				document.getElementById('loadingMessage').style.display = 'none';
+			}
+		}
+
+		function displayEvents(events) {
+			const tbody = document.getElementById('logsBody');
+			tbody.innerHTML = '';
+
+			events.forEach(event => {
+				const row = document.createElement('tr');
+				const levelClass = getLevelClass(event.event);
+				const description = formatDescription(event);
+				const isError = event.event === 'tool_error' || event.event === 'error';
+				const statusClass = isError ? 'ko' : 'ok';
+
+			row.className = `log-item-${levelClass}`;
+			row.innerHTML = `
+				<td style="text-align: center; padding: 2px 8px;">
+					<span class="status-indicator ${statusClass}" title="${isError ? 'Error' : 'OK'}"></span>
+				</td>
+				<td class="log-time">${formatDate(event.timestamp)}</td>
+				<td>
+					<span class="level-badge ${levelClass}">
+						${event.event.replace('_', ' ')}
+					</span>
+				</td>
+				<td class="log-description">${description}</td>
+			`;
+				tbody.appendChild(row);
+			});
+		}
+
+		function getLevelClass(eventType) {
+			const levelMap = {
+				'tool_call': 'debug',
+				'session_start': 'info',
+				'session_end': 'info',
+				'tool_error': 'error',
+				'error': 'error',
+				'custom': 'warning'
+			};
+			return levelMap[eventType] || 'info';
+		}
+
+		function getLevelIcon(eventType) {
+			const iconMap = {
+				'tool_call': '🐛',
+				'session_start': 'ℹ️',
+				'session_end': 'ℹ️',
+				'tool_error': '❌',
+				'error': '❌',
+				'custom': '⚠️'
+			};
+			return iconMap[eventType] || 'ℹ️';
+		}
+
+		function formatDescription(event) {
+			if (event.data) {
+				const dataStr = JSON.stringify(event.data);
+				return dataStr;
+			}
+			return '-';
+		}
+
+		function formatDate(dateString) {
+			if (!dateString) return '-';
+			const date = new Date(dateString);
+			const day = date.getDate();
+			const month = date.getMonth() + 1;
+			const year = date.getFullYear().toString().slice(-2);
+			const hours = String(date.getHours()).padStart(2, '0');
+			const minutes = String(date.getMinutes()).padStart(2, '0');
+			return `${day}/${month}/${year} ${hours}:${minutes}`;
+		}
+
+		function formatSize(bytes) {
+			if (bytes < 1024) return bytes + ' B';
+			if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
+			return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+		}
+
+		function updatePagination(data) {
+			const pageInfo = document.getElementById('pageInfo');
+			const currentPage = Math.floor(data.offset / data.limit) + 1;
+			const totalPages = Math.ceil(data.total / data.limit);
+			pageInfo.textContent = `Page ${currentPage} of ${totalPages} (${data.total} total)`;
+
+			document.getElementById('prevBtn').disabled = currentOffset === 0;
+			document.getElementById('nextBtn').disabled = !data.hasMore;
+		}
+
+		function previousPage() {
+			if (currentOffset >= limit) {
+				currentOffset -= limit;
+				loadEvents();
+			}
+		}
+
+		function nextPage() {
+			currentOffset += limit;
+			loadEvents();
+		}
+
+		function refreshLogs() {
+			currentOffset = 0;
+			loadEventTypeStats();
+			loadSessions();
+			loadEvents();
+		}
+
+		let deleteAllConfirmed = false;
+
+		function confirmDeleteAll() {
+			if (!deleteAllConfirmed) {
+				deleteAllConfirmed = true;
+				const confirmed = confirm('Are you sure you want to delete ALL events? This action cannot be undone.\n\nClick OK to confirm, or Cancel to abort.');
+				if (!confirmed) {
+					deleteAllConfirmed = false;
+					return;
+				}
+				// Second confirmation
+				const secondConfirmed = confirm('FINAL WARNING: This will permanently delete ALL events from the database.\n\nAre you absolutely sure?');
+				if (!secondConfirmed) {
+					deleteAllConfirmed = false;
+					return;
+				}
+			}
+
+			// Perform deletion
+			deleteAllEvents();
+		}
+
+		async function deleteAllEvents() {
+			try {
+				const response = await fetch('/api/events', {
+					method: 'DELETE'
+				});
+
+				if (!response.ok) {
+					throw new Error(`HTTP error! status: ${response.status}`);
+				}
+
+				const data = await response.json();
+				alert(`Successfully deleted ${data.deletedCount || 0} events.`);
+
+				// Reset confirmation flag
+				deleteAllConfirmed = false;
+
+				// Refresh the view
+				currentOffset = 0;
+				loadEventTypeStats();
+				loadSessions();
+				loadEvents();
+			} catch (error) {
+				console.error('Error deleting events:', error);
+				alert('Error deleting events: ' + error.message);
+				deleteAllConfirmed = false;
+			}
+		}
+
+		// Search with debounce
+		let searchDebounceTimer;
+		document.getElementById('searchInput').addEventListener('input', (e) => {
+			clearTimeout(searchDebounceTimer);
+			searchDebounceTimer = setTimeout(() => {
+				searchQuery = e.target.value;
+				currentOffset = 0;
+				loadEvents();
+			}, 500);
+		});
+
+		// Sort order change
+		document.getElementById('sortSelect').addEventListener('change', (e) => {
+			sortOrder = e.target.value;
+			currentOffset = 0;
+			loadEvents();
+		});
+
+		// Limit change
+		document.getElementById('limitSelect').addEventListener('change', (e) => {
+			limit = parseInt(e.target.value);
+			currentOffset = 0;
+			loadEvents();
+		});
+
+		// Session selection (for "All Sessions" item)
+		document.querySelectorAll('[data-session="all"]').forEach(item => {
+			item.addEventListener('click', () => {
+				document.querySelectorAll('.server-item').forEach(i => i.classList.remove('active'));
+				item.classList.add('active');
+				selectedSession = 'all';
+				sortOrder = 'DESC';
+				document.getElementById('sortSelect').value = 'DESC';
+				currentOffset = 0;
+				loadEvents();
+			});
+		});
+
+		// Initialize
+		initTheme();
+		setupLevelFilters();
+		loadEventTypeStats();
+		loadSessions();
+		loadEvents();
+
+		// Auto-refresh every 30 seconds
+		setInterval(() => {
+			loadEventTypeStats();
+			loadSessions();
+			if (currentOffset === 0) {
+				loadEvents();
+			}
+		}, 30000);
+	</script>
+</body>
+</html>

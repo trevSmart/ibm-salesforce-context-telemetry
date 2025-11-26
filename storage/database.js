@@ -477,6 +477,88 @@ async function deleteAllEvents() {
 }
 
 /**
+ * Get daily event counts for the last N days
+ * @param {number} days - Number of days to retrieve (default: 30)
+ * @returns {Array} Array of {date, count} objects
+ */
+async function getDailyStats(days = 30) {
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
+
+	const endDate = new Date();
+	const startDate = new Date();
+	startDate.setDate(startDate.getDate() - days);
+	startDate.setHours(0, 0, 0, 0);
+
+	if (dbType === 'sqlite') {
+		// SQLite: use DATE() function to group by date
+		const result = db.prepare(`
+			SELECT
+				DATE(created_at) as date,
+				COUNT(*) as count
+			FROM telemetry_events
+			WHERE created_at >= ?
+			GROUP BY DATE(created_at)
+			ORDER BY date ASC
+		`).all(startDate.toISOString());
+
+		// Fill in missing days with 0 counts
+		const dateMap = new Map();
+		result.forEach(row => {
+			dateMap.set(row.date, parseInt(row.count));
+		});
+
+		const filledResults = [];
+		for (let i = 0; i < days; i++) {
+			const date = new Date(startDate);
+			date.setDate(date.getDate() + i);
+			const dateStr = date.toISOString().split('T')[0];
+			filledResults.push({
+				date: dateStr,
+				count: dateMap.get(dateStr) || 0
+			});
+		}
+
+		return filledResults;
+	} else {
+		// PostgreSQL: use DATE_TRUNC to group by date
+		const result = await db.query(`
+			SELECT
+				DATE(created_at) as date,
+				COUNT(*) as count
+			FROM telemetry_events
+			WHERE created_at >= $1
+			GROUP BY DATE(created_at)
+			ORDER BY date ASC
+		`, [startDate.toISOString()]);
+
+		// Fill in missing days with 0 counts
+		const dateMap = new Map();
+		result.rows.forEach(row => {
+			// Handle both Date objects and string dates from PostgreSQL
+			const dateValue = row.date instanceof Date
+				? row.date.toISOString().split('T')[0]
+				: row.date.split('T')[0];
+			dateMap.set(dateValue, parseInt(row.count));
+		});
+
+		const filledResults = [];
+		for (let i = 0; i < days; i++) {
+			const date = new Date(startDate);
+			date.setDate(date.getDate() + i);
+			const dateStr = date.toISOString().split('T')[0];
+			filledResults.push({
+				date: dateStr,
+				count: dateMap.get(dateStr) || 0
+			});
+		}
+
+		return filledResults;
+	}
+}
+
+/**
  * Close database connection
  */
 async function close() {
@@ -497,6 +579,7 @@ module.exports = {
 	getEvents,
 	getEventTypeStats,
 	getSessions,
+	getDailyStats,
 	deleteAllEvents,
 	close
 };

@@ -156,13 +156,37 @@ app.get('/api/sessions', async (req, res) => {
 	}
 });
 
-// Serve dashboard page
+app.get('/api/daily-stats', async (req, res) => {
+	try {
+		const days = parseInt(req.query.days) || 30;
+		const stats = await db.getDailyStats(days);
+		res.json(stats);
+	} catch (error) {
+		console.error('Error fetching daily stats:', error);
+		res.status(500).json({
+			status: 'error',
+			message: 'Failed to fetch daily statistics'
+		});
+	}
+});
+
+// Serve landing page
 app.get('/', (_req, res) => {
-	const dashboardPath = path.join(__dirname, 'public', 'index.html');
-	if (fs.existsSync(dashboardPath)) {
-		res.sendFile(dashboardPath);
+	const landingPath = path.join(__dirname, 'public', 'index.html');
+	if (fs.existsSync(landingPath)) {
+		res.sendFile(landingPath);
 	} else {
 		res.status(200).send('MCP Telemetry server is running ✅<br><a href="/api/events">View API</a>');
+	}
+});
+
+// Serve event log page
+app.get('/event-log', (_req, res) => {
+	const eventLogPath = path.join(__dirname, 'public', 'event-log.html');
+	if (fs.existsSync(eventLogPath)) {
+		res.sendFile(eventLogPath);
+	} else {
+		res.status(404).send('Event log page not found');
 	}
 });
 
