@@ -254,10 +254,6 @@
     color: #be123c;
   }
 
-  html.dark .level-badge.error {
-    color: var(--level-error);
-  }
-
   .level-badge.success {
     background: var(--level-success-bg);
     color: #047857;
