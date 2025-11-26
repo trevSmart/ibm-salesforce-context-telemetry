@@ -87,7 +87,7 @@
 
 		body {
 			font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-			background: linear-gradient(45deg, #7fa7ff, #c18bff);
+			background: linear-gradient(45deg, #a9c9ff, #f1d1ff);
 			min-height: 100vh;
 			padding: 20px 12px;
 			position: relative;
@@ -970,7 +970,7 @@
 			transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 			display: flex;
 			flex-direction: column;
-			min-height: 200px;
+			min-height: 250px;
 		}
 
 		.session-activity-card.hidden {
@@ -1030,12 +1030,20 @@
 		}
 
 		.horizontal-resizer {
-			height: 0;
-			padding: 12px 0;
-			margin: -6px 16px 16px 16px;
+			height: 12px;
+			margin: 6px 16px 16px 16px;
 			position: relative;
 			cursor: row-resize;
 			flex-shrink: 0;
+		}
+
+		.horizontal-resizer::before {
+			content: '';
+			position: absolute;
+			left: 0;
+			right: 0;
+			top: -6px;
+			bottom: -6px;
 		}
 
 		.horizontal-resizer::after {
@@ -1047,7 +1055,7 @@
 			transform: translateY(-50%);
 			height: 3px;
 			border-radius: 999px;
-			background: transparent;
+			background: rgba(255, 255, 255, 0.05);
 			transition: background 0.15s ease;
 		}
 
@@ -2164,7 +2172,7 @@
 			const axisColor = themeIsDark ? '#a1a1aa' : '#52525b';
 			const splitLineColor = themeIsDark ? 'rgba(63, 63, 70, 0.35)' : 'rgba(228, 228, 231, 0.35)';
 			const gradientCap = 70;
-			const yAxisMax = Math.max(30, maxBucketCount || 0);
+			const yAxisMax = Math.max(20, maxBucketCount || 0);
 			const warmOffset = Math.min(gradientCap / Math.max(yAxisMax, 1), 1);
 
 			let chartSeries = [];
