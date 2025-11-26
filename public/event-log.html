@@ -1976,6 +1976,21 @@
 			}
 		}
 
+		async function fetchAllSessionsActivityEvents() {
+			const params = new URLSearchParams({
+				limit: SESSION_ACTIVITY_FETCH_LIMIT.toString(),
+				orderBy: 'created_at',
+				order: 'ASC'
+			});
+
+			const response = await fetch(`/api/events?${params}`);
+			if (!response.ok) {
+				throw new Error(`HTTP error! status: ${response.status}`);
+			}
+			const data = await response.json();
+			return Array.isArray(data.events) ? data.events : [];
+		}
+
 		async function updateSessionActivityChart(options = {}) {
 			const eventsOverride = Array.isArray(options.events) ? options.events : null;
 			const targetSession = typeof options.sessionId !== 'undefined' ? options.sessionId : selectedSession;
@@ -1986,7 +2001,17 @@
 			}
 
 			if (targetSession === 'all') {
-				hideSessionActivityCard();
+				try {
+					const allEvents = await fetchAllSessionsActivityEvents();
+					if (allEvents.length === 0) {
+						hideSessionActivityCard();
+						return;
+					}
+					renderSessionActivityChart(allEvents, { sessionId: 'all' });
+				} catch (error) {
+					handleInitializationError('all sessions activity chart', error);
+					hideSessionActivityCard();
+				}
 				return;
 			}
 
@@ -2664,11 +2689,7 @@
 					document.getElementById('pagination').style.display = 'flex';
 					document.getElementById('tableControls').style.display = 'flex';
 					handleNotificationState(data.events, triggeredByNotification);
-					if (selectedSession !== 'all') {
-						updateSessionActivityChart();
-					} else {
-						updateSessionActivityChart({ events: data.events, sessionId: 'all' });
-					}
+					updateSessionActivityChart({ sessionId: selectedSession });
 				} else {
 					document.getElementById('emptyState').style.display = 'block';
 					document.getElementById('tableControls').style.display = 'none';
