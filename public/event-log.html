@@ -3,8 +3,9 @@
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Telemetry Log Viewer - IBM Salesforce Context</title>
-	<link rel="icon" type="image/svg+xml" href="/resources/favicon.svg">
+	<title>IBM Salesforce Context Telemetry</title>
+	<link rel="icon" type="image/svg+xml" sizes="any" href="/resources/favicon.svg">
+	<link rel="icon" type="image/png" sizes="32x32" href="/resources/favicon.png">
 	<link href="/css/output.css" rel="stylesheet">
 	<script src="https://kit.fontawesome.com/3991db92c8.js" crossorigin="anonymous"></script>
 	<style>
@@ -818,8 +819,12 @@
 
 		.server-item-actions {
 			position: relative;
-			margin-left: 8px;
+			margin-left: auto;
 			z-index: 10;
+			display: flex;
+			align-items: center;
+			justify-content: flex-end;
+			min-width: 48px;
 		}
 
 		.server-item-actions .actions-dropdown {
@@ -891,6 +896,70 @@
 			min-height: 0;
 		}
 
+		.session-activity-card {
+			background: var(--bg-secondary);
+			border: 1px solid var(--border-color);
+			border-radius: 14px;
+			padding: 16px 20px 12px 20px;
+			margin: 0 16px 12px 16px;
+			box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+			transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+		}
+
+		.session-activity-card.hidden {
+			display: none;
+		}
+
+		.session-activity-header {
+			display: flex;
+			align-items: flex-start;
+			justify-content: space-between;
+			gap: 16px;
+			margin-bottom: 10px;
+		}
+
+		.session-activity-header .label {
+			font-size: 0.75rem;
+			letter-spacing: 0.08em;
+			text-transform: uppercase;
+			color: var(--text-muted);
+			margin-bottom: 4px;
+			font-weight: 600;
+		}
+
+		.session-activity-header .subtitle {
+			font-size: 0.95rem;
+			color: var(--text-primary);
+			font-weight: 500;
+		}
+
+		.session-activity-legend {
+			display: flex;
+			gap: 14px;
+			flex-wrap: wrap;
+			align-items: center;
+			font-size: 0.8rem;
+			color: var(--text-secondary);
+		}
+
+		.session-activity-legend .legend-item {
+			display: inline-flex;
+			align-items: center;
+			gap: 6px;
+		}
+
+		.session-activity-legend .legend-dot {
+			width: 10px;
+			height: 10px;
+			border-radius: 999px;
+			display: inline-block;
+		}
+
+		#sessionActivityChart {
+			width: 100%;
+			height: 170px;
+		}
+
 		.logs-table-container {
 			flex: 1;
 			overflow: hidden;
@@ -939,7 +1008,7 @@
 			font-weight: 600;
 			color: #52525b;
 			border-bottom: 2px solid #f4f4f5;
-			font-size: 0.75rem;
+			font-size: 0.8125rem;
 			line-height: 1;
 			letter-spacing: 0.05em;
 		}
@@ -965,10 +1034,11 @@
 		.logs-table tbody tr {
 			transition: background-color 0.15s ease;
 			background: white;
+			cursor: pointer;
 		}
 
 		html.dark .logs-table tbody tr {
-			background: #27272c;
+			background: #1f1f23;
 		}
 
 		.logs-table tbody tr:hover {
@@ -976,8 +1046,8 @@
 		}
 
 		html.dark .logs-table tbody tr:hover {
-			background: #27272c;
-			box-shadow: inset 0 0 0 9999px rgba(14, 165, 233, 0.08);
+			background-color: rgba(14, 165, 233, 0.15);
+			box-shadow: none;
 		}
 		/* Level-specific row hover colors */
 		.logs-table tbody tr.log-item-success:hover {
@@ -985,8 +1055,8 @@
 		}
 
 		html.dark .logs-table tbody tr.log-item-success:hover {
-			background: #27272c;
-			box-shadow: inset 0 0 0 9999px rgba(16, 185, 129, 0.12);
+			background-color: rgba(16, 185, 129, 0.2);
+			box-shadow: none;
 		}
 
 		.logs-table tbody tr.log-item-info:hover {
@@ -994,8 +1064,8 @@
 		}
 
 		html.dark .logs-table tbody tr.log-item-info:hover {
-			background: #27272c;
-			box-shadow: inset 0 0 0 9999px rgba(14, 165, 233, 0.12);
+			background-color: rgba(14, 165, 233, 0.2);
+			box-shadow: none;
 		}
 
 		.logs-table tbody tr.log-item-warning:hover {
@@ -1003,8 +1073,8 @@
 		}
 
 		html.dark .logs-table tbody tr.log-item-warning:hover {
-			background: #27272c;
-			box-shadow: inset 0 0 0 9999px rgba(245, 158, 11, 0.12);
+			background-color: rgba(245, 158, 11, 0.2);
+			box-shadow: none;
 		}
 
 		.logs-table tbody tr.log-item-error:hover {
@@ -1012,8 +1082,8 @@
 		}
 
 		html.dark .logs-table tbody tr.log-item-error:hover {
-			background: #27272c;
-			box-shadow: inset 0 0 0 9999px rgba(239, 68, 68, 0.12);
+			background-color: rgba(239, 68, 68, 0.2);
+			box-shadow: none;
 		}
 
 		.level-badge {
@@ -1597,6 +1667,25 @@
 							</select>
 						</div>
 					</div>
+					<div id="sessionActivityCard" class="session-activity-card hidden">
+						<div class="session-activity-header">
+							<div>
+								<p class="label">Activity overview</p>
+								<p id="sessionActivitySubtitle" class="subtitle">–</p>
+							</div>
+							<div id="sessionActivityLegend" class="session-activity-legend">
+								<span class="legend-item">
+									<span class="legend-dot" style="background: #0ea5e9;"></span>
+									<span>Events per slot</span>
+								</span>
+								<span class="legend-item">
+									<span class="legend-dot" style="background: rgba(16,185,129,0.7);"></span>
+									<span>Office window</span>
+								</span>
+							</div>
+						</div>
+						<div id="sessionActivityChart"></div>
+					</div>
 					<div class="logs-table-container" id="logsTableContainer">
 						<div id="loadingMessage" class="loading">Loading events...</div>
 						<div id="errorMessage" class="error-message" style="display: none;"></div>
@@ -1634,6 +1723,7 @@
 		</div>
 	</div>
 
+	<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
 	<script>
 		let currentOffset = 0;
 		let limit = 50;
@@ -1648,6 +1738,13 @@
 		let notificationRefreshIntervalId = null;
 		let lastKnownEventTimestamp = null;
 		const knownSessionIds = new Set();
+		let sessionActivityChart = null;
+		let lastSessionActivityEvents = [];
+		const SESSION_ACTIVITY_FETCH_LIMIT = 1000;
+		const SESSION_ACTIVITY_SLOT_MINUTES = 10;
+		const SESSION_ACTIVITY_MARGIN_MINUTES = 30;
+		const OFFICE_START = { hour: 8, minute: 30 };
+		const OFFICE_END = { hour: 18, minute: 30 };
 
 		// Theme management - using .dark class like Laravel Log Viewer
 		// Detects system theme by default, but allows manual override
@@ -1675,6 +1772,7 @@
 			const newTheme = isDark ? 'light' : 'dark';
 			localStorage.setItem('theme', newTheme);
 			applyTheme(newTheme);
+			refreshSessionActivityTheme();
 		}
 
 		function updateThemeIcon(theme) {
@@ -1696,6 +1794,7 @@
 				if (!localStorage.getItem('theme')) {
 					const newTheme = e.matches ? 'dark' : 'light';
 					applyTheme(newTheme);
+					refreshSessionActivityTheme();
 				}
 			});
 		}
@@ -1733,6 +1832,233 @@
 				// Initialize button state
 				updateButtonState();
 			});
+		}
+
+		function initSessionActivityChart() {
+			if (sessionActivityChart) {
+				return sessionActivityChart;
+			}
+			const chartEl = document.getElementById('sessionActivityChart');
+			if (!chartEl || typeof echarts === 'undefined') {
+				return null;
+			}
+			sessionActivityChart = echarts.init(chartEl);
+			window.addEventListener('resize', () => {
+				sessionActivityChart?.resize();
+			});
+			return sessionActivityChart;
+		}
+
+		function hideSessionActivityCard() {
+			const card = document.getElementById('sessionActivityCard');
+			if (card) {
+				card.classList.add('hidden');
+			}
+			const subtitle = document.getElementById('sessionActivitySubtitle');
+			if (subtitle) {
+				subtitle.textContent = '–';
+			}
+			lastSessionActivityEvents = [];
+			if (sessionActivityChart) {
+				sessionActivityChart.clear();
+			}
+		}
+
+		function showSessionActivityCard() {
+			const card = document.getElementById('sessionActivityCard');
+			if (card) {
+				card.classList.remove('hidden');
+			}
+		}
+
+		async function updateSessionActivityChart() {
+			if (selectedSession === 'all') {
+				hideSessionActivityCard();
+				return;
+			}
+
+			try {
+				const params = new URLSearchParams({
+					sessionId: selectedSession,
+					orderBy: 'created_at',
+					order: 'ASC',
+					limit: SESSION_ACTIVITY_FETCH_LIMIT.toString()
+				});
+				const response = await fetch(`/api/events?${params}`);
+				if (!response.ok) {
+					throw new Error(`HTTP error! status: ${response.status}`);
+				}
+				const data = await response.json();
+				if (!data.events || data.events.length === 0) {
+					hideSessionActivityCard();
+					return;
+				}
+				renderSessionActivityChart(data.events);
+			} catch (error) {
+				console.error('Error loading session activity chart:', error);
+				hideSessionActivityCard();
+			}
+		}
+
+		function renderSessionActivityChart(events) {
+			if (!Array.isArray(events) || events.length === 0) {
+				hideSessionActivityCard();
+				return;
+			}
+
+			const chartInstance = initSessionActivityChart();
+			if (!chartInstance) {
+				return;
+			}
+
+			lastSessionActivityEvents = events.slice();
+			const { seriesData, windowStart, windowEnd, referenceDate, officeStart, officeEnd } = buildSessionActivitySeries(events);
+			const totalEvents = events.length;
+			const subtitle = document.getElementById('sessionActivitySubtitle');
+			if (subtitle) {
+				const formattedDate = formatHumanDate(referenceDate);
+				const eventLabel = totalEvents === 1 ? 'event' : 'events';
+				subtitle.textContent = `${formattedDate} · ${totalEvents} ${eventLabel}`;
+			}
+			showSessionActivityCard();
+
+			const themeIsDark = document.documentElement.classList.contains('dark');
+			const lineColor = themeIsDark ? '#38bdf8' : '#0ea5e9';
+			const areaColor = themeIsDark ? 'rgba(14,165,233,0.18)' : 'rgba(14,165,233,0.28)';
+			const axisColor = themeIsDark ? '#a1a1aa' : '#52525b';
+			const splitLineColor = themeIsDark ? 'rgba(63, 63, 70, 0.35)' : 'rgba(228, 228, 231, 0.35)';
+
+			chartInstance.setOption({
+				grid: { left: 45, right: 20, top: 15, bottom: 30 },
+				xAxis: {
+					type: 'time',
+					min: windowStart.getTime(),
+					max: windowEnd.getTime(),
+					axisLabel: {
+						color: axisColor,
+						formatter: value => formatChartTimeLabel(new Date(value))
+					},
+					axisLine: { lineStyle: { color: axisColor } },
+					splitLine: { show: true, lineStyle: { color: splitLineColor } },
+					axisTick: { show: false }
+				},
+				yAxis: {
+					type: 'value',
+					min: 0,
+					minInterval: 1,
+					name: 'Events',
+					nameGap: 22,
+					nameTextStyle: { color: axisColor },
+					axisLabel: { color: axisColor },
+					axisLine: { show: false },
+					splitLine: { lineStyle: { color: splitLineColor } }
+				},
+				tooltip: {
+					trigger: 'axis',
+					axisPointer: { type: 'line' },
+					valueFormatter: value => `${value} ${value === 1 ? 'event' : 'events'}`
+				},
+				series: [{
+					name: 'Events',
+					type: 'line',
+					smooth: true,
+					showSymbol: false,
+					lineStyle: { width: 3, color: lineColor },
+					areaStyle: { color: areaColor },
+					data: seriesData
+				}],
+				markArea: {
+					itemStyle: { color: 'rgba(16,185,129,0.12)' },
+					data: [
+						[
+							{ xAxis: officeStart.getTime() },
+							{ xAxis: officeEnd.getTime() }
+						]
+					]
+				}
+			}, true);
+
+			chartInstance.resize();
+		}
+
+		function buildSessionActivitySeries(events) {
+			const referenceDate = new Date(events[0].timestamp);
+			const eventTimes = events
+				.map(event => Date.parse(event.timestamp))
+				.filter(time => !Number.isNaN(time));
+			const minEventTime = eventTimes.length ? Math.min(...eventTimes) : null;
+			const maxEventTime = eventTimes.length ? Math.max(...eventTimes) : null;
+			const { start: windowStart, end: windowEnd } = getExtendedWindow(referenceDate, minEventTime, maxEventTime);
+			const officeStart = new Date(referenceDate);
+			officeStart.setHours(OFFICE_START.hour, OFFICE_START.minute, 0, 0);
+			const officeEnd = new Date(referenceDate);
+			officeEnd.setHours(OFFICE_END.hour, OFFICE_END.minute, 0, 0);
+			const slotMs = SESSION_ACTIVITY_SLOT_MINUTES * 60 * 1000;
+			const slotCount = Math.floor((windowEnd.getTime() - windowStart.getTime()) / slotMs) + 1;
+			const buckets = Array.from({ length: slotCount }, () => 0);
+
+			events.forEach(event => {
+				const time = Date.parse(event.timestamp);
+				if (Number.isNaN(time)) {
+					return;
+				}
+				const bucketIndex = Math.floor((time - windowStart.getTime()) / slotMs);
+				if (bucketIndex >= 0 && bucketIndex < buckets.length) {
+					buckets[bucketIndex] += 1;
+				}
+			});
+
+			const seriesData = buckets.map((count, index) => {
+				const ts = windowStart.getTime() + (index * slotMs);
+				return [ts, count];
+			});
+
+			return { seriesData, windowStart, windowEnd, referenceDate, officeStart, officeEnd };
+		}
+
+		function getExtendedWindow(referenceDate, minEventTime, maxEventTime) {
+			const start = new Date(referenceDate);
+			start.setHours(OFFICE_START.hour, OFFICE_START.minute, 0, 0);
+			start.setTime(start.getTime() - SESSION_ACTIVITY_MARGIN_MINUTES * 60 * 1000);
+			if (typeof minEventTime === 'number' && minEventTime < start.getTime()) {
+				start.setTime(minEventTime - SESSION_ACTIVITY_MARGIN_MINUTES * 60 * 1000);
+			}
+			const end = new Date(referenceDate);
+			end.setHours(OFFICE_END.hour, OFFICE_END.minute, 0, 0);
+			end.setTime(end.getTime() + SESSION_ACTIVITY_MARGIN_MINUTES * 60 * 1000);
+			if (typeof maxEventTime === 'number' && maxEventTime > end.getTime()) {
+				end.setTime(maxEventTime + SESSION_ACTIVITY_MARGIN_MINUTES * 60 * 1000);
+			}
+			return { start, end };
+		}
+
+		function formatChartTimeLabel(dateObj) {
+			if (!(dateObj instanceof Date)) {
+				return '';
+			}
+			return `${padNumber(dateObj.getHours())}:${padNumber(dateObj.getMinutes())}`;
+		}
+
+		function formatHumanDate(dateObj) {
+			if (!(dateObj instanceof Date)) {
+				return '';
+			}
+			const day = padNumber(dateObj.getDate());
+			const month = padNumber(dateObj.getMonth() + 1);
+			const year = dateObj.getFullYear();
+			return `${day}/${month}/${year}`;
+		}
+
+		function padNumber(value) {
+			return String(value).padStart(2, '0');
+		}
+
+		function refreshSessionActivityTheme() {
+			if (lastSessionActivityEvents.length > 0) {
+				renderSessionActivityChart(lastSessionActivityEvents);
+			} else if (sessionActivityChart) {
+				sessionActivityChart.resize();
+			}
 		}
 
 		async function loadEventTypeStats() {
@@ -1837,7 +2163,7 @@
 							<div class="actions-dropdown" id="session-dropdown-${session.session_id}">
 								<div class="actions-dropdown-item delete" onclick="event.stopPropagation(); confirmDeleteSession('${session.session_id}')">
 									<span>🗑️</span>
-									<span>Eliminar</span>
+									<span>Delete</span>
 								</div>
 							</div>
 						</div>
@@ -1960,9 +2286,15 @@
 					document.getElementById('pagination').style.display = 'flex';
 					document.getElementById('tableControls').style.display = 'flex';
 					handleNotificationState(data.events, triggeredByNotification);
+					if (selectedSession !== 'all') {
+						updateSessionActivityChart();
+					} else {
+						hideSessionActivityCard();
+					}
 				} else {
 					document.getElementById('emptyState').style.display = 'block';
 					document.getElementById('tableControls').style.display = 'none';
+					hideSessionActivityCard();
 				}
 			} catch (error) {
 				console.error('Error loading events:', error);
@@ -2017,7 +2349,7 @@
 						<div class="actions-dropdown" id="dropdown-${event.id}">
 							<div class="actions-dropdown-item delete" onclick="confirmDeleteEvent(${event.id})">
 								<span>🗑️</span>
-								<span>Eliminar</span>
+								<span>Delete</span>
 							</div>
 						</div>
 					</td>
@@ -2257,7 +2589,7 @@
 
 		async function enableNotificationMode() {
 			if (!('Notification' in window)) {
-				alert('El teu navegador no suporta notificacions d\'escriptori.');
+				alert('Your browser does not support desktop notifications.');
 				return;
 			}
 
@@ -2272,7 +2604,7 @@
 			}
 
 			if (permission !== 'granted') {
-				alert('Has de permetre les notificacions del navegador per activar aquest mode.');
+				alert('You must allow browser notifications to enable this mode.');
 				return;
 			}
 
@@ -2399,10 +2731,10 @@
 				return;
 			}
 
-			const title = 'Noves sessions de telemetria';
+			const title = 'New telemetry sessions';
 			const body = newSessionsCount === 1
-				? 'S\'ha iniciat 1 sessió nova.'
-				: `S\'han iniciat ${newSessionsCount} sessions noves.`;
+				? '1 new session started.'
+				: `${newSessionsCount} new sessions started.`;
 
 			try {
 				new Notification(title, {
@@ -2505,7 +2837,7 @@
 		}
 
 		function confirmDeleteEvent(eventId) {
-			const confirmed = confirm('Estàs segur que vols eliminar aquest event? Aquesta acció no es pot desfer.');
+			const confirmed = confirm('Are you sure you want to delete this event? This action cannot be undone.');
 			if (confirmed) {
 				deleteEvent(eventId);
 			}
@@ -2533,12 +2865,12 @@
 				loadEvents();
 			} catch (error) {
 				console.error('Error deleting event:', error);
-				alert('Error eliminant l\'event: ' + error.message);
+				alert('Error deleting the event: ' + error.message);
 			}
 		}
 
 		function confirmDeleteSession(sessionId) {
-			const confirmed = confirm('Estàs segur que vols eliminar tots els events d\'aquesta sessió? Aquesta acció no es pot desfer.');
+			const confirmed = confirm('Are you sure you want to delete all events from this session? This action cannot be undone.');
 			if (confirmed) {
 				deleteSession(sessionId);
 			}
@@ -2583,7 +2915,7 @@
 				loadEvents();
 			} catch (error) {
 				console.error('Error deleting session:', error);
-				alert('Error eliminant la sessió: ' + error.message);
+				alert('Error deleting the session: ' + error.message);
 			}
 		}
 
