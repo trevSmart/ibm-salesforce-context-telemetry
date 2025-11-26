@@ -9,7 +9,10 @@
     "build": "npm run build:css:prod",
     "build:css": "tailwindcss -i ./public/css/input.css -o ./public/css/output.css --watch",
     "build:css:prod": "tailwindcss -i ./public/css/input.css -o ./public/css/output.css --minify",
-    "postinstall": "npm run build:css:prod || true"
+    "postinstall": "npm run build:css:prod || true",
+    "start:electron": "npm run build:css:prod && electron electron.js",
+    "dist:mac": "npm run build:css:prod && electron-builder --mac dmg zip --universal",
+    "postdist:mac": "npm rebuild better-sqlite3"
   },
   "keywords": [],
   "author": "",
@@ -21,11 +24,59 @@
     "better-sqlite3": "^12.4.6",
     "cors": "^2.8.5",
     "express": "^5.1.0",
-    "pg": "^8.11.0"
+    "pg": "^8.11.0",
+    "dotenv": "^16.4.5"
   },
   "devDependencies": {
     "autoprefixer": "^10.4.20",
     "postcss": "^8.4.47",
-    "tailwindcss": "^3.4.13"
+    "tailwindcss": "^3.4.13",
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.ibm.context.telemetry.viewer",
+    "productName": "IBM Saesforce Context Telemetry",
+    "directories": {
+      "output": "dist"
+    },
+    "extraMetadata": {
+      "main": "electron.js"
+    },
+    "extraResources": [
+      {
+        "from": ".env",
+        "to": ".env",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "files": [
+      "electron.js",
+      "public/**/*",
+      "package.json",
+      ".env"
+    ],
+    "mac": {
+      "icon": "public/resources/favicon.png",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ],
+      "category": "public.app-category.developer-tools"
+    }
   }
 }

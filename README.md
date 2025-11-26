@@ -16,6 +16,9 @@ npm start
 
 # Test the server
 curl http://localhost:3100/
+
+# Launch the event log desktop viewer
+npm run start:electron
 ```
 
 ## Overview
@@ -63,6 +66,34 @@ The server is currently deployed on Render at:
 **https://ibm-salesforce-context-telemetry.onrender.com**
 
 Visit the URL in your browser to access the **Telemetry Dashboard** and view all collected events.
+
+## Desktop event log viewer
+
+If you prefer a desktop experience to monitor telemetry events, you can now open the existing `public/event-log.html` UI inside a lightweight Electron shell. Keep the API server running (`npm start`) so the UI can reach `/api/*`:
+
+```bash
+npm run start:electron
+```
+
+This command rebuilds the Tailwind CSS bundle (ensuring `public/css/output.css` is up to date) and then spins up an Electron window that simply hosts the current HTML interface, so you get the exact same experience without needing to open the browser manually. By default it points to `http://localhost:3100/event-log`, but you can override it (for example, to target a remote deployment) via:
+
+```bash
+TELEMETRY_UI_URL="https://your-server.example.com/event-log" npm run start:electron
+```
+
+To avoid passing the variable manually each time, create a `.env` file (copy `.env.example`) and set `TELEMETRY_UI_URL` there. The Electron bootstrap automatically loads the value both in development and inside the packaged app (the `.env` file is bundled), so the desktop viewer will always target the URL you define.
+
+Inside the UI you can detect if it is running under the desktop shell by checking `window.__IS_ELECTRON__` (boolean) or by inspecting `document.documentElement.dataset.runtime` (`electron` / `browser`). This is useful if you need to adjust behavior (for example, hiding links that only make sense on the web).
+
+### Build a macOS app bundle
+
+When you need a distributable `.app` (and `.dmg` installer) run:
+
+```bash
+npm run dist:mac
+```
+
+Electron Builder will place the signed artifacts under `dist/`. The command already regenerates the Tailwind bundle before packaging, so the embedded offline fallback remains in sync. We pass `--universal`, which merges x64 i arm64 en un sol binari per garantir compatibilitat amb qualsevol Mac. Abans de construir, assegura’t que el teu `.env` (no es versiona) conté el `TELEMETRY_UI_URL` desitjat: l’arxiu es copia com a recurs extra i es llegeix en temps d’execució, per tant qualsevol canvi requereix regenerar els artefactes.
 
 ## API Endpoints
 
