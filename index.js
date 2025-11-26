@@ -84,6 +84,7 @@ app.get('/api/events', async (req, res) => {
 			offset = 0,
 			eventType,
 			serverId,
+			sessionId,
 			startDate,
 			endDate,
 			orderBy = 'created_at',
@@ -95,6 +96,7 @@ app.get('/api/events', async (req, res) => {
 			offset: parseInt(offset),
 			eventType,
 			serverId,
+			sessionId,
 			startDate,
 			endDate,
 			orderBy,
@@ -134,6 +136,19 @@ app.get('/api/event-types', async (req, res) => {
 		res.status(500).json({
 			status: 'error',
 			message: 'Failed to fetch event type statistics'
+		});
+	}
+});
+
+app.get('/api/sessions', async (req, res) => {
+	try {
+		const sessions = await db.getSessions();
+		res.json(sessions);
+	} catch (error) {
+		console.error('Error fetching sessions:', error);
+		res.status(500).json({
+			status: 'error',
+			message: 'Failed to fetch sessions'
 		});
 	}
 });

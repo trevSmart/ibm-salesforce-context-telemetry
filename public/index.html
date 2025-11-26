@@ -4,25 +4,7 @@
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>Telemetry Log Viewer - IBM Salesforce Context</title>
-	<script src="https://cdn.tailwindcss.com"></script>
-	<script>
-		tailwind.config = {
-			darkMode: 'class',
-			theme: {
-				extend: {
-					colors: {
-						brand: {
-							500: '#0ea5e9',
-							600: '#0284c7',
-							700: '#0369a1',
-							800: '#075985',
-							900: '#0c4a6e',
-						}
-					}
-				}
-			}
-		}
-	</script>
+	<link href="/css/output.css" rel="stylesheet">
 	<style>
 		:root {
 			/* Light mode colors - matching Laravel Log Viewer */
@@ -100,6 +82,7 @@
 		}
 
 		body {
+			font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 			background: linear-gradient(135deg, #a8c0ff 0%, #b8a8ff 50%, #c8a8ff 100%);
 			min-height: 100vh;
 			padding: 20px;
@@ -129,7 +112,7 @@
 			z-index: 10;
 			max-width: 1600px;
 			margin: 0 auto;
-			background: white;
+			background: #f4f4f5;
 			border-radius: 16px;
 			box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
 			overflow: hidden;
@@ -142,36 +125,15 @@
 			background: #27272a;
 		}
 
-		.header-bar {
-			padding: 20px 32px;
-			border-bottom: 1px solid #e4e4e7;
-			display: flex;
-			align-items: center;
-			justify-content: space-between;
-			background: white;
-			flex-wrap: wrap;
-			gap: 16px;
-		}
-
-		html.dark .header-bar {
-			border-color: #3f3f46;
-			background: #27272a;
-		}
-
-		.header-left {
-			display: flex;
-			align-items: center;
-			gap: 16px;
-		}
 
 		.log-viewer-title {
-			font-size: 1.5rem;
-			line-height: 2rem;
-			font-weight: 700;
+			font-size: 1.25rem;
+			line-height: 1.75rem;
+			font-weight: 600;
 			color: #10b981;
 			display: flex;
 			align-items: center;
-			gap: 10px;
+			gap: 8px;
 		}
 
 		html.dark .log-viewer-title {
@@ -180,7 +142,7 @@
 
 		.log-viewer-title::before {
 			content: '📋';
-			font-size: 1.875rem;
+			font-size: 1.5rem;
 		}
 
 		.back-link {
@@ -188,7 +150,7 @@
 			line-height: 1.25rem;
 			color: #52525b;
 			text-decoration: none;
-			margin-left: 10px;
+			margin-left: 0;
 		}
 
 		html.dark .back-link {
@@ -203,12 +165,6 @@
 			color: #e4e4e7;
 		}
 
-		.header-controls {
-			display: flex;
-			align-items: center;
-			gap: 16px;
-			flex-wrap: wrap;
-		}
 
 		.level-filters {
 			display: flex;
@@ -219,80 +175,81 @@
 		.level-filter-btn {
 			display: inline-flex;
 			align-items: center;
-			gap: 8px;
-			padding: 4px 12px;
+			gap: 6px;
+			padding: 6px 12px;
 			border: 1px solid;
 			border-radius: 6px;
 			font-size: 0.875rem;
 			line-height: 1.25rem;
-			font-weight: 600;
+			font-weight: 500;
 			cursor: pointer;
 			transition: all 0.2s;
 			position: relative;
 		}
 
 		.level-filter-btn input[type="checkbox"] {
-			accent-color: rgba(255, 255, 255, 0.8);
+			accent-color: rgba(255, 255, 255, 0.9);
+			margin-right: 2px;
 		}
 
 		.level-filter-btn.level-debug {
-			background: var(--level-info-bg);
+			background: #e0f2fe;
 			border-color: #bae6fd;
-			color: var(--text-secondary);
+			color: #0c4a6e;
 		}
 
 		html.dark .level-filter-btn.level-debug {
-			background: rgba(12, 74, 110, 0.4);
+			background: rgba(12, 74, 110, 0.3);
 			border-color: #075985;
-			color: var(--text-secondary);
+			color: #7dd3fc;
 		}
 
 		.level-filter-btn.level-info {
-			background: var(--level-info-bg);
+			background: #e0f2fe;
 			border-color: #bae6fd;
-			color: var(--text-secondary);
+			color: #0c4a6e;
 		}
 
 		html.dark .level-filter-btn.level-info {
-			background: rgba(12, 74, 110, 0.4);
+			background: rgba(12, 74, 110, 0.3);
 			border-color: #075985;
-			color: var(--text-secondary);
+			color: #7dd3fc;
 		}
 
 		.level-filter-btn.level-warning {
-			background: var(--level-warning-bg);
+			background: #fef3c7;
 			border-color: #fde68a;
-			color: #b45309;
+			color: #92400e;
 		}
 
 		html.dark .level-filter-btn.level-warning {
-			background: rgba(120, 53, 15, 0.4);
+			background: rgba(120, 53, 15, 0.3);
 			border-color: #92400e;
-			color: var(--level-warning);
+			color: #fbbf24;
 		}
 
 		.level-filter-btn.level-error {
-			background: var(--level-error-bg);
+			background: #fee2e2;
 			border-color: #fecdd3;
-			color: #be123c;
+			color: #991b1b;
 		}
 
 		html.dark .level-filter-btn.level-error {
-			background: rgba(136, 19, 55, 0.4);
+			background: rgba(136, 19, 55, 0.3);
 			border-color: #9f1239;
-			color: var(--level-error);
+			color: #fb7185;
 		}
 
 		.level-filter-btn.level-success {
-			background: var(--level-success-bg);
+			background: #d1fae5;
 			border-color: #a7f3d0;
-			color: #047857;
+			color: #065f46;
 		}
 
 		html.dark .level-filter-btn.level-success {
-			background: rgba(6, 78, 59, 0.4);
+			background: rgba(6, 78, 59, 0.3);
 			border-color: #065f46;
-			color: var(--level-success);
+			color: #10b981;
 		}
 
 		.level-filter-btn:hover {
@@ -322,48 +279,92 @@
 
 		.level-filter-btn.level-debug.active,
 		.level-filter-btn.level-info.active {
-			background: var(--level-info);
-			border-color: var(--level-info);
+			background: #0284c7;
+			border-color: #0284c7;
+			color: white;
+		}
+
+		html.dark .level-filter-btn.level-debug.active,
+		html.dark .level-filter-btn.level-info.active {
+			background: #0284c7;
+			border-color: #0284c7;
+			color: white;
 		}
 
 		.level-filter-btn.level-warning.active {
 			background: #d97706;
 			border-color: #d97706;
+			color: white;
+		}
+
+		html.dark .level-filter-btn.level-warning.active {
+			background: #d97706;
+			border-color: #d97706;
+			color: white;
 		}
 
 		.level-filter-btn.level-error.active {
-			background: #e11d48;
-			border-color: #e11d48;
+			background: #dc2626;
+			border-color: #dc2626;
+			color: white;
+		}
+
+		html.dark .level-filter-btn.level-error.active {
+			background: #dc2626;
+			border-color: #dc2626;
+			color: white;
 		}
 
 		.level-filter-btn.level-success.active {
 			background: #059669;
 			border-color: #059669;
+			color: white;
+		}
+
+		html.dark .level-filter-btn.level-success.active {
+			background: #059669;
+			border-color: #059669;
+			color: white;
 		}
 
 		.level-filter-btn .level-icon {
-			font-size: 1rem;
-			line-height: 1.5rem;
+			font-size: 0.875rem;
+			line-height: 1.25rem;
 		}
 
 		.level-filter-btn .level-count {
-			background: rgba(0, 0, 0, 0.1);
-			padding: 2px 8px;
-			border-radius: 12px;
+			background: rgba(0, 0, 0, 0.08);
+			padding: 2px 6px;
+			border-radius: 10px;
 			font-size: 0.75rem;
 			line-height: 1rem;
-			font-weight: 700;
+			font-weight: 600;
+			margin-left: 2px;
 		}
 
 		html.dark .level-filter-btn .level-count {
-			background: rgba(255, 255, 255, 0.1);
+			background: rgba(255, 255, 255, 0.15);
 		}
 
 		.level-filter-btn.active .level-count {
-			background: rgba(255, 255, 255, 0.25);
+			background: rgba(255, 255, 255, 0.3);
 		}
 
 		.search-controls {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+		}
+
+		.table-controls {
+			padding: 12px 16px;
+			display: flex;
+			justify-content: flex-end;
+			align-items: center;
+			flex-shrink: 0;
+		}
+
+		.table-controls-right {
 			display: flex;
 			align-items: center;
 			gap: 10px;
@@ -407,40 +408,43 @@
 		}
 
 		.control-select {
-			padding: 10px 16px;
-			border: 1px solid #d4d4d8;
-			border-radius: 8px;
+			padding: 6px 24px 6px 8px;
+			border: none;
+			border-radius: 0;
 			font-size: 0.875rem;
 			line-height: 1.25rem;
-			background: #fafafa;
-			color: #18181b;
+			background: transparent;
+			color: #a1a1aa;
 			cursor: pointer;
 			transition: all 0.2s;
+			appearance: none;
+			background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%23a1a1aa' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+			background-repeat: no-repeat;
+			background-position: right 4px center;
+			background-size: 16px;
+			padding-right: 24px;
 		}
 
 		html.dark .control-select {
-			border-color: #52525b;
-			background: #18181b;
-			color: #e4e4e7;
+			color: #71717a;
+			background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%2371717a' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
 		}
 
 		.control-select:hover {
-			background: #f4f4f5;
+			color: #52525b;
 		}
 
 		html.dark .control-select:hover {
-			background: #27272a;
+			color: #a1a1aa;
 		}
 
 		.control-select:focus {
 			outline: none;
-			border-color: #0ea5e9;
-			box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
+			color: #52525b;
 		}
 
 		html.dark .control-select:focus {
-			border-color: #0369a1;
-			box-shadow: 0 0 0 3px rgba(3, 105, 161, 0.3);
+			color: #a1a1aa;
 		}
 
 		.icon-btn {
@@ -478,33 +482,51 @@
 			display: flex;
 			flex: 1;
 			overflow: hidden;
+			gap: 16px;
+			padding: 0 16px;
 		}
 
 		.sidebar {
 			width: 280px;
-			background: #fafafa;
-			border-right: 1px solid #e4e4e7;
-			overflow-y: auto;
-			padding: 20px 12px;
+			background: transparent;
+			border-right: none;
+			overflow: hidden;
+			display: flex;
+			flex-direction: column;
+			flex-shrink: 0;
 		}
 
-		html.dark .sidebar {
-			background: #27272a;
-			border-color: #3f3f46;
+		.sidebar-header {
+			padding: 20px 12px;
+			border-bottom: none;
+			flex-shrink: 0;
 		}
 
 		@media (min-width: 768px) {
-			.sidebar {
+			.sidebar-header {
 				padding: 20px;
 			}
 		}
+
+		.sidebar-content {
+			flex: 1;
+			overflow-y: auto;
+			padding: 0 12px 20px 12px;
+		}
+
+		@media (min-width: 768px) {
+			.sidebar-content {
+				padding: 0 20px 20px 20px;
+			}
+		}
+
 
 		.sidebar-title {
 			font-size: 0.75rem;
 			line-height: 1rem;
 			font-weight: 600;
 			color: #52525b;
-			margin-bottom: 16px;
+			margin-bottom: 12px;
 			text-transform: uppercase;
 			letter-spacing: 0.05em;
 		}
@@ -518,8 +540,8 @@
 		}
 
 		.server-item {
-			padding: 8px 12px;
-			margin-bottom: 8px;
+			padding: 10px 12px;
+			margin-bottom: 6px;
 			border-radius: 6px;
 			cursor: pointer;
 			transition: all 0.2s;
@@ -527,7 +549,7 @@
 			align-items: center;
 			justify-content: space-between;
 			background: white;
-			border: 1px solid transparent;
+			border: 2px solid transparent;
 		}
 
 		html.dark .server-item {
@@ -551,7 +573,7 @@
 
 		html.dark .server-item.active {
 			background: rgba(12, 74, 110, 0.4);
-			border-color: #075985;
+			border-color: #0ea5e9;
 		}
 
 		.server-item.active .server-name {
@@ -568,17 +590,22 @@
 			line-height: 1.25rem;
 			color: #18181b;
 			flex: 1;
+			font-weight: 500;
 		}
 
 		html.dark .server-name {
 			color: #e4e4e7;
 		}
 
+		.server-item.active .server-name {
+			font-weight: 600;
+		}
+
 		.server-size {
 			font-size: 0.75rem;
 			line-height: 1rem;
 			color: #52525b;
-			margin-left: 10px;
+			margin-left: 8px;
 		}
 
 		html.dark .server-size {
@@ -592,34 +619,89 @@
 			overflow: hidden;
 			background: white;
 			position: relative;
+			min-width: 0;
 		}
 
 		html.dark .main-content {
 			background: #27272a;
 		}
 
+		.main-content-header {
+			padding: 20px 16px;
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 16px;
+			border-bottom: none;
+			flex-shrink: 0;
+		}
+
+		.main-content-body {
+			flex: 1;
+			display: flex;
+			flex-direction: column;
+			overflow: hidden;
+			min-height: 0;
+		}
+
 		.logs-table-container {
 			flex: 1;
-			overflow-y: auto;
+			overflow: hidden;
 			position: relative;
+			min-height: 0;
+			display: flex;
+			flex-direction: column;
+		}
+
+		.logs-table-container > div:last-child {
+			flex: 1;
+			overflow-y: auto;
+			min-height: 0;
+			display: flex;
+			flex-direction: column;
+		}
+
+		.logs-table-container > div:last-child > table {
+			height: 100%;
 		}
 
 		.logs-table {
 			width: 100%;
-			border-collapse: collapse;
+			border-collapse: separate;
+			border-spacing: 0;
 			font-size: 0.875rem;
 			line-height: 1.25rem;
+			border: 1px solid #e4e4e7;
+			border-radius: 8px;
+			overflow: hidden;
+		}
+
+		html.dark .logs-table {
+			border-color: #3f3f46;
 		}
 
 		.logs-table thead {
+			display: table-header-group;
 			position: sticky;
 			top: 0;
 			z-index: 10;
 			background: #f4f4f5;
 		}
 
+		.logs-table tbody {
+			display: table-row-group;
+		}
+
 		html.dark .logs-table thead {
 			background: #18181b;
+		}
+
+		.logs-table th:first-child {
+			border-top-left-radius: 8px;
+		}
+
+		.logs-table th:last-child {
+			border-top-right-radius: 8px;
 		}
 
 		.logs-table th {
@@ -640,9 +722,23 @@
 		}
 
 		.logs-table td {
-			padding: 12px 16px;
+			padding: 8px 16px;
 			border-bottom: 1px solid #e4e4e7;
 			color: #18181b;
+			font-size: 0.75rem;
+			line-height: 1rem;
+		}
+
+		.logs-table tbody tr:last-child td {
+			border-bottom: none;
+		}
+
+		.logs-table tbody tr:last-child td:first-child {
+			border-bottom-left-radius: 8px;
+		}
+
+		.logs-table tbody tr:last-child td:last-child {
+			border-bottom-right-radius: 8px;
 		}
 
 		html.dark .logs-table td {
@@ -750,14 +846,12 @@
 		}
 
 		.level-badge-icon {
-			font-size: 0.875rem;
-			line-height: 1.25rem;
+			font-size: 0.75rem;
+			line-height: 1rem;
 		}
 
 		.log-time {
-			font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
-			font-size: 0.75rem;
-			line-height: 1rem;
+			font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 			color: #18181b;
 		}
 
@@ -766,17 +860,40 @@
 		}
 
 		.log-description {
-			font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
-			font-size: 0.875rem;
-			line-height: 1.5;
+			font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 			max-width: 600px;
-			word-break: break-word;
-			color: #52525b;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			white-space: nowrap;
+			color: #a1a1aa;
 		}
 
 		html.dark .log-description {
-			color: #e4e4e7;
-			opacity: 0.9;
+			color: #71717a;
+		}
+
+		.status-indicator {
+			display: inline-block;
+			width: 10px;
+			height: 10px;
+			border-radius: 50%;
+			flex-shrink: 0;
+		}
+
+		.status-indicator.ok {
+			background-color: #10b981;
+		}
+
+		html.dark .status-indicator.ok {
+			background-color: #10b981;
+		}
+
+		.status-indicator.ko {
+			background-color: #ef4444;
+		}
+
+		html.dark .status-indicator.ko {
+			background-color: #fb7185;
 		}
 
 		.pagination {
@@ -918,31 +1035,28 @@
 		}
 
 		/* Scrollbar styling */
-		.sidebar::-webkit-scrollbar,
+		.sidebar-content::-webkit-scrollbar,
 		.logs-table-container::-webkit-scrollbar {
 			width: 8px;
 		}
 
-		.sidebar::-webkit-scrollbar-track,
+		.sidebar-content::-webkit-scrollbar-track,
 		.logs-table-container::-webkit-scrollbar-track {
 			background: var(--bg-secondary);
 		}
 
-		.sidebar::-webkit-scrollbar-thumb,
+		.sidebar-content::-webkit-scrollbar-thumb,
 		.logs-table-container::-webkit-scrollbar-thumb {
 			background: var(--border-color);
 			border-radius: 4px;
 		}
 
-		.sidebar::-webkit-scrollbar-thumb:hover,
+		.sidebar-content::-webkit-scrollbar-thumb:hover,
 		.logs-table-container::-webkit-scrollbar-thumb:hover {
 			background: var(--text-secondary);
 		}
 
 		@media (max-width: 1200px) {
-			.header-controls {
-				width: 100%;
-			}
 			.level-filters {
 				width: 100%;
 			}
@@ -955,98 +1069,106 @@
 		}
 	</style>
 </head>
-<body>
+	<body>
 	<div class="main-container">
-		<div class="header-bar">
-			<div class="header-left">
-				<div class="log-viewer-title">Log Viewer</div>
-				<a href="/" class="back-link text-sm">← Back to Dashboard</a>
-			</div>
-			<div class="header-controls">
-				<div class="level-filters">
-					<button class="level-filter-btn level-debug" data-level="tool_call">
-						<input type="checkbox" checked id="filter-tool_call" class="w-[18px] h-[18px] cursor-pointer">
-						<span class="level-icon text-base">🐛</span>
-						<span class="text-sm">Tool Call</span>
-						<span class="level-count text-xs font-bold" id="count-tool_call">0</span>
-					</button>
-					<button class="level-filter-btn level-info" data-level="session_start">
-						<input type="checkbox" checked id="filter-session_start" class="w-[18px] h-[18px] cursor-pointer">
-						<span class="level-icon text-base">ℹ️</span>
-						<span class="text-sm">Session</span>
-						<span class="level-count text-xs font-bold" id="count-session_start">0</span>
-					</button>
-					<button class="level-filter-btn level-warning" data-level="custom">
-						<input type="checkbox" checked id="filter-custom" class="w-[18px] h-[18px] cursor-pointer">
-						<span class="level-icon text-base">⚠️</span>
-						<span class="text-sm">Custom</span>
-						<span class="level-count text-xs font-bold" id="count-custom">0</span>
-					</button>
-					<button class="level-filter-btn level-error" data-level="tool_error">
-						<input type="checkbox" checked id="filter-tool_error" class="w-[18px] h-[18px] cursor-pointer">
-						<span class="level-icon text-base">❌</span>
-						<span class="text-sm">Error</span>
-						<span class="level-count text-xs font-bold" id="count-tool_error">0</span>
-					</button>
-				</div>
-				<div class="search-controls">
-					<input type="text" class="search-input" id="searchInput" placeholder="Search... RegEx welcome!">
-					<select class="control-select" id="sortSelect">
-						<option value="DESC">Newest first</option>
-						<option value="ASC">Oldest first</option>
-					</select>
-					<select class="control-select" id="limitSelect">
-						<option value="25">25 items per page</option>
-						<option value="50" selected>50 items per page</option>
-						<option value="100">100 items per page</option>
-					</select>
-					<button class="icon-btn" onclick="refreshLogs()" title="Refresh">🔄</button>
-					<button class="icon-btn theme-toggle" onclick="toggleTheme()" title="Toggle theme">🌙</button>
-				</div>
-			</div>
-		</div>
-
 		<div class="content-wrapper">
 			<div class="sidebar">
-				<div class="sidebar-title">Servers</div>
-				<ul class="server-list list-none" id="serverList">
-					<li class="server-item active" data-server="all">
-						<span class="server-name">All Servers</span>
-						<span class="server-size" id="totalSize">-</span>
-					</li>
-				</ul>
+				<div class="sidebar-header">
+					<div class="log-viewer-title text-xl font-semibold">Log Viewer</div>
+					<a href="/" class="back-link text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200">← Back to Dashboard</a>
+				</div>
+				<div class="sidebar-content">
+					<div class="sidebar-title text-xs font-semibold uppercase tracking-wider">Sessions</div>
+					<ul class="server-list list-none" id="sessionList">
+						<li class="server-item active" data-session="all">
+							<span class="server-name text-sm">All Sessions</span>
+							<span class="server-size text-xs" id="totalSize">-</span>
+						</li>
+					</ul>
+				</div>
 			</div>
 
 			<div class="main-content">
-				<div class="logs-table-container">
-					<div id="loadingMessage" class="loading">Loading events...</div>
-					<div id="errorMessage" class="error-message" style="display: none;"></div>
-					<div id="emptyState" class="empty-state" style="display: none;">
-						<div class="empty-state-icon">📭</div>
-						<div class="font-semibold mt-2.5">No events found</div>
+				<div class="main-content-header">
+					<div class="level-filters">
+						<button class="level-filter-btn level-debug" data-level="tool_call">
+							<input type="checkbox" checked id="filter-tool_call" class="w-4 h-4 cursor-pointer">
+							<span class="level-icon text-sm">🐛</span>
+							<span class="text-sm font-medium">Tool Call</span>
+							<span class="level-count text-xs font-semibold" id="count-tool_call">0</span>
+						</button>
+						<button class="level-filter-btn level-info" data-level="session_start">
+							<input type="checkbox" checked id="filter-session_start" class="w-4 h-4 cursor-pointer">
+							<span class="level-icon text-sm">ℹ️</span>
+							<span class="text-sm font-medium">Session</span>
+							<span class="level-count text-xs font-semibold" id="count-session_start">0</span>
+						</button>
+						<button class="level-filter-btn level-warning" data-level="custom">
+							<input type="checkbox" checked id="filter-custom" class="w-4 h-4 cursor-pointer">
+							<span class="level-icon text-sm">⚠️</span>
+							<span class="text-sm font-medium">Custom</span>
+							<span class="level-count text-xs font-semibold" id="count-custom">0</span>
+						</button>
+						<button class="level-filter-btn level-error" data-level="tool_error">
+							<input type="checkbox" checked id="filter-tool_error" class="w-4 h-4 cursor-pointer">
+							<span class="level-icon text-sm">❌</span>
+							<span class="text-sm font-medium">Error</span>
+							<span class="level-count text-xs font-semibold" id="count-tool_error">0</span>
+						</button>
 					</div>
-					<table class="logs-table" id="logsTable" style="display: none;">
-						<thead>
-							<tr>
-								<th>Level</th>
-								<th>Time</th>
-								<th>Server</th>
-								<th>Description</th>
-							</tr>
-						</thead>
-						<tbody id="logsBody">
-						</tbody>
-					</table>
+					<div class="search-controls">
+						<input type="text" class="search-input" id="searchInput" placeholder="Search">
+						<button class="icon-btn" onclick="refreshLogs()" title="Refresh">🔄</button>
+						<button class="icon-btn theme-toggle" onclick="toggleTheme()" title="Toggle theme">🌙</button>
+					</div>
 				</div>
-				<div class="pagination" id="pagination" style="display: none;">
-					<button class="pagination-btn" onclick="previousPage()" id="prevBtn">← Previous</button>
-					<span class="pagination-info" id="pageInfo"></span>
-					<button class="pagination-btn" onclick="nextPage()" id="nextBtn">Next →</button>
-				</div>
-				<div class="footer-info">
-					<span class="text-xs">Memory: <span id="memoryInfo" class="font-semibold">-</span></span>
-					<span class="text-xs">Duration: <span id="durationInfo" class="font-semibold">-</span></span>
-					<span class="text-xs">Version: <span class="font-semibold">v1.0.0</span></span>
+				<div class="main-content-body">
+					<div class="table-controls" id="tableControls" style="display: none;">
+						<div class="table-controls-right">
+							<select class="control-select" id="sortSelect">
+								<option value="DESC">Newest first</option>
+								<option value="ASC">Oldest first</option>
+							</select>
+							<select class="control-select" id="limitSelect">
+								<option value="25">25 items per page</option>
+								<option value="50" selected>50 items per page</option>
+								<option value="100">100 items per page</option>
+							</select>
+						</div>
+					</div>
+					<div class="logs-table-container" id="logsTableContainer">
+						<div id="loadingMessage" class="loading">Loading events...</div>
+						<div id="errorMessage" class="error-message" style="display: none;"></div>
+						<div id="emptyState" class="empty-state" style="display: none;">
+							<div class="empty-state-icon">📭</div>
+							<div class="font-semibold mt-2.5">No events found</div>
+						</div>
+						<div style="flex: 1; overflow-y: auto; min-height: 0; display: flex; flex-direction: column;">
+							<table class="logs-table" id="logsTable" style="display: none; height: 100%;">
+								<thead>
+									<tr>
+										<th style="width: 40px;"></th>
+										<th>Level</th>
+										<th>Time</th>
+										<th>Server</th>
+										<th>Description</th>
+									</tr>
+								</thead>
+								<tbody id="logsBody">
+								</tbody>
+							</table>
+						</div>
+					</div>
+					<div class="pagination" id="pagination" style="display: none;">
+						<button class="pagination-btn" onclick="previousPage()" id="prevBtn">← Previous</button>
+						<span class="pagination-info" id="pageInfo"></span>
+						<button class="pagination-btn" onclick="nextPage()" id="nextBtn">Next →</button>
+					</div>
+					<div class="footer-info">
+						<span class="text-xs">Memory: <span id="memoryInfo" class="font-semibold">-</span></span>
+						<span class="text-xs">Duration: <span id="durationInfo" class="font-semibold">-</span></span>
+						<span class="text-xs">Version: <span class="font-semibold">v1.0.0</span></span>
+					</div>
 				</div>
 			</div>
 		</div>
@@ -1056,7 +1178,7 @@
 		let currentOffset = 0;
 		let limit = 50;
 		let totalEvents = 0;
-		let selectedServer = 'all';
+		let selectedSession = 'all';
 		let activeFilters = new Set(['tool_call', 'session_start', 'custom', 'tool_error']);
 		let searchQuery = '';
 		let sortOrder = 'DESC';
@@ -1148,15 +1270,89 @@
 			}
 		}
 
-		async function loadServers() {
+		async function loadSessions() {
 			try {
-				// For now, we'll just show "All Servers"
-				// In the future, this could fetch unique server IDs
-				const response = await fetch('/api/stats');
-				const stats = await response.json();
-				// Server list can be expanded later
+				const response = await fetch('/api/sessions');
+				if (!response.ok) {
+					throw new Error(`HTTP error! status: ${response.status}`);
+				}
+				const sessions = await response.json();
+				console.log('Loaded sessions:', sessions);
+				const sessionList = document.getElementById('sessionList');
+
+				if (!sessionList) {
+					console.error('sessionList element not found');
+					return;
+				}
+
+				// Keep the "All Sessions" item
+				const allSessionsItem = sessionList.querySelector('[data-session="all"]');
+				if (!allSessionsItem) {
+					console.error('All sessions item not found');
+					return;
+				}
+
+				sessionList.innerHTML = '';
+				sessionList.appendChild(allSessionsItem);
+
+				// Add each session
+				if (Array.isArray(sessions) && sessions.length > 0) {
+					sessions.forEach(session => {
+						if (!session || !session.session_id) {
+							console.warn('Invalid session data:', session);
+							return;
+						}
+
+						const li = document.createElement('li');
+						li.className = 'server-item';
+						li.setAttribute('data-session', session.session_id);
+
+						// Format session ID (show first 12 chars)
+						const sessionDisplay = session.session_id.length > 12
+							? session.session_id.substring(0, 12) + '...'
+							: session.session_id;
+
+						li.innerHTML = `
+							<span class="server-name text-sm">${sessionDisplay}</span>
+							<span class="server-size text-xs">${session.count || 0}</span>
+						`;
+
+						li.addEventListener('click', () => {
+							document.querySelectorAll('.server-item').forEach(i => i.classList.remove('active'));
+							li.classList.add('active');
+							selectedSession = session.session_id;
+							// When a session is selected, default to ASC order (oldest first)
+							if (selectedSession !== 'all') {
+								sortOrder = 'ASC';
+								document.getElementById('sortSelect').value = 'ASC';
+							} else {
+								sortOrder = 'DESC';
+								document.getElementById('sortSelect').value = 'DESC';
+							}
+							currentOffset = 0;
+							loadEvents();
+						});
+
+						sessionList.appendChild(li);
+					});
+
+					// Update total size
+					const total = sessions.reduce((sum, session) => sum + (session.count || 0), 0);
+					const totalSizeEl = document.getElementById('totalSize');
+					if (totalSizeEl) {
+						totalSizeEl.textContent = total;
+					}
+				} else {
+					console.log('No sessions found or empty array');
+					// Update total size to 0 if no sessions
+					const totalSizeEl = document.getElementById('totalSize');
+					if (totalSizeEl) {
+						totalSizeEl.textContent = '0';
+					}
+				}
 			} catch (error) {
-				console.error('Error loading servers:', error);
+				console.error('Error loading sessions:', error);
+				// Show error in console but don't break the UI
 			}
 		}
 
@@ -1167,6 +1363,7 @@
 			document.getElementById('errorMessage').style.display = 'none';
 			document.getElementById('emptyState').style.display = 'none';
 			document.getElementById('pagination').style.display = 'none';
+			document.getElementById('tableControls').style.display = 'none';
 
 			try {
 				const params = new URLSearchParams({
@@ -1183,8 +1380,8 @@
 					});
 				}
 
-				if (selectedServer !== 'all') {
-					params.append('serverId', selectedServer);
+				if (selectedSession !== 'all') {
+					params.append('sessionId', selectedSession);
 				}
 
 				if (searchQuery) {
@@ -1202,8 +1399,10 @@
 					updatePagination(data);
 					document.getElementById('logsTable').style.display = 'table';
 					document.getElementById('pagination').style.display = 'flex';
+					document.getElementById('tableControls').style.display = 'flex';
 				} else {
 					document.getElementById('emptyState').style.display = 'block';
+					document.getElementById('tableControls').style.display = 'none';
 				}
 			} catch (error) {
 				console.error('Error loading events:', error);
@@ -1223,9 +1422,14 @@
 				const levelClass = getLevelClass(event.event);
 				const levelIcon = getLevelIcon(event.event);
 				const description = formatDescription(event);
+				const isError = event.event === 'tool_error' || event.event === 'error';
+				const statusClass = isError ? 'ko' : 'ok';
 
 				row.className = `log-item-${levelClass}`;
 				row.innerHTML = `
+					<td style="text-align: center; padding: 8px 8px;">
+						<span class="status-indicator ${statusClass}" title="${isError ? 'Error' : 'OK'}"></span>
+					</td>
 					<td>
 						<span class="level-badge ${levelClass}">
 							<span class="level-badge-icon">${levelIcon}</span>
@@ -1266,10 +1470,7 @@
 
 		function formatDescription(event) {
 			if (event.data) {
-				const dataStr = JSON.stringify(event.data, null, 2);
-				if (dataStr.length > 200) {
-					return dataStr.substring(0, 200) + '...';
-				}
+				const dataStr = JSON.stringify(event.data);
 				return dataStr;
 			}
 			return '-';
@@ -1319,6 +1520,7 @@
 		function refreshLogs() {
 			currentOffset = 0;
 			loadEventTypeStats();
+			loadSessions();
 			loadEvents();
 		}
 
@@ -1347,12 +1549,14 @@
 			loadEvents();
 		});
 
-		// Server selection
-		document.querySelectorAll('.server-item').forEach(item => {
+		// Session selection (for "All Sessions" item)
+		document.querySelectorAll('[data-session="all"]').forEach(item => {
 			item.addEventListener('click', () => {
 				document.querySelectorAll('.server-item').forEach(i => i.classList.remove('active'));
 				item.classList.add('active');
-				selectedServer = item.dataset.server;
+				selectedSession = 'all';
+				sortOrder = 'DESC';
+				document.getElementById('sortSelect').value = 'DESC';
 				currentOffset = 0;
 				loadEvents();
 			});
@@ -1362,12 +1566,13 @@
 		initTheme();
 		setupLevelFilters();
 		loadEventTypeStats();
-		loadServers();
+		loadSessions();
 		loadEvents();
 
 		// Auto-refresh every 30 seconds
 		setInterval(() => {
 			loadEventTypeStats();
+			loadSessions();
 			if (currentOffset === 0) {
 				loadEvents();
 			}

@@ -1,8 +1,5 @@
 # Dependencies
 node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
 package-lock.json
 
 # Environment variables
@@ -11,52 +8,35 @@ package-lock.json
 .env.*.local
 
 # Logs
-logs/
+logs
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+storage/*.db
+storage/*.sqlite
+storage/*.sqlite3
 
 # OS files
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
 Thumbs.db
-desktop.ini
 
-# IDE files
+# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
-.project
-.classpath
-.settings/
+
+# Build outputs
+public/css/output.css
+public/css/output.css.map
 
 # Temporary files
 tmp/
-*.tmp
-*.temp
-
-# Database files
-data/
-*.db
-*.db-shm
-*.db-wal
-
-# Build artifacts
-dist/
-build/
-*.tsbuildinfo
-
-# Coverage
-coverage/
-.nyc_output/
-
-# Optional npm cache directory
-.npm
-
-# Optional eslint cache
-.eslintcache
-dev/
+temp/

@@ -210,6 +210,7 @@ async function getEvents(options = {}) {
 		offset = 0,
 		eventType,
 		serverId,
+		sessionId,
 		startDate,
 		endDate,
 		orderBy = 'created_at',
@@ -227,6 +228,10 @@ async function getEvents(options = {}) {
 	if (serverId) {
 		whereClause += dbType === 'sqlite' ? ' AND server_id = ?' : ` AND server_id = $${paramIndex++}`;
 		params.push(serverId);
+	}
+	if (sessionId) {
+		whereClause += dbType === 'sqlite' ? ' AND session_id = ?' : ` AND session_id = $${paramIndex++}`;
+		params.push(sessionId);
 	}
 	if (startDate) {
 		whereClause += dbType === 'sqlite' ? ' AND created_at >= ?' : ` AND created_at >= $${paramIndex++}`;
@@ -318,6 +323,54 @@ async function getEventTypeStats() {
 }
 
 /**
+ * Get unique sessions with event counts
+ * @returns {Array} Sessions with count and latest timestamp
+ */
+async function getSessions() {
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
+
+	if (dbType === 'sqlite') {
+		const result = db.prepare(`
+			SELECT
+				session_id,
+				COUNT(*) as count,
+				MIN(created_at) as first_event,
+				MAX(created_at) as last_event
+			FROM telemetry_events
+			WHERE session_id IS NOT NULL
+			GROUP BY session_id
+			ORDER BY last_event DESC
+		`).all();
+		return result.map(row => ({
+			session_id: row.session_id,
+			count: parseInt(row.count),
+			first_event: row.first_event,
+			last_event: row.last_event
+		}));
+	} else {
+		const result = await db.query(`
+			SELECT
+				session_id,
+				COUNT(*) as count,
+				MIN(created_at) as first_event,
+				MAX(created_at) as last_event
+			FROM telemetry_events
+			WHERE session_id IS NOT NULL
+			GROUP BY session_id
+			ORDER BY last_event DESC
+		`);
+		return result.rows.map(row => ({
+			session_id: row.session_id,
+			count: parseInt(row.count),
+			first_event: row.first_event,
+			last_event: row.last_event
+		}));
+	}
+}
+
+/**
  * Delete all events from the database
  * @returns {Promise<number>} Number of deleted events
  */
@@ -356,6 +409,7 @@ module.exports = {
 	getStats,
 	getEvents,
 	getEventTypeStats,
+	getSessions,
 	deleteAllEvents,
 	close
 };

@@ -1,0 +1,292 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom styles for level colors and other specific styling */
+@layer components {
+  :root {
+    /* Light mode colors - matching Laravel Log Viewer */
+    --bg-primary: #ffffff;
+    --bg-secondary: #fafafa;
+    --bg-sidebar: #fafafa;
+    --bg-table-header: #f4f4f5;
+    --text-primary: #18181b;
+    --text-secondary: #52525b;
+    --text-muted: #a1a1aa;
+    --border-color: #e4e4e7;
+    --hover-bg: #f4f4f5;
+
+    /* Level colors - matching Laravel Log Viewer */
+    --level-success: #10b981;
+    --level-success-bg: #ecfdf5;
+    --level-success-hover: #d1fae5;
+    --level-info: #0ea5e9;
+    --level-info-bg: #f0f9ff;
+    --level-info-hover: #e0f2fe;
+    --level-warning: #f59e0b;
+    --level-warning-bg: #fffbeb;
+    --level-warning-hover: #fef3c7;
+    --level-error: #ef4444;
+    --level-error-bg: #fef2f2;
+    --level-error-hover: #fee2e2;
+    --level-debug: #0ea5e9;
+  }
+
+  html.dark {
+    /* Dark mode colors - matching Laravel Log Viewer */
+    --bg-primary: #27272a;
+    --bg-secondary: #18181b;
+    --bg-sidebar: #27272a;
+    --bg-table-header: #18181b;
+    --text-primary: #e4e4e7;
+    --text-secondary: #a1a1aa;
+    --text-muted: #71717a;
+    --border-color: #3f3f46;
+    --hover-bg: #3f3f46;
+
+    /* Dark mode level colors */
+    --level-success: #10b981;
+    --level-success-bg: rgba(6, 78, 59, 0.4);
+    --level-success-hover: rgba(6, 78, 59, 0.75);
+    --level-info: #0ea5e9;
+    --level-info-bg: rgba(12, 74, 110, 0.4);
+    --level-info-hover: rgba(12, 74, 110, 0.75);
+    --level-warning: #fbbf24;
+    --level-warning-bg: rgba(120, 53, 15, 0.4);
+    --level-warning-hover: rgba(120, 53, 15, 0.75);
+    --level-error: #fb7185;
+    --level-error-bg: rgba(136, 19, 55, 0.4);
+    --level-error-hover: rgba(136, 19, 55, 0.75);
+  }
+
+  html.dark {
+    color-scheme: dark;
+  }
+
+  body {
+    background: linear-gradient(135deg, #a8c0ff 0%, #b8a8ff 50%, #c8a8ff 100%);
+    min-height: 100vh;
+    padding: 20px;
+    position: relative;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background:
+      radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.3) 0%, transparent 50%),
+      radial-gradient(circle at 80% 70%, rgba(255, 255, 255, 0.2) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .main-container {
+    position: relative;
+    z-index: 10;
+    max-width: 1600px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 40px);
+  }
+
+  html.dark .main-container {
+    background: #27272a;
+  }
+
+  /* Level filter buttons */
+  .level-filter-btn.level-debug {
+    background: var(--level-info-bg);
+    border-color: #bae6fd;
+    color: var(--text-secondary);
+  }
+
+  html.dark .level-filter-btn.level-debug {
+    background: rgba(12, 74, 110, 0.4);
+    border-color: #075985;
+    color: var(--text-secondary);
+  }
+
+  .level-filter-btn.level-info {
+    background: var(--level-info-bg);
+    border-color: #bae6fd;
+    color: var(--text-secondary);
+  }
+
+  html.dark .level-filter-btn.level-info {
+    background: rgba(12, 74, 110, 0.4);
+    border-color: #075985;
+    color: var(--text-secondary);
+  }
+
+  .level-filter-btn.level-warning {
+    background: var(--level-warning-bg);
+    border-color: #fde68a;
+    color: #b45309;
+  }
+
+  html.dark .level-filter-btn.level-warning {
+    background: rgba(120, 53, 15, 0.4);
+    border-color: #92400e;
+    color: var(--level-warning);
+  }
+
+  .level-filter-btn.level-error {
+    background: var(--level-error-bg);
+    border-color: #fecdd3;
+    color: #be123c;
+  }
+
+  html.dark .level-filter-btn.level-error {
+    background: rgba(136, 19, 55, 0.4);
+    border-color: #9f1239;
+    color: var(--level-error);
+  }
+
+  .level-filter-btn.level-success {
+    background: var(--level-success-bg);
+    border-color: #a7f3d0;
+    color: #047857;
+  }
+
+  html.dark .level-filter-btn.level-success {
+    background: rgba(6, 78, 59, 0.4);
+    border-color: #065f46;
+    color: var(--level-success);
+  }
+
+  .level-filter-btn:hover {
+    opacity: 1;
+  }
+
+  .level-filter-btn.level-debug:hover,
+  .level-filter-btn.level-info:hover {
+    background: var(--level-info-hover);
+  }
+
+  .level-filter-btn.level-warning:hover {
+    background: var(--level-warning-hover);
+  }
+
+  .level-filter-btn.level-error:hover {
+    background: var(--level-error-hover);
+  }
+
+  .level-filter-btn.level-success:hover {
+    background: var(--level-success-hover);
+  }
+
+  .level-filter-btn.active {
+    color: white;
+  }
+
+  .level-filter-btn.level-debug.active,
+  .level-filter-btn.level-info.active {
+    background: var(--level-info);
+    border-color: var(--level-info);
+  }
+
+  .level-filter-btn.level-warning.active {
+    background: #d97706;
+    border-color: #d97706;
+  }
+
+  .level-filter-btn.level-error.active {
+    background: #e11d48;
+    border-color: #e11d48;
+  }
+
+  .level-filter-btn.level-success.active {
+    background: #059669;
+    border-color: #059669;
+  }
+
+  .level-filter-btn input[type="checkbox"] {
+    accent-color: rgba(255, 255, 255, 0.8);
+  }
+
+  .level-filter-btn .level-count {
+    background: rgba(0, 0, 0, 0.1);
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    line-height: 1rem;
+    font-weight: 700;
+  }
+
+  html.dark .level-filter-btn .level-count {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  .level-filter-btn.active .level-count {
+    background: rgba(255, 255, 255, 0.25);
+  }
+
+  /* Level badges */
+  .level-badge.debug {
+    background: var(--level-info-bg);
+    color: var(--level-info);
+  }
+
+  .level-badge.info {
+    background: var(--level-info-bg);
+    color: var(--level-info);
+  }
+
+  .level-badge.warning {
+    background: var(--level-warning-bg);
+    color: #b45309;
+  }
+
+  html.dark .level-badge.warning {
+    color: var(--level-warning);
+  }
+
+  .level-badge.error {
+    background: var(--level-error-bg);
+    color: #be123c;
+  }
+
+  html.dark .level-badge.error {
+    color: var(--level-error);
+  }
+
+  .level-badge.success {
+    background: var(--level-success-bg);
+    color: #047857;
+  }
+
+  html.dark .level-badge.success {
+    color: var(--level-success);
+  }
+
+  /* Scrollbar styling */
+  .sidebar::-webkit-scrollbar,
+  .logs-table-container::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .sidebar::-webkit-scrollbar-track,
+  .logs-table-container::-webkit-scrollbar-track {
+    background: var(--bg-secondary);
+  }
+
+  .sidebar::-webkit-scrollbar-thumb,
+  .logs-table-container::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 4px;
+  }
+
+  .sidebar::-webkit-scrollbar-thumb:hover,
+  .logs-table-container::-webkit-scrollbar-thumb:hover {
+    background: var(--text-secondary);
+  }
+}
