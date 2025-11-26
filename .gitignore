@@ -39,6 +39,12 @@ tmp/
 *.tmp
 *.temp
 
+# Database files
+data/
+*.db
+*.db-shm
+*.db-wal
+
 # Build artifacts
 dist/
 build/

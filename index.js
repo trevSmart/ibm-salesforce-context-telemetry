@@ -3,6 +3,7 @@ const cors = require('cors');
 const Ajv = require('ajv');
 const fs = require('fs');
 const path = require('path');
+const db = require('./storage/database');
 const app = express();
 const port = process.env.PORT || 3000;
 
@@ -15,6 +16,7 @@ const validate = ajv.compile(schema);
 // Middleware
 app.use(cors()); // Allow requests from any origin
 app.use(express.json()); // Parse JSON request bodies
+app.use(express.static('public')); // Serve static files from public directory
 
 app.post('/telemetry', (req, res) => {
 	try {
@@ -47,8 +49,11 @@ app.post('/telemetry', (req, res) => {
 		const timestamp = new Date().toISOString();
 		console.log(`[${timestamp}] Telemetry event:`, JSON.stringify(telemetryData, null, 2));
 
-		// TODO: Store in database, send to analytics, etc.
-		// Example: await db.telemetry.insert(telemetryData);
+		// Store in database (non-blocking - don't await to avoid blocking response)
+		db.storeEvent(telemetryData, timestamp).catch(err => {
+			console.error('Error storing telemetry event:', err);
+			// Don't fail the request if storage fails - telemetry is non-critical
+		});
 
 		// Return success response
 		res.status(200).json({
@@ -68,8 +73,76 @@ app.get('/health', (_req, res) => {
 	res.status(200).send('ok');
 });
 
+// API endpoints for viewing telemetry data
+app.get('/api/events', async (req, res) => {
+	try {
+		const {
+			limit = 50,
+			offset = 0,
+			eventType,
+			serverId,
+			startDate,
+			endDate,
+			orderBy = 'created_at',
+			order = 'DESC'
+		} = req.query;
+
+		const result = await db.getEvents({
+			limit: parseInt(limit),
+			offset: parseInt(offset),
+			eventType,
+			serverId,
+			startDate,
+			endDate,
+			orderBy,
+			order
+		});
+
+		res.json(result);
+	} catch (error) {
+		console.error('Error fetching events:', error);
+		res.status(500).json({
+			status: 'error',
+			message: 'Failed to fetch events'
+		});
+	}
+});
+
+app.get('/api/stats', async (req, res) => {
+	try {
+		const { startDate, endDate, eventType } = req.query;
+		const stats = await db.getStats({ startDate, endDate, eventType });
+		res.json(stats);
+	} catch (error) {
+		console.error('Error fetching stats:', error);
+		res.status(500).json({
+			status: 'error',
+			message: 'Failed to fetch statistics'
+		});
+	}
+});
+
+app.get('/api/event-types', async (req, res) => {
+	try {
+		const stats = await db.getEventTypeStats();
+		res.json(stats);
+	} catch (error) {
+		console.error('Error fetching event type stats:', error);
+		res.status(500).json({
+			status: 'error',
+			message: 'Failed to fetch event type statistics'
+		});
+	}
+});
+
+// Serve dashboard page
 app.get('/', (_req, res) => {
-	res.status(200).send('MCP Telemetry server is running ✅');
+	const dashboardPath = path.join(__dirname, 'public', 'index.html');
+	if (fs.existsSync(dashboardPath)) {
+		res.sendFile(dashboardPath);
+	} else {
+		res.status(200).send('MCP Telemetry server is running ✅<br><a href="/api/events">View API</a>');
+	}
 });
 
 // Serve OpenAPI specification
@@ -88,6 +161,33 @@ app.get('/schema', (_req, res) => {
 	res.json(schema);
 });
 
-app.listen(port, () => {
-	console.log(`Telemetry server listening on port ${port}`);
+// Initialize database and start server
+async function startServer() {
+	try {
+		await db.init();
+		console.log('Database initialized successfully');
+
+		app.listen(port, () => {
+			console.log(`Telemetry server listening on port ${port}`);
+		});
+	} catch (error) {
+		console.error('Failed to initialize database:', error);
+		process.exit(1);
+	}
+}
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+	console.log('SIGTERM received, closing database...');
+	await db.close();
+	process.exit(0);
 });
+
+process.on('SIGINT', async () => {
+	console.log('SIGINT received, closing database...');
+	await db.close();
+	process.exit(0);
+});
+
+// Start the server
+startServer();

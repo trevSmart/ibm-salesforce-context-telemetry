@@ -33,9 +33,14 @@ This telemetry server receives telemetry events from IBM Salesforce Context MCP 
 │   ├── SETUP.md           # Setup and deployment guide
 │   ├── INTEGRATION.md     # Integration guide for MCP servers
 │   ├── API_SPECIFICATION.md # Complete API documentation
+│   ├── DATABASE.md        # Database configuration guide
 │   └── AGENTS.md          # Instructions for AI agents
 ├── examples/               # Code examples
 │   └── telemetry-client.js # Reference telemetry client
+├── public/                 # Web dashboard
+│   └── index.html         # Telemetry dashboard interface
+├── storage/                # Database storage module
+│   └── database.js        # Database operations
 ├── index.js                # Main server file
 └── package.json            # Dependencies and scripts
 ```
@@ -43,6 +48,8 @@ This telemetry server receives telemetry events from IBM Salesforce Context MCP 
 ## Features
 
 * **Telemetry Collection**: Receives telemetry events via REST API
+* **Web Dashboard**: Beautiful web interface to view and analyze telemetry data
+* **Database Storage**: Stores events in SQLite (default) or PostgreSQL
 * **Health Monitoring**: Provides health check endpoints for monitoring
 * **Scalable Architecture**: Built with Express.js for easy deployment
 * **Privacy-First**: Designed with data privacy and security in mind
@@ -51,6 +58,8 @@ This telemetry server receives telemetry events from IBM Salesforce Context MCP 
 
 The server is currently deployed on Render at:
 **https://ibm-salesforce-context-telemetry.onrender.com**
+
+Visit the URL in your browser to access the **Telemetry Dashboard** and view all collected events.
 
 ## API Endpoints
 
@@ -108,6 +117,59 @@ Serves the JSON Schema for validation.
 **Response:**
 JSON Schema object
 
+### GET `/api/events`
+
+Retrieves telemetry events with pagination and filtering.
+
+**Query Parameters:**
+- `limit` (default: 50) - Number of events per page
+- `offset` (default: 0) - Pagination offset
+- `eventType` - Filter by event type
+- `serverId` - Filter by server ID
+- `startDate` - Filter events from this date
+- `endDate` - Filter events until this date
+- `orderBy` - Sort field (id, event, timestamp, created_at, server_id)
+- `order` - Sort order (ASC, DESC)
+
+**Response:**
+```json
+{
+  "events": [...],
+  "total": 100,
+  "limit": 50,
+  "offset": 0,
+  "hasMore": true
+}
+```
+
+### GET `/api/stats`
+
+Get telemetry statistics.
+
+**Query Parameters:**
+- `startDate` - Filter from date
+- `endDate` - Filter until date
+- `eventType` - Filter by event type
+
+**Response:**
+```json
+{
+  "total": 100
+}
+```
+
+### GET `/api/event-types`
+
+Get statistics grouped by event type.
+
+**Response:**
+```json
+[
+  { "event": "tool_call", "count": 50 },
+  { "event": "tool_error", "count": 5 }
+]
+```
+
 ## Local Development
 
 ### Prerequisites
@@ -134,14 +196,24 @@ The server will start on port 3000 by default, or the port specified in the `POR
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `PORT` | Server port | `3000` |
+| `DB_TYPE` | Database type (`sqlite` or `postgresql`) | `sqlite` |
+| `DB_PATH` | Path to SQLite database file (SQLite only) | `./data/telemetry.db` |
+| `DATABASE_URL` | PostgreSQL connection string (PostgreSQL only) | - |
+| `DATABASE_SSL` | Enable SSL for PostgreSQL (`true`/`false`) | `false` |
 
 ## Architecture
 
-The current implementation logs telemetry events to the console. Future enhancements may include:
+The server stores telemetry events in a database:
 
-* Database storage (PostgreSQL, MongoDB, etc.)
+* **SQLite** (default) - File-based database, perfect for development and small deployments
+* **PostgreSQL** - Production-ready database for high-volume deployments
+
+See [docs/DATABASE.md](./docs/DATABASE.md) for complete database configuration and setup instructions.
+
+Future enhancements may include:
+
 * Cloud storage (S3, Azure Blob, etc.)
-* Real-time analytics
+* Real-time analytics dashboard
 * Data aggregation and reporting
 * Privacy-preserving anonymization
 
