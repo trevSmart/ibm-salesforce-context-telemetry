@@ -130,6 +130,14 @@
 			height: calc(100vh - 50px);
 		}
 
+		html[data-runtime="electron"] body {
+			padding: 0;
+		}
+
+		html[data-runtime="electron"] .main-container {
+			border-radius: 0;
+		}
+
 		html.dark .main-container {
 			background: #27272a;
 		}
@@ -782,6 +790,7 @@
 			display: flex;
 			align-items: center;
 			justify-content: space-between;
+			gap: 8px;
 			background: white;
 			border: 2px solid transparent;
 			position: relative;
@@ -838,7 +847,8 @@
 			font-size: 0.8125rem;
 			line-height: 1.15rem;
 			color: #18181b;
-			flex: 1;
+			flex: 1 1 auto;
+			min-width: 0;
 			font-weight: 500;
 			transition: color 0.2s ease, font-weight 0.2s ease;
 			white-space: nowrap;
@@ -873,6 +883,7 @@
 			line-height: 1rem;
 			color: #52525b;
 			margin-left: 8px;
+			flex-shrink: 0;
 		}
 
 		html.dark .server-size {
@@ -887,6 +898,7 @@
 			align-items: center;
 			justify-content: flex-end;
 			min-width: 48px;
+			flex-shrink: 0;
 		}
 
 		.server-item-actions .actions-dropdown {
@@ -1251,6 +1263,20 @@
 
 		html.dark .logs-table th.time-column,
 		html.dark .log-time {
+			color: #e4e4e7;
+		}
+
+		.log-client {
+			font-size: 0.75rem;
+			line-height: 1.4;
+			max-width: 220px;
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			color: #18181b;
+		}
+
+		html.dark .log-client {
 			color: #e4e4e7;
 		}
 
@@ -1810,6 +1836,7 @@
 										<th style="width: 40px;"></th>
 										<th class="time-column">Time</th>
 										<th style="width: 130px;">Event</th>
+										<th style="width: 160px;">Client</th>
 										<th>Payload</th>
 										<th style="width: 50px;"></th>
 									</tr>
@@ -1834,6 +1861,27 @@
 	</div>
 
 	<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+	<script>
+		const detectElectronEnvironment = () => {
+			const userAgent = navigator?.userAgent?.toLowerCase() || '';
+			if (userAgent.includes(' electron/')) {
+				return true;
+			}
+			if (typeof window !== 'undefined' && window.process?.versions?.electron) {
+				return true;
+			}
+			if (typeof navigator === 'object' && Array.isArray(navigator.plugins)) {
+				return navigator.plugins.namedItem?.('Chromium PDF Plugin') && window.process?.type === 'renderer';
+			}
+			return false;
+		};
+
+		const isElectronRuntime = detectElectronEnvironment();
+		window.__IS_ELECTRON__ = isElectronRuntime;
+		document.documentElement.dataset.runtime = isElectronRuntime ? 'electron' : 'browser';
+		document.body?.classList?.toggle('electron-runtime', isElectronRuntime);
+		console.info(`[Telemetry Viewer] Runtime detected: ${isElectronRuntime ? 'Electron' : 'Browser'}`);
+	</script>
 	<script>
 		let currentOffset = 0;
 		let limit = 50;
@@ -2809,6 +2857,20 @@
 			}
 		}
 
+		function extractClientName(eventData) {
+			if (!eventData || typeof eventData !== 'object') {
+				return '-';
+			}
+			try {
+				if (eventData.companyDetails && typeof eventData.companyDetails.Name === 'string' && eventData.companyDetails.Name.trim() !== '') {
+					return eventData.companyDetails.Name.trim();
+				}
+			} catch (_error) {
+				// Ignore and fall through to default
+			}
+			return '-';
+		}
+
 		function displayEvents(events) {
 			const tbody = document.getElementById('logsBody');
 			tbody.innerHTML = '';
@@ -2818,6 +2880,7 @@
 				const description = formatDescription(event);
 				const descriptionPretty = formatDescriptionPretty(event);
 				const eventData = normalizeEventData(event.data);
+				const clientName = extractClientName(eventData);
 				const dataStatus = typeof eventData.status === 'string'
 					? eventData.status.toLowerCase()
 					: null;
@@ -2850,6 +2913,7 @@
 							${event.event.replace('_', ' ')}
 						</span>
 					</td>
+					<td class="log-client">${escapeHtml(clientName)}</td>
 					<td class="log-description">${description}</td>
 					<td class="actions-cell">
 						<button class="actions-btn" onclick="toggleActionsDropdown(event, ${event.id})" title="Actions">
@@ -2891,7 +2955,7 @@
 				expandedRow.id = `expanded-${event.id}`;
 
 				const expandedTd = document.createElement('td');
-				expandedTd.colSpan = 5;
+				expandedTd.colSpan = 6;
 				expandedTd.className = 'log-description-expanded';
 
 				const pre = document.createElement('pre');

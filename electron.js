@@ -16,11 +16,19 @@ const loadEnv = () => {
     candidates.push(path.join(process.resourcesPath, '.env'));
   }
 
+  let loadedFrom = null;
   for (const envPath of candidates) {
     if (fs.existsSync(envPath)) {
       dotenv.config({ path: envPath });
+      loadedFrom = envPath;
       break;
     }
+  }
+
+  if (loadedFrom) {
+    console.info(`[Electron] Loaded environment from ${loadedFrom}`);
+  } else {
+    console.warn('[Electron] No .env file found, using default configuration.');
   }
 };
 

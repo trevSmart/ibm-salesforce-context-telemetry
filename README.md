@@ -83,6 +83,8 @@ TELEMETRY_UI_URL="https://your-server.example.com/event-log" npm run start:elect
 
 To avoid passing the variable manually each time, create a `.env` file (copy `.env.example`) and set `TELEMETRY_UI_URL` there. The Electron bootstrap automatically loads the value both in development and inside the packaged app (the `.env` file is bundled), so the desktop viewer will always target the URL you define.
 
+Inside the UI you can detect if it is running under the desktop shell by checking `window.__IS_ELECTRON__` (boolean) or by inspecting `document.documentElement.dataset.runtime` (`electron` / `browser`). This is useful if you need to adjust behavior (for example, hiding links that only make sense on the web).
+
 ### Build a macOS app bundle
 
 When you need a distributable `.app` (and `.dmg` installer) run:
@@ -91,7 +93,7 @@ When you need a distributable `.app` (and `.dmg` installer) run:
 npm run dist:mac
 ```
 
-Electron Builder will place the signed artifacts under `dist/`. The command already regenerates the Tailwind bundle before packaging, so the embedded offline fallback remains in sync. We pass `--universal`, which merges x64 i arm64 en un sol binari per garantir compatibilitat amb qualsevol Mac. Utilitza la variable `TELEMETRY_UI_URL` en temps de build si vols que l’app apunti per defecte a un entorn remot.
+Electron Builder will place the signed artifacts under `dist/`. The command already regenerates the Tailwind bundle before packaging, so the embedded offline fallback remains in sync. We pass `--universal`, which merges x64 i arm64 en un sol binari per garantir compatibilitat amb qualsevol Mac. Abans de construir, assegura’t que el teu `.env` (no es versiona) conté el `TELEMETRY_UI_URL` desitjat: l’arxiu es copia com a recurs extra i es llegeix en temps d’execució, per tant qualsevol canvi requereix regenerar els artefactes.
 
 ## API Endpoints
 

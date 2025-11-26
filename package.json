@@ -11,7 +11,8 @@
     "build:css:prod": "tailwindcss -i ./public/css/input.css -o ./public/css/output.css --minify",
     "postinstall": "npm run build:css:prod || true",
     "start:electron": "npm run build:css:prod && electron electron.js",
-    "dist:mac": "npm run build:css:prod && electron-builder --mac dmg zip --universal"
+    "dist:mac": "npm run build:css:prod && electron-builder --mac dmg zip --universal",
+    "postdist:mac": "npm rebuild better-sqlite3"
   },
   "keywords": [],
   "author": "",
@@ -42,6 +43,15 @@
     "extraMetadata": {
       "main": "electron.js"
     },
+    "extraResources": [
+      {
+        "from": ".env",
+        "to": ".env",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
     "files": [
       "electron.js",
       "public/**/*",
