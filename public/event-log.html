@@ -4,6 +4,7 @@
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>Telemetry Log Viewer - IBM Salesforce Context</title>
+	<link rel="icon" type="image/svg+xml" href="/resources/favicon.svg">
 	<link href="/css/output.css" rel="stylesheet">
 	<script src="https://kit.fontawesome.com/3991db92c8.js" crossorigin="anonymous"></script>
 	<style>
@@ -752,14 +753,13 @@
 		}
 
 		.server-item.active {
-			background: #e0f2fe;
-			border-color: #0ea5e9;
+			background: #bae6fd;
+			border-color: transparent;
 		}
 
 		html.dark .server-item.active {
-			background: #27272c;
-			border-color: #0ea5e9;
-			box-shadow: inset 0 0 0 1px rgba(14, 165, 233, 0.35);
+			background: rgba(14, 165, 233, 0.18);
+			border-color: transparent;
 		}
 
 		.server-item.active .server-name {
@@ -941,7 +941,6 @@
 			border-bottom: 2px solid #f4f4f5;
 			font-size: 0.75rem;
 			line-height: 1;
-			text-transform: uppercase;
 			letter-spacing: 0.05em;
 		}
 
@@ -1025,9 +1024,9 @@
 			padding: 4px 10px;
 			border-radius: 6px;
 			transition: opacity 0.2s ease, transform 0.15s ease;
-			font-size: 0.75rem;
+			font-size: 0.625rem;
 			line-height: 1rem;
-			font-weight: 600;
+			font-weight: 800;
 			text-transform: uppercase;
 			width: auto;
 			box-sizing: border-box;
@@ -1090,7 +1089,7 @@
 
 		.log-description {
 			font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
-			font-size: 0.75rem;
+			font-size: 0.6875rem;
 			line-height: 1.4;
 			max-width: 800px;
 			overflow: hidden;
@@ -1578,7 +1577,7 @@
 					</div>
 					<div class="search-controls">
 						<input type="text" class="search-input" id="searchInput" placeholder="Search">
-						<button class="icon-btn" onclick="refreshLogs()" title="Refresh"><i class="fa-solid fa-rotate-right"></i></button>
+						<button type="button" class="icon-btn" onclick="refreshLogs(event)" title="Refresh"><i class="fa-solid fa-rotate-right"></i></button>
 						<button class="icon-btn delete-all-btn" onclick="confirmDeleteAll()" title="Delete all events"><i class="fa-regular fa-trash-can"></i></button>
 						<button class="icon-btn notification-toggle" onclick="toggleNotificationMode()" title="Enable notifications"><i class="fa-regular fa-bell"></i></button>
 						<button class="icon-btn theme-toggle" onclick="toggleTheme()" title="Toggle theme"><i class="fa-regular fa-moon"></i></button>
@@ -1648,6 +1647,7 @@
 		let notificationModeEnabled = false;
 		let notificationRefreshIntervalId = null;
 		let lastKnownEventTimestamp = null;
+		const knownSessionIds = new Set();
 
 		// Theme management - using .dark class like Laravel Log Viewer
 		// Detects system theme by default, but allows manual override
@@ -1781,11 +1781,13 @@
 
 				// Add each session
 				if (Array.isArray(sessions) && sessions.length > 0) {
+					const discoveredSessionIds = [];
 					sessions.forEach(session => {
 						if (!session || !session.session_id) {
 							console.warn('Invalid session data:', session);
 							return;
 						}
+						discoveredSessionIds.push(session.session_id);
 
 						const li = document.createElement('li');
 						li.className = 'server-item';
@@ -1864,6 +1866,8 @@
 						sessionList.appendChild(li);
 					});
 
+					rememberSessionsFromList(discoveredSessionIds);
+
 					// Update total size
 					const total = sessions.reduce((sum, session) => sum + (session.count || 0), 0);
 					const totalSizeEl = document.getElementById('totalSize');
@@ -1885,6 +1889,7 @@
 
 		async function loadEvents(options = {}) {
 			const triggeredByNotification = Boolean(options.triggeredByNotification);
+			const skipUiReset = Boolean(options.skipUiReset);
 			startTime = performance.now();
 			const loadingMessageEl = document.getElementById('loadingMessage');
 			const logsTableEl = document.getElementById('logsTable');
@@ -1893,7 +1898,7 @@
 			const errorMessageEl = document.getElementById('errorMessage');
 			const emptyStateEl = document.getElementById('emptyState');
 
-			if (triggeredByNotification) {
+			if (triggeredByNotification || skipUiReset) {
 				if (loadingMessageEl) {
 					loadingMessageEl.style.display = 'none';
 				}
@@ -1987,7 +1992,7 @@
 				row.setAttribute('data-event-id', event.id);
 				row.innerHTML = `
 					<td style="text-align: center; padding: 2px 8px;">
-						<button class="expand-btn" id="expand-btn-${event.id}" onclick="toggleRowExpand(${event.id})" title="Expand/Collapse">
+						<button class="expand-btn" type="button" id="expand-btn-${event.id}" title="Expand/Collapse">
 							<i class="fa-solid fa-chevron-right"></i>
 						</button>
 					</td>
@@ -2017,6 +2022,22 @@
 						</div>
 					</td>
 				`;
+				const expandButton = row.querySelector(`#expand-btn-${event.id}`);
+				if (expandButton) {
+					expandButton.addEventListener('click', (evt) => {
+						evt.stopPropagation();
+						toggleRowExpand(event.id);
+					});
+				}
+
+				row.addEventListener('click', (evt) => {
+					if (evt.target.closest('.actions-btn') || evt.target.closest('.actions-dropdown')) {
+						return;
+					}
+
+					toggleRowExpand(event.id);
+				});
+
 				tbody.appendChild(row);
 
 				// Expanded row
@@ -2166,11 +2187,14 @@
 			loadEvents();
 		}
 
-		function refreshLogs() {
+		function refreshLogs(event) {
+			if (event?.preventDefault) {
+				event.preventDefault();
+			}
 			currentOffset = 0;
 			loadEventTypeStats();
 			loadSessions();
-			loadEvents();
+			loadEvents({ skipUiReset: true });
 		}
 
 		let deleteAllConfirmed = false;
@@ -2298,18 +2322,27 @@
 			const newestTimestamp = getNewestTimestampFromEvents(events);
 
 			if (notificationModeEnabled && triggeredByNotification && lastKnownEventTimestamp) {
-				const newEventsCount = events.reduce((count, event) => {
+				const newSessionIds = events.reduce((set, event) => {
 					const eventTimestamp = getEventTimestamp(event);
-					if (eventTimestamp !== null && eventTimestamp > lastKnownEventTimestamp) {
-						return count + 1;
+					const sessionId = event?.session_id;
+					if (
+						eventTimestamp !== null &&
+						eventTimestamp > lastKnownEventTimestamp &&
+						sessionId &&
+						!knownSessionIds.has(sessionId)
+					) {
+						set.add(sessionId);
 					}
-					return count;
-				}, 0);
+					return set;
+				}, new Set());
 
-				if (newEventsCount > 0) {
-					showDesktopNotification(newEventsCount);
+				if (newSessionIds.size > 0) {
+					notifyAboutNewSessions(newSessionIds.size);
+					newSessionIds.forEach((sessionId) => knownSessionIds.add(sessionId));
 				}
 			}
+
+			rememberSessionsFromEvents(events);
 
 			if (newestTimestamp !== null) {
 				lastKnownEventTimestamp = Math.max(lastKnownEventTimestamp || 0, newestTimestamp);
@@ -2337,20 +2370,44 @@
 			return Number.isNaN(timestamp) ? null : timestamp;
 		}
 
-		function showDesktopNotification(newEventsCount) {
-			if (!('Notification' in window) || Notification.permission !== 'granted') {
+		function rememberSessionId(sessionId) {
+			if (typeof sessionId === 'string' && sessionId.trim() !== '') {
+				knownSessionIds.add(sessionId);
+			}
+		}
+
+		function rememberSessionsFromList(sessionIds) {
+			if (!Array.isArray(sessionIds)) {
+				return;
+			}
+			sessionIds.forEach(rememberSessionId);
+		}
+
+		function rememberSessionsFromEvents(events) {
+			if (!Array.isArray(events)) {
+				return;
+			}
+			events.forEach(event => {
+				if (event?.session_id) {
+					rememberSessionId(event.session_id);
+				}
+			});
+		}
+
+		function notifyAboutNewSessions(newSessionsCount) {
+			if (!('Notification' in window) || Notification.permission !== 'granted' || newSessionsCount <= 0) {
 				return;
 			}
 
-			const title = 'Nous events de telemetria';
-			const body = newEventsCount === 1
-				? 'S\'ha rebut 1 event nou.'
-				: `S'han rebut ${newEventsCount} events nous.`;
+			const title = 'Noves sessions de telemetria';
+			const body = newSessionsCount === 1
+				? 'S\'ha iniciat 1 sessió nova.'
+				: `S\'han iniciat ${newSessionsCount} sessions noves.`;
 
 			try {
 				new Notification(title, {
 					body,
-					tag: 'telemetry-events',
+					tag: 'telemetry-sessions',
 					renotify: true
 				});
 			} catch (error) {
