@@ -6,7 +6,7 @@ package-lock.json
 .env
 .env.local
 .env.*.local
-
+dist/
 # Logs
 logs
 *.log
