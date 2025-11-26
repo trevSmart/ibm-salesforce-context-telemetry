@@ -2142,14 +2142,6 @@
 			})) : null);
 		}
 
-		function buildMultiSessionActivitySeries(events) {
-			const referenceDate = new Date(events[0].timestamp);
-			const eventTimes = events
-				.map(event => Date.parse(event.timestamp))
-				.filter(time => !Number.isNaN(time));
-			const minEventTime = eventTimes.length ? Math.min(...eventTimes) : null;
-			const maxEventTime = eventTimes.length ? Math.max(...eventTimes) : null;
-			const { start: windowStart, end: windowEnd } = getExtendedWindow(referenceDate, minEventTime, maxEventTime);
 		function buildSessionActivitySeries(events) {
 			const referenceDate = new Date(events[0].timestamp);
 			const eventTimes = events
