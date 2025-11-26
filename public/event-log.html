@@ -1651,12 +1651,14 @@
 								: session.session_id;
 						}
 
-						const activeIndicator = session.is_active ? '<span class="session-active-indicator"></span>' : '';
-						li.innerHTML = `
+					const activeIndicator = session.is_active ? '<span class="session-active-indicator"></span>' : '';
+					li.innerHTML = `
+						<div style="display: flex; align-items: center; flex: 1;">
 							${activeIndicator}
 							<span class="server-name text-sm">${sessionDisplay}</span>
-							<span class="server-size text-xs">${session.count || 0}</span>
-						`;
+						</div>
+						<span class="server-size text-xs">${session.count || 0}</span>
+					`;
 
 						li.addEventListener('click', () => {
 							document.querySelectorAll('.server-item').forEach(i => i.classList.remove('active'));
