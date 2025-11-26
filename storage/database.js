@@ -386,7 +386,11 @@ async function getSessions() {
 				 ORDER BY created_at ASC LIMIT 1) as user_id,
 				(SELECT data FROM telemetry_events
 				 WHERE session_id = s.session_id AND event = 'session_start'
-				 ORDER BY created_at ASC LIMIT 1) as session_start_data
+				 ORDER BY created_at ASC LIMIT 1) as session_start_data,
+				(SELECT COUNT(*) FROM telemetry_events
+				 WHERE session_id = s.session_id AND event = 'session_start') as has_start,
+				(SELECT COUNT(*) FROM telemetry_events
+				 WHERE session_id = s.session_id AND event = 'session_end') as has_end
 			FROM telemetry_events s
 			WHERE s.session_id IS NOT NULL
 			GROUP BY s.session_id
@@ -405,13 +409,23 @@ async function getSessions() {
 					// If parsing fails, ignore and use user_id
 				}
 			}
+
+			// Determine if session is active
+			const hasStart = parseInt(row.has_start) > 0;
+			const hasEnd = parseInt(row.has_end) > 0;
+			const lastEvent = new Date(row.last_event);
+			const now = new Date();
+			const hoursSinceLastEvent = (now - lastEvent) / (1000 * 60 * 60);
+			const isActive = hasStart && !hasEnd && hoursSinceLastEvent < 2;
+
 			return {
 				session_id: row.session_id,
 				count: parseInt(row.count),
 				first_event: row.first_event,
 				last_event: row.last_event,
 				user_id: row.user_id,
-				user_name: user_name
+				user_name: user_name,
+				is_active: isActive
 			};
 		});
 	} else {
@@ -426,7 +440,11 @@ async function getSessions() {
 				 ORDER BY created_at ASC LIMIT 1) as user_id,
 				(SELECT data FROM telemetry_events
 				 WHERE session_id = s.session_id AND event = 'session_start'
-				 ORDER BY created_at ASC LIMIT 1) as session_start_data
+				 ORDER BY created_at ASC LIMIT 1) as session_start_data,
+				(SELECT COUNT(*) FROM telemetry_events
+				 WHERE session_id = s.session_id AND event = 'session_start') as has_start,
+				(SELECT COUNT(*) FROM telemetry_events
+				 WHERE session_id = s.session_id AND event = 'session_end') as has_end
 			FROM telemetry_events s
 			WHERE s.session_id IS NOT NULL
 			GROUP BY s.session_id
@@ -447,13 +465,23 @@ async function getSessions() {
 					// If parsing fails, ignore and use user_id
 				}
 			}
+
+			// Determine if session is active
+			const hasStart = parseInt(row.has_start) > 0;
+			const hasEnd = parseInt(row.has_end) > 0;
+			const lastEvent = new Date(row.last_event);
+			const now = new Date();
+			const hoursSinceLastEvent = (now - lastEvent) / (1000 * 60 * 60);
+			const isActive = hasStart && !hasEnd && hoursSinceLastEvent < 2;
+
 			return {
 				session_id: row.session_id,
 				count: parseInt(row.count),
 				first_event: row.first_event,
 				last_event: row.last_event,
 				user_id: row.user_id,
-				user_name: user_name
+				user_name: user_name,
+				is_active: isActive
 			};
 		});
 	}
@@ -508,10 +536,11 @@ async function getDailyStats(days = 30) {
 		throw new Error('Database not initialized. Call init() first.');
 	}
 
-	const endDate = new Date();
-	const startDate = new Date();
-	startDate.setDate(startDate.getDate() - days);
-	startDate.setHours(0, 0, 0, 0);
+	// Always include today's data by building the range backwards from today (UTC)
+	const rangeDays = Math.max(1, Number.isFinite(days) ? Math.floor(days) : 30);
+	const now = new Date();
+	const startDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+	startDate.setUTCDate(startDate.getUTCDate() - (rangeDays - 1));
 
 	if (dbType === 'sqlite') {
 		// SQLite: use DATE() function to group by date
@@ -541,9 +570,9 @@ async function getDailyStats(days = 30) {
 		});
 
 		const filledResults = [];
-		for (let i = 0; i < days; i++) {
+		for (let i = 0; i < rangeDays; i++) {
 			const date = new Date(startDate);
-			date.setDate(date.getDate() + i);
+			date.setUTCDate(date.getUTCDate() + i);
 			const dateStr = date.toISOString().split('T')[0];
 			filledResults.push({
 				date: dateStr,
@@ -575,9 +604,9 @@ async function getDailyStats(days = 30) {
 		});
 
 		const filledResults = [];
-		for (let i = 0; i < days; i++) {
+		for (let i = 0; i < rangeDays; i++) {
 			const date = new Date(startDate);
-			date.setDate(date.getDate() + i);
+			date.setUTCDate(date.getUTCDate() + i);
 			const dateStr = date.toISOString().split('T')[0];
 			filledResults.push({
 				date: dateStr,

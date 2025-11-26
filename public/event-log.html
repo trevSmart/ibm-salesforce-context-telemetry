@@ -84,10 +84,14 @@
 
 		body {
 			font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-			background: linear-gradient(135deg, #a8c0ff 0%, #b8a8ff 50%, #c8a8ff 100%);
+			background: linear-gradient(45deg, #7fa7ff, #c18bff);
 			min-height: 100vh;
 			padding: 20px;
 			position: relative;
+		}
+
+		body, body * {
+			font-weight: 300 !important;
 		}
 
 		body::before {
@@ -629,6 +633,10 @@
 			padding: 0 16px;
 		}
 
+		html.dark .content-wrapper {
+			background: #19181a;
+		}
+
 		.sidebar {
 			width: 280px;
 			background: transparent;
@@ -641,7 +649,7 @@
 		}
 
 		html.dark .sidebar {
-			background: #27272a;
+			background: #19181a;
 		}
 
 		.sidebar-header {
@@ -713,7 +721,7 @@
 		}
 
 		html.dark .server-item {
-			background: #27272a;
+			background: #27272c;
 		}
 
 		.server-item:hover {
@@ -722,8 +730,9 @@
 		}
 
 		html.dark .server-item:hover {
-			background: rgba(12, 74, 110, 0.4);
+			background: #27272c;
 			border-color: #0369a1;
+			box-shadow: inset 0 0 0 1px rgba(14, 165, 233, 0.2);
 		}
 
 		.server-item.active {
@@ -732,8 +741,9 @@
 		}
 
 		html.dark .server-item.active {
-			background: rgba(12, 74, 110, 0.4);
+			background: #27272c;
 			border-color: #0ea5e9;
+			box-shadow: inset 0 0 0 1px rgba(14, 165, 233, 0.35);
 		}
 
 		.server-item.active .server-name {
@@ -746,8 +756,8 @@
 		}
 
 		.server-name {
-			font-size: 0.875rem;
-			line-height: 1.25rem;
+			font-size: 0.8125rem;
+			line-height: 1.15rem;
 			color: #18181b;
 			flex: 1;
 			font-weight: 500;
@@ -756,6 +766,20 @@
 
 		html.dark .server-name {
 			color: #e4e4e7;
+		}
+
+		.session-date {
+			font-weight: 400 !important;
+			color: inherit;
+		}
+
+		.session-user {
+			font-weight: 300 !important;
+			color: rgba(24, 24, 27, 0.75);
+		}
+
+		html.dark .session-user {
+			color: rgba(228, 228, 231, 0.7);
 		}
 
 		.server-item.active .server-name {
@@ -773,6 +797,31 @@
 			color: #a1a1aa;
 		}
 
+		.session-active-indicator {
+			width: 8px;
+			height: 8px;
+			border-radius: 50%;
+			background-color: #10b981;
+			margin-right: 8px;
+			flex-shrink: 0;
+			box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+			animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+		}
+
+		@keyframes pulse {
+			0%, 100% {
+				opacity: 1;
+			}
+			50% {
+				opacity: 0.7;
+			}
+		}
+
+		html.dark .session-active-indicator {
+			background-color: #10b981;
+			box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.3);
+		}
+
 		.main-content {
 			flex: 1;
 			display: flex;
@@ -784,7 +833,7 @@
 		}
 
 		html.dark .main-content {
-			background: #27272a;
+			background: #19181a;
 		}
 
 		.main-content-header {
@@ -840,7 +889,7 @@
 		}
 
 		html.dark .logs-table thead {
-			background: #27272a;
+			background: #19181a;
 		}
 
 		.logs-table tbody {
@@ -861,7 +910,7 @@
 
 		html.dark .logs-table th {
 			color: #a1a1aa;
-			border-bottom: 2px solid #27272a;
+			border-bottom: 2px solid #19181a;
 		}
 
 		.logs-table td {
@@ -874,7 +923,7 @@
 		}
 
 		html.dark .logs-table td {
-			border-bottom: 2px solid #27272a;
+			border-bottom: 2px solid #19181a;
 		}
 
 		.logs-table tbody tr {
@@ -883,7 +932,7 @@
 		}
 
 		html.dark .logs-table tbody tr {
-			background: #272729;
+			background: #27272c;
 		}
 
 		.logs-table tbody tr:hover {
@@ -891,20 +940,17 @@
 		}
 
 		html.dark .logs-table tbody tr:hover {
-			background-color: rgba(14, 165, 233, 0.1);
+			background: #27272c;
+			box-shadow: inset 0 0 0 9999px rgba(14, 165, 233, 0.08);
 		}
-
-		html.dark .logs-table td {
-			color: #e4e4e7;
-		}
-
 		/* Level-specific row hover colors */
 		.logs-table tbody tr.log-item-success:hover {
 			background-color: rgba(16, 185, 129, 0.05);
 		}
 
 		html.dark .logs-table tbody tr.log-item-success:hover {
-			background-color: rgba(16, 185, 129, 0.1);
+			background: #27272c;
+			box-shadow: inset 0 0 0 9999px rgba(16, 185, 129, 0.12);
 		}
 
 		.logs-table tbody tr.log-item-info:hover {
@@ -912,7 +958,8 @@
 		}
 
 		html.dark .logs-table tbody tr.log-item-info:hover {
-			background-color: rgba(14, 165, 233, 0.1);
+			background: #27272c;
+			box-shadow: inset 0 0 0 9999px rgba(14, 165, 233, 0.12);
 		}
 
 		.logs-table tbody tr.log-item-warning:hover {
@@ -920,7 +967,8 @@
 		}
 
 		html.dark .logs-table tbody tr.log-item-warning:hover {
-			background-color: rgba(245, 158, 11, 0.1);
+			background: #27272c;
+			box-shadow: inset 0 0 0 9999px rgba(245, 158, 11, 0.12);
 		}
 
 		.logs-table tbody tr.log-item-error:hover {
@@ -928,7 +976,8 @@
 		}
 
 		html.dark .logs-table tbody tr.log-item-error:hover {
-			background-color: rgba(239, 68, 68, 0.1);
+			background: #27272c;
+			box-shadow: inset 0 0 0 9999px rgba(239, 68, 68, 0.12);
 		}
 
 		.level-badge {
@@ -992,6 +1041,7 @@
 		.log-time {
 			font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 			color: #18181b;
+			font-weight: 400 !important;
 		}
 
 		html.dark .log-time {
@@ -1004,11 +1054,11 @@
 			overflow: hidden;
 			text-overflow: ellipsis;
 			white-space: nowrap;
-			color: #a1a1aa;
+			color: #71717a;
 		}
 
 		html.dark .log-description {
-			color: #71717a;
+			color: #8c8c8c;
 		}
 
 		.status-indicator {
@@ -1037,7 +1087,7 @@
 
 		.pagination {
 			padding: 20px 32px;
-			border-top: 1px solid #e4e4e7;
+			border-top: none;
 			display: flex;
 			align-items: center;
 			justify-content: center;
@@ -1046,7 +1096,6 @@
 		}
 
 		html.dark .pagination {
-			border-color: #3f3f46;
 			background: transparent;
 		}
 
@@ -1368,7 +1417,7 @@
 					</div>
 					<div class="search-controls">
 						<input type="text" class="search-input" id="searchInput" placeholder="Search">
-						<button class="icon-btn" onclick="refreshLogs()" title="Refresh"><i class="fa-solid fa-arrows-rotate"></i></button>
+						<button class="icon-btn" onclick="refreshLogs()" title="Refresh"><i class="fa-solid fa-rotate-right"></i></button>
 						<button class="icon-btn delete-all-btn" onclick="confirmDeleteAll()" title="Delete all events"><i class="fa-regular fa-trash-can"></i></button>
 						<button class="icon-btn theme-toggle" onclick="toggleTheme()" title="Toggle theme"><i class="fa-regular fa-moon"></i></button>
 					</div>
@@ -1586,13 +1635,15 @@
 							const hours = String(date.getHours()).padStart(2, '0');
 							const minutes = String(date.getMinutes()).padStart(2, '0');
 							const dateStr = `${day}/${month}/${year} ${hours}:${minutes}`;
-							sessionDisplay = dateStr;
-							// Prefer user_name (full name) over user_id
+							const dateHtml = `<span class="session-date">${dateStr}</span>`;
+
+							let userHtml = '';
 							if (session.user_name) {
-								sessionDisplay += ` • ${session.user_name}`;
+								userHtml = `<span class="session-user"> • ${session.user_name}</span>`;
 							} else if (session.user_id) {
-								sessionDisplay += ` • ${session.user_id}`;
+								userHtml = `<span class="session-user"> • ${session.user_id}</span>`;
 							}
+							sessionDisplay = `${dateHtml}${userHtml}`;
 						} else {
 							// Fallback to session ID if no date
 							sessionDisplay = session.session_id.length > 12
@@ -1600,7 +1651,9 @@
 								: session.session_id;
 						}
 
+						const activeIndicator = session.is_active ? '<span class="session-active-indicator"></span>' : '';
 						li.innerHTML = `
+							${activeIndicator}
 							<span class="server-name text-sm">${sessionDisplay}</span>
 							<span class="server-size text-xs">${session.count || 0}</span>
 						`;

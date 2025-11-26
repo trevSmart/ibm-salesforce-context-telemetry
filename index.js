@@ -20,15 +20,28 @@ const validate = ajv.compile(schema);
 app.use(cors()); // Allow requests from any origin
 app.use(express.json()); // Parse JSON request bodies
 
-// Ensure CSS files are served with correct MIME type
+// Serve static files from public directory
+app.use(express.static('public', {
+	// Ensure CSS files are served with correct MIME type
+	setHeaders: (res, path) => {
+		if (path.endsWith('.css')) {
+			res.type('text/css');
+		}
+	}
+}));
+
+// Fallback for CSS files - return empty CSS if file doesn't exist (prevents HTML 404)
 app.use((req, res, next) => {
-	if (req.path.endsWith('.css')) {
-		res.type('text/css');
+	if (req.path.endsWith('.css') && !res.headersSent) {
+		const cssPath = path.join(__dirname, 'public', req.path);
+		if (!fs.existsSync(cssPath)) {
+			// Return empty CSS with correct MIME type instead of HTML 404
+			res.type('text/css');
+			return res.status(200).send('/* CSS file not found */');
+		}
 	}
 	next();
 });
-
-app.use(express.static('public')); // Serve static files from public directory
 
 app.post('/telemetry', (req, res) => {
 	try {

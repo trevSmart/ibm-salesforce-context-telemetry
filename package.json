@@ -6,8 +6,10 @@
   "scripts": {
     "prestart": "lsof -ti :3100 | xargs kill -9 2>/dev/null || true",
     "start": "node index.js",
+    "build": "npm run build:css:prod",
     "build:css": "tailwindcss -i ./public/css/input.css -o ./public/css/output.css --watch",
-    "build:css:prod": "tailwindcss -i ./public/css/input.css -o ./public/css/output.css --minify"
+    "build:css:prod": "tailwindcss -i ./public/css/input.css -o ./public/css/output.css --minify",
+    "postinstall": "npm run build:css:prod || true"
   },
   "keywords": [],
   "author": "",
