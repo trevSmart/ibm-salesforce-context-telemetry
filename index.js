@@ -334,6 +334,38 @@ app.get('/api/export/logs', async (req, res) => {
 	}
 });
 
+// Delete a single event by ID
+app.delete('/api/events/:id', async (req, res) => {
+	try {
+		const eventId = parseInt(req.params.id);
+		if (isNaN(eventId)) {
+			return res.status(400).json({
+				status: 'error',
+				message: 'Invalid event ID'
+			});
+		}
+
+		const deleted = await db.deleteEvent(eventId);
+		if (deleted) {
+			res.json({
+				status: 'ok',
+				message: 'Event deleted successfully'
+			});
+		} else {
+			res.status(404).json({
+				status: 'error',
+				message: 'Event not found'
+			});
+		}
+	} catch (error) {
+		console.error('Error deleting event:', error);
+		res.status(500).json({
+			status: 'error',
+			message: 'Failed to delete event'
+		});
+	}
+});
+
 // Delete all events from database
 app.delete('/api/events', async (req, res) => {
 	try {

@@ -460,6 +460,26 @@ async function getSessions() {
 }
 
 /**
+ * Delete a single event by ID
+ * @param {number} id - Event ID
+ * @returns {Promise<boolean>} True if event was deleted, false if not found
+ */
+async function deleteEvent(id) {
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
+
+	if (dbType === 'sqlite') {
+		const stmt = db.prepare('DELETE FROM telemetry_events WHERE id = ?');
+		const result = stmt.run(id);
+		return result.changes > 0;
+	} else if (dbType === 'postgresql') {
+		const result = await db.query('DELETE FROM telemetry_events WHERE id = $1', [id]);
+		return result.rowCount > 0;
+	}
+}
+
+/**
  * Delete all events from the database
  * @returns {Promise<number>} Number of deleted events
  */
@@ -495,6 +515,10 @@ async function getDailyStats(days = 30) {
 
 	if (dbType === 'sqlite') {
 		// SQLite: use DATE() function to group by date
+		// Convert startDate to SQLite datetime format (YYYY-MM-DD HH:MM:SS) for comparison
+		// SQLite stores CURRENT_TIMESTAMP as 'YYYY-MM-DD HH:MM:SS' format
+		const sqliteStartDate = startDate.toISOString().replace('T', ' ').replace(/\.\d{3}Z$/, '');
+
 		const result = db.prepare(`
 			SELECT
 				DATE(created_at) as date,
@@ -503,12 +527,17 @@ async function getDailyStats(days = 30) {
 			WHERE created_at >= ?
 			GROUP BY DATE(created_at)
 			ORDER BY date ASC
-		`).all(startDate.toISOString());
+		`).all(sqliteStartDate);
 
 		// Fill in missing days with 0 counts
 		const dateMap = new Map();
 		result.forEach(row => {
-			dateMap.set(row.date, parseInt(row.count));
+			// SQLite DATE() returns string in 'YYYY-MM-DD' format
+			// Normalize to ensure consistent format
+			let dateStr = String(row.date);
+			// Remove time portion if present, keep only date part
+			dateStr = dateStr.split('T')[0].split(' ')[0];
+			dateMap.set(dateStr, parseInt(row.count));
 		});
 
 		const filledResults = [];
@@ -582,6 +611,7 @@ module.exports = {
 	getEventTypeStats,
 	getSessions,
 	getDailyStats,
+	deleteEvent,
 	deleteAllEvents,
 	close
 };

@@ -1233,6 +1233,93 @@
 				width: 100%;
 			}
 		}
+
+		/* Actions dropdown styles */
+		.actions-cell {
+			position: relative;
+			text-align: center;
+			padding: 8px 4px;
+		}
+
+		.actions-btn {
+			background: transparent;
+			border: none;
+			cursor: pointer;
+			padding: 4px 8px;
+			border-radius: 4px;
+			color: #a1a1aa;
+			font-size: 1.25rem;
+			line-height: 1;
+			transition: background-color 0.2s ease, color 0.2s ease;
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+		}
+
+		.actions-btn:hover {
+			background: var(--hover-bg);
+			color: var(--text-primary);
+		}
+
+		html.dark .actions-btn {
+			color: #71717a;
+		}
+
+		html.dark .actions-btn:hover {
+			color: #e4e4e7;
+		}
+
+		.actions-dropdown {
+			position: absolute;
+			right: 0;
+			top: 100%;
+			margin-top: 4px;
+			background: white;
+			border: 1px solid var(--border-color);
+			border-radius: 6px;
+			box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+			min-width: 150px;
+			z-index: 100;
+			display: none;
+			overflow: hidden;
+		}
+
+		html.dark .actions-dropdown {
+			background: #27272a;
+			border-color: #3f3f46;
+			box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+		}
+
+		.actions-dropdown.show {
+			display: block;
+		}
+
+		.actions-dropdown-item {
+			padding: 8px 12px;
+			cursor: pointer;
+			transition: background-color 0.15s ease;
+			display: flex;
+			align-items: center;
+			gap: 8px;
+			font-size: 0.875rem;
+			color: var(--text-primary);
+		}
+
+		.actions-dropdown-item:hover {
+			background: var(--hover-bg);
+		}
+
+		.actions-dropdown-item.delete {
+			color: #ef4444;
+		}
+
+		html.dark .actions-dropdown-item.delete {
+			color: #fb7185;
+		}
+
+		.actions-dropdown-item.delete:hover {
+			background: var(--level-error-bg);
+		}
 	</style>
 </head>
 	<body>
@@ -1313,6 +1400,7 @@
 										<th>Time</th>
 										<th style="width: 130px;">Event</th>
 										<th>Description</th>
+										<th style="width: 50px;"></th>
 									</tr>
 								</thead>
 								<tbody id="logsBody">
@@ -1630,6 +1718,21 @@
 					</span>
 				</td>
 				<td class="log-description">${description}</td>
+				<td class="actions-cell">
+					<button class="actions-btn" onclick="toggleActionsDropdown(event, ${event.id})" title="Actions">
+						<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+							<circle cx="8" cy="3" r="1.5"/>
+							<circle cx="8" cy="8" r="1.5"/>
+							<circle cx="8" cy="13" r="1.5"/>
+						</svg>
+					</button>
+					<div class="actions-dropdown" id="dropdown-${event.id}">
+						<div class="actions-dropdown-item delete" onclick="confirmDeleteEvent(${event.id})">
+							<span>🗑️</span>
+							<span>Eliminar</span>
+						</div>
+					</div>
+				</td>
 			`;
 				tbody.appendChild(row);
 			});
@@ -1800,6 +1903,64 @@
 				loadEvents();
 			});
 		});
+
+		// Close dropdowns when clicking outside
+		document.addEventListener('click', (e) => {
+			if (!e.target.closest('.actions-cell')) {
+				document.querySelectorAll('.actions-dropdown').forEach(dropdown => {
+					dropdown.classList.remove('show');
+				});
+			}
+		});
+
+		function toggleActionsDropdown(e, eventId) {
+			e.stopPropagation();
+			const dropdown = document.getElementById(`dropdown-${eventId}`);
+			const isShowing = dropdown.classList.contains('show');
+
+			// Close all other dropdowns
+			document.querySelectorAll('.actions-dropdown').forEach(d => {
+				d.classList.remove('show');
+			});
+
+			// Toggle this dropdown
+			if (!isShowing) {
+				dropdown.classList.add('show');
+			}
+		}
+
+		function confirmDeleteEvent(eventId) {
+			const confirmed = confirm('Estàs segur que vols eliminar aquest event? Aquesta acció no es pot desfer.');
+			if (confirmed) {
+				deleteEvent(eventId);
+			}
+		}
+
+		async function deleteEvent(eventId) {
+			try {
+				const response = await fetch(`/api/events/${eventId}`, {
+					method: 'DELETE'
+				});
+
+				if (!response.ok) {
+					const data = await response.json();
+					throw new Error(data.message || `HTTP error! status: ${response.status}`);
+				}
+
+				// Close dropdown
+				document.querySelectorAll('.actions-dropdown').forEach(d => {
+					d.classList.remove('show');
+				});
+
+				// Refresh the view
+				loadEventTypeStats();
+				loadSessions();
+				loadEvents();
+			} catch (error) {
+				console.error('Error deleting event:', error);
+				alert('Error eliminant l\'event: ' + error.message);
+			}
+		}
 
 		// Initialize
 		initTheme();
