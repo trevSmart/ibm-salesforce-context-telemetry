@@ -382,6 +382,18 @@ app.delete('/api/events/:id', async (req, res) => {
 // Delete all events from database
 app.delete('/api/events', async (req, res) => {
 	try {
+		const { sessionId } = req.query;
+
+		if (sessionId) {
+			const deletedCount = await db.deleteEventsBySession(sessionId);
+			return res.json({
+				status: 'ok',
+				message: `Successfully deleted ${deletedCount} events from session ${sessionId}`,
+				deletedCount,
+				sessionId
+			});
+		}
+
 		const deletedCount = await db.deleteAllEvents();
 		res.json({
 			status: 'ok',

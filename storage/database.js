@@ -527,6 +527,30 @@ async function deleteAllEvents() {
 }
 
 /**
+ * Delete all events for a specific session
+ * @param {string} sessionId - Session identifier
+ * @returns {Promise<number>} Number of deleted events
+ */
+async function deleteEventsBySession(sessionId) {
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
+
+	if (!sessionId) {
+		throw new Error('Session ID is required to delete events by session');
+	}
+
+	if (dbType === 'sqlite') {
+		const stmt = db.prepare('DELETE FROM telemetry_events WHERE session_id = ?');
+		const result = stmt.run(sessionId);
+		return result.changes;
+	} else if (dbType === 'postgresql') {
+		const result = await db.query('DELETE FROM telemetry_events WHERE session_id = $1', [sessionId]);
+		return result.rowCount;
+	}
+}
+
+/**
  * Get daily event counts for the last N days
  * @param {number} days - Number of days to retrieve (default: 30)
  * @returns {Array} Array of {date, count} objects
@@ -642,5 +666,6 @@ module.exports = {
 	getDailyStats,
 	deleteEvent,
 	deleteAllEvents,
+	deleteEventsBySession,
 	close
 };

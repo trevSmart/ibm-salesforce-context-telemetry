@@ -599,6 +599,16 @@
 			transform: scale(0.95);
 		}
 
+		.icon-btn.notification-toggle.active {
+			background: var(--brand-600);
+			color: white;
+		}
+
+		html.dark .icon-btn.notification-toggle.active {
+			background: var(--brand-700);
+			color: white;
+		}
+
 		html.dark .icon-btn {
 			background: #3f3f46;
 			color: #71717a;
@@ -711,6 +721,7 @@
 			background: white;
 			border: 2px solid transparent;
 			position: relative;
+			min-height: 48px;
 		}
 
 		.server-item:hover .server-item-actions {
@@ -1544,15 +1555,15 @@
 			<div class="main-content">
 				<div class="main-content-header">
 					<div class="level-filters">
-						<button class="level-filter-btn level-debug" data-level="tool_call">
-							<input type="checkbox" checked id="filter-tool_call" class="w-4 h-4 cursor-pointer">
-							<span class="text-sm font-medium">Tool Call</span>
-							<span class="level-count text-xs font-semibold" id="count-tool_call">0</span>
-						</button>
 						<button class="level-filter-btn level-info" data-level="session_start">
 							<input type="checkbox" checked id="filter-session_start" class="w-4 h-4 cursor-pointer">
 							<span class="text-sm font-medium">Session</span>
 							<span class="level-count text-xs font-semibold" id="count-session_start">0</span>
+						</button>
+						<button class="level-filter-btn level-debug" data-level="tool_call">
+							<input type="checkbox" checked id="filter-tool_call" class="w-4 h-4 cursor-pointer">
+							<span class="text-sm font-medium">Tool</span>
+							<span class="level-count text-xs font-semibold" id="count-tool_call">0</span>
 						</button>
 						<button class="level-filter-btn level-warning" data-level="custom">
 							<input type="checkbox" checked id="filter-custom" class="w-4 h-4 cursor-pointer">
@@ -1569,6 +1580,7 @@
 						<input type="text" class="search-input" id="searchInput" placeholder="Search">
 						<button class="icon-btn" onclick="refreshLogs()" title="Refresh"><i class="fa-solid fa-rotate-right"></i></button>
 						<button class="icon-btn delete-all-btn" onclick="confirmDeleteAll()" title="Delete all events"><i class="fa-regular fa-trash-can"></i></button>
+						<button class="icon-btn notification-toggle" onclick="toggleNotificationMode()" title="Enable notifications"><i class="fa-regular fa-bell"></i></button>
 						<button class="icon-btn theme-toggle" onclick="toggleTheme()" title="Toggle theme"><i class="fa-regular fa-moon"></i></button>
 					</div>
 				</div>
@@ -1600,7 +1612,7 @@
 										<th style="width: 40px;"></th>
 										<th class="time-column">Time</th>
 										<th style="width: 130px;">Event</th>
-										<th>Description</th>
+										<th>Payload</th>
 										<th style="width: 50px;"></th>
 									</tr>
 								</thead>
@@ -1615,8 +1627,7 @@
 						<button class="pagination-btn" onclick="nextPage()" id="nextBtn">Next →</button>
 					</div>
 					<div class="footer-info">
-						<span class="text-xs">Memory: <span id="memoryInfo" class="font-semibold">-</span></span>
-						<span class="text-xs">Duration: <span id="durationInfo" class="font-semibold">-</span></span>
+						<span class="text-xs">Load time: <span id="durationInfo" class="font-semibold">-</span></span>
 						<span class="text-xs">Version: <span class="font-semibold">v1.0.0</span></span>
 					</div>
 				</div>
@@ -1633,6 +1644,10 @@
 		let searchQuery = '';
 		let sortOrder = 'DESC';
 		let startTime = performance.now();
+		const NOTIFICATION_REFRESH_INTERVAL = 5 * 60 * 1000;
+		let notificationModeEnabled = false;
+		let notificationRefreshIntervalId = null;
+		let lastKnownEventTimestamp = null;
 
 		// Theme management - using .dark class like Laravel Log Viewer
 		// Detects system theme by default, but allows manual override
@@ -1868,14 +1883,41 @@
 			}
 		}
 
-		async function loadEvents() {
+		async function loadEvents(options = {}) {
+			const triggeredByNotification = Boolean(options.triggeredByNotification);
 			startTime = performance.now();
-			document.getElementById('loadingMessage').style.display = 'block';
-			document.getElementById('logsTable').style.display = 'none';
-			document.getElementById('errorMessage').style.display = 'none';
-			document.getElementById('emptyState').style.display = 'none';
-			document.getElementById('pagination').style.display = 'none';
-			document.getElementById('tableControls').style.display = 'none';
+			const loadingMessageEl = document.getElementById('loadingMessage');
+			const logsTableEl = document.getElementById('logsTable');
+			const paginationEl = document.getElementById('pagination');
+			const tableControlsEl = document.getElementById('tableControls');
+			const errorMessageEl = document.getElementById('errorMessage');
+			const emptyStateEl = document.getElementById('emptyState');
+
+			if (triggeredByNotification) {
+				if (loadingMessageEl) {
+					loadingMessageEl.style.display = 'none';
+				}
+			} else {
+				if (loadingMessageEl) {
+					loadingMessageEl.style.display = 'block';
+				}
+				if (logsTableEl) {
+					logsTableEl.style.display = 'none';
+				}
+				if (paginationEl) {
+					paginationEl.style.display = 'none';
+				}
+				if (tableControlsEl) {
+					tableControlsEl.style.display = 'none';
+				}
+			}
+
+			if (errorMessageEl) {
+				errorMessageEl.style.display = 'none';
+			}
+			if (emptyStateEl) {
+				emptyStateEl.style.display = 'none';
+			}
 
 			try {
 				const params = new URLSearchParams({
@@ -1912,6 +1954,7 @@
 					document.getElementById('logsTable').style.display = 'table';
 					document.getElementById('pagination').style.display = 'flex';
 					document.getElementById('tableControls').style.display = 'flex';
+					handleNotificationState(data.events, triggeredByNotification);
 				} else {
 					document.getElementById('emptyState').style.display = 'block';
 					document.getElementById('tableControls').style.display = 'none';
@@ -1921,7 +1964,9 @@
 				document.getElementById('errorMessage').textContent = 'Error loading events: ' + error.message;
 				document.getElementById('errorMessage').style.display = 'block';
 			} finally {
-				document.getElementById('loadingMessage').style.display = 'none';
+				if (loadingMessageEl) {
+					loadingMessageEl.style.display = 'none';
+				}
 			}
 		}
 
@@ -2178,6 +2223,141 @@
 			}
 		}
 
+		function toggleNotificationMode() {
+			if (notificationModeEnabled) {
+				disableNotificationMode();
+			} else {
+				enableNotificationMode();
+			}
+		}
+
+		async function enableNotificationMode() {
+			if (!('Notification' in window)) {
+				alert('El teu navegador no suporta notificacions d\'escriptori.');
+				return;
+			}
+
+			let permission = Notification.permission;
+			if (permission === 'default') {
+				try {
+					permission = await Notification.requestPermission();
+				} catch (error) {
+					console.error('Notification permission error:', error);
+					permission = 'denied';
+				}
+			}
+
+			if (permission !== 'granted') {
+				alert('Has de permetre les notificacions del navegador per activar aquest mode.');
+				return;
+			}
+
+			notificationModeEnabled = true;
+			updateNotificationButtonState();
+			scheduleNotificationRefresh();
+		}
+
+		function disableNotificationMode() {
+			notificationModeEnabled = false;
+			updateNotificationButtonState();
+			clearNotificationInterval();
+		}
+
+		function updateNotificationButtonState() {
+			const button = document.querySelector('.notification-toggle');
+			if (!button) {
+				return;
+			}
+			button.classList.toggle('active', notificationModeEnabled);
+			button.setAttribute('title', notificationModeEnabled ? 'Disable notifications' : 'Enable notifications');
+			button.innerHTML = notificationModeEnabled
+				? '<i class="fa-solid fa-bell"></i>'
+				: '<i class="fa-regular fa-bell"></i>';
+		}
+
+		function scheduleNotificationRefresh() {
+			clearNotificationInterval();
+			notificationRefreshIntervalId = setInterval(() => {
+				loadEvents({ triggeredByNotification: true });
+			}, NOTIFICATION_REFRESH_INTERVAL);
+			loadEvents({ triggeredByNotification: true });
+		}
+
+		function clearNotificationInterval() {
+			if (notificationRefreshIntervalId) {
+				clearInterval(notificationRefreshIntervalId);
+				notificationRefreshIntervalId = null;
+			}
+		}
+
+		function handleNotificationState(events, triggeredByNotification) {
+			if (!Array.isArray(events) || events.length === 0) {
+				return;
+			}
+
+			const newestTimestamp = getNewestTimestampFromEvents(events);
+
+			if (notificationModeEnabled && triggeredByNotification && lastKnownEventTimestamp) {
+				const newEventsCount = events.reduce((count, event) => {
+					const eventTimestamp = getEventTimestamp(event);
+					if (eventTimestamp !== null && eventTimestamp > lastKnownEventTimestamp) {
+						return count + 1;
+					}
+					return count;
+				}, 0);
+
+				if (newEventsCount > 0) {
+					showDesktopNotification(newEventsCount);
+				}
+			}
+
+			if (newestTimestamp !== null) {
+				lastKnownEventTimestamp = Math.max(lastKnownEventTimestamp || 0, newestTimestamp);
+			}
+		}
+
+		function getNewestTimestampFromEvents(events) {
+			return events.reduce((latest, event) => {
+				const eventTimestamp = getEventTimestamp(event);
+				if (eventTimestamp === null) {
+					return latest;
+				}
+				if (latest === null || eventTimestamp > latest) {
+					return eventTimestamp;
+				}
+				return latest;
+			}, lastKnownEventTimestamp);
+		}
+
+		function getEventTimestamp(event) {
+			if (!event || !event.timestamp) {
+				return null;
+			}
+			const timestamp = Date.parse(event.timestamp);
+			return Number.isNaN(timestamp) ? null : timestamp;
+		}
+
+		function showDesktopNotification(newEventsCount) {
+			if (!('Notification' in window) || Notification.permission !== 'granted') {
+				return;
+			}
+
+			const title = 'Nous events de telemetria';
+			const body = newEventsCount === 1
+				? 'S\'ha rebut 1 event nou.'
+				: `S'han rebut ${newEventsCount} events nous.`;
+
+			try {
+				new Notification(title, {
+					body,
+					tag: 'telemetry-events',
+					renotify: true
+				});
+			} catch (error) {
+				console.error('Error showing notification:', error);
+			}
+		}
+
 		// Search with debounce
 		let searchDebounceTimer;
 		document.getElementById('searchInput').addEventListener('input', (e) => {
@@ -2309,7 +2489,7 @@
 
 		async function deleteSession(sessionId) {
 			try {
-				const response = await fetch(`/api/events?sessionId=${sessionId}`, {
+				const response = await fetch(`/api/events?sessionId=${encodeURIComponent(sessionId)}`, {
 					method: 'DELETE'
 				});
 
@@ -2351,6 +2531,7 @@
 		}
 
 		// Initialize
+		updateNotificationButtonState();
 		initTheme();
 		setupLevelFilters();
 		loadEventTypeStats();
