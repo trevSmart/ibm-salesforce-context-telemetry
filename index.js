@@ -19,6 +19,15 @@ const validate = ajv.compile(schema);
 // Middleware
 app.use(cors()); // Allow requests from any origin
 app.use(express.json()); // Parse JSON request bodies
+
+// Ensure CSS files are served with correct MIME type
+app.use((req, res, next) => {
+	if (req.path.endsWith('.css')) {
+		res.type('text/css');
+	}
+	next();
+});
+
 app.use(express.static('public')); // Serve static files from public directory
 
 app.post('/telemetry', (req, res) => {

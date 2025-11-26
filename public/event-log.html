@@ -1807,15 +1807,6 @@
 		loadEventTypeStats();
 		loadSessions();
 		loadEvents();
-
-		// Auto-refresh every 30 seconds
-		setInterval(() => {
-			loadEventTypeStats();
-			loadSessions();
-			if (currentOffset === 0) {
-				loadEvents();
-			}
-		}, 30000);
 	</script>
 </body>
 </html>
