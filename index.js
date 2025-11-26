@@ -72,8 +72,87 @@ app.post('/telemetry', (req, res) => {
 	}
 });
 
-app.get('/health', (_req, res) => {
-	res.status(200).send('ok');
+// Track server start time for uptime calculation
+const serverStartTime = Date.now();
+
+app.get('/health', async (req, res) => {
+	const format = req.query.format || (req.headers.accept?.includes('application/json') ? 'json' : 'html');
+
+	if (format === 'json') {
+		try {
+			// Get uptime
+			const uptime = Math.floor((Date.now() - serverStartTime) / 1000);
+
+			// Get memory usage
+			const memoryUsage = process.memoryUsage();
+			const memory = {
+				used: memoryUsage.heapUsed,
+				total: memoryUsage.heapTotal,
+				external: memoryUsage.external,
+				rss: memoryUsage.rss
+			};
+
+			// Check database status
+			let dbStatus = 'unknown';
+			let dbType = process.env.DB_TYPE || 'sqlite';
+			try {
+				// Try a simple query to check database connectivity
+				await db.getStats();
+				dbStatus = 'connected';
+			} catch (error) {
+				dbStatus = 'error';
+				console.error('Database health check failed:', error);
+			}
+
+			// Get total events count
+			let totalEvents = 0;
+			try {
+				const stats = await db.getStats();
+				totalEvents = stats.total || 0;
+			} catch (error) {
+				console.error('Failed to get event stats:', error);
+			}
+
+			// Determine overall health status
+			const isHealthy = dbStatus === 'connected';
+
+			const healthData = {
+				status: isHealthy ? 'healthy' : 'unhealthy',
+				timestamp: new Date().toISOString(),
+				uptime: uptime,
+				version: require('./package.json').version,
+				nodeVersion: process.version,
+				environment: process.env.NODE_ENV || 'development',
+				memory: memory,
+				database: {
+					type: dbType,
+					status: dbStatus
+				},
+				stats: {
+					totalEvents: totalEvents
+				}
+			};
+
+			res.status(isHealthy ? 200 : 503).json(healthData);
+		} catch (error) {
+			console.error('Health check error:', error);
+			res.status(503).json({
+				status: 'unhealthy',
+				timestamp: new Date().toISOString(),
+				message: 'Health check failed',
+				error: error.message
+			});
+		}
+	} else {
+		// Serve HTML page
+		const healthPath = path.join(__dirname, 'public', 'health.html');
+		if (fs.existsSync(healthPath)) {
+			res.sendFile(healthPath);
+		} else {
+			// Fallback to simple text response
+			res.status(200).send('ok');
+		}
+	}
 });
 
 // API endpoints for viewing telemetry data
