@@ -134,16 +134,17 @@
 			display: flex;
 			align-items: center;
 			gap: 8px;
+			transition: opacity 0.2s ease;
+		}
+
+		.log-viewer-title:hover {
+			opacity: 0.8;
 		}
 
 		html.dark .log-viewer-title {
 			color: #10b981;
 		}
 
-		.log-viewer-title::before {
-			content: '📋';
-			font-size: 1.5rem;
-		}
 
 		.back-link {
 			font-size: 0.875rem;
@@ -151,6 +152,7 @@
 			color: #52525b;
 			text-decoration: none;
 			margin-left: 0;
+			transition: color 0.2s ease;
 		}
 
 		html.dark .back-link {
@@ -183,59 +185,149 @@
 			line-height: 1.25rem;
 			font-weight: 500;
 			cursor: pointer;
-			transition: all 0.2s;
+			transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.15s ease;
 			position: relative;
 		}
 
+		.level-filter-btn:hover {
+			transform: translateY(-1px);
+		}
+
+		.level-filter-btn:active {
+			transform: translateY(0);
+		}
+
 		.level-filter-btn input[type="checkbox"] {
-			accent-color: rgba(255, 255, 255, 0.9);
+			appearance: none;
+			-webkit-appearance: none;
+			-moz-appearance: none;
+			width: 16px;
+			height: 16px;
 			margin-right: 2px;
+			cursor: pointer;
+			background-color: white;
+			border: 1px solid #d1d5db;
+			border-radius: 3px;
+			position: relative;
+			flex-shrink: 0;
+		}
+
+		.level-filter-btn input[type="checkbox"]:checked {
+			background-color: white;
+			border-color: #6b7280;
+		}
+
+		.level-filter-btn input[type="checkbox"]:checked::after {
+			content: '';
+			position: absolute;
+			left: 4px;
+			top: 1px;
+			width: 5px;
+			height: 9px;
+			border: solid #6b7280;
+			border-width: 0 2px 2px 0;
+			transform: rotate(45deg);
+		}
+
+		/* Checkbox mark color matches button text color when active */
+		.level-filter-btn.level-debug.active input[type="checkbox"]:checked::after {
+			border-color: #6b21a8;
+		}
+
+		.level-filter-btn.level-info.active input[type="checkbox"]:checked::after {
+			border-color: #1e40af;
+		}
+
+		.level-filter-btn.level-warning.active input[type="checkbox"]:checked::after {
+			border-color: #92400e;
+		}
+
+		.level-filter-btn.level-error.active input[type="checkbox"]:checked::after {
+			border-color: #991b1b;
+		}
+
+		.level-filter-btn.level-success.active input[type="checkbox"]:checked::after {
+			border-color: #065f46;
+		}
+
+		html.dark .level-filter-btn input[type="checkbox"] {
+			background-color: white;
+			border-color: #9ca3af;
+		}
+
+		html.dark .level-filter-btn input[type="checkbox"]:checked {
+			background-color: white;
+			border-color: #6b7280;
+		}
+
+		html.dark .level-filter-btn input[type="checkbox"]:checked::after {
+			border-color: #6b7280;
+		}
+
+		html.dark .level-filter-btn.level-debug.active input[type="checkbox"]:checked::after {
+			border-color: #6b21a8;
+		}
+
+		html.dark .level-filter-btn.level-info.active input[type="checkbox"]:checked::after {
+			border-color: #1e40af;
+		}
+
+		html.dark .level-filter-btn.level-warning.active input[type="checkbox"]:checked::after {
+			border-color: #92400e;
+		}
+
+		html.dark .level-filter-btn.level-error.active input[type="checkbox"]:checked::after {
+			border-color: #991b1b;
+		}
+
+		html.dark .level-filter-btn.level-success.active input[type="checkbox"]:checked::after {
+			border-color: #065f46;
 		}
 
 		.level-filter-btn.level-debug {
-			background: #e0f2fe;
-			border-color: #bae6fd;
+			background: #f0f9ff;
+			border-color: #dbeafe;
 			color: #0c4a6e;
 		}
 
 		html.dark .level-filter-btn.level-debug {
-			background: rgba(12, 74, 110, 0.3);
+			background: rgba(12, 74, 110, 0.25);
 			border-color: #075985;
 			color: #7dd3fc;
 		}
 
 		.level-filter-btn.level-info {
-			background: #e0f2fe;
-			border-color: #bae6fd;
+			background: #f0f9ff;
+			border-color: #dbeafe;
 			color: #0c4a6e;
 		}
 
 		html.dark .level-filter-btn.level-info {
-			background: rgba(12, 74, 110, 0.3);
+			background: rgba(12, 74, 110, 0.25);
 			border-color: #075985;
 			color: #7dd3fc;
 		}
 
 		.level-filter-btn.level-warning {
-			background: #fef3c7;
-			border-color: #fde68a;
+			background: #fffbeb;
+			border-color: #fef3c7;
 			color: #92400e;
 		}
 
 		html.dark .level-filter-btn.level-warning {
-			background: rgba(120, 53, 15, 0.3);
+			background: rgba(120, 53, 15, 0.25);
 			border-color: #92400e;
 			color: #fbbf24;
 		}
 
 		.level-filter-btn.level-error {
-			background: #fee2e2;
-			border-color: #fecdd3;
+			background: #fef2f2;
+			border-color: #fee2e2;
 			color: #991b1b;
 		}
 
 		html.dark .level-filter-btn.level-error {
-			background: rgba(136, 19, 55, 0.3);
+			background: rgba(136, 19, 55, 0.25);
 			border-color: #9f1239;
 			color: #fb7185;
 		}
@@ -256,7 +348,10 @@
 			opacity: 1;
 		}
 
-		.level-filter-btn.level-debug:hover,
+		.level-filter-btn.level-debug:hover {
+			background: #e9d5ff;
+		}
+
 		.level-filter-btn.level-info:hover {
 			background: var(--level-info-hover);
 		}
@@ -274,57 +369,67 @@
 		}
 
 		.level-filter-btn.active {
-			color: white;
+			color: #18181b;
 		}
 
-		.level-filter-btn.level-debug.active,
+		.level-filter-btn.level-debug.active {
+			background: #ddd6fe;
+			border-color: #c4b5fd;
+			color: #6b21a8;
+		}
+
 		.level-filter-btn.level-info.active {
-			background: #0284c7;
-			border-color: #0284c7;
-			color: white;
+			background: #bfdbfe;
+			border-color: #93c5fd;
+			color: #1e40af;
 		}
 
-		html.dark .level-filter-btn.level-debug.active,
+		html.dark .level-filter-btn.level-debug.active {
+			background: #ddd6fe;
+			border-color: #c4b5fd;
+			color: #6b21a8;
+		}
+
 		html.dark .level-filter-btn.level-info.active {
-			background: #0284c7;
-			border-color: #0284c7;
-			color: white;
+			background: #bfdbfe;
+			border-color: #93c5fd;
+			color: #1e40af;
 		}
 
 		.level-filter-btn.level-warning.active {
-			background: #d97706;
-			border-color: #d97706;
-			color: white;
+			background: #fde68a;
+			border-color: #fcd34d;
+			color: #92400e;
 		}
 
 		html.dark .level-filter-btn.level-warning.active {
-			background: #d97706;
-			border-color: #d97706;
-			color: white;
+			background: #fde68a;
+			border-color: #fcd34d;
+			color: #92400e;
 		}
 
 		.level-filter-btn.level-error.active {
-			background: #dc2626;
-			border-color: #dc2626;
-			color: white;
+			background: #fecaca;
+			border-color: #fca5a5;
+			color: #991b1b;
 		}
 
 		html.dark .level-filter-btn.level-error.active {
-			background: #dc2626;
-			border-color: #dc2626;
-			color: white;
+			background: #fecaca;
+			border-color: #fca5a5;
+			color: #991b1b;
 		}
 
 		.level-filter-btn.level-success.active {
-			background: #059669;
-			border-color: #059669;
-			color: white;
+			background: #a7f3d0;
+			border-color: #6ee7b7;
+			color: #065f46;
 		}
 
 		html.dark .level-filter-btn.level-success.active {
-			background: #059669;
-			border-color: #059669;
-			color: white;
+			background: #a7f3d0;
+			border-color: #6ee7b7;
+			color: #065f46;
 		}
 
 		.level-filter-btn .level-icon {
@@ -340,6 +445,7 @@
 			line-height: 1rem;
 			font-weight: 600;
 			margin-left: 2px;
+			transition: background-color 0.2s ease, transform 0.2s ease;
 		}
 
 		html.dark .level-filter-btn .level-count {
@@ -347,7 +453,15 @@
 		}
 
 		.level-filter-btn.active .level-count {
-			background: rgba(255, 255, 255, 0.3);
+			background: rgba(0, 0, 0, 0.1);
+		}
+
+		html.dark .level-filter-btn.active .level-count {
+			background: rgba(0, 0, 0, 0.2);
+		}
+
+		.level-filter-btn:hover .level-count {
+			transform: scale(1.05);
 		}
 
 		.search-controls {
@@ -357,7 +471,7 @@
 		}
 
 		.table-controls {
-			padding: 12px 16px;
+			padding: 0 16px;
 			display: flex;
 			justify-content: flex-end;
 			align-items: center;
@@ -371,15 +485,15 @@
 		}
 
 		.search-input {
-			padding: 10px 16px;
+			padding: 6px 12px;
 			border: 1px solid #d4d4d8;
-			border-radius: 8px;
+			border-radius: 6px;
 			font-size: 0.875rem;
 			line-height: 1.25rem;
 			width: 250px;
 			background: white;
 			color: #18181b;
-			transition: all 0.2s;
+			transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
 		}
 
 		html.dark .search-input {
@@ -416,13 +530,22 @@
 			background: transparent;
 			color: #a1a1aa;
 			cursor: pointer;
-			transition: all 0.2s;
+			transition: color 0.2s ease, opacity 0.2s ease;
 			appearance: none;
 			background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%23a1a1aa' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
 			background-repeat: no-repeat;
 			background-position: right 4px center;
 			background-size: 16px;
 			padding-right: 24px;
+		}
+
+		.control-select:hover {
+			opacity: 0.8;
+		}
+
+		.control-select:focus {
+			outline: none;
+			opacity: 1;
 		}
 
 		html.dark .control-select {
@@ -459,8 +582,16 @@
 			justify-content: center;
 			font-size: 1.125rem;
 			line-height: 1.75rem;
-			transition: all 0.2s;
+			transition: background-color 0.2s ease, color 0.2s ease, transform 0.15s ease;
 			color: #a1a1aa;
+		}
+
+		.icon-btn:hover {
+			transform: scale(1.1);
+		}
+
+		.icon-btn:active {
+			transform: scale(0.95);
 		}
 
 		html.dark .icon-btn {
@@ -476,6 +607,17 @@
 		html.dark .icon-btn:hover {
 			background: #52525b;
 			color: #a1a1aa;
+		}
+
+		.delete-all-btn:hover {
+			background: #fee2e2;
+			color: #dc2626;
+			transform: scale(1.1) rotate(5deg);
+		}
+
+		html.dark .delete-all-btn:hover {
+			background: rgba(220, 38, 38, 0.2);
+			color: #f87171;
 		}
 
 		.content-wrapper {
@@ -494,6 +636,11 @@
 			display: flex;
 			flex-direction: column;
 			flex-shrink: 0;
+			align-items: stretch;
+		}
+
+		html.dark .sidebar {
+			background: #27272a;
 		}
 
 		.sidebar-header {
@@ -512,11 +659,13 @@
 			flex: 1;
 			overflow-y: auto;
 			padding: 0 12px 20px 12px;
+			padding-top: 20px;
 		}
 
 		@media (min-width: 768px) {
 			.sidebar-content {
 				padding: 0 20px 20px 20px;
+				padding-top: 20px;
 			}
 		}
 
@@ -527,6 +676,8 @@
 			font-weight: 600;
 			color: #52525b;
 			margin-bottom: 12px;
+			margin-top: 0;
+			padding-top: 0;
 			text-transform: uppercase;
 			letter-spacing: 0.05em;
 		}
@@ -544,12 +695,20 @@
 			margin-bottom: 6px;
 			border-radius: 6px;
 			cursor: pointer;
-			transition: all 0.2s;
+			transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
 			display: flex;
 			align-items: center;
 			justify-content: space-between;
 			background: white;
 			border: 2px solid transparent;
+		}
+
+		.server-item:hover {
+			transform: translateX(2px);
+		}
+
+		.server-item:active {
+			transform: translateX(0);
 		}
 
 		html.dark .server-item {
@@ -591,6 +750,7 @@
 			color: #18181b;
 			flex: 1;
 			font-weight: 500;
+			transition: color 0.2s ease, font-weight 0.2s ease;
 		}
 
 		html.dark .server-name {
@@ -617,7 +777,7 @@
 			display: flex;
 			flex-direction: column;
 			overflow: hidden;
-			background: white;
+			background: #f4f4f5;
 			position: relative;
 			min-width: 0;
 		}
@@ -657,12 +817,6 @@
 			flex: 1;
 			overflow-y: auto;
 			min-height: 0;
-			display: flex;
-			flex-direction: column;
-		}
-
-		.logs-table-container > div:last-child > table {
-			height: 100%;
 		}
 
 		.logs-table {
@@ -671,13 +825,9 @@
 			border-spacing: 0;
 			font-size: 0.875rem;
 			line-height: 1.25rem;
-			border: 1px solid #e4e4e7;
-			border-radius: 8px;
-			overflow: hidden;
-		}
-
-		html.dark .logs-table {
-			border-color: #3f3f46;
+			border: none;
+			border-radius: 0;
+			overflow: visible;
 		}
 
 		.logs-table thead {
@@ -688,124 +838,112 @@
 			background: #f4f4f5;
 		}
 
+		html.dark .logs-table thead {
+			background: #27272a;
+		}
+
 		.logs-table tbody {
 			display: table-row-group;
 		}
 
-		html.dark .logs-table thead {
-			background: #18181b;
-		}
-
-		.logs-table th:first-child {
-			border-top-left-radius: 8px;
-		}
-
-		.logs-table th:last-child {
-			border-top-right-radius: 8px;
-		}
-
 		.logs-table th {
-			padding: 12px 16px;
+			padding: 12px 4px;
 			text-align: left;
 			font-weight: 600;
 			color: #52525b;
-			border-bottom: 2px solid #e4e4e7;
+			border-bottom: 2px solid #f4f4f5;
 			font-size: 0.75rem;
-			line-height: 1rem;
+			line-height: 1;
 			text-transform: uppercase;
 			letter-spacing: 0.05em;
 		}
 
 		html.dark .logs-table th {
 			color: #a1a1aa;
-			border-color: #3f3f46;
+			border-bottom: 2px solid #27272a;
 		}
 
 		.logs-table td {
-			padding: 8px 16px;
-			border-bottom: 1px solid #e4e4e7;
+			padding: 8px 4px;
+			border-bottom: 2px solid #f4f4f5;
 			color: #18181b;
-			font-size: 0.75rem;
-			line-height: 1rem;
-		}
-
-		.logs-table tbody tr:last-child td {
-			border-bottom: none;
-		}
-
-		.logs-table tbody tr:last-child td:first-child {
-			border-bottom-left-radius: 8px;
-		}
-
-		.logs-table tbody tr:last-child td:last-child {
-			border-bottom-right-radius: 8px;
+			font-size: 0.79rem;
+			line-height: 1.2;
+			transition: background-color 0.15s ease;
 		}
 
 		html.dark .logs-table td {
-			border-color: #3f3f46;
-			color: #e4e4e7;
+			border-bottom: 2px solid #27272a;
 		}
 
 		.logs-table tbody tr {
-			transition: background-color 0.15s;
+			transition: background-color 0.15s ease;
 			background: white;
 		}
 
 		html.dark .logs-table tbody tr {
-			background: #27272a;
+			background: #272729;
 		}
 
 		.logs-table tbody tr:hover {
-			background: #fafafa;
+			background-color: rgba(14, 165, 233, 0.05);
 		}
 
 		html.dark .logs-table tbody tr:hover {
-			background: rgba(63, 63, 70, 0.5);
+			background-color: rgba(14, 165, 233, 0.1);
+		}
+
+		html.dark .logs-table td {
+			color: #e4e4e7;
 		}
 
 		/* Level-specific row hover colors */
 		.logs-table tbody tr.log-item-success:hover {
-			background: #d1fae5;
+			background-color: rgba(16, 185, 129, 0.05);
 		}
 
 		html.dark .logs-table tbody tr.log-item-success:hover {
-			background: rgba(6, 78, 59, 0.4);
+			background-color: rgba(16, 185, 129, 0.1);
 		}
 
 		.logs-table tbody tr.log-item-info:hover {
-			background: #e0f2fe;
+			background-color: rgba(14, 165, 233, 0.05);
 		}
 
 		html.dark .logs-table tbody tr.log-item-info:hover {
-			background: rgba(12, 74, 110, 0.4);
+			background-color: rgba(14, 165, 233, 0.1);
 		}
 
 		.logs-table tbody tr.log-item-warning:hover {
-			background: #fef3c7;
+			background-color: rgba(245, 158, 11, 0.05);
 		}
 
 		html.dark .logs-table tbody tr.log-item-warning:hover {
-			background: rgba(120, 53, 15, 0.4);
+			background-color: rgba(245, 158, 11, 0.1);
 		}
 
 		.logs-table tbody tr.log-item-error:hover {
-			background: #fee2e2;
+			background-color: rgba(239, 68, 68, 0.05);
 		}
 
 		html.dark .logs-table tbody tr.log-item-error:hover {
-			background: rgba(136, 19, 55, 0.4);
+			background-color: rgba(239, 68, 68, 0.1);
 		}
 
 		.level-badge {
 			display: inline-flex;
 			align-items: center;
+			justify-content: flex-start;
 			gap: 6px;
 			padding: 4px 10px;
 			border-radius: 6px;
+			transition: opacity 0.2s ease, transform 0.15s ease;
 			font-size: 0.75rem;
 			line-height: 1rem;
 			font-weight: 600;
 			text-transform: uppercase;
+			width: 150px;
+			box-sizing: border-box;
 		}
 
 		.level-badge.debug {
@@ -903,12 +1041,12 @@
 			align-items: center;
 			justify-content: center;
 			gap: 10px;
-			background: white;
+			background: transparent;
 		}
 
 		html.dark .pagination {
 			border-color: #3f3f46;
-			background: #27272a;
+			background: transparent;
 		}
 
 		.pagination-btn {
@@ -922,9 +1060,17 @@
 			font-size: 0.875rem;
 			line-height: 1.25rem;
 			font-weight: 500;
-			transition: all 0.2s;
+			transition: color 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
 			display: inline-flex;
 			align-items: center;
+		}
+
+		.pagination-btn:hover:not(:disabled) {
+			transform: translateY(-1px);
+		}
+
+		.pagination-btn:active:not(:disabled) {
+			transform: translateY(0);
 		}
 
 		html.dark .pagination-btn {
@@ -978,10 +1124,12 @@
 			font-size: 0.75rem;
 			line-height: 1rem;
 			color: #52525b;
+			background: transparent;
 		}
 
 		html.dark .footer-info {
 			color: #a1a1aa;
+			background: transparent;
 		}
 
 		.loading {
@@ -1035,24 +1183,42 @@
 		}
 
 		/* Scrollbar styling */
-		.sidebar-content::-webkit-scrollbar,
-		.logs-table-container::-webkit-scrollbar {
+		.sidebar-content::-webkit-scrollbar {
 			width: 8px;
 		}
 
-		.sidebar-content::-webkit-scrollbar-track,
-		.logs-table-container::-webkit-scrollbar-track {
+		.sidebar-content::-webkit-scrollbar-track {
 			background: var(--bg-secondary);
 		}
 
-		.sidebar-content::-webkit-scrollbar-thumb,
-		.logs-table-container::-webkit-scrollbar-thumb {
+		.sidebar-content::-webkit-scrollbar-thumb {
 			background: var(--border-color);
 			border-radius: 4px;
 		}
 
-		.sidebar-content::-webkit-scrollbar-thumb:hover,
-		.logs-table-container::-webkit-scrollbar-thumb:hover {
+		.sidebar-content::-webkit-scrollbar-thumb:hover {
+			background: var(--text-secondary);
+		}
+
+		/* Table scrollbar - hidden by default, shown on hover (Mac-like behavior) */
+		.logs-table-container > div:last-child::-webkit-scrollbar {
+			width: 8px;
+		}
+
+		.logs-table-container > div:last-child::-webkit-scrollbar-track {
+			background: transparent;
+		}
+
+		.logs-table-container > div:last-child::-webkit-scrollbar-thumb {
+			background: transparent;
+			border-radius: 4px;
+		}
+
+		.logs-table-container:hover > div:last-child::-webkit-scrollbar-thumb {
+			background: var(--border-color);
+		}
+
+		.logs-table-container:hover > div:last-child::-webkit-scrollbar-thumb:hover {
 			background: var(--text-secondary);
 		}
 
@@ -1074,7 +1240,7 @@
 		<div class="content-wrapper">
 			<div class="sidebar">
 				<div class="sidebar-header">
-					<div class="log-viewer-title text-xl font-semibold">Log Viewer</div>
+					<div class="log-viewer-title text-xl font-semibold">Event log</div>
 					<a href="/" class="back-link text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200">← Back to Dashboard</a>
 				</div>
 				<div class="sidebar-content">
@@ -1093,25 +1259,21 @@
 					<div class="level-filters">
 						<button class="level-filter-btn level-debug" data-level="tool_call">
 							<input type="checkbox" checked id="filter-tool_call" class="w-4 h-4 cursor-pointer">
-							<span class="level-icon text-sm">🐛</span>
 							<span class="text-sm font-medium">Tool Call</span>
 							<span class="level-count text-xs font-semibold" id="count-tool_call">0</span>
 						</button>
 						<button class="level-filter-btn level-info" data-level="session_start">
 							<input type="checkbox" checked id="filter-session_start" class="w-4 h-4 cursor-pointer">
-							<span class="level-icon text-sm">ℹ️</span>
 							<span class="text-sm font-medium">Session</span>
 							<span class="level-count text-xs font-semibold" id="count-session_start">0</span>
 						</button>
 						<button class="level-filter-btn level-warning" data-level="custom">
 							<input type="checkbox" checked id="filter-custom" class="w-4 h-4 cursor-pointer">
-							<span class="level-icon text-sm">⚠️</span>
 							<span class="text-sm font-medium">Custom</span>
 							<span class="level-count text-xs font-semibold" id="count-custom">0</span>
 						</button>
 						<button class="level-filter-btn level-error" data-level="tool_error">
 							<input type="checkbox" checked id="filter-tool_error" class="w-4 h-4 cursor-pointer">
-							<span class="level-icon text-sm">❌</span>
 							<span class="text-sm font-medium">Error</span>
 							<span class="level-count text-xs font-semibold" id="count-tool_error">0</span>
 						</button>
@@ -1119,6 +1281,7 @@
 					<div class="search-controls">
 						<input type="text" class="search-input" id="searchInput" placeholder="Search">
 						<button class="icon-btn" onclick="refreshLogs()" title="Refresh">🔄</button>
+						<button class="icon-btn delete-all-btn" onclick="confirmDeleteAll()" title="Delete all events">🗑️</button>
 						<button class="icon-btn theme-toggle" onclick="toggleTheme()" title="Toggle theme">🌙</button>
 					</div>
 				</div>
@@ -1143,14 +1306,13 @@
 							<div class="empty-state-icon">📭</div>
 							<div class="font-semibold mt-2.5">No events found</div>
 						</div>
-						<div style="flex: 1; overflow-y: auto; min-height: 0; display: flex; flex-direction: column;">
-							<table class="logs-table" id="logsTable" style="display: none; height: 100%;">
+						<div style="flex: 1; overflow-y: auto; min-height: 0;">
+							<table class="logs-table" id="logsTable" style="display: none;">
 								<thead>
 									<tr>
 										<th style="width: 40px;"></th>
-										<th>Level</th>
+										<th style="width: 180px;">Event</th>
 										<th>Time</th>
-										<th>Server</th>
 										<th>Description</th>
 									</tr>
 								</thead>
@@ -1277,7 +1439,6 @@
 					throw new Error(`HTTP error! status: ${response.status}`);
 				}
 				const sessions = await response.json();
-				console.log('Loaded sessions:', sessions);
 				const sessionList = document.getElementById('sessionList');
 
 				if (!sessionList) {
@@ -1307,10 +1468,27 @@
 						li.className = 'server-item';
 						li.setAttribute('data-session', session.session_id);
 
-						// Format session ID (show first 12 chars)
-						const sessionDisplay = session.session_id.length > 12
-							? session.session_id.substring(0, 12) + '...'
-							: session.session_id;
+						// Format session display: date and user
+						let sessionDisplay = '';
+						if (session.first_event) {
+							const date = new Date(session.first_event);
+							const dateStr = date.toLocaleDateString('en-US', {
+								month: 'short',
+								day: 'numeric',
+								year: 'numeric',
+								hour: '2-digit',
+								minute: '2-digit'
+							});
+							sessionDisplay = dateStr;
+							if (session.user_id) {
+								sessionDisplay += ` • ${session.user_id}`;
+							}
+						} else {
+							// Fallback to session ID if no date
+							sessionDisplay = session.session_id.length > 12
+								? session.session_id.substring(0, 12) + '...'
+								: session.session_id;
+						}
 
 						li.innerHTML = `
 							<span class="server-name text-sm">${sessionDisplay}</span>
@@ -1343,7 +1521,6 @@
 						totalSizeEl.textContent = total;
 					}
 				} else {
-					console.log('No sessions found or empty array');
 					// Update total size to 0 if no sessions
 					const totalSizeEl = document.getElementById('totalSize');
 					if (totalSizeEl) {
@@ -1427,7 +1604,7 @@
 
 				row.className = `log-item-${levelClass}`;
 				row.innerHTML = `
-					<td style="text-align: center; padding: 8px 8px;">
+					<td style="text-align: center; padding: 2px 8px;">
 						<span class="status-indicator ${statusClass}" title="${isError ? 'Error' : 'OK'}"></span>
 					</td>
 					<td>
@@ -1437,7 +1614,6 @@
 						</span>
 					</td>
 					<td class="log-time">${formatDate(event.timestamp)}</td>
-					<td>${event.server_id || '-'}</td>
 					<td class="log-description">${description}</td>
 				`;
 				tbody.appendChild(row);
@@ -1522,6 +1698,56 @@
 			loadEventTypeStats();
 			loadSessions();
 			loadEvents();
+		}
+
+		let deleteAllConfirmed = false;
+
+		function confirmDeleteAll() {
+			if (!deleteAllConfirmed) {
+				deleteAllConfirmed = true;
+				const confirmed = confirm('Are you sure you want to delete ALL events? This action cannot be undone.\n\nClick OK to confirm, or Cancel to abort.');
+				if (!confirmed) {
+					deleteAllConfirmed = false;
+					return;
+				}
+				// Second confirmation
+				const secondConfirmed = confirm('FINAL WARNING: This will permanently delete ALL events from the database.\n\nAre you absolutely sure?');
+				if (!secondConfirmed) {
+					deleteAllConfirmed = false;
+					return;
+				}
+			}
+
+			// Perform deletion
+			deleteAllEvents();
+		}
+
+		async function deleteAllEvents() {
+			try {
+				const response = await fetch('/api/events', {
+					method: 'DELETE'
+				});
+
+				if (!response.ok) {
+					throw new Error(`HTTP error! status: ${response.status}`);
+				}
+
+				const data = await response.json();
+				alert(`Successfully deleted ${data.deletedCount || 0} events.`);
+
+				// Reset confirmation flag
+				deleteAllConfirmed = false;
+
+				// Refresh the view
+				currentOffset = 0;
+				loadEventTypeStats();
+				loadSessions();
+				loadEvents();
+			} catch (error) {
+				console.error('Error deleting events:', error);
+				alert('Error deleting events: ' + error.message);
+				deleteAllConfirmed = false;
+			}
 		}
 
 		// Search with debounce

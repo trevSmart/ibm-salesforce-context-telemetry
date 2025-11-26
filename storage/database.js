@@ -90,6 +90,39 @@ async function init() {
 }
 
 /**
+ * Extract a session identifier from different telemetry payload formats.
+ * Accepts camelCase (sessionId) and snake_case (session_id) plus nested "session".
+ * @param {object} eventData
+ * @returns {string|null}
+ */
+function getNormalizedSessionId(eventData = {}) {
+	const directId = eventData.sessionId || eventData.session_id;
+	if (directId) {
+		return directId;
+	}
+
+	if (typeof eventData.session === 'string') {
+		return eventData.session;
+	}
+
+	if (eventData.session && typeof eventData.session === 'object') {
+		return eventData.session.id || eventData.session.sessionId || eventData.session.session_id || null;
+	}
+
+	const dataSession =
+		eventData.data?.sessionId ||
+		eventData.data?.session_id ||
+		(typeof eventData.data?.session === 'string' ? eventData.data.session : null) ||
+		(eventData.data?.session && typeof eventData.data.session === 'object'
+			? eventData.data.session.id ||
+				eventData.data.session.sessionId ||
+				eventData.data.session.session_id
+			: null);
+
+	return dataSession || null;
+}
+
+/**
  * Store a telemetry event
  * @param {object} eventData - The telemetry event data
  * @param {string} receivedAt - ISO timestamp when event was received
@@ -101,6 +134,8 @@ async function storeEvent(eventData, receivedAt) {
 	}
 
 	try {
+		const normalizedSessionId = getNormalizedSessionId(eventData);
+
 		if (dbType === 'sqlite') {
 			const stmt = db.prepare(`
 				INSERT INTO telemetry_events
@@ -113,7 +148,7 @@ async function storeEvent(eventData, receivedAt) {
 				eventData.timestamp,
 				eventData.serverId || null,
 				eventData.version || null,
-				eventData.sessionId || null,
+				normalizedSessionId || null,
 				eventData.userId || null,
 				JSON.stringify(eventData.data || {}),
 				receivedAt
@@ -128,7 +163,7 @@ async function storeEvent(eventData, receivedAt) {
 					eventData.timestamp,
 					eventData.serverId || null,
 					eventData.version || null,
-					eventData.sessionId || null,
+					normalizedSessionId || null,
 					eventData.userId || null,
 					eventData.data || {},
 					receivedAt
@@ -208,7 +243,7 @@ async function getEvents(options = {}) {
 	const {
 		limit = 50,
 		offset = 0,
-		eventType,
+		eventTypes,
 		serverId,
 		sessionId,
 		startDate,
@@ -221,9 +256,17 @@ async function getEvents(options = {}) {
 	const params = [];
 	let paramIndex = 1;
 
-	if (eventType) {
-		whereClause += dbType === 'sqlite' ? ' AND event = ?' : ` AND event = $${paramIndex++}`;
-		params.push(eventType);
+	if (eventTypes && Array.isArray(eventTypes) && eventTypes.length > 0) {
+		if (eventTypes.length === 1) {
+			whereClause += dbType === 'sqlite' ? ' AND event = ?' : ` AND event = $${paramIndex++}`;
+			params.push(eventTypes[0]);
+		} else {
+			const placeholders = eventTypes.map(() => {
+				return dbType === 'sqlite' ? '?' : `$${paramIndex++}`;
+			}).join(', ');
+			whereClause += ` AND event IN (${placeholders})`;
+			params.push(...eventTypes);
+		}
 	}
 	if (serverId) {
 		whereClause += dbType === 'sqlite' ? ' AND server_id = ?' : ` AND server_id = $${paramIndex++}`;
@@ -334,38 +377,46 @@ async function getSessions() {
 	if (dbType === 'sqlite') {
 		const result = db.prepare(`
 			SELECT
-				session_id,
+				s.session_id,
 				COUNT(*) as count,
-				MIN(created_at) as first_event,
-				MAX(created_at) as last_event
-			FROM telemetry_events
-			WHERE session_id IS NOT NULL
-			GROUP BY session_id
+				MIN(s.created_at) as first_event,
+				MAX(s.created_at) as last_event,
+				(SELECT user_id FROM telemetry_events
+				 WHERE session_id = s.session_id
+				 ORDER BY created_at ASC LIMIT 1) as user_id
+			FROM telemetry_events s
+			WHERE s.session_id IS NOT NULL
+			GROUP BY s.session_id
 			ORDER BY last_event DESC
 		`).all();
 		return result.map(row => ({
 			session_id: row.session_id,
 			count: parseInt(row.count),
 			first_event: row.first_event,
-			last_event: row.last_event
+			last_event: row.last_event,
+			user_id: row.user_id
 		}));
 	} else {
 		const result = await db.query(`
 			SELECT
-				session_id,
+				s.session_id,
 				COUNT(*) as count,
-				MIN(created_at) as first_event,
-				MAX(created_at) as last_event
-			FROM telemetry_events
-			WHERE session_id IS NOT NULL
-			GROUP BY session_id
+				MIN(s.created_at) as first_event,
+				MAX(s.created_at) as last_event,
+				(SELECT user_id FROM telemetry_events
+				 WHERE session_id = s.session_id
+				 ORDER BY created_at ASC LIMIT 1) as user_id
+			FROM telemetry_events s
+			WHERE s.session_id IS NOT NULL
+			GROUP BY s.session_id
 			ORDER BY last_event DESC
 		`);
 		return result.rows.map(row => ({
 			session_id: row.session_id,
 			count: parseInt(row.count),
 			first_event: row.first_event,
-			last_event: row.last_event
+			last_event: row.last_event,
+			user_id: row.user_id
 		}));
 	}
 }

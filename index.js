@@ -91,10 +91,13 @@ app.get('/api/events', async (req, res) => {
 			order = 'DESC'
 		} = req.query;
 
+		// Handle multiple eventType values (Express converts them to an array)
+		const eventTypes = Array.isArray(eventType) ? eventType : (eventType ? [eventType] : []);
+
 		const result = await db.getEvents({
 			limit: parseInt(limit),
 			offset: parseInt(offset),
-			eventType,
+			eventTypes: eventTypes.length > 0 ? eventTypes : undefined,
 			serverId,
 			sessionId,
 			startDate,
