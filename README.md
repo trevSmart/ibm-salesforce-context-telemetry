@@ -251,6 +251,8 @@ The server stores telemetry events in a database:
 
 See [docs/DATABASE.md](./docs/DATABASE.md) for complete database configuration and setup instructions.
 
+**⚠️ Important for Render deployments**: SQLite does not persist between deployments on Render. See [docs/RENDER_DEPLOYMENT.md](./docs/RENDER_DEPLOYMENT.md) for instructions on using PostgreSQL with Render.
+
 Future enhancements may include:
 
 * Cloud storage (S3, Azure Blob, etc.)

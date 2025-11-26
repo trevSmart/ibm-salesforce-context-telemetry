@@ -74,52 +74,22 @@ Prem `Ctrl + C` a la terminal on corre el servidor per aturar-lo.
 
 ## 🌐 Pas 3: Desplegar a Render
 
-Render és un servei gratuït (amb limitacions) per desplegar aplicacions web. Segueix aquests passos:
+Render és un servei gratuït (amb limitacions) per desplegar aplicacions web.
 
-### 3.1. Crear compte a Render
+**⚠️ IMPORTANT**: Si utilitzes SQLite (per defecte), la base de dades es reinicialitza en cada deploy i perdràs tots els events. Per a producció a Render, **has d'utilitzar PostgreSQL**.
 
-1. Ves a https://render.com
-2. Crea un compte (pots fer servir GitHub per registrar-te ràpidament)
+**📖 Guia completa**: Consulta [RENDER_DEPLOYMENT.md](./RENDER_DEPLOYMENT.md) per instruccions detallades sobre com configurar PostgreSQL a Render i evitar la pèrdua de dades.
 
-### 3.2. Connectar el repositori GitHub
+### Resum ràpid:
 
-1. Assegura't que el teu codi està pujat a GitHub
-2. A Render, clica a "New +" → "Web Service"
-3. Connecta el teu repositori de GitHub
-4. Selecciona el repositori `ibm-salesforce-context-telemetry`
+1. **Crear base de dades PostgreSQL** a Render
+2. **Configurar variables d'entorn**:
+   - `DB_TYPE=postgresql`
+   - `DATABASE_URL=<Internal Database URL de Render>`
+   - `DATABASE_SSL=true`
+3. **Desplegar** el servei web
 
-### 3.3. Configurar el servei
-
-Omple aquests camps:
-
-- **Name**: `ibm-salesforce-context-telemetry` (o el nom que vulguis)
-- **Environment**: `Node`
-- **Build Command**: `npm install`
-- **Start Command**: `npm start`
-- **Plan**: Free (per començar)
-
-### 3.4. Variables d'entorn (opcional)
-
-Si vols canviar el port, afegeix una variable d'entorn:
-- **Key**: `PORT`
-- **Value**: `3100` (o el port que vulguis)
-
-### 3.5. Desplegar
-
-1. Clica a "Create Web Service"
-2. Render començarà a construir i desplegar el teu servidor
-3. Espera uns minuts mentre es desplega
-4. Quan acabi, tindràs una URL com: `https://ibm-salesforce-context-telemetry.onrender.com`
-
-### 3.6. Provar el desplegament
-
-Un cop desplegat, prova la URL:
-
-```bash
-curl https://ibm-salesforce-context-telemetry.onrender.com/
-```
-
-Hauries de veure: `MCP Telemetry server is running ✅`
+Veure [RENDER_DEPLOYMENT.md](./RENDER_DEPLOYMENT.md) per passos detallats.
 
 ## 🔧 Configuració Avançada
 

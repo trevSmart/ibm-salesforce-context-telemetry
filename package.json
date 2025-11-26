@@ -20,7 +20,8 @@
     "ajv-formats": "^3.0.1",
     "better-sqlite3": "^12.4.6",
     "cors": "^2.8.5",
-    "express": "^5.1.0"
+    "express": "^5.1.0",
+    "pg": "^8.11.0"
   },
   "devDependencies": {
     "autoprefixer": "^10.4.20",
