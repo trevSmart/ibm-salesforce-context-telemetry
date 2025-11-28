@@ -7,6 +7,9 @@
 	<link rel="icon" type="image/svg+xml" sizes="any" href="/resources/favicon.svg">
 	<link rel="icon" type="image/png" sizes="32x32" href="/resources/favicon.png">
 	<link href="/css/output.css" rel="stylesheet">
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 	<link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
 	<link rel="stylesheet" href="/vendor/fontawesome/css/v4-shims.min.css">
 	<script>
@@ -16,6 +19,16 @@
 			const theme = savedTheme || 'dark';
 			if (theme === 'dark') {
 				document.documentElement.classList.add('dark');
+			}
+			// Make body visible after theme is applied
+			function makeBodyVisible() {
+				document.body.style.visibility = 'visible';
+			}
+			if (document.readyState === 'loading') {
+				document.addEventListener('DOMContentLoaded', makeBodyVisible);
+			} else {
+				// DOM already loaded, make visible immediately
+				makeBodyVisible();
 			}
 		})();
 	</script>
@@ -97,16 +110,12 @@
 		}
 
 		/* Prevent flash of unstyled content - hide body until theme is applied */
-		html:not(.dark) body {
+		body {
 			visibility: hidden;
 		}
 
-		html.dark body {
-			visibility: visible;
-		}
-
 		body {
-			font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+			font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 			font-weight: 300;
 			background: linear-gradient(45deg, #a9c9ff, #f1d1ff);
 			min-height: 100vh;
@@ -505,7 +514,7 @@
 		}
 
 		.search-controls .search-input {
-			margin-right: 10px;
+			margin-right: 13px;
 		}
 
 		.icon-buttons-group {
@@ -514,16 +523,17 @@
 			gap: 0;
 			border-radius: 8px;
 			position: relative;
+			overflow: hidden;
 		}
 
 		.icon-buttons-group::before {
 			content: '';
 			position: absolute;
-			top: -2px;
-			left: -2px;
-			right: -2px;
-			bottom: -2px;
-			border: 2px solid transparent;
+			top: -1px;
+			left: -1px;
+			right: -1px;
+			bottom: -1px;
+			border: 1px solid transparent;
 			border-radius: 8px;
 			pointer-events: none;
 			z-index: 10;
@@ -534,9 +544,9 @@
 			content: '';
 			position: absolute;
 			top: 0;
-			left: var(--hover-left, 0);
-			width: 40px;
-			height: 40px;
+			left: var(--hover-left, -100px);
+			width: 38px;
+			height: 38px;
 			background: var(--hover-bg);
 			border-radius: 0;
 			pointer-events: none;
@@ -549,74 +559,44 @@
 			transition: opacity 0.15s ease, border-radius 0.3s cubic-bezier(0.4, 0, 0.2, 1), background 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
 		}
 
-		.icon-buttons-group:has(.icon-btn:hover)::before {
+		.icon-buttons-group:has(.icon-btn:hover)::before,
+		.icon-buttons-group[data-hover-index]::before {
 			border-color: var(--border-color);
 		}
 
-		.icon-buttons-group:has(.icon-btn:nth-child(1):hover) {
-			--hover-left: 0;
-			--last-hover-left: 0;
-		}
-
-		.icon-buttons-group:has(.icon-btn:nth-child(1):hover)::after {
-			left: var(--hover-left);
+		.icon-buttons-group[data-hover-index="0"]::after {
+			left: 0;
 			opacity: 1;
-			border-top-left-radius: 8px;
-			border-bottom-left-radius: 8px;
-			border-top-right-radius: 0;
-			border-bottom-right-radius: 0;
+			border-radius: 0;
 		}
 
-		.icon-buttons-group:has(.icon-btn:nth-child(2):hover) {
-			--hover-left: 40px;
-			--last-hover-left: 40px;
-		}
-
-		.icon-buttons-group:has(.icon-btn:nth-child(2):hover)::after {
-			left: var(--hover-left);
+		.icon-buttons-group[data-hover-index="1"]::after {
+			left: 38px;
 			opacity: 1;
 			border-radius: 0;
 			background: #fee2e2;
 		}
 
-		html.dark .icon-buttons-group:has(.icon-btn:nth-child(2):hover)::after {
+		html.dark .icon-buttons-group[data-hover-index="1"]::after {
 			background: rgba(220, 38, 38, 0.2);
 		}
 
-		.icon-buttons-group:has(.icon-btn:nth-child(3):hover) {
-			--hover-left: 80px;
-			--last-hover-left: 80px;
-		}
-
-		.icon-buttons-group:has(.icon-btn:nth-child(3):hover)::after {
-			left: var(--hover-left);
+		.icon-buttons-group[data-hover-index="2"]::after {
+			left: 76px;
 			opacity: 1;
 			border-radius: 0;
 		}
 
-		.icon-buttons-group:has(.icon-btn:nth-child(4):hover) {
-			--hover-left: 120px;
-			--last-hover-left: 120px;
-		}
-
-		.icon-buttons-group:has(.icon-btn:nth-child(4):hover)::after {
-			left: var(--hover-left);
+		.icon-buttons-group[data-hover-index="3"]::after {
+			left: 114px;
 			opacity: 1;
 			border-radius: 0;
 		}
 
-		.icon-buttons-group:has(.icon-btn:nth-child(5):hover) {
-			--hover-left: 160px;
-			--last-hover-left: 160px;
-		}
-
-		.icon-buttons-group:has(.icon-btn:nth-child(5):hover)::after {
-			left: var(--hover-left);
+		.icon-buttons-group[data-hover-index="4"]::after {
+			left: 152px;
 			opacity: 1;
-			border-top-left-radius: 0;
-			border-bottom-left-radius: 0;
-			border-top-right-radius: 8px;
-			border-bottom-right-radius: 8px;
+			border-radius: 0;
 		}
 
 		.icon-buttons-group .icon-btn {
@@ -624,6 +604,8 @@
 			position: relative;
 			z-index: 2;
 			background: transparent !important;
+			width: 38px;
+			height: 38px;
 		}
 
 		.icon-buttons-group .icon-btn:hover {
@@ -636,13 +618,72 @@
 		}
 
 		.icon-buttons-group .icon-btn:first-of-type {
-			border-top-left-radius: 8px;
-			border-bottom-left-radius: 8px;
+			border-radius: 0;
 		}
 
 		.icon-buttons-group .icon-btn:last-of-type {
-			border-top-right-radius: 8px;
-			border-bottom-right-radius: 8px;
+			border-radius: 0;
+		}
+
+		.user-menu-container {
+			position: relative;
+		}
+
+		.user-menu {
+			position: absolute;
+			top: calc(100% + 8px);
+			right: 0;
+			background: var(--bg-primary);
+			border: 1px solid var(--border-color);
+			border-radius: 8px;
+			box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+			min-width: 160px;
+			z-index: 1000;
+			overflow: hidden;
+		}
+
+		html.dark .user-menu {
+			background: var(--bg-primary);
+			box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+		}
+
+		.user-menu-item {
+			display: block;
+			width: 100%;
+			padding: 8px 12px;
+			font-size: 0.875rem;
+			color: var(--text-primary);
+			text-decoration: none;
+			transition: background-color 0.2s ease;
+		}
+
+		.user-menu-item:hover:not(:first-child) {
+			background: var(--hover-bg);
+		}
+
+		.user-menu-item:first-child {
+			font-size: 0.75rem;
+			color: var(--text-muted);
+			border-bottom: 1px solid var(--border-color);
+			cursor: default;
+		}
+
+		.user-menu-item button,
+		.user-menu-item[onclick] {
+			width: 100%;
+			text-align: left;
+			border: none;
+			background: transparent;
+			cursor: pointer;
+			padding: 8px 12px;
+			font-size: 0.875rem;
+			color: var(--text-primary);
+			transition: background-color 0.2s ease;
+		}
+
+		.user-menu-item button:hover,
+		.user-menu-item[onclick]:hover {
+			background: var(--hover-bg);
 		}
 
 		.table-controls {
@@ -666,6 +707,7 @@
 			font-size: 0.875rem;
 			line-height: 1.25rem;
 			width: 250px;
+			min-width: 100px;
 			background: white;
 			color: #18181b;
 			transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
@@ -997,6 +1039,11 @@
 			flex-shrink: 0;
 		}
 
+		/* Hide count for "All Sessions" button */
+		.server-item[data-session="all"] .server-item-right {
+			display: none;
+		}
+
 		.server-item:hover .server-item-actions {
 			z-index: 1001;
 		}
@@ -1086,6 +1133,24 @@
 
 		.server-item.active .server-name {
 			font-weight: 600;
+		}
+
+		.server-item[data-session="all"] .server-name {
+			font-weight: 300;
+			color: rgba(24, 24, 27, 0.75);
+		}
+
+		.server-item[data-session="all"].active .server-name {
+			font-weight: 300;
+			color: rgba(24, 24, 27, 0.75);
+		}
+
+		html.dark .server-item[data-session="all"] .server-name {
+			color: rgba(228, 228, 231, 0.7);
+		}
+
+		html.dark .server-item[data-session="all"].active .server-name {
+			color: rgba(228, 228, 231, 0.7);
 		}
 
 		.server-size {
@@ -1460,24 +1525,24 @@
 		}
 
 		.logs-table th {
-			padding: 12px 4px;
+			padding: 8px 4px;
 			text-align: left;
-			font-weight: 400;
-			color: var(--text-muted);
+			font-weight: 300;
+			color: var(--text-secondary);
 			border-bottom: 2px solid #f4f4f5;
 			font-size: 0.75rem;
 			line-height: 1;
-			letter-spacing: 0.07em;
+			letter-spacing: 0.05em;
 			text-transform: uppercase;
 		}
 
 		html.dark .logs-table th {
-			color: var(--text-muted);
+			color: var(--text-secondary);
 			border-bottom: 2px solid #19181a;
 		}
 
 		.logs-table td {
-			padding: 8px 4px;
+			padding: 10px 4px;
 			border-bottom: 2px solid #f4f4f5;
 			color: #18181b;
 			font-size: 0.75rem;
@@ -1604,7 +1669,7 @@
 
 		.logs-table th.time-column,
 		.log-time {
-			font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+			font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 			font-weight: 400;
 			min-width: 110px;
 			white-space: nowrap;
@@ -2070,7 +2135,6 @@
 					<div class="log-viewer-title text-xl font-semibold">Event log</div>
 					<div style="display: flex; align-items: center; gap: 12px; margin-top: 8px;">
 						<a href="/" class="back-link text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200">← Back to Home</a>
-						<button onclick="handleLogout()" class="back-link text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200" style="background: none; border: none; cursor: pointer; padding: 0;">Logout</button>
 					</div>
 				</div>
 				<div class="sidebar-content">
@@ -2121,11 +2185,17 @@
 					<div class="search-controls">
 						<input type="text" class="search-input" id="searchInput" placeholder="Search">
 						<div class="icon-buttons-group">
-							<button type="button" class="icon-btn" onclick="refreshLogs(event)" title="Refresh"><i class="fa fa-refresh"></i></button>
-							<button class="icon-btn delete-all-btn" onclick="confirmDeleteAll()" title="Delete all events"><i class="fa-regular fa-trash-can"></i></button>
-							<button class="icon-btn notification-toggle" onclick="toggleNotificationMode()" title="Enable notifications"><i class="fa-regular fa-bell"></i></button>
-							<button class="icon-btn theme-toggle" onclick="toggleTheme()" title="Toggle theme"><i class="fa-regular fa-moon"></i></button>
-							<button class="icon-btn user-btn" id="userBtn" title="User" onclick="showUserMenu(event)"><i class="fa-regular fa-user"></i></button>
+							<button type="button" class="icon-btn" onclick="refreshLogs(event)"><i class="fa fa-refresh"></i></button>
+							<button class="icon-btn delete-all-btn" onclick="confirmDeleteAll()"><i class="fa-regular fa-trash-can"></i></button>
+							<button class="icon-btn notification-toggle" onclick="toggleNotificationMode()"><i class="fa-regular fa-bell"></i></button>
+							<button class="icon-btn theme-toggle" onclick="toggleTheme()"><i class="fa-regular fa-moon"></i></button>
+							<div class="user-menu-container" style="position: relative;">
+								<button class="icon-btn user-btn" id="userBtn" onclick="showUserMenu(event)"><i class="fa-regular fa-user"></i></button>
+								<div class="user-menu" id="userMenu" style="display: none;">
+									<div class="user-menu-item" id="userMenuUsername">Loading...</div>
+									<button class="user-menu-item" onclick="handleLogout()">Logout</button>
+								</div>
+							</div>
 						</div>
 					</div>
 				</div>
@@ -2133,14 +2203,14 @@
 					<div id="sessionActivityCard" class="session-activity-card hidden">
 						<div class="session-activity-header">
 							<div style="display: flex; align-items: center; gap: 8px;">
-								<button class="date-nav-btn" id="prevDayBtn" onclick="navigateToPreviousDay()" title="Previous day">
+								<button class="date-nav-btn" id="prevDayBtn" onclick="navigateToPreviousDay()">
 									<i class="fa-solid fa-chevron-left"></i>
 								</button>
 								<div>
 									<p id="sessionActivityTitle" class="label">Activity overview</p>
 									<p id="sessionActivitySubtitle" class="subtitle">–</p>
 								</div>
-								<button class="date-nav-btn" id="nextDayBtn" onclick="navigateToNextDay()" title="Next day">
+								<button class="date-nav-btn" id="nextDayBtn" onclick="navigateToNextDay()">
 									<i class="fa-solid fa-chevron-right"></i>
 								</button>
 							</div>
@@ -2148,7 +2218,6 @@
 								<button
 									type="button"
 									class="session-activity-legend-toggle"
-									title="Hover to see the sessions legend"
 								>
 									<img src="resources/colors.png" alt="" class="session-activity-legend-toggle-image">
 									<span>Legend</span>
@@ -2259,23 +2328,52 @@
 
 		function showUserMenu(e) {
 			e.stopPropagation();
-			// For now, just show a simple alert with user info
-			// In the future, this could show a dropdown menu
-			fetch('/api/auth/status')
-				.then(response => response.json())
-				.then(data => {
-					if (data.authenticated && data.username) {
-						alert(`Logged in as: ${data.username}`);
-					} else {
-						handleLogout();
-					}
-				})
-				.catch(() => {
-					handleLogout();
-				});
+			const userMenu = document.getElementById('userMenu');
+			const isVisible = userMenu.style.display !== 'none';
+
+			// Toggle menu visibility
+			if (isVisible) {
+				userMenu.style.display = 'none';
+			} else {
+				userMenu.style.display = 'block';
+				// Load user info
+				fetch('/api/auth/status')
+					.then(response => response.json())
+					.then(data => {
+						const usernameElement = document.getElementById('userMenuUsername');
+						if (data.authenticated && data.username) {
+							usernameElement.textContent = data.username;
+						} else {
+							usernameElement.textContent = 'Not authenticated';
+						}
+					})
+					.catch(() => {
+						const usernameElement = document.getElementById('userMenuUsername');
+						usernameElement.textContent = 'Error loading user';
+					});
+			}
 		}
 
+		// Close user menu when clicking outside
+		document.addEventListener('click', function(event) {
+			const userMenu = document.getElementById('userMenu');
+			const userBtn = document.getElementById('userBtn');
+			const userMenuContainer = event.target.closest('.user-menu-container');
+
+			if (userMenu && userMenu.style.display !== 'none') {
+				if (!userMenuContainer && !userMenu.contains(event.target)) {
+					userMenu.style.display = 'none';
+				}
+			}
+		});
+
 		async function handleLogout() {
+			// Close menu
+			const userMenu = document.getElementById('userMenu');
+			if (userMenu) {
+				userMenu.style.display = 'none';
+			}
+
 			try {
 				const response = await fetch('/logout', {
 					method: 'POST',
@@ -2684,9 +2782,16 @@
 			let multiSeriesEntries = [];
 
 			if (isAllSessionsView) {
-				// For "All sessions", use selected date or current day
-				const useCurrentDay = selectedActivityDate === null;
-				const dateToUse = selectedActivityDate || new Date();
+				// For "All sessions", use selected date or the first event's day
+				const useCurrentDay = false; // Always use the date from events or selected date
+				let dateToUse = selectedActivityDate;
+				if (!dateToUse && events.length > 0) {
+					// Use the first event's day if no date is selected
+					dateToUse = new Date(events[0].timestamp);
+				} else if (!dateToUse) {
+					// Fallback to current day if no events
+					dateToUse = new Date();
+				}
 				const multiSeries = buildMultiSessionActivitySeries(events, useCurrentDay, dateToUse);
 				windowStart = multiSeries.windowStart;
 				windowEnd = multiSeries.windowEnd;
@@ -2834,10 +2939,61 @@
 			}, true);
 
 			chartInstance.resize();
-			renderSessionActivityLegend(isAllSessionsView ? chartSeries.map(series => ({
-				name: series.name,
-				color: series.lineStyle?.color || '#53cf98'
-			})) : null);
+			// Filter legend to only show series with data in the visible time window
+			let legendEntries = null;
+			if (isAllSessionsView) {
+				// Filter series to only those with data (value > 0) in the visible window
+				const filteredSeries = chartSeries.filter(series => {
+					// Check if series has any data points with value > 0
+					// Note: seriesData is already filtered to windowStart/windowEnd when built
+					if (!series.data || !Array.isArray(series.data)) {
+						return false;
+					}
+					// Check if any point has value > 0
+					return series.data.some(point => {
+						if (!Array.isArray(point) || point.length < 2) {
+							return false;
+						}
+						const value = point[1];
+						return value > 0;
+					});
+				});
+
+				// Map to legend entries
+				legendEntries = filteredSeries.map(series => ({
+					name: series.name,
+					color: series.lineStyle?.color || '#53cf98'
+				}));
+
+				// Fallback: if filter removed all series, show all series (for debugging)
+				if (legendEntries.length === 0 && chartSeries.length > 0) {
+					legendEntries = chartSeries.map(series => ({
+						name: series.name,
+						color: series.lineStyle?.color || '#53cf98'
+					}));
+				}
+			} else {
+				// For single session view, show the session's series in the legend
+				if (chartSeries.length > 0) {
+					const series = chartSeries[0];
+					// Check if series has data (value > 0) in the visible window
+					const hasData = series.data && Array.isArray(series.data) && series.data.some(point => {
+						if (!Array.isArray(point) || point.length < 2) {
+							return false;
+						}
+						const value = point[1];
+						return value > 0;
+					});
+
+					if (hasData) {
+						legendEntries = [{
+							name: series.name,
+							color: series.lineStyle?.color || '#53cf98'
+						}];
+					}
+				}
+			}
+			renderSessionActivityLegend(legendEntries);
 		}
 
 		function buildSessionActivitySeries(events, useCurrentDay = false, customDate = null) {
@@ -3256,7 +3412,7 @@
 
 			legendEl.innerHTML = '';
 
-			// Only show legend when there are multiple series (multiple sessions)
+			// Show legend for series with data (works for both all sessions and single session views)
 			if (Array.isArray(seriesEntries) && seriesEntries.length > 0) {
 				seriesEntries.forEach(entry => {
 					const safeName = escapeHtml(entry.name);
@@ -3269,7 +3425,6 @@
 					legendEl.appendChild(item);
 				});
 			}
-			// No legend for single session view - the chart is self-explanatory
 		}
 
 		function refreshSessionActivityTheme() {
@@ -3356,7 +3511,7 @@
 							<div class="server-item-right">
 								<span class="server-size text-xs">${session.count || 0}</span>
 								<div class="server-item-actions">
-									<button class="actions-btn" onclick="event.stopPropagation(); toggleSessionActionsDropdown(event, '${session.session_id}')" title="Actions">
+									<button class="actions-btn" onclick="event.stopPropagation(); toggleSessionActionsDropdown(event, '${session.session_id}')">
 										<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
 											<circle cx="8" cy="3" r="1.5"/>
 											<circle cx="8" cy="8" r="1.5"/>
@@ -3591,12 +3746,12 @@
 				row.setAttribute('data-event', JSON.stringify(event));
 				row.innerHTML = `
 					<td style="text-align: center; padding: 2px 8px;">
-						<button class="expand-btn" type="button" id="expand-btn-${event.id}" title="Expand/Collapse">
+						<button class="expand-btn" type="button" id="expand-btn-${event.id}">
 							<i class="fa-solid fa-chevron-right"></i>
 						</button>
 					</td>
 					<td style="text-align: center; padding: 2px 8px;">
-						<span class="status-indicator ${statusClass}" title="${isError ? 'Error' : 'OK'}">${statusLabel}</span>
+						<span class="status-indicator ${statusClass}">${statusLabel}</span>
 					</td>
 					<td class="log-time">${formatDate(event.timestamp)}</td>
 					<td>
@@ -3607,7 +3762,7 @@
 					<td class="log-client">${escapeHtml(clientName)}</td>
 					<td class="log-description">${description}</td>
 					<td class="actions-cell">
-						<button class="actions-btn" onclick="toggleActionsDropdown(event, ${event.id})" title="Actions">
+						<button class="actions-btn" onclick="toggleActionsDropdown(event, ${event.id})">
 							<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
 								<circle cx="8" cy="3" r="1.5"/>
 								<circle cx="8" cy="8" r="1.5"/>
@@ -4591,39 +4746,65 @@
 			const iconButtonsGroup = document.querySelector('.icon-buttons-group');
 			if (!iconButtonsGroup) return;
 
+			const afterElement = iconButtonsGroup;
+			const buttonPositions = [0, 38, 76, 114, 152];
 			let isInsideGroup = false;
 			let currentHoveredButton = null;
+			let hasEnteredFromOutside = false;
 
-			iconButtonsGroup.addEventListener('mouseenter', () => {
+			iconButtonsGroup.addEventListener('mouseenter', (e) => {
 				isInsideGroup = true;
+				hasEnteredFromOutside = true;
 				iconButtonsGroup.classList.add('no-transition');
 			});
 
 			iconButtonsGroup.addEventListener('mouseleave', () => {
 				isInsideGroup = false;
 				currentHoveredButton = null;
+				hasEnteredFromOutside = false;
 				iconButtonsGroup.classList.remove('no-transition');
 			});
 
 			const buttons = iconButtonsGroup.querySelectorAll('.icon-btn');
 			buttons.forEach((button, index) => {
-				button.addEventListener('mouseenter', () => {
-					if (currentHoveredButton !== null && currentHoveredButton !== index) {
+				button.addEventListener('mouseenter', (e) => {
+					const wasFromOutside = currentHoveredButton === null || hasEnteredFromOutside;
+
+					if (currentHoveredButton !== null && currentHoveredButton !== index && !wasFromOutside) {
 						// Moving from one button to another - enable transition
 						iconButtonsGroup.classList.remove('no-transition');
-					} else if (currentHoveredButton === null) {
-						// Entering from outside - no transition
+						iconButtonsGroup.setAttribute('data-hover-index', index);
+					} else {
+						// Entering from outside or first hover - no transition
 						iconButtonsGroup.classList.add('no-transition');
+
+						// Set the hover index attribute which triggers CSS
+						iconButtonsGroup.setAttribute('data-hover-index', index);
+
+						// Force a reflow to ensure the position is set before removing no-transition
+						void iconButtonsGroup.offsetHeight;
+
+						// Remove no-transition after a short delay to allow smooth transitions between buttons
+						setTimeout(() => {
+							if (isInsideGroup && currentHoveredButton === index) {
+								iconButtonsGroup.classList.remove('no-transition');
+							}
+						}, 20);
+
+						hasEnteredFromOutside = false;
 					}
 					currentHoveredButton = index;
-
-					// Remove no-transition after a short delay to allow smooth transitions between buttons
-					setTimeout(() => {
-						if (isInsideGroup) {
-							iconButtonsGroup.classList.remove('no-transition');
-						}
-					}, 50);
 				});
+
+				button.addEventListener('mouseleave', () => {
+					if (currentHoveredButton === index && !isInsideGroup) {
+						iconButtonsGroup.removeAttribute('data-hover-index');
+					}
+				});
+			});
+
+			iconButtonsGroup.addEventListener('mouseleave', () => {
+				iconButtonsGroup.removeAttribute('data-hover-index');
 			});
 		})();
 	</script>

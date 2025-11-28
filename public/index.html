@@ -7,6 +7,9 @@
 	<link rel="icon" type="image/svg+xml" sizes="any" href="/resources/favicon.svg">
 	<link rel="icon" type="image/png" sizes="32x32" href="/resources/favicon.png">
 	<link href="/css/output.css" rel="stylesheet">
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 	<style>
 		:root {
 			--bg-primary: #ffffff;
@@ -29,7 +32,7 @@
 		}
 
 		body {
-			font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+			font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 			background: linear-gradient(135deg, #a8c0ff 0%, #b8a8ff 50%, #c8a8ff 100%);
 			min-height: 100vh;
 			display: flex;
@@ -235,25 +238,45 @@
 					chart.destroy();
 				}
 
+				// Check if there are multiple series (datasets)
+				// For now, we only have one dataset, but this prepares for future multi-series support
+				const datasets = [{
+					label: 'Events',
+					data: counts,
+					borderColor: borderColor,
+					backgroundColor: backgroundColor,
+					borderWidth: 2,
+					fill: true,
+					tension: 0.4,
+					pointRadius: 3,
+					pointHoverRadius: 5,
+					pointBackgroundColor: borderColor,
+					pointBorderColor: '#ffffff',
+					pointBorderWidth: 2,
+					spanGaps: false
+				}];
+
+				// Check if there are multiple series
+				const hasMultipleSeries = datasets.length > 1;
+
+				// If multiple series, convert 0 values to null so lines don't draw
+				if (hasMultipleSeries) {
+					datasets.forEach(dataset => {
+						dataset.data = dataset.data.map(value => value === 0 ? null : value);
+						// Hide points where value is null
+						dataset.pointRadius = (ctx) => {
+							const value = ctx.parsed.y;
+							return (value === null || value === undefined) ? 0 : 3;
+						};
+					});
+				}
+
 				const ctx = document.getElementById('eventsChart').getContext('2d');
 				chart = new Chart(ctx, {
 					type: 'line',
 					data: {
 						labels: labels,
-						datasets: [{
-							label: 'Events',
-							data: counts,
-							borderColor: borderColor,
-							backgroundColor: backgroundColor,
-							borderWidth: 2,
-							fill: true,
-							tension: 0.4,
-							pointRadius: 3,
-							pointHoverRadius: 5,
-							pointBackgroundColor: borderColor,
-							pointBorderColor: '#ffffff',
-							pointBorderWidth: 2
-						}]
+						datasets: datasets
 					},
 					options: {
 						responsive: true,
