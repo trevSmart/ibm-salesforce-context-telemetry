@@ -28,6 +28,11 @@ const detectElectronEnvironment = () => {
 			const data = await response.json();
 			if (!data.authenticated) {
 				window.location.href = '/login';
+				return;
+			}
+			if (data.role !== 'advanced') {
+				window.location.href = '/';
+				return;
 			}
 		} catch (error) {
 			console.error('Auth check failed:', error);
@@ -1773,6 +1778,11 @@ const detectElectronEnvironment = () => {
 					</div>
 				</td>
 			`;
+			const descriptionCell = row.querySelector('.log-description');
+			if (descriptionCell) {
+				descriptionCell.textContent = description;
+				descriptionCell.removeAttribute('title');
+			}
 			const expandButton = row.querySelector(`#expand-btn-${event.id}`);
 			if (expandButton) {
 				expandButton.addEventListener('click', (evt) => {

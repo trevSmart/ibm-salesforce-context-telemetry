@@ -458,6 +458,8 @@ For production deployments with multiple users, create users in the database:
 ```bash
 npm run create-user admin secure-password
 npm run create-user user1 password1
+# Optional third argument sets the role (advanced|basic). Default is advanced.
+npm run create-user analyst password123 basic
 ```
 
 **Via API (after initial login):**
@@ -466,6 +468,23 @@ npm run create-user user1 password1
 curl -X POST http://localhost:3100/api/users \
   -H "Content-Type: application/json" \
   -d '{"username": "newuser", "password": "secure-password"}'
+```
+
+### Permission Levels
+
+User accounts can operate with two permission levels:
+
+| Role      | Access                                                                     |
+|-----------|----------------------------------------------------------------------------|
+| advanced  | Full access to the event log, export/delete operations, and user management |
+| basic     | Limited to the main dashboard (no event log or destructive actions)        |
+
+When creating a user (via script or API), pass `"role": "basic"` to limit access. You can also change existing users with:
+
+```bash
+curl -X PUT http://localhost:3100/api/users/alice/role \
+  -H "Content-Type: application/json" \
+  -d '{"role": "advanced"}'
 ```
 
 **Authentication Priority:**

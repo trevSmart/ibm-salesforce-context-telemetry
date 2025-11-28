@@ -213,11 +213,13 @@ app.post('/login', auth.requireGuest, async (req, res) => {
 			});
 		}
 
-		const isValid = await auth.authenticate(username, password);
+		const authResult = await auth.authenticate(username, password);
 
-		if (isValid) {
+		if (authResult && authResult.success) {
+			const userInfo = authResult.user || { username, role: 'advanced' };
 			req.session.authenticated = true;
-			req.session.username = username;
+			req.session.username = userInfo.username;
+			req.session.role = userInfo.role;
 
 			// If it's a form submission, save session and redirect to home
 			if (req.headers['content-type']?.includes('application/x-www-form-urlencoded')) {
@@ -278,14 +280,18 @@ app.post('/logout', (req, res) => {
 });
 
 app.get('/api/auth/status', (req, res) => {
+	const isAuthenticated = Boolean(req.session && req.session.authenticated);
 	res.json({
-		authenticated: req.session && req.session.authenticated || false,
-		username: req.session && req.session.username || null
+		authenticated: isAuthenticated,
+		username: req.session && req.session.username || null,
+		role: isAuthenticated && req.session?.role
+			? auth.normalizeRole(req.session.role)
+			: null
 	});
 });
 
 // User management API endpoints
-app.get('/api/users', auth.requireAuth, async (req, res) => {
+app.get('/api/users', auth.requireAuth, auth.requireRole('advanced'), async (req, res) => {
 	try {
 		const users = await db.getAllUsers();
 		res.json({
@@ -301,9 +307,9 @@ app.get('/api/users', auth.requireAuth, async (req, res) => {
 	}
 });
 
-app.post('/api/users', auth.requireAuth, async (req, res) => {
+app.post('/api/users', auth.requireAuth, auth.requireRole('advanced'), async (req, res) => {
 	try {
-		const { username, password } = req.body;
+		const { username, password, role } = req.body;
 
 		if (!username || !password) {
 			return res.status(400).json({
@@ -325,7 +331,9 @@ app.post('/api/users', auth.requireAuth, async (req, res) => {
 		const passwordHash = await auth.hashPassword(password);
 
 		// Create user
-		const user = await db.createUser(username, passwordHash);
+		const normalizedRole = role ? auth.normalizeRole(role) : 'advanced';
+
+		const user = await db.createUser(username, passwordHash, normalizedRole);
 
 		res.status(201).json({
 			status: 'ok',
@@ -333,7 +341,8 @@ app.post('/api/users', auth.requireAuth, async (req, res) => {
 			user: {
 				id: user.id,
 				username: user.username,
-				created_at: user.created_at
+				created_at: user.created_at,
+				role: normalizedRole
 			}
 		});
 	} catch (error) {
@@ -345,7 +354,7 @@ app.post('/api/users', auth.requireAuth, async (req, res) => {
 	}
 });
 
-app.delete('/api/users/:username', auth.requireAuth, async (req, res) => {
+app.delete('/api/users/:username', auth.requireAuth, auth.requireRole('advanced'), async (req, res) => {
 	try {
 		const { username } = req.params;
 
@@ -378,7 +387,7 @@ app.delete('/api/users/:username', auth.requireAuth, async (req, res) => {
 	}
 });
 
-app.put('/api/users/:username/password', auth.requireAuth, async (req, res) => {
+app.put('/api/users/:username/password', auth.requireAuth, auth.requireRole('advanced'), async (req, res) => {
 	try {
 		const { username } = req.params;
 		const { password } = req.body;
@@ -415,8 +424,48 @@ app.put('/api/users/:username/password', auth.requireAuth, async (req, res) => {
 	}
 });
 
+app.put('/api/users/:username/role', auth.requireAuth, auth.requireRole('advanced'), async (req, res) => {
+	try {
+		const { username } = req.params;
+		const { role } = req.body;
+
+		if (!role) {
+			return res.status(400).json({
+				status: 'error',
+				message: 'Role is required'
+			});
+		}
+
+		const normalizedRole = auth.normalizeRole(role);
+		const updated = await db.updateUserRole(username, normalizedRole);
+		if (!updated) {
+			return res.status(404).json({
+				status: 'error',
+				message: 'User not found'
+			});
+		}
+
+		// If the authenticated user updated their own role, refresh session value
+		if (req.session && req.session.username === username) {
+			req.session.role = normalizedRole;
+		}
+
+		res.json({
+			status: 'ok',
+			message: 'Role updated successfully',
+			role: normalizedRole
+		});
+	} catch (error) {
+		console.error('Error updating user role:', error);
+		res.status(500).json({
+			status: 'error',
+			message: 'Failed to update role'
+		});
+	}
+});
+
 // API endpoints for viewing telemetry data
-app.get('/api/events', auth.requireAuth, async (req, res) => {
+app.get('/api/events', auth.requireAuth, auth.requireRole('advanced'), async (req, res) => {
 	try {
 		const {
 			limit = 50,
@@ -469,7 +518,7 @@ app.get('/api/events', auth.requireAuth, async (req, res) => {
 	}
 });
 
-app.get('/api/events/:id', auth.requireAuth, async (req, res) => {
+app.get('/api/events/:id', auth.requireAuth, auth.requireRole('advanced'), async (req, res) => {
 	try {
 		const eventId = parseInt(req.params.id);
 		if (isNaN(eventId)) {
@@ -514,7 +563,7 @@ app.get('/api/stats', auth.requireAuth, async (req, res) => {
 	}
 });
 
-app.get('/api/event-types', auth.requireAuth, async (req, res) => {
+app.get('/api/event-types', auth.requireAuth, auth.requireRole('advanced'), async (req, res) => {
 	try {
 		const { sessionId, userId } = req.query;
 		// Handle multiple userId values (Express converts them to an array)
@@ -539,7 +588,7 @@ app.get('/api/event-types', auth.requireAuth, async (req, res) => {
 	}
 });
 
-app.get('/api/sessions', auth.requireAuth, async (req, res) => {
+app.get('/api/sessions', auth.requireAuth, auth.requireRole('advanced'), async (req, res) => {
 	try {
 		const { userId } = req.query;
 		// Handle multiple userId values (Express converts them to an array)
@@ -583,7 +632,7 @@ app.get('/api/daily-stats', auth.requireAuth, async (req, res) => {
 	}
 });
 
-app.get('/api/telemetry-users', auth.requireAuth, async (req, res) => {
+app.get('/api/telemetry-users', auth.requireAuth, auth.requireRole('advanced'), async (req, res) => {
 	try {
 		const userIds = await db.getUniqueUserIds();
 		res.json(userIds);
@@ -596,7 +645,7 @@ app.get('/api/telemetry-users', auth.requireAuth, async (req, res) => {
 	}
 });
 
-app.get('/api/database-size', auth.requireAuth, async (req, res) => {
+app.get('/api/database-size', auth.requireAuth, auth.requireRole('advanced'), async (req, res) => {
 	try {
 		const sizeInfo = await db.getDatabaseSize();
 		if (sizeInfo === null) {
@@ -650,7 +699,7 @@ app.get('/', auth.requireAuth, (_req, res) => {
 });
 
 // Serve event log page
-app.get('/event-log', auth.requireAuth, (_req, res) => {
+app.get('/event-log', auth.requireAuth, auth.requireRole('advanced'), (_req, res) => {
 	const eventLogPath = path.join(__dirname, 'public', 'event-log.html');
 	if (fs.existsSync(eventLogPath)) {
 		res.sendFile(eventLogPath);
@@ -676,7 +725,7 @@ app.get('/schema', auth.requireAuth, (_req, res) => {
 });
 
 // Export logs in JSON Lines (JSONL) format
-app.get('/api/export/logs', auth.requireAuth, async (req, res) => {
+app.get('/api/export/logs', auth.requireAuth, auth.requireRole('advanced'), async (req, res) => {
 	try {
 		const {
 			startDate,
@@ -716,7 +765,7 @@ app.get('/api/export/logs', auth.requireAuth, async (req, res) => {
 });
 
 // Delete a single event by ID
-app.delete('/api/events/:id', auth.requireAuth, async (req, res) => {
+app.delete('/api/events/:id', auth.requireAuth, auth.requireRole('advanced'), async (req, res) => {
 	try {
 		const eventId = parseInt(req.params.id);
 		if (isNaN(eventId)) {
@@ -748,7 +797,7 @@ app.delete('/api/events/:id', auth.requireAuth, async (req, res) => {
 });
 
 // Delete all events from database
-app.delete('/api/events', auth.requireAuth, async (req, res) => {
+app.delete('/api/events', auth.requireAuth, auth.requireRole('advanced'), async (req, res) => {
 	try {
 		const { sessionId } = req.query;
 

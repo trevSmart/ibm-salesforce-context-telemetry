@@ -11,9 +11,15 @@ const path = require('path');
 
 // Database configuration constants
 const DEFAULT_MAX_DB_SIZE = 1024 * 1024 * 1024; // 1 GB in bytes
+const VALID_ROLES = ['basic', 'advanced'];
 
 let db = null;
 let dbType = process.env.DB_TYPE || 'sqlite';
+
+function normalizeRole(role) {
+	const value = typeof role === 'string' ? role.toLowerCase() : '';
+	return VALID_ROLES.includes(value) ? value : 'advanced';
+}
 
 /**
  * Initialize database connection
@@ -50,6 +56,7 @@ async function init() {
 				id INTEGER PRIMARY KEY AUTOINCREMENT,
 				username TEXT NOT NULL UNIQUE,
 				password_hash TEXT NOT NULL,
+				role TEXT NOT NULL DEFAULT 'advanced',
 				created_at TEXT DEFAULT CURRENT_TIMESTAMP,
 				last_login TEXT
 			);
@@ -99,6 +106,7 @@ async function init() {
 				id SERIAL PRIMARY KEY,
 				username TEXT NOT NULL UNIQUE,
 				password_hash TEXT NOT NULL,
+				role TEXT NOT NULL DEFAULT 'advanced',
 				created_at TIMESTAMPTZ DEFAULT NOW(),
 				last_login TIMESTAMPTZ
 			);
@@ -122,6 +130,8 @@ async function init() {
 	} else {
 		throw new Error(`Unsupported database type: ${dbType}`);
 	}
+
+	await ensureUserRoleColumn();
 }
 
 /**
@@ -1094,12 +1104,12 @@ async function getUserByUsername(username) {
 	}
 
 	if (dbType === 'sqlite') {
-		const stmt = db.prepare('SELECT id, username, password_hash, created_at, last_login FROM users WHERE username = ?');
+		const stmt = db.prepare('SELECT id, username, password_hash, role, created_at, last_login FROM users WHERE username = ?');
 		const user = stmt.get(username);
 		return user || null;
 	} else if (dbType === 'postgresql') {
 		const result = await db.query(
-			'SELECT id, username, password_hash, created_at, last_login FROM users WHERE username = $1',
+			'SELECT id, username, password_hash, role, created_at, last_login FROM users WHERE username = $1',
 			[username]
 		);
 		return result.rows[0] || null;
@@ -1112,24 +1122,27 @@ async function getUserByUsername(username) {
  * @param {string} passwordHash - Bcrypt password hash
  * @returns {Promise<object>} Created user object
  */
-async function createUser(username, passwordHash) {
+async function createUser(username, passwordHash, role = 'advanced') {
 	if (!db) {
 		throw new Error('Database not initialized. Call init() first.');
 	}
 
+	const normalized = normalizeRole(role);
+
 	if (dbType === 'sqlite') {
-		const stmt = db.prepare('INSERT INTO users (username, password_hash) VALUES (?, ?)');
-		const result = stmt.run(username, passwordHash);
+		const stmt = db.prepare('INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)');
+		const result = stmt.run(username, passwordHash, normalized);
 		return {
 			id: result.lastInsertRowid,
 			username,
 			password_hash: passwordHash,
+			role: normalized,
 			created_at: new Date().toISOString()
 		};
 	} else if (dbType === 'postgresql') {
 		const result = await db.query(
-			'INSERT INTO users (username, password_hash) VALUES ($1, $2) RETURNING id, username, password_hash, created_at',
-			[username, passwordHash]
+			'INSERT INTO users (username, password_hash, role) VALUES ($1, $2, $3) RETURNING id, username, password_hash, role, created_at',
+			[username, passwordHash, normalized]
 		);
 		return result.rows[0];
 	}
@@ -1164,10 +1177,10 @@ async function getAllUsers() {
 	}
 
 	if (dbType === 'sqlite') {
-		const stmt = db.prepare('SELECT id, username, created_at, last_login FROM users ORDER BY username');
+		const stmt = db.prepare('SELECT id, username, role, created_at, last_login FROM users ORDER BY username');
 		return stmt.all();
 	} else if (dbType === 'postgresql') {
-		const result = await db.query('SELECT id, username, created_at, last_login FROM users ORDER BY username');
+		const result = await db.query('SELECT id, username, role, created_at, last_login FROM users ORDER BY username');
 		return result.rows;
 	}
 }
@@ -1211,6 +1224,31 @@ async function updateUserPassword(username, passwordHash) {
 		const result = await db.query('UPDATE users SET password_hash = $1 WHERE username = $2', [passwordHash, username]);
 		return result.rowCount > 0;
 	}
+}
+
+/**
+ * Update user role
+ * @param {string} username - Username
+ * @param {string} role - New role (basic|advanced)
+ * @returns {Promise<boolean>} True if updated, false otherwise
+ */
+async function updateUserRole(username, role) {
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
+
+	const normalized = normalizeRole(role);
+
+	if (dbType === 'sqlite') {
+		const stmt = db.prepare('UPDATE users SET role = ? WHERE username = ?');
+		const result = stmt.run(normalized, username);
+		return result.changes > 0;
+	} else if (dbType === 'postgresql') {
+		const result = await db.query('UPDATE users SET role = $1 WHERE username = $2', [normalized, username]);
+		return result.rowCount > 0;
+	}
+
+	return false;
 }
 
 /**
@@ -1379,6 +1417,26 @@ function getPostgresPool() {
 	return null;
 }
 
+async function ensureUserRoleColumn() {
+	if (!db) {
+		return;
+	}
+
+	try {
+		if (dbType === 'sqlite') {
+			const columns = db.prepare('PRAGMA table_info(users)').all();
+			const hasRoleColumn = columns.some(column => column.name === 'role');
+			if (!hasRoleColumn) {
+				db.exec("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'advanced'");
+			}
+		} else if (dbType === 'postgresql') {
+			await db.query('ALTER TABLE IF EXISTS users ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT $1', ['advanced']);
+		}
+	} catch (error) {
+		console.error('Error ensuring user role column:', error);
+	}
+}
+
 module.exports = {
 	init,
 	storeEvent,
@@ -1402,6 +1460,7 @@ module.exports = {
 	getAllUsers,
 	deleteUser,
 	updateUserPassword,
+	updateUserRole,
 	// Organization management
 	getOrgCompanyName,
 	getAllOrgs,

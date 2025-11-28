@@ -9,6 +9,16 @@
 			window.location.href = '/login';
 			return;
 		}
+
+		const eventLogLink = document.getElementById('eventLogLink');
+		if (eventLogLink) {
+			if (data.role === 'advanced') {
+				eventLogLink.style.display = '';
+			} else {
+				eventLogLink.style.display = 'none';
+			}
+		}
+
 		// Only load chart data if authenticated
 		loadChartData();
 
