@@ -39,8 +39,8 @@ function initSessionMiddleware() {
 		cookie: {
 			secure: isProduction, // Use secure cookies in production (HTTPS)
 			httpOnly: true,
-			maxAge: 24 * 60 * 60 * 1000, // 24 hours
-			sameSite: isProduction ? 'lax' : 'lax' // Use 'lax' for better compatibility
+			sameSite: 'lax', // Allow cookies to be sent on same-site requests and top-level navigations
+			maxAge: 24 * 60 * 60 * 1000 // 24 hours
 		}
 	});
 }

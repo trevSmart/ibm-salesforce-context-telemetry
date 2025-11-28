@@ -218,7 +218,7 @@ app.post('/login', auth.requireGuest, async (req, res) => {
 				req.session.save((err) => {
 					if (err) {
 						console.error('Error saving session:', err);
-						return res.redirect('/login?error=session_error');
+						return res.redirect('/login?error=server_error');
 					}
 					return res.redirect('/');
 				});

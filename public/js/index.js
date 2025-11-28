@@ -2,12 +2,15 @@
 (async () => {
 	try {
 		const response = await fetch('/api/auth/status', {
-			credentials: 'include'
+			credentials: 'include' // Ensure cookies are sent
 		});
 		const data = await response.json();
 		if (!data.authenticated) {
 			window.location.href = '/login';
+			return;
 		}
+		// Only load chart data if authenticated
+		loadChartData();
 	} catch (error) {
 		console.error('Auth check failed:', error);
 		window.location.href = '/login';
@@ -38,7 +41,7 @@ let chart = null;
 async function loadChartData() {
 	try {
 		const response = await fetch('/api/daily-stats?days=30', {
-			credentials: 'include'
+			credentials: 'include' // Ensure cookies are sent
 		});
 		if (response.status === 401) {
 			window.location.href = '/login';
@@ -162,5 +165,4 @@ async function loadChartData() {
 	}
 }
 
-// Load chart on page load
-loadChartData();
+// Chart will be loaded after authentication check
