@@ -1646,6 +1646,13 @@
     justify-content: flex-end;
     min-height: 32px;
     flex-shrink: 0;
+    opacity: 1;
+    transition: opacity 0.3s ease;
+  }
+
+  .session-activity-legend-wrapper.hidden {
+    opacity: 0;
+    pointer-events: none;
   }
 
   .session-activity-legend-toggle {

@@ -1265,7 +1265,8 @@ const detectElectronEnvironment = () => {
 		// Show legend button only for "All sessions" view and if there are any series
 		const hasSeries = Array.isArray(seriesEntries) && seriesEntries.length > 0;
 		if (isAllSessionsView && hasSeries) {
-			legendWrapper.style.visibility = 'visible';
+			// Show legend button with opacity transition
+			legendWrapper.classList.remove('hidden');
 			// Show legend for series with data
 			seriesEntries.forEach(entry => {
 				const safeName = escapeHtml(entry.name);
@@ -1278,8 +1279,8 @@ const detectElectronEnvironment = () => {
 				legendEl.appendChild(item);
 			});
 		} else {
-			// Hide the legend button if not in "All sessions" view or if there are no series
-			legendWrapper.style.visibility = 'hidden';
+			// Hide the legend button with opacity transition
+			legendWrapper.classList.add('hidden');
 		}
 	}
 

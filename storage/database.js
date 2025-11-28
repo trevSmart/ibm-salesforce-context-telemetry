@@ -1179,6 +1179,33 @@ async function getAllOrgs() {
 	}
 }
 
+/**
+ * Update event data by ID
+ * @param {number} id - Event ID
+ * @param {object} data - New data object
+ * @returns {Promise<boolean>} True if updated, false otherwise
+ */
+async function updateEventData(id, data) {
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
+
+	try {
+		if (dbType === 'sqlite') {
+			const stmt = db.prepare('UPDATE telemetry_events SET data = ? WHERE id = ?');
+			const result = stmt.run(JSON.stringify(data), id);
+			return result.changes > 0;
+		} else if (dbType === 'postgresql') {
+			const result = await db.query('UPDATE telemetry_events SET data = $1 WHERE id = $2', [data, id]);
+			return result.rowCount > 0;
+		}
+		return false;
+	} catch (error) {
+		console.error('Error updating event data:', error);
+		return false;
+	}
+}
+
 module.exports = {
 	init,
 	storeEvent,
@@ -1204,5 +1231,8 @@ module.exports = {
 	updateUserPassword,
 	// Organization management
 	getOrgCompanyName,
-	getAllOrgs
+	getAllOrgs,
+	upsertOrgCompanyName,
+	// Event updates
+	updateEventData
 };
