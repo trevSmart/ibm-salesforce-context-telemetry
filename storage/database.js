@@ -1368,6 +1368,17 @@ async function getUniqueUserIds() {
 	return Array.from(userIds).sort();
 }
 
+/**
+ * Get PostgreSQL pool if using PostgreSQL, null otherwise
+ * Used for session store configuration
+ */
+function getPostgresPool() {
+	if (dbType === 'postgresql' && db) {
+		return db;
+	}
+	return null;
+}
+
 module.exports = {
 	init,
 	storeEvent,
@@ -1398,5 +1409,7 @@ module.exports = {
 	// Event updates
 	updateEventData,
 	// User filtering
-	getUniqueUserIds
+	getUniqueUserIds,
+	// Session store
+	getPostgresPool
 };

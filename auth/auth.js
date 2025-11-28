@@ -6,6 +6,7 @@
 const bcrypt = require('bcrypt');
 const session = require('express-session');
 const crypto = require('crypto');
+const pgSession = require('connect-pg-simple')(session);
 
 // Get credentials from environment variables (for backward compatibility)
 const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin';
@@ -29,10 +30,27 @@ function init(databaseModule) {
 
 /**
  * Initialize session middleware
+ * Uses PostgreSQL store if available, otherwise falls back to MemoryStore
  */
 function initSessionMiddleware() {
 	const isProduction = process.env.NODE_ENV === 'production';
-	return session({
+
+	// Try to get PostgreSQL pool from database module
+	let store = null;
+	if (db) {
+		const postgresPool = db.getPostgresPool ? db.getPostgresPool() : null;
+		if (postgresPool) {
+			// Use PostgreSQL store for sessions
+			store = new pgSession({
+				pool: postgresPool,
+				tableName: 'session', // Table name for sessions
+				createTableIfMissing: true // Automatically create session table if it doesn't exist
+			});
+		}
+	}
+
+	// If no PostgreSQL store, MemoryStore will be used (with warning in production)
+	const sessionConfig = {
 		secret: SESSION_SECRET,
 		resave: false,
 		saveUninitialized: false,
@@ -42,7 +60,14 @@ function initSessionMiddleware() {
 			sameSite: 'lax', // Allow cookies to be sent on same-site requests and top-level navigations
 			maxAge: 24 * 60 * 60 * 1000 // 24 hours
 		}
-	});
+	};
+
+	// Only set store if we have PostgreSQL, otherwise use default MemoryStore
+	if (store) {
+		sessionConfig.store = store;
+	}
+
+	return session(sessionConfig);
 }
 
 /**

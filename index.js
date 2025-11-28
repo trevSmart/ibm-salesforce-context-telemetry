@@ -24,7 +24,7 @@ const validate = ajv.compile(schema);
 app.use(cors()); // Allow requests from any origin
 app.use(express.json()); // Parse JSON request bodies
 app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies (for login form)
-app.use(auth.initSessionMiddleware()); // Initialize session middleware
+// Session middleware will be initialized after database is ready (see startServer function)
 
 // Serve static files from public directory
 app.use(express.static('public', {
@@ -785,6 +785,10 @@ async function startServer() {
 		// Initialize authentication with database
 		auth.init(db);
 		console.log('Authentication initialized with database support');
+
+		// Initialize session middleware after database is ready
+		// This allows PostgreSQL session store to be used if available
+		app.use(auth.initSessionMiddleware());
 
 		app.listen(port, () => {
 			console.log('\n' + '='.repeat(60));
