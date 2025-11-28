@@ -54,6 +54,13 @@ async function init() {
 				last_login TEXT
 			);
 
+			CREATE TABLE IF NOT EXISTS orgs (
+				server_id TEXT PRIMARY KEY,
+				company_name TEXT,
+				updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+				created_at TEXT DEFAULT CURRENT_TIMESTAMP
+			);
+
 			CREATE INDEX IF NOT EXISTS idx_event ON telemetry_events(event);
 			CREATE INDEX IF NOT EXISTS idx_timestamp ON telemetry_events(timestamp);
 			CREATE INDEX IF NOT EXISTS idx_server_id ON telemetry_events(server_id);
@@ -94,6 +101,13 @@ async function init() {
 				password_hash TEXT NOT NULL,
 				created_at TIMESTAMPTZ DEFAULT NOW(),
 				last_login TIMESTAMPTZ
+			);
+
+			CREATE TABLE IF NOT EXISTS orgs (
+				server_id TEXT PRIMARY KEY,
+				company_name TEXT,
+				updated_at TIMESTAMPTZ DEFAULT NOW(),
+				created_at TIMESTAMPTZ DEFAULT NOW()
 			);
 
 			CREATE INDEX IF NOT EXISTS idx_event ON telemetry_events(event);
@@ -144,6 +158,75 @@ function getNormalizedSessionId(eventData = {}) {
 }
 
 /**
+ * Extract company name from telemetry event data
+ * Supports both new format (data.state.org.companyDetails.Name) and legacy format (data.companyDetails.Name)
+ * @param {object} eventData - The telemetry event data
+ * @returns {string|null} Company name or null if not found
+ */
+function extractCompanyName(eventData = {}) {
+	if (!eventData || !eventData.data) {
+		return null;
+	}
+
+	const data = eventData.data;
+
+	// New format: data.state.org.companyDetails.Name
+	if (data.state && data.state.org && data.state.org.companyDetails) {
+		const companyName = data.state.org.companyDetails.Name;
+		if (typeof companyName === 'string' && companyName.trim() !== '') {
+			return companyName.trim();
+		}
+	}
+
+	// Legacy format: data.companyDetails.Name
+	if (data.companyDetails && typeof data.companyDetails.Name === 'string') {
+		const companyName = data.companyDetails.Name.trim();
+		if (companyName !== '') {
+			return companyName;
+		}
+	}
+
+	return null;
+}
+
+/**
+ * Update or insert organization company name
+ * @param {string} serverId - Server ID (org identifier)
+ * @param {string} companyName - Company name
+ * @returns {Promise<void>}
+ */
+async function upsertOrgCompanyName(serverId, companyName) {
+	if (!db || !serverId || !companyName) {
+		return;
+	}
+
+	try {
+		const now = new Date().toISOString();
+		if (dbType === 'sqlite') {
+			const stmt = db.prepare(`
+				INSERT INTO orgs (server_id, company_name, updated_at, created_at)
+				VALUES (?, ?, ?, ?)
+				ON CONFLICT(server_id) DO UPDATE SET
+					company_name = excluded.company_name,
+					updated_at = excluded.updated_at
+			`);
+			stmt.run(serverId, companyName, now, now);
+		} else if (dbType === 'postgresql') {
+			await db.query(`
+				INSERT INTO orgs (server_id, company_name, updated_at, created_at)
+				VALUES ($1, $2, $3, $4)
+				ON CONFLICT (server_id) DO UPDATE SET
+					company_name = EXCLUDED.company_name,
+					updated_at = EXCLUDED.updated_at
+			`, [serverId, companyName, now, now]);
+		}
+	} catch (error) {
+		// Log error but don't fail the event storage
+		console.error('Error upserting org company name:', error);
+	}
+}
+
+/**
  * Store a telemetry event
  * @param {object} eventData - The telemetry event data
  * @param {string} receivedAt - ISO timestamp when event was received
@@ -190,6 +273,17 @@ async function storeEvent(eventData, receivedAt) {
 					receivedAt
 				]
 			);
+		}
+
+		// Extract and store company name if available
+		if (eventData.serverId) {
+			const companyName = extractCompanyName(eventData);
+			if (companyName) {
+				// Don't await to avoid blocking event storage
+				upsertOrgCompanyName(eventData.serverId, companyName).catch(err => {
+					console.error('Error storing company name:', err);
+				});
+			}
 		}
 	} catch (error) {
 		// Re-throw to allow caller to handle
@@ -902,6 +996,54 @@ async function updateUserPassword(username, passwordHash) {
 	}
 }
 
+/**
+ * Get company name for a server/org
+ * @param {string} serverId - Server ID
+ * @returns {Promise<string|null>} Company name or null if not found
+ */
+async function getOrgCompanyName(serverId) {
+	if (!db || !serverId) {
+		return null;
+	}
+
+	try {
+		if (dbType === 'sqlite') {
+			const stmt = db.prepare('SELECT company_name FROM orgs WHERE server_id = ?');
+			const result = stmt.get(serverId);
+			return result ? result.company_name : null;
+		} else if (dbType === 'postgresql') {
+			const result = await db.query('SELECT company_name FROM orgs WHERE server_id = $1', [serverId]);
+			return result.rows.length > 0 ? result.rows[0].company_name : null;
+		}
+	} catch (error) {
+		console.error('Error getting org company name:', error);
+		return null;
+	}
+}
+
+/**
+ * Get all organizations with their company names
+ * @returns {Promise<Array>} Array of org objects with server_id and company_name
+ */
+async function getAllOrgs() {
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
+
+	try {
+		if (dbType === 'sqlite') {
+			const stmt = db.prepare('SELECT server_id, company_name, created_at, updated_at FROM orgs ORDER BY updated_at DESC');
+			return stmt.all();
+		} else if (dbType === 'postgresql') {
+			const result = await db.query('SELECT server_id, company_name, created_at, updated_at FROM orgs ORDER BY updated_at DESC');
+			return result.rows;
+		}
+	} catch (error) {
+		console.error('Error getting all orgs:', error);
+		return [];
+	}
+}
+
 module.exports = {
 	init,
 	storeEvent,
@@ -923,5 +1065,8 @@ module.exports = {
 	updateLastLogin,
 	getAllUsers,
 	deleteUser,
-	updateUserPassword
+	updateUserPassword,
+	// Organization management
+	getOrgCompanyName,
+	getAllOrgs
 };
