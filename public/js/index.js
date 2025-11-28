@@ -40,13 +40,13 @@ function escapeHtml(str) {
 function showUserMenu(e) {
 	e.stopPropagation();
 	const userMenu = document.getElementById('userMenu');
-	const isVisible = userMenu.style.display !== 'none';
+	const isVisible = userMenu.classList.contains('show');
 
 	// Toggle menu visibility
 	if (isVisible) {
-		userMenu.style.display = 'none';
+		userMenu.classList.remove('show');
 	} else {
-		userMenu.style.display = 'block';
+		userMenu.classList.add('show');
 		// Load user info
 		fetch('/api/auth/status', {
 			credentials: 'include' // Ensure cookies are sent
@@ -73,9 +73,9 @@ document.addEventListener('click', function(event) {
 	const userBtn = document.getElementById('userBtn');
 	const userMenuContainer = event.target.closest('.user-menu-container');
 
-	if (userMenu && userMenu.style.display !== 'none') {
+	if (userMenu && userMenu.classList.contains('show')) {
 		if (!userMenuContainer && !userMenu.contains(event.target)) {
-			userMenu.style.display = 'none';
+			userMenu.classList.remove('show');
 		}
 	}
 });
@@ -84,7 +84,7 @@ async function handleLogout() {
 	// Close menu
 	const userMenu = document.getElementById('userMenu');
 	if (userMenu) {
-		userMenu.style.display = 'none';
+		userMenu.classList.remove('show');
 	}
 
 	try {
@@ -185,7 +185,7 @@ async function loadChartData(days = currentDays) {
 					backgroundColor: startSessionsBackgroundColor,
 					borderWidth: 2,
 					fill: true,
-					tension: 0.4,
+					tension: 0.25,
 					pointRadius: 3,
 					pointHoverRadius: 5,
 					pointBackgroundColor: startSessionsBorderColor,
@@ -200,7 +200,7 @@ async function loadChartData(days = currentDays) {
 					backgroundColor: toolEventsBackgroundColor,
 					borderWidth: 2,
 					fill: true,
-					tension: 0.4,
+					tension: 0.25,
 					pointRadius: 3,
 					pointHoverRadius: 5,
 					pointBackgroundColor: toolEventsBorderColor,
@@ -220,7 +220,7 @@ async function loadChartData(days = currentDays) {
 					backgroundColor: totalEventsBackgroundColor,
 					borderWidth: 2,
 					fill: true,
-					tension: 0.4,
+					tension: 0.1,
 					pointRadius: 3,
 					pointHoverRadius: 5,
 					pointBackgroundColor: totalEventsBorderColor,

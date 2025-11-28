@@ -38,13 +38,13 @@ const detectElectronEnvironment = () => {
 	function showUserMenu(e) {
 		e.stopPropagation();
 		const userMenu = document.getElementById('userMenu');
-		const isVisible = userMenu.style.display !== 'none';
+		const isVisible = userMenu.classList.contains('show');
 
 		// Toggle menu visibility
 		if (isVisible) {
-			userMenu.style.display = 'none';
+			userMenu.classList.remove('show');
 		} else {
-			userMenu.style.display = 'block';
+			userMenu.classList.add('show');
 			// Load user info
 			fetch('/api/auth/status', {
 				credentials: 'include' // Ensure cookies are sent
@@ -71,9 +71,9 @@ const detectElectronEnvironment = () => {
 		const userBtn = document.getElementById('userBtn');
 		const userMenuContainer = event.target.closest('.user-menu-container');
 
-		if (userMenu && userMenu.style.display !== 'none') {
+		if (userMenu && userMenu.classList.contains('show')) {
 			if (!userMenuContainer && !userMenu.contains(event.target)) {
-				userMenu.style.display = 'none';
+				userMenu.classList.remove('show');
 			}
 		}
 	});
@@ -82,7 +82,7 @@ const detectElectronEnvironment = () => {
 		// Close menu
 		const userMenu = document.getElementById('userMenu');
 		if (userMenu) {
-			userMenu.style.display = 'none';
+			userMenu.classList.remove('show');
 		}
 
 		try {
@@ -119,6 +119,8 @@ const detectElectronEnvironment = () => {
 	let selectedSession = 'all';
 	let selectedActivityDate = null; // null means use current day by default
 	let activeFilters = new Set(['tool_call', 'session_start', 'custom', 'tool_error']);
+	let selectedUserIds = new Set(); // Will be populated with all users when loaded - all selected by default
+	let allUserIds = new Set(); // Track all available user IDs
 	let searchQuery = '';
 	let sortOrder = 'DESC';
 	let startTime = performance.now();
@@ -457,8 +459,28 @@ const detectElectronEnvironment = () => {
 		hoverPreviewState = null;
 		isHoverPreviewActive = false;
 
+		// Restore the selected session
+		selectedSession = savedState.sessionId;
+
 		// Restore the selected activity date
 		selectedActivityDate = savedState.activityDate ? new Date(savedState.activityDate) : null;
+
+		// Restore the visual state of session buttons
+		document.querySelectorAll('.server-item').forEach(i => i.classList.remove('active'));
+		document.querySelectorAll('[data-session="all"]').forEach(i => i.classList.remove('active'));
+
+		if (savedState.sessionId === 'all') {
+			// Restore "All Sessions" as active
+			document.querySelectorAll('[data-session="all"]').forEach(item => {
+				item.classList.add('active');
+			});
+		} else {
+			// Restore the specific session as active
+			const sessionItem = document.querySelector(`.server-item[data-session="${savedState.sessionId}"]`);
+			if (sessionItem) {
+				sessionItem.classList.add('active');
+			}
+		}
 
 		// Restore the chart with saved state
 		if (savedState.events && savedState.events.length > 0) {
@@ -499,7 +521,7 @@ const detectElectronEnvironment = () => {
 			}
 		}
 
-		// Delay the chart update by 300ms
+		// Delay the chart update by 150ms
 		hoverTimeoutId = setTimeout(async () => {
 			isHoverPreviewActive = true;
 
@@ -542,7 +564,7 @@ const detectElectronEnvironment = () => {
 			}
 
 			hoverTimeoutId = null;
-		}, 300);
+		}, 150);
 	}
 
 	async function updateSessionActivityChart(options = {}) {
@@ -785,23 +807,30 @@ const detectElectronEnvironment = () => {
 		}, !enableTransition); // notMerge: false when transition is enabled, true otherwise
 
 		chartInstance.resize();
-		// Filter legend to only show series with data in the visible time window
+		// Filter legend to only show series with data during the displayed day
 		let legendEntries = null;
 		if (isAllSessionsView) {
-			// Filter series to only those with data (value > 0) in the visible window
+			// Calculate the day boundaries (00:00:00 to 23:59:59.999 of referenceDate)
+			const dayStart = new Date(referenceDate);
+			dayStart.setHours(0, 0, 0, 0);
+			const dayEnd = new Date(referenceDate);
+			dayEnd.setHours(23, 59, 59, 999);
+
+			// Filter series to only those with data (value > 0) during the displayed day
 			const filteredSeries = chartSeries.filter(series => {
-				// Check if series has any data points with value > 0
-				// Note: seriesData is already filtered to windowStart/windowEnd when built
+				// Check if series has any data points with value > 0 during the displayed day
 				if (!series.data || !Array.isArray(series.data)) {
 					return false;
 				}
-				// Check if any point has value > 0
+				// Check if any point has value > 0 and falls within the displayed day
 				return series.data.some(point => {
 					if (!Array.isArray(point) || point.length < 2) {
 						return false;
 					}
+					const timestamp = point[0];
 					const value = point[1];
-					return value > 0;
+					// Check if the point is within the displayed day and has data
+					return value > 0 && timestamp >= dayStart.getTime() && timestamp <= dayEnd.getTime();
 				});
 			});
 
@@ -1135,7 +1164,7 @@ const detectElectronEnvironment = () => {
 		return {
 			name: 'Events',
 			type: 'line',
-			smooth: 0.25,
+			smooth: 0.55,
 			smoothMonotone: 'x', // prevent bezier overshoot while keeping curvature
 			showSymbol: false,
 			connectNulls: true, // Connect valid points even if there are null values between them
@@ -1262,9 +1291,9 @@ const detectElectronEnvironment = () => {
 		// Always keep the wrapper in the layout to prevent height changes
 		legendWrapper.style.display = 'flex';
 
-		// Show legend button only for "All sessions" view and if there are any series
-		const hasSeries = Array.isArray(seriesEntries) && seriesEntries.length > 0;
-		if (isAllSessionsView && hasSeries) {
+		// Show legend button only for "All sessions" view and if there are more than one series
+		const hasMultipleSeries = Array.isArray(seriesEntries) && seriesEntries.length > 1;
+		if (isAllSessionsView && hasMultipleSeries) {
 			// Show legend button with opacity transition
 			legendWrapper.classList.remove('hidden');
 			// Show legend for series with data
@@ -1294,10 +1323,31 @@ const detectElectronEnvironment = () => {
 
 	async function loadEventTypeStats(sessionId = null) {
 		try {
-			const params = sessionId && sessionId !== 'all'
-				? `?sessionId=${encodeURIComponent(sessionId)}`
-				: '';
-			const response = await fetch(`/api/event-types${params}`, {
+			const params = new URLSearchParams();
+			if (sessionId && sessionId !== 'all') {
+				params.append('sessionId', sessionId);
+			}
+			// Apply user filters
+			// If users haven't been loaded yet (allUserIds.size === 0), don't filter (show all)
+			// If no users are selected after loading, send a special marker to return no stats
+			// If all users are selected, don't filter (show all)
+			// If some users are selected, filter by those users
+			if (allUserIds.size === 0) {
+				// Users not loaded yet - don't filter (show all stats)
+				// Don't add any userId param
+			} else if (selectedUserIds.size === 0) {
+				// No users selected - send special marker to return no stats
+				params.append('userId', '__none__');
+			} else if (selectedUserIds.size > 0 && selectedUserIds.size < allUserIds.size) {
+				// Some users selected - filter by those users
+				Array.from(selectedUserIds).forEach(userId => {
+					params.append('userId', userId);
+				});
+			}
+			// If all users are selected (selectedUserIds.size === allUserIds.size), don't add any userId param
+			const queryString = params.toString();
+			const url = queryString ? `/api/event-types?${queryString}` : '/api/event-types';
+			const response = await fetch(url, {
 				credentials: 'include' // Ensure cookies are sent
 			});
 			const validResponse = await handleApiResponse(response);
@@ -1324,7 +1374,28 @@ const detectElectronEnvironment = () => {
 
 	async function loadSessions() {
 		try {
-			const response = await fetch('/api/sessions', {
+			const params = new URLSearchParams();
+			// Apply user filters
+			// If users haven't been loaded yet (allUserIds.size === 0), don't filter (show all)
+			// If no users are selected after loading, send a special marker to return no sessions
+			// If all users are selected, don't filter (show all)
+			// If some users are selected, filter by those users
+			if (allUserIds.size === 0) {
+				// Users not loaded yet - don't filter (show all sessions)
+				// Don't add any userId param
+			} else if (selectedUserIds.size === 0) {
+				// No users selected - send special marker to return no sessions
+				params.append('userId', '__none__');
+			} else if (selectedUserIds.size > 0 && selectedUserIds.size < allUserIds.size) {
+				// Some users selected - filter by those users
+				Array.from(selectedUserIds).forEach(userId => {
+					params.append('userId', userId);
+				});
+			}
+			// If all users are selected (selectedUserIds.size === allUserIds.size), don't add any userId param
+			const queryString = params.toString();
+			const url = queryString ? `/api/sessions?${queryString}` : '/api/sessions';
+			const response = await fetch(url, {
 				credentials: 'include' // Ensure cookies are sent
 			});
 			const validResponse = await handleApiResponse(response);
@@ -1535,6 +1606,25 @@ const detectElectronEnvironment = () => {
 			if (searchQuery) {
 				params.append('search', searchQuery);
 			}
+
+			// Apply user filters
+			// If users haven't been loaded yet (allUserIds.size === 0), don't filter (show all)
+			// If no users are selected after loading, send a special marker to return no events
+			// If all users are selected, don't filter (show all)
+			// If some users are selected, filter by those users
+			if (allUserIds.size === 0) {
+				// Users not loaded yet - don't filter (show all events)
+				// Don't add any userId param
+			} else if (selectedUserIds.size === 0) {
+				// No users selected - send special marker to return no events
+				params.append('userId', '__none__');
+			} else if (selectedUserIds.size > 0 && selectedUserIds.size < allUserIds.size) {
+				// Some users selected - filter by those users
+				Array.from(selectedUserIds).forEach(userId => {
+					params.append('userId', userId);
+				});
+			}
+			// If all users are selected (selectedUserIds.size === allUserIds.size), don't add any userId param
 
 			const response = await fetch(`/api/events?${params}`);
 			const validResponse = await handleApiResponse(response);
@@ -2721,6 +2811,171 @@ const detectElectronEnvironment = () => {
 		}
 	}
 
+	// User filter dropdown management
+	async function loadUsers() {
+		try {
+			const response = await fetch('/api/telemetry-users', {
+				credentials: 'include'
+			});
+			const validResponse = await handleApiResponse(response);
+			if (!validResponse) return;
+			const data = await validResponse.json();
+
+			// Check if response is an error object
+			if (data && data.status === 'error') {
+				console.error('Error loading users:', data.message);
+				const dropdownContent = document.getElementById('userFilterDropdownContent');
+				if (dropdownContent) {
+					dropdownContent.innerHTML = '<div class="user-filter-empty">Error loading users</div>';
+				}
+				return;
+			}
+
+			// Ensure data is an array
+			const userIds = Array.isArray(data) ? data : [];
+
+			const dropdownContent = document.getElementById('userFilterDropdownContent');
+			if (!dropdownContent) return;
+
+			dropdownContent.innerHTML = '';
+
+			if (userIds.length === 0) {
+				dropdownContent.innerHTML = '<div class="user-filter-empty">No users found</div>';
+				return;
+			}
+
+			// Update allUserIds and select all users by default if this is the first load
+			allUserIds = new Set(userIds);
+			const isFirstLoad = selectedUserIds.size === 0;
+			if (isFirstLoad) {
+				// Select all users by default
+				selectedUserIds = new Set(userIds);
+			}
+
+			// Add "Select all" button at the top
+			const selectAllButton = document.createElement('button');
+			selectAllButton.className = 'user-filter-action-btn';
+			selectAllButton.textContent = 'Select all';
+			selectAllButton.addEventListener('click', (e) => {
+				e.stopPropagation();
+				// Select all users
+				selectedUserIds = new Set(userIds);
+				// Update all individual checkboxes
+				userIds.forEach(userId => {
+					const checkbox = document.getElementById(`user-filter-${userId}`);
+					if (checkbox) {
+						checkbox.checked = true;
+					}
+				});
+				currentOffset = 0;
+				loadEvents();
+				loadEventTypeStats(selectedSession);
+				loadSessions();
+			});
+
+			dropdownContent.appendChild(selectAllButton);
+
+			// Add "Deselect all" button
+			const deselectAllButton = document.createElement('button');
+			deselectAllButton.className = 'user-filter-action-btn';
+			deselectAllButton.textContent = 'Deselect all';
+			deselectAllButton.addEventListener('click', (e) => {
+				e.stopPropagation();
+				// Deselect all users
+				selectedUserIds.clear();
+				// Update all individual checkboxes
+				userIds.forEach(userId => {
+					const checkbox = document.getElementById(`user-filter-${userId}`);
+					if (checkbox) {
+						checkbox.checked = false;
+					}
+				});
+				currentOffset = 0;
+				loadEvents();
+				loadEventTypeStats(selectedSession);
+				loadSessions();
+			});
+
+			dropdownContent.appendChild(deselectAllButton);
+
+			// Add separator
+			const separator = document.createElement('div');
+			separator.className = 'user-filter-separator';
+			dropdownContent.appendChild(separator);
+
+			userIds.forEach(userId => {
+				const userItem = document.createElement('div');
+				userItem.className = 'user-filter-item';
+				userItem.innerHTML = `
+					<input type="checkbox" id="user-filter-${userId}" class="user-filter-checkbox" data-user-id="${userId}">
+					<label for="user-filter-${userId}" class="user-filter-label">${escapeHtml(userId)}</label>
+				`;
+
+				const checkbox = userItem.querySelector('input[type="checkbox"]');
+				// Check if user is selected (default to true on first load)
+				checkbox.checked = selectedUserIds.has(userId);
+
+				checkbox.addEventListener('change', (e) => {
+					if (e.target.checked) {
+						selectedUserIds.add(userId);
+					} else {
+						selectedUserIds.delete(userId);
+					}
+					// No need to update button states - they're always available
+					currentOffset = 0;
+					loadEvents();
+					loadEventTypeStats(selectedSession);
+					loadSessions();
+				});
+
+				dropdownContent.appendChild(userItem);
+			});
+		} catch (error) {
+			console.error('Error loading users:', error);
+		}
+	}
+
+	window.toggleUserFilterDropdown = function(event) {
+		event.stopPropagation();
+		const dropdown = document.getElementById('userFilterDropdown');
+		const chevron = document.getElementById('userFilterChevron');
+		if (!dropdown || !chevron) return;
+
+		const isVisible = dropdown.classList.contains('show');
+		if (isVisible) {
+			dropdown.classList.remove('show');
+			chevron.classList.remove('fa-chevron-up');
+			chevron.classList.add('fa-chevron-down');
+		} else {
+			dropdown.classList.add('show');
+			chevron.classList.remove('fa-chevron-down');
+			chevron.classList.add('fa-chevron-up');
+			// Load users if not already loaded
+			const dropdownContent = document.getElementById('userFilterDropdownContent');
+			if (dropdownContent && dropdownContent.children.length === 0) {
+				loadUsers();
+			}
+		}
+	}
+
+	// Close user filter dropdown when clicking outside
+	document.addEventListener('click', function(event) {
+		const dropdown = document.getElementById('userFilterDropdown');
+		const dropdownBtn = document.getElementById('userFilterDropdownBtn');
+		const dropdownContainer = event.target.closest('.user-filter-dropdown-container');
+
+		if (dropdown && dropdown.classList.contains('show')) {
+			if (!dropdownContainer && !dropdown.contains(event.target)) {
+				dropdown.classList.remove('show');
+				const chevron = document.getElementById('userFilterChevron');
+				if (chevron) {
+					chevron.classList.remove('fa-chevron-up');
+					chevron.classList.add('fa-chevron-down');
+				}
+			}
+		}
+	});
+
 	function initializeApp() {
 		runSafeInitStep('notification button state', updateNotificationButtonState);
 		runSafeInitStep('theme initialization', initTheme);
@@ -2732,6 +2987,7 @@ const detectElectronEnvironment = () => {
 		runSafeAsyncInitStep('sessions list', () => loadSessions());
 		runSafeAsyncInitStep('events table', () => loadEvents());
 		runSafeAsyncInitStep('database size', () => loadDatabaseSize());
+		runSafeAsyncInitStep('users list', () => loadUsers());
 	}
 
 	initializeApp();

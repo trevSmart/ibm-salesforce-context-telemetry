@@ -158,6 +158,43 @@ function getNormalizedSessionId(eventData = {}) {
 }
 
 /**
+ * Extract a user identifier from different telemetry payload formats.
+ * Accepts camelCase (userId) and snake_case (user_id) plus nested locations.
+ * Also extracts user name from data field (userName, user_name, user.name) similar to how sessions display them.
+ * @param {object} eventData
+ * @returns {string|null}
+ */
+function getNormalizedUserId(eventData = {}) {
+	// Try direct fields first
+	const directId = eventData.userId || eventData.user_id;
+	if (directId) {
+		return directId;
+	}
+
+	// Try nested in data object (for userId/user_id)
+	const dataUserId =
+		eventData.data?.userId ||
+		eventData.data?.user_id ||
+		eventData.data?.user?.id ||
+		eventData.data?.user?.userId ||
+		eventData.data?.user?.user_id ||
+		null;
+	if (dataUserId) {
+		return dataUserId;
+	}
+
+	// Try user name from data field (same logic as in getSessions for display)
+	// This is what appears in the session buttons
+	const userName =
+		eventData.data?.userName ||
+		eventData.data?.user_name ||
+		(eventData.data?.user && eventData.data.user.name) ||
+		null;
+
+	return userName || null;
+}
+
+/**
  * Extract company name from telemetry event data
  * Supports both new format (data.state.org.companyDetails.Name) and legacy format (data.companyDetails.Name)
  * @param {object} eventData - The telemetry event data
@@ -239,6 +276,7 @@ async function storeEvent(eventData, receivedAt) {
 
 	try {
 		const normalizedSessionId = getNormalizedSessionId(eventData);
+		const normalizedUserId = getNormalizedUserId(eventData);
 
 		if (dbType === 'sqlite') {
 			const stmt = db.prepare(`
@@ -253,7 +291,7 @@ async function storeEvent(eventData, receivedAt) {
 				eventData.serverId || null,
 				eventData.version || null,
 				normalizedSessionId || null,
-				eventData.userId || null,
+				normalizedUserId || null,
 				JSON.stringify(eventData.data || {}),
 				receivedAt
 			);
@@ -268,7 +306,7 @@ async function storeEvent(eventData, receivedAt) {
 					eventData.serverId || null,
 					eventData.version || null,
 					normalizedSessionId || null,
-					eventData.userId || null,
+					normalizedUserId || null,
 					eventData.data || {},
 					receivedAt
 				]
@@ -363,6 +401,7 @@ async function getEvents(options = {}) {
 		sessionId,
 		startDate,
 		endDate,
+		userIds,
 		orderBy = 'created_at',
 		order = 'DESC'
 	} = options;
@@ -398,6 +437,13 @@ async function getEvents(options = {}) {
 	if (endDate) {
 		whereClause += dbType === 'sqlite' ? ' AND created_at <= ?' : ` AND created_at <= $${paramIndex++}`;
 		params.push(endDate);
+	}
+	if (options.userIds && Array.isArray(options.userIds) && options.userIds.length > 0) {
+		const placeholders = options.userIds.map(() => {
+			return dbType === 'sqlite' ? '?' : `$${paramIndex++}`;
+		}).join(', ');
+		whereClause += ` AND user_id IN (${placeholders})`;
+		params.push(...options.userIds);
 	}
 
 	// Get total count
@@ -482,7 +528,7 @@ async function getEventById(id) {
  * @returns {Array} Statistics by event type
  */
 async function getEventTypeStats(options = {}) {
-	const { sessionId } = options || {};
+	const { sessionId, userIds } = options || {};
 	if (!db) {
 		throw new Error('Database not initialized. Call init() first.');
 	}
@@ -493,9 +539,18 @@ async function getEventTypeStats(options = {}) {
 			FROM telemetry_events
 		`;
 		const params = [];
+		const conditions = [];
 		if (sessionId) {
-			query += ' WHERE session_id = ?';
+			conditions.push('session_id = ?');
 			params.push(sessionId);
+		}
+		if (userIds && Array.isArray(userIds) && userIds.length > 0) {
+			const placeholders = userIds.map(() => '?').join(', ');
+			conditions.push(`user_id IN (${placeholders})`);
+			params.push(...userIds);
+		}
+		if (conditions.length > 0) {
+			query += ' WHERE ' + conditions.join(' AND ');
 		}
 		query += `
 			GROUP BY event
@@ -510,9 +565,19 @@ async function getEventTypeStats(options = {}) {
 			FROM telemetry_events
 		`;
 		const params = [];
+		const conditions = [];
+		let paramIndex = 1;
 		if (sessionId) {
+			conditions.push(`session_id = $${paramIndex++}`);
 			params.push(sessionId);
-			query += ` WHERE session_id = $${params.length}`;
+		}
+		if (userIds && Array.isArray(userIds) && userIds.length > 0) {
+			const placeholders = userIds.map(() => `$${paramIndex++}`).join(', ');
+			conditions.push(`user_id IN (${placeholders})`);
+			params.push(...userIds);
+		}
+		if (conditions.length > 0) {
+			query += ' WHERE ' + conditions.join(' AND ');
 		}
 		query += `
 			GROUP BY event
@@ -528,14 +593,23 @@ async function getEventTypeStats(options = {}) {
 
 /**
  * Get unique sessions with event counts
+ * @param {object} options - Query options
  * @returns {Array} Sessions with count and latest timestamp
  */
-async function getSessions() {
+async function getSessions(options = {}) {
+	const { userIds } = options || {};
 	if (!db) {
 		throw new Error('Database not initialized. Call init() first.');
 	}
 
 	if (dbType === 'sqlite') {
+		let whereClause = 'WHERE s.session_id IS NOT NULL';
+		const params = [];
+		if (userIds && Array.isArray(userIds) && userIds.length > 0) {
+			const placeholders = userIds.map(() => '?').join(', ');
+			whereClause += ` AND s.user_id IN (${placeholders})`;
+			params.push(...userIds);
+		}
 		const result = db.prepare(`
 			SELECT
 				s.session_id,
@@ -553,10 +627,10 @@ async function getSessions() {
 				(SELECT COUNT(*) FROM telemetry_events
 				 WHERE session_id = s.session_id AND event = 'session_end') as has_end
 			FROM telemetry_events s
-			WHERE s.session_id IS NOT NULL
+			${whereClause}
 			GROUP BY s.session_id
 			ORDER BY last_event DESC
-		`).all();
+		`).all(...params);
 		return result.map(row => {
 			let user_name = null;
 			if (row.session_start_data) {
@@ -590,6 +664,14 @@ async function getSessions() {
 			};
 		});
 	} else {
+		let whereClause = 'WHERE s.session_id IS NOT NULL';
+		const params = [];
+		let paramIndex = 1;
+		if (userIds && Array.isArray(userIds) && userIds.length > 0) {
+			const placeholders = userIds.map(() => `$${paramIndex++}`).join(', ');
+			whereClause += ` AND s.user_id IN (${placeholders})`;
+			params.push(...userIds);
+		}
 		const result = await db.query(`
 			SELECT
 				s.session_id,
@@ -607,10 +689,10 @@ async function getSessions() {
 				(SELECT COUNT(*) FROM telemetry_events
 				 WHERE session_id = s.session_id AND event = 'session_end') as has_end
 			FROM telemetry_events s
-			WHERE s.session_id IS NOT NULL
+			${whereClause}
 			GROUP BY s.session_id
 			ORDER BY last_event DESC
-		`);
+		`, params);
 		return result.rows.map(row => {
 			let user_name = null;
 			if (row.session_start_data) {
@@ -1206,6 +1288,86 @@ async function updateEventData(id, data) {
 	}
 }
 
+/**
+ * Get unique user IDs from all events
+ * Extracts user names from the data field (userName, user_name, user.name) similar to how sessions display them
+ * @returns {Array} Array of unique user IDs/names, sorted alphabetically
+ */
+async function getUniqueUserIds() {
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
+
+	let events;
+	if (dbType === 'sqlite') {
+		const result = db.prepare(`
+			SELECT data
+			FROM telemetry_events
+			WHERE data IS NOT NULL AND data != ''
+		`).all();
+		events = result.map(row => {
+			try {
+				return typeof row.data === 'string' ? JSON.parse(row.data) : row.data;
+			} catch (e) {
+				return null;
+			}
+		}).filter(data => data !== null);
+	} else {
+		const result = await db.query(`
+			SELECT data
+			FROM telemetry_events
+			WHERE data IS NOT NULL
+		`);
+		events = result.rows.map(row => {
+			try {
+				return typeof row.data === 'string' ? JSON.parse(row.data) : row.data;
+			} catch (e) {
+				return null;
+			}
+		}).filter(data => data !== null);
+	}
+
+	// Extract user names from data field (same logic as in getSessions)
+	const userIds = new Set();
+	events.forEach(data => {
+		if (!data) return;
+
+		// Try multiple paths: userName (camelCase), user_name (snake_case), or data.user.name (nested)
+		const userName = data.userName || data.user_name || (data.user && data.user.name) || null;
+		if (userName && typeof userName === 'string' && userName.trim() !== '') {
+			userIds.add(userName.trim());
+		}
+	});
+
+	// Also include user_id from the database column if it exists
+	if (dbType === 'sqlite') {
+		const dbUserIds = db.prepare(`
+			SELECT DISTINCT user_id
+			FROM telemetry_events
+			WHERE user_id IS NOT NULL AND user_id != ''
+		`).all();
+		dbUserIds.forEach(row => {
+			if (row.user_id && row.user_id.trim() !== '') {
+				userIds.add(row.user_id.trim());
+			}
+		});
+	} else {
+		const dbUserIds = await db.query(`
+			SELECT DISTINCT user_id
+			FROM telemetry_events
+			WHERE user_id IS NOT NULL AND user_id != ''
+		`);
+		dbUserIds.rows.forEach(row => {
+			if (row.user_id && row.user_id.trim() !== '') {
+				userIds.add(row.user_id.trim());
+			}
+		});
+	}
+
+	// Convert to array and sort alphabetically
+	return Array.from(userIds).sort();
+}
+
 module.exports = {
 	init,
 	storeEvent,
@@ -1234,5 +1396,7 @@ module.exports = {
 	getAllOrgs,
 	upsertOrgCompanyName,
 	// Event updates
-	updateEventData
+	updateEventData,
+	// User filtering
+	getUniqueUserIds
 };

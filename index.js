@@ -425,12 +425,25 @@ app.get('/api/events', auth.requireAuth, async (req, res) => {
 			sessionId,
 			startDate,
 			endDate,
+			userId,
 			orderBy = 'created_at',
 			order = 'DESC'
 		} = req.query;
 
 		// Handle multiple eventType values (Express converts them to an array)
 		const eventTypes = Array.isArray(eventType) ? eventType : (eventType ? [eventType] : []);
+		// Handle multiple userId values (Express converts them to an array)
+		const userIds = Array.isArray(userId) ? userId : (userId ? [userId] : []);
+
+		// If __none__ is in the userIds array, return no events
+		if (userIds.includes('__none__')) {
+			return res.json({
+				events: [],
+				total: 0,
+				limit: parseInt(limit),
+				offset: parseInt(offset)
+			});
+		}
 
 		const result = await db.getEvents({
 			limit: parseInt(limit),
@@ -440,6 +453,7 @@ app.get('/api/events', auth.requireAuth, async (req, res) => {
 			sessionId,
 			startDate,
 			endDate,
+			userIds: userIds.length > 0 ? userIds : undefined,
 			orderBy,
 			order
 		});
@@ -501,8 +515,19 @@ app.get('/api/stats', auth.requireAuth, async (req, res) => {
 
 app.get('/api/event-types', auth.requireAuth, async (req, res) => {
 	try {
-		const { sessionId } = req.query;
-		const stats = await db.getEventTypeStats({ sessionId });
+		const { sessionId, userId } = req.query;
+		// Handle multiple userId values (Express converts them to an array)
+		const userIds = Array.isArray(userId) ? userId : (userId ? [userId] : []);
+
+		// If __none__ is in the userIds array, return no stats
+		if (userIds.includes('__none__')) {
+			return res.json([]);
+		}
+
+		const stats = await db.getEventTypeStats({
+			sessionId,
+			userIds: userIds.length > 0 ? userIds : undefined
+		});
 		res.json(stats);
 	} catch (error) {
 		console.error('Error fetching event type stats:', error);
@@ -515,7 +540,18 @@ app.get('/api/event-types', auth.requireAuth, async (req, res) => {
 
 app.get('/api/sessions', auth.requireAuth, async (req, res) => {
 	try {
-		const sessions = await db.getSessions();
+		const { userId } = req.query;
+		// Handle multiple userId values (Express converts them to an array)
+		const userIds = Array.isArray(userId) ? userId : (userId ? [userId] : []);
+
+		// If __none__ is in the userIds array, return no sessions
+		if (userIds.includes('__none__')) {
+			return res.json([]);
+		}
+
+		const sessions = await db.getSessions({
+			userIds: userIds.length > 0 ? userIds : undefined
+		});
 		res.json(sessions);
 	} catch (error) {
 		console.error('Error fetching sessions:', error);
@@ -542,6 +578,19 @@ app.get('/api/daily-stats', auth.requireAuth, async (req, res) => {
 		res.status(500).json({
 			status: 'error',
 			message: 'Failed to fetch daily statistics'
+		});
+	}
+});
+
+app.get('/api/telemetry-users', auth.requireAuth, async (req, res) => {
+	try {
+		const userIds = await db.getUniqueUserIds();
+		res.json(userIds);
+	} catch (error) {
+		console.error('Error fetching unique user IDs:', error);
+		res.status(500).json({
+			status: 'error',
+			message: 'Failed to fetch unique user IDs'
 		});
 	}
 });

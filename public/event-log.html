@@ -88,16 +88,28 @@
 							<span class="level-count text-xs" id="count-tool_error">0</span>
 						</button>
 					</div>
+					<div class="user-filter-dropdown-container">
+						<button class="user-filter-dropdown-btn" id="userFilterDropdownBtn" onclick="toggleUserFilterDropdown(event)">
+							<i class="fa-solid fa-users"></i>
+							<span class="text-sm font-medium">Users</span>
+							<i class="fa-solid fa-chevron-down" id="userFilterChevron"></i>
+						</button>
+						<div class="user-filter-dropdown" id="userFilterDropdown">
+							<div class="user-filter-dropdown-content" id="userFilterDropdownContent">
+								<!-- User list will be populated by JavaScript -->
+							</div>
+						</div>
+					</div>
 					<div class="search-controls">
 						<input type="text" class="search-input" id="searchInput" placeholder="Search">
 						<div class="icon-buttons-group">
 							<button type="button" class="icon-btn" onclick="refreshLogs(event)"><i class="fa fa-refresh"></i></button>
-							<button class="icon-btn delete-all-btn" onclick="confirmDeleteAll()"><i class="fa-regular fa-trash-can"></i></button>
+							<button class="icon-btn delete-all-btn" onclick="confirmDeleteAll()"><i class="fa-solid fa-broom"></i></button>
 							<button class="icon-btn notification-toggle" onclick="toggleNotificationMode()"><i class="fa-regular fa-bell"></i></button>
 							<button class="icon-btn theme-toggle" onclick="toggleTheme()"><i class="fa-regular fa-moon"></i></button>
 							<div class="user-menu-container" style="position: relative;">
 								<button class="icon-btn user-btn" id="userBtn" onclick="showUserMenu(event)"><i class="fa-regular fa-user"></i></button>
-								<div class="user-menu" id="userMenu" style="display: none;">
+								<div class="user-menu" id="userMenu">
 									<div class="user-menu-item" id="userMenuUsername"><i class="fa-regular fa-user user-menu-icon"></i>Loading...</div>
 									<button class="user-menu-item" onclick="handleLogout()">Logout</button>
 								</div>
