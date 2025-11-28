@@ -10,6 +10,9 @@ const auth = require('./auth/auth');
 const app = express();
 const port = process.env.PORT || 3100;
 
+// Trust reverse proxy headers so secure cookies work behind Render/Cloudflare
+app.set('trust proxy', 1);
+
 // Load and compile JSON schema for validation
 const schemaPath = path.join(__dirname, 'api', 'telemetry-schema.json');
 const schema = JSON.parse(fs.readFileSync(schemaPath, 'utf8'));
@@ -25,6 +28,8 @@ app.use(auth.initSessionMiddleware()); // Initialize session middleware
 
 // Serve static files from public directory
 app.use(express.static('public', {
+	// Prevent automatic index.html serving so auth guard can handle "/"
+	index: false,
 	// Ensure CSS files are served with correct MIME type
 	setHeaders: (res, path) => {
 		if (path.endsWith('.css')) {
