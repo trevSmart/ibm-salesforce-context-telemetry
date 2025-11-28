@@ -529,7 +529,13 @@ app.get('/api/sessions', auth.requireAuth, async (req, res) => {
 app.get('/api/daily-stats', auth.requireAuth, async (req, res) => {
 	try {
 		const days = parseInt(req.query.days) || 30;
-		const stats = await db.getDailyStats(days);
+		const byEventTypeRaw = String(req.query.byEventType || '').toLowerCase();
+		const useEventTypeBreakdown = ['true', '1', 'yes', 'on'].includes(byEventTypeRaw);
+
+		const stats = useEventTypeBreakdown
+			? await db.getDailyStatsByEventType(days)
+			: await db.getDailyStats(days);
+
 		res.json(stats);
 	} catch (error) {
 		console.error('Error fetching daily stats:', error);

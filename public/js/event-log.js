@@ -53,14 +53,14 @@ const detectElectronEnvironment = () => {
 				.then(data => {
 					const usernameElement = document.getElementById('userMenuUsername');
 					if (data.authenticated && data.username) {
-						usernameElement.textContent = data.username;
+						usernameElement.innerHTML = '<i class="fa-regular fa-user user-menu-icon"></i>' + escapeHtml(data.username);
 					} else {
-						usernameElement.textContent = 'Not authenticated';
+						usernameElement.innerHTML = '<i class="fa-regular fa-user user-menu-icon"></i>Not authenticated';
 					}
 				})
 				.catch(() => {
 					const usernameElement = document.getElementById('userMenuUsername');
-					usernameElement.textContent = 'Error loading user';
+					usernameElement.innerHTML = '<i class="fa-regular fa-user user-menu-icon"></i>Error loading user';
 				});
 		}
 	}
@@ -555,7 +555,7 @@ const detectElectronEnvironment = () => {
 		const axisColor = themeIsDark ? '#a1a1aa' : '#52525b';
 		const splitLineColor = themeIsDark ? 'rgba(63, 63, 70, 0.35)' : 'rgba(228, 228, 231, 0.35)';
 		const gradientCap = 70;
-		const yAxisMax = Math.max(20, maxBucketCount || 0);
+		const yAxisMax = Math.max(15, maxBucketCount || 0);
 		const warmOffset = Math.min(gradientCap / Math.max(yAxisMax, 1), 1);
 
 		let chartSeries = [];
@@ -1261,7 +1261,12 @@ const detectElectronEnvironment = () => {
 						document.querySelectorAll('.server-item').forEach(i => i.classList.remove('active'));
 						li.classList.add('active');
 						selectedSession = session.session_id;
-						selectedActivityDate = null; // Reset to default when changing session
+						// Pin activity chart to this session's day (prefer last event, fall back to first)
+						const sessionDay = session.last_event || session.first_event || null;
+						const parsedSessionDate = sessionDay ? new Date(sessionDay) : null;
+						selectedActivityDate = parsedSessionDate && !Number.isNaN(parsedSessionDate.getTime())
+							? parsedSessionDate
+							: null;
 						// When a session is selected, default to ASC order (oldest first)
 						if (selectedSession !== 'all') {
 							sortOrder = 'ASC';
@@ -1310,14 +1315,10 @@ const detectElectronEnvironment = () => {
 		const errorMessageEl = document.getElementById('errorMessage');
 		const emptyStateEl = document.getElementById('emptyState');
 
-		if (triggeredByNotification || skipUiReset) {
-			if (loadingMessageEl) {
-				loadingMessageEl.style.display = 'none';
-			}
-		} else {
-			if (loadingMessageEl) {
-				loadingMessageEl.style.display = 'block';
-			}
+		if (loadingMessageEl) {
+			loadingMessageEl.style.display = 'none';
+		}
+		if (!skipUiReset) {
 			if (logsTableEl) {
 				logsTableEl.style.display = 'none';
 			}
@@ -2594,4 +2595,3 @@ const detectElectronEnvironment = () => {
 			});
 		});
 	})();
-

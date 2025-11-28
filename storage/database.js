@@ -726,22 +726,19 @@ async function getDailyStats(days = 30) {
 	const now = new Date();
 	const startDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
 	startDate.setUTCDate(startDate.getUTCDate() - (rangeDays - 1));
+	const startDateISO = startDate.toISOString();
 
 	if (dbType === 'sqlite') {
-		// SQLite: use DATE() function to group by date
-		// Convert startDate to SQLite datetime format (YYYY-MM-DD HH:MM:SS) for comparison
-		// SQLite stores CURRENT_TIMESTAMP as 'YYYY-MM-DD HH:MM:SS' format
-		const sqliteStartDate = startDate.toISOString().replace('T', ' ').replace(/\.\d{3}Z$/, '');
-
+		// SQLite: use DATE() function to group by date using the event timestamp (UTC)
 		const result = db.prepare(`
 			SELECT
-				DATE(created_at) as date,
+				date(timestamp, 'utc') as date,
 				COUNT(*) as count
 			FROM telemetry_events
-			WHERE created_at >= ?
-			GROUP BY DATE(created_at)
+			WHERE timestamp >= ?
+			GROUP BY date(timestamp, 'utc')
 			ORDER BY date ASC
-		`).all(sqliteStartDate);
+		`).all(startDateISO);
 
 		// Fill in missing days with 0 counts
 		const dateMap = new Map();
@@ -767,16 +764,16 @@ async function getDailyStats(days = 30) {
 
 		return filledResults;
 	} else {
-		// PostgreSQL: use DATE_TRUNC to group by date
+		// PostgreSQL: use DATE with UTC timezone to group by date using the event timestamp
 		const result = await db.query(`
 			SELECT
-				DATE(created_at) as date,
+				DATE(timestamp AT TIME ZONE 'UTC') as date,
 				COUNT(*) as count
 			FROM telemetry_events
-			WHERE created_at >= $1
-			GROUP BY DATE(created_at)
+			WHERE timestamp >= $1
+			GROUP BY DATE(timestamp AT TIME ZONE 'UTC')
 			ORDER BY date ASC
-		`, [startDate.toISOString()]);
+		`, [startDateISO]);
 
 		// Fill in missing days with 0 counts
 		const dateMap = new Map();
@@ -796,6 +793,144 @@ async function getDailyStats(days = 30) {
 			filledResults.push({
 				date: dateStr,
 				count: dateMap.get(dateStr) || 0
+			});
+		}
+
+		return filledResults;
+	}
+}
+
+/**
+ * Get daily event counts separated by event type for the last N days
+ * Returns two series: start sessions without end, and tool events
+ * @param {number} days - Number of days to retrieve (default: 30)
+ * @returns {Array} Array of {date, startSessionsWithoutEnd, toolEvents} objects
+ */
+async function getDailyStatsByEventType(days = 30) {
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
+
+	// Always include today's data by building the range backwards from today (UTC)
+	const rangeDays = Math.max(1, Number.isFinite(days) ? Math.floor(days) : 30);
+	const now = new Date();
+	const startDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+	startDate.setUTCDate(startDate.getUTCDate() - (rangeDays - 1));
+	const startDateISO = startDate.toISOString();
+
+	if (dbType === 'sqlite') {
+		// Get all session_start events
+		const sessionStarts = db.prepare(`
+			SELECT
+				date(timestamp, 'utc') as date,
+				session_id,
+				id
+			FROM telemetry_events
+			WHERE timestamp >= ? AND event = 'session_start'
+		`).all(startDateISO);
+
+		// Get all session_end events
+		const sessionEnds = db.prepare(`
+			SELECT DISTINCT session_id
+			FROM telemetry_events
+			WHERE timestamp >= ? AND event = 'session_end'
+		`).all(startDateISO);
+
+		// Count all session_starts by date (regardless of whether they have an end)
+		const startSessionsMap = new Map();
+		sessionStarts.forEach(row => {
+			let dateStr = String(row.date);
+			dateStr = dateStr.split('T')[0].split(' ')[0];
+			startSessionsMap.set(dateStr, (startSessionsMap.get(dateStr) || 0) + 1);
+		});
+
+		// Get tool events (tool_call and tool_error)
+		const toolEvents = db.prepare(`
+			SELECT
+				date(timestamp, 'utc') as date,
+				COUNT(*) as count
+			FROM telemetry_events
+			WHERE timestamp >= ? AND event IN ('tool_call', 'tool_error')
+			GROUP BY date(timestamp, 'utc')
+		`).all(startDateISO);
+
+		const toolEventsMap = new Map();
+		toolEvents.forEach(row => {
+			let dateStr = String(row.date);
+			dateStr = dateStr.split('T')[0].split(' ')[0];
+			toolEventsMap.set(dateStr, parseInt(row.count));
+		});
+
+		// Fill in missing days with 0 counts
+		const filledResults = [];
+		for (let i = 0; i < rangeDays; i++) {
+			const date = new Date(startDate);
+			date.setUTCDate(date.getUTCDate() + i);
+			const dateStr = date.toISOString().split('T')[0];
+			filledResults.push({
+				date: dateStr,
+				startSessionsWithoutEnd: startSessionsMap.get(dateStr) || 0,
+				toolEvents: toolEventsMap.get(dateStr) || 0
+			});
+		}
+
+		return filledResults;
+	} else {
+		// PostgreSQL
+		// Get all session_start events
+		const sessionStartsResult = await db.query(`
+			SELECT
+				DATE(timestamp AT TIME ZONE 'UTC') as date,
+				session_id,
+				id
+			FROM telemetry_events
+			WHERE timestamp >= $1 AND event = 'session_start'
+		`, [startDateISO]);
+
+		// Get all session_end events
+		const sessionEndsResult = await db.query(`
+			SELECT DISTINCT session_id
+			FROM telemetry_events
+			WHERE timestamp >= $1 AND event = 'session_end'
+		`, [startDateISO]);
+
+		// Count all session_starts by date (regardless of whether they have an end)
+		const startSessionsMap = new Map();
+		sessionStartsResult.rows.forEach(row => {
+			const dateValue = row.date instanceof Date
+				? row.date.toISOString().split('T')[0]
+				: row.date.split('T')[0];
+			startSessionsMap.set(dateValue, (startSessionsMap.get(dateValue) || 0) + 1);
+		});
+
+		// Get tool events (tool_call and tool_error)
+		const toolEventsResult = await db.query(`
+			SELECT
+				DATE(timestamp AT TIME ZONE 'UTC') as date,
+				COUNT(*) as count
+			FROM telemetry_events
+			WHERE timestamp >= $1 AND event IN ('tool_call', 'tool_error')
+			GROUP BY DATE(timestamp AT TIME ZONE 'UTC')
+		`, [startDateISO]);
+
+		const toolEventsMap = new Map();
+		toolEventsResult.rows.forEach(row => {
+			const dateValue = row.date instanceof Date
+				? row.date.toISOString().split('T')[0]
+				: row.date.split('T')[0];
+			toolEventsMap.set(dateValue, parseInt(row.count));
+		});
+
+		// Fill in missing days with 0 counts
+		const filledResults = [];
+		for (let i = 0; i < rangeDays; i++) {
+			const date = new Date(startDate);
+			date.setUTCDate(date.getUTCDate() + i);
+			const dateStr = date.toISOString().split('T')[0];
+			filledResults.push({
+				date: dateStr,
+				startSessionsWithoutEnd: startSessionsMap.get(dateStr) || 0,
+				toolEvents: toolEventsMap.get(dateStr) || 0
 			});
 		}
 
@@ -1053,6 +1188,7 @@ module.exports = {
 	getEventTypeStats,
 	getSessions,
 	getDailyStats,
+	getDailyStatsByEventType,
 	deleteEvent,
 	deleteAllEvents,
 	deleteEventsBySession,

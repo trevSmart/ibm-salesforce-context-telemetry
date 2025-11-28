@@ -10,13 +10,53 @@
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+	<link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
+	<link rel="stylesheet" href="/vendor/fontawesome/css/v4-shims.min.css">
+	<script>
+		// Apply theme immediately before page render to prevent flash
+		(function() {
+			const savedTheme = localStorage.getItem('theme');
+			const systemTheme = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+			const theme = savedTheme || systemTheme;
+			if (theme === 'dark') {
+				document.documentElement.classList.add('dark');
+			}
+			// Make body visible after theme is applied
+			function makeBodyVisible() {
+				document.body.style.visibility = 'visible';
+			}
+			if (document.readyState === 'loading') {
+				document.addEventListener('DOMContentLoaded', makeBodyVisible);
+			} else {
+				// DOM already loaded, make visible immediately
+				makeBodyVisible();
+			}
+		})();
+	</script>
 </head>
-<body class="index-page">
+<body class="index-page" style="visibility: hidden;">
 	<div class="container">
-		<h1>IBM Salesforce Context Telemetry Server</h1>
+		<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+			<h1 style="margin: 0;">IBM Salesforce Context Telemetry Server</h1>
+			<div class="user-menu-container" style="position: relative;">
+				<button class="icon-btn user-btn" id="userBtn" onclick="showUserMenu(event)"><i class="fa-regular fa-user"></i></button>
+				<div class="user-menu" id="userMenu" style="display: none;">
+					<div class="user-menu-item" id="userMenuUsername"><i class="fa-regular fa-user user-menu-icon"></i>Loading...</div>
+					<button class="user-menu-item" onclick="handleLogout()">Logout</button>
+				</div>
+			</div>
+		</div>
 
 		<div class="chart-container">
-			<div class="chart-title">Events per day (last 30 days)</div>
+			<div class="chart-header">
+				<div class="chart-title">Events per day</div>
+				<select id="timeRangeSelect" class="time-range-select">
+					<option value="7" selected>Últims 7 dies</option>
+					<option value="15">Últims 15 dies</option>
+					<option value="30">Últims 30 dies</option>
+					<option value="90">Últims 3 mesos</option>
+				</select>
+			</div>
 			<canvas id="eventsChart"></canvas>
 		</div>
 

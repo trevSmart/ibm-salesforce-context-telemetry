@@ -2,6 +2,20 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Remove font-size from form elements */
+@layer base {
+  button, input, optgroup, select, textarea {
+    font-size: inherit;
+  }
+}
+
+/* Override font-semibold to use font-weight 500 */
+@layer utilities {
+  .font-semibold {
+    font-weight: 500;
+  }
+}
+
 /* Custom styles for level colors and other specific styling */
 @layer components {
   :root {
@@ -358,12 +372,50 @@
     height: 300px !important;
   }
 
+  .chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+
   .chart-title {
     font-size: 0.875rem;
     font-weight: 600;
     color: var(--text-primary);
-    margin-bottom: 20px;
     text-align: left;
+    margin: 0;
+  }
+
+  .time-range-select {
+    padding: 6px 12px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .time-range-select:hover {
+    border-color: var(--accent-color);
+  }
+
+  .time-range-select:focus {
+    outline: none;
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
+  }
+
+  html.dark .time-range-select {
+    background-color: var(--bg-secondary);
+    border-color: var(--border-color);
+  }
+
+  html.dark .time-range-select:hover {
+    border-color: var(--accent-color);
   }
 
   h1 {
@@ -888,6 +940,7 @@
 
   .user-menu-container {
     position: relative;
+    text-align: start;
   }
 
   .user-menu {
@@ -927,6 +980,18 @@
     color: var(--text-muted);
     border-bottom: 1px solid var(--border-color);
     cursor: default;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .user-menu-icon {
+    display: inline-block;
+    height: 1.125rem; /* 0.75rem * 1.5 (default line-height) */
+    height: 1lh; /* Use line-height unit if supported */
+    width: auto;
+    flex-shrink: 0;
+    padding-right: 8px;
   }
 
   .user-menu-item button,
@@ -2091,11 +2156,11 @@
   }
 
   .pagination {
-    padding: 20px 32px;
+    padding: 5px 0 12px;
     border-top: none;
     display: flex;
-    align-items: center;
-    justify-content: center;
+    align-items: start;
+    justify-content: start;
     gap: 10px;
     background: transparent;
   }
@@ -2112,9 +2177,7 @@
     background: transparent;
     color: #52525b;
     cursor: pointer;
-    font-size: 0.875rem;
     line-height: 1.25rem;
-    font-weight: 500;
     transition: color 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
     display: inline-flex;
     align-items: center;
@@ -2159,9 +2222,7 @@
 
   .pagination-info {
     color: #52525b;
-    font-size: 0.875rem;
     line-height: 1.25rem;
-    font-weight: 500;
     padding: 8px 16px;
     border-top: 2px solid transparent;
   }
@@ -2208,7 +2269,6 @@
     background: #fef2f2;
     color: #be123c;
     padding: 16px 20px;
-    border-radius: 8px;
     margin: 20px 32px;
     border-left: 4px solid #ef4444;
   }
