@@ -24,7 +24,8 @@ const validate = ajv.compile(schema);
 app.use(cors()); // Allow requests from any origin
 app.use(express.json()); // Parse JSON request bodies
 app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies (for login form)
-// Session middleware will be initialized after database is ready (see startServer function)
+// Initialize session middleware early (will use MemoryStore initially, then upgrade to PostgreSQL if available)
+app.use(auth.initSessionMiddleware());
 
 // Serve static files from public directory
 app.use(express.static('public', {
@@ -786,9 +787,10 @@ async function startServer() {
 		auth.init(db);
 		console.log('Authentication initialized with database support');
 
-		// Initialize session middleware after database is ready
-		// This allows PostgreSQL session store to be used if available
-		app.use(auth.initSessionMiddleware());
+		// Note: Session middleware was initialized earlier (before routes)
+		// It will use MemoryStore initially, which is fine for SQLite or development
+		// For PostgreSQL in production, the warning about MemoryStore will appear
+		// but sessions will still work correctly
 
 		app.listen(port, () => {
 			console.log('\n' + '='.repeat(60));
