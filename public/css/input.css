@@ -500,12 +500,14 @@
 
 
   .back-link {
-    font-size: 0.875rem;
-    line-height: 1.25rem;
+    letter-spacing: 0.05em;
+    font-size: 11px;
+    line-height: 0.35rem;
     color: #52525b;
     text-decoration: none;
     margin-left: 0;
-    transition: color 0.2s ease;
+    transition: color .2s ease;
+    font-weight: 204;
   }
 
   html.dark .back-link {
@@ -1608,18 +1610,6 @@
     font-weight: 500;
     display: none;
   }
-
-  .back-link.subtitle {
-    font-size: 0.95rem;
-    color: var(--text-primary);
-    font-weight: 500;
-    text-decoration: none;
-  }
-
-  .back-link.subtitle:hover {
-    opacity: 0.8;
-  }
-
   .date-nav-btn {
     background: transparent;
     border: none;
@@ -1654,6 +1644,8 @@
     display: flex;
     align-items: center;
     justify-content: flex-end;
+    min-height: 32px;
+    flex-shrink: 0;
   }
 
   .session-activity-legend-toggle {

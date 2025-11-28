@@ -131,6 +131,10 @@ const detectElectronEnvironment = () => {
 	let sessionActivityChart = null;
 	let lastSessionActivityEvents = [];
 	const SESSION_ACTIVITY_FETCH_LIMIT = 1000;
+	// State for hover preview functionality
+	let hoverPreviewState = null;
+	let isHoverPreviewActive = false;
+	let hoverTimeoutId = null;
 	const SESSION_ACTIVITY_SLOT_MINUTES = 10;
 	const SESSION_ACTIVITY_MARGIN_MINUTES = 30;
 	const SESSION_SERIES_COLORS = [
@@ -354,7 +358,7 @@ const detectElectronEnvironment = () => {
 			document.removeEventListener('mouseup', stopResize);
 			document.removeEventListener('touchmove', handleResize);
 			document.removeEventListener('touchend', stopResize);
-			// Assegurar que la gràfica es redimensiona quan s'acaba el redimensionament
+			// Ensure the chart resizes when resizing ends
 			if (sessionActivityChart) {
 				setTimeout(() => {
 					sessionActivityChart.resize();
@@ -423,6 +427,124 @@ const detectElectronEnvironment = () => {
 		return Array.isArray(data.events) ? data.events : [];
 	}
 
+	// Save current chart state for hover preview restoration
+	function saveChartState() {
+		// If already in hover preview, we want to save the original state, not the preview state
+		// So we use the saved state's sessionId if available, otherwise use current selectedSession
+		if (isHoverPreviewActive && hoverPreviewState) {
+			// Already saved the original state, don't overwrite it
+			return;
+		}
+		hoverPreviewState = {
+			sessionId: selectedSession,
+			activityDate: selectedActivityDate ? new Date(selectedActivityDate) : null,
+			events: lastSessionActivityEvents.slice()
+		};
+	}
+
+	// Restore chart state from hover preview
+	function restoreChartState() {
+		// Clear any pending hover timeout
+		if (hoverTimeoutId !== null) {
+			clearTimeout(hoverTimeoutId);
+			hoverTimeoutId = null;
+		}
+
+		if (!hoverPreviewState || !isHoverPreviewActive) {
+			return;
+		}
+		const savedState = hoverPreviewState;
+		hoverPreviewState = null;
+		isHoverPreviewActive = false;
+
+		// Restore the selected activity date
+		selectedActivityDate = savedState.activityDate ? new Date(savedState.activityDate) : null;
+
+		// Restore the chart with saved state
+		if (savedState.events && savedState.events.length > 0) {
+			renderSessionActivityChart(savedState.events, { sessionId: savedState.sessionId, activityDate: savedState.activityDate });
+		} else {
+			// If no saved events, reload the chart for the saved session
+			updateSessionActivityChart({ sessionId: savedState.sessionId });
+		}
+	}
+
+	// Handle hover preview for session buttons
+	async function handleSessionHover(sessionId, sessionData = null) {
+		// Don't preview if already selected and not in hover preview
+		if (selectedSession === sessionId && !isHoverPreviewActive) {
+			return;
+		}
+
+		// Clear any existing hover timeout
+		if (hoverTimeoutId !== null) {
+			clearTimeout(hoverTimeoutId);
+			hoverTimeoutId = null;
+		}
+
+		// Save current state if not already in hover preview
+		if (!isHoverPreviewActive) {
+			saveChartState();
+		}
+
+		// Extract the session date from sessionData
+		let sessionDate = null;
+		if (sessionData) {
+			const sessionDay = sessionData.last_event || sessionData.first_event || null;
+			if (sessionDay) {
+				const parsedDate = new Date(sessionDay);
+				if (!Number.isNaN(parsedDate.getTime())) {
+					sessionDate = parsedDate;
+				}
+			}
+		}
+
+		// Delay the chart update by 300ms
+		hoverTimeoutId = setTimeout(async () => {
+			isHoverPreviewActive = true;
+
+			// Update chart to show hovered session with smooth transition
+			if (sessionId === 'all') {
+				try {
+					const allEvents = await fetchAllSessionsActivityEvents();
+					if (allEvents.length > 0) {
+						renderSessionActivityChart(allEvents, { sessionId: 'all', activityDate: sessionDate, enableTransition: true });
+					}
+				} catch (error) {
+					console.error('Error loading hover preview for all sessions:', error);
+				}
+			} else {
+				try {
+					const params = new URLSearchParams({
+						sessionId: sessionId,
+						orderBy: 'created_at',
+						order: 'ASC',
+						limit: SESSION_ACTIVITY_FETCH_LIMIT.toString()
+					});
+					const response = await fetch(`/api/events?${params}`);
+					const validResponse = await handleApiResponse(response);
+					if (validResponse) {
+						const data = await validResponse.json();
+						if (data.events && data.events.length > 0) {
+							// If no session date from sessionData, extract from first event
+							if (!sessionDate && data.events.length > 0) {
+								const firstEventDate = new Date(data.events[0].timestamp);
+								if (!Number.isNaN(firstEventDate.getTime())) {
+									sessionDate = firstEventDate;
+								}
+							}
+							renderSessionActivityChart(data.events, { sessionId: sessionId, activityDate: sessionDate, enableTransition: true });
+						}
+					}
+				} catch (error) {
+					console.error('Error loading hover preview for session:', error);
+				}
+			}
+
+			hoverTimeoutId = null;
+		}, 300);
+	}
+
 	async function updateSessionActivityChart(options = {}) {
 		const eventsOverride = Array.isArray(options.events) ? options.events : null;
 		const targetSession = typeof options.sessionId !== 'undefined' ? options.sessionId : selectedSession;
@@ -485,6 +607,12 @@ const detectElectronEnvironment = () => {
 		const uniqueSessions = Array.from(new Set(events.map(evt => evt.session_id || 'Unknown session')));
 		const isAllSessionsView = targetSession === 'all' && uniqueSessions.length > 0;
 
+		// Use activityDate from options if provided (for hover preview), otherwise use selectedActivityDate
+		const overrideDate = options.activityDate ? new Date(options.activityDate) : null;
+
+		// Enable smooth transitions when hovering (notMerge: false allows ECharts to animate)
+		const enableTransition = options.enableTransition === true;
+
 		let seriesData = [];
 		let windowStart;
 		let windowEnd;
@@ -495,9 +623,9 @@ const detectElectronEnvironment = () => {
 		let multiSeriesEntries = [];
 
 		if (isAllSessionsView) {
-			// For "All sessions", use selected date or current day
+			// For "All sessions", use override date, selected date, or current day
 			const useCurrentDay = false; // Always use the date from events or selected date
-			let dateToUse = selectedActivityDate;
+			let dateToUse = overrideDate || selectedActivityDate;
 			if (!dateToUse) {
 				// Use current day by default
 				dateToUse = new Date();
@@ -511,9 +639,9 @@ const detectElectronEnvironment = () => {
 			maxBucketCount = multiSeries.maxBucketCount;
 			multiSeriesEntries = multiSeries.seriesList;
 		} else {
-			// For specific session, use selected date or current day
+			// For specific session, use override date, selected date, or current day
 			const useCurrentDay = true; // Always use current day when no date is selected
-			const dateToUse = selectedActivityDate || new Date();
+			const dateToUse = overrideDate || selectedActivityDate || new Date();
 			const singleSeries = buildSessionActivitySeries(events, useCurrentDay, dateToUse);
 			({
 				seriesData,
@@ -568,7 +696,15 @@ const detectElectronEnvironment = () => {
 			chartSeries = [createSingleSessionSeriesOption(seriesData, warmOffset)];
 		}
 
+		// Configure animation for smooth transitions
+		const animationConfig = enableTransition ? {
+			animation: true,
+			animationDuration: 500,
+			animationEasing: 'cubicOut'
+		} : {};
+
 		chartInstance.setOption({
+			...animationConfig,
 			grid: { left: 45, right: 20, top: 15, bottom: 30 },
 			xAxis: {
 				type: 'time',
@@ -601,7 +737,7 @@ const detectElectronEnvironment = () => {
 					if (!Array.isArray(params)) {
 						params = [params];
 					}
-					// Filtrar les sèries amb valor 0 o null
+					// Filter series with value 0 or null
 					const filteredParams = params.filter(param => {
 						// Extract the actual numeric value from param.value
 						// For time-series data, value can be [timestamp, value] or just the value
@@ -612,11 +748,11 @@ const detectElectronEnvironment = () => {
 						}
 						return value !== null && value !== undefined && value !== 0;
 					});
-					// Si no hi ha cap sèrie vàlida, no mostrar el tooltip
+					// If there are no valid series, don't show the tooltip
 					if (filteredParams.length === 0) {
 						return '';
 					}
-					// Construir el contingut del tooltip amb les sèries filtrades
+					// Build the tooltip content with filtered series
 					let result = '';
 					if (filteredParams.length > 0 && filteredParams[0].axisValue) {
 						const date = new Date(filteredParams[0].axisValue);
@@ -646,7 +782,7 @@ const detectElectronEnvironment = () => {
 					]
 				]
 			}
-		}, true);
+		}, !enableTransition); // notMerge: false when transition is enabled, true otherwise
 
 		chartInstance.resize();
 		// Filter legend to only show series with data in the visible time window
@@ -703,7 +839,7 @@ const detectElectronEnvironment = () => {
 				}
 			}
 		}
-		renderSessionActivityLegend(legendEntries);
+		renderSessionActivityLegend(legendEntries, isAllSessionsView);
 	}
 
 	function buildSessionActivitySeries(events, useCurrentDay = false, customDate = null) {
@@ -1114,7 +1250,7 @@ const detectElectronEnvironment = () => {
 			.replace(/'/g, '&#39;');
 	}
 
-	function renderSessionActivityLegend(seriesEntries) {
+	function renderSessionActivityLegend(seriesEntries, isAllSessionsView = false) {
 		const legendEl = document.getElementById('sessionActivityLegend');
 		const legendWrapper = document.querySelector('.session-activity-legend-wrapper');
 		if (!legendEl || !legendWrapper) {
@@ -1123,11 +1259,14 @@ const detectElectronEnvironment = () => {
 
 		legendEl.innerHTML = '';
 
-		// Show legend button only if there are multiple series
-		const hasMultipleSeries = Array.isArray(seriesEntries) && seriesEntries.length > 1;
-		if (hasMultipleSeries) {
-			legendWrapper.style.display = '';
-			// Show legend for series with data (works for both all sessions and single session views)
+		// Always keep the wrapper in the layout to prevent height changes
+		legendWrapper.style.display = 'flex';
+
+		// Show legend button only for "All sessions" view and if there are any series
+		const hasSeries = Array.isArray(seriesEntries) && seriesEntries.length > 0;
+		if (isAllSessionsView && hasSeries) {
+			legendWrapper.style.visibility = 'visible';
+			// Show legend for series with data
 			seriesEntries.forEach(entry => {
 				const safeName = escapeHtml(entry.name);
 				const item = document.createElement('span');
@@ -1139,8 +1278,8 @@ const detectElectronEnvironment = () => {
 				legendEl.appendChild(item);
 			});
 		} else {
-			// Hide the legend button if there's only one series or no series
-			legendWrapper.style.display = 'none';
+			// Hide the legend button if not in "All sessions" view or if there are no series
+			legendWrapper.style.visibility = 'hidden';
 		}
 	}
 
@@ -1254,6 +1393,11 @@ const detectElectronEnvironment = () => {
 						if (e.target.closest('.server-item-actions')) {
 							return;
 						}
+						// Cancel hover preview when clicking
+						if (isHoverPreviewActive) {
+							hoverPreviewState = null;
+							isHoverPreviewActive = false;
+						}
 						// Avoid flickering if clicking on the same session that's already selected
 						if (selectedSession === session.session_id && li.classList.contains('active')) {
 							return;
@@ -1278,6 +1422,37 @@ const detectElectronEnvironment = () => {
 						currentOffset = 0;
 						loadEvents();
 						loadEventTypeStats(selectedSession);
+					});
+
+					// Add hover preview functionality
+					li.addEventListener('mouseenter', (e) => {
+						// Don't preview if hovering over actions button
+						if (e.target.closest('.server-item-actions')) {
+							return;
+						}
+						handleSessionHover(session.session_id, session);
+					});
+
+					li.addEventListener('mouseleave', (e) => {
+						// Don't restore if mouse is moving to actions button
+						if (e.relatedTarget && e.relatedTarget.closest('.server-item-actions')) {
+							return;
+						}
+						// Don't restore if mouse is still within the sessions area (sidebar-content)
+						// This includes gaps between buttons
+						if (e.relatedTarget && (
+							e.relatedTarget.closest('.sidebar-content') ||
+							e.relatedTarget.closest('.all-sessions-container') ||
+							e.relatedTarget.closest('#sessionList') ||
+							e.relatedTarget.closest('.server-list') ||
+							e.relatedTarget.closest('.server-item')
+						)) {
+							return;
+						}
+						// Only restore if not clicking (click will handle it) and cursor left sessions area
+						if (isHoverPreviewActive) {
+							restoreChartState();
+						}
 					});
 
 					sessionList.appendChild(li);
@@ -1942,6 +2117,11 @@ const detectElectronEnvironment = () => {
 	// Session selection (for "All Sessions" item)
 	document.querySelectorAll('[data-session="all"]').forEach(item => {
 		item.addEventListener('click', () => {
+			// Cancel hover preview when clicking
+			if (isHoverPreviewActive) {
+				hoverPreviewState = null;
+				isHoverPreviewActive = false;
+			}
 			// Avoid flickering if clicking on "All Sessions" when it's already selected
 			if (selectedSession === 'all' && item.classList.contains('active')) {
 				return;
@@ -1955,6 +2135,29 @@ const detectElectronEnvironment = () => {
 			currentOffset = 0;
 			loadEvents();
 			loadEventTypeStats(selectedSession);
+		});
+
+		// Add hover preview functionality
+		item.addEventListener('mouseenter', () => {
+			handleSessionHover('all');
+		});
+
+		item.addEventListener('mouseleave', (e) => {
+			// Don't restore if mouse is still within the sessions area (sidebar-content)
+			// This includes gaps between buttons
+			if (e.relatedTarget && (
+				e.relatedTarget.closest('.sidebar-content') ||
+				e.relatedTarget.closest('.all-sessions-container') ||
+				e.relatedTarget.closest('#sessionList') ||
+				e.relatedTarget.closest('.server-list') ||
+				e.relatedTarget.closest('.server-item')
+			)) {
+				return;
+			}
+			// Only restore if not clicking (click will handle it) and cursor left sessions area
+			if (isHoverPreviewActive) {
+				restoreChartState();
+			}
 		});
 	});
 

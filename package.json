@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "prestart": "lsof -ti :3100 | xargs kill -9 2>/dev/null || true",
-    "start": "npm run build:css:prod && node index.js",
+    "start": "npm run build:css && node index.js",
     "build": "npm run build:css:prod",
     "build:css": "tailwindcss -i ./public/css/input.css -o ./public/css/output.css --watch",
     "build:css:prod": "tailwindcss -i ./public/css/input.css -o ./public/css/output.css --minify",
