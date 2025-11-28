@@ -78,6 +78,11 @@
 			height: 300px;
 		}
 
+		#eventsChart {
+			width: 100% !important;
+			height: 300px !important;
+		}
+
 		.chart-title {
 			font-size: 0.875rem;
 			font-weight: 600;
@@ -167,6 +172,20 @@
 
 	<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 	<script>
+		// Check authentication status on page load
+		(async () => {
+			try {
+				const response = await fetch('/api/auth/status');
+				const data = await response.json();
+				if (!data.authenticated) {
+					window.location.href = '/login';
+				}
+			} catch (error) {
+				console.error('Auth check failed:', error);
+				window.location.href = '/login';
+			}
+		})();
+
 		// Detect system theme
 		function getSystemTheme() {
 			return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
@@ -191,6 +210,13 @@
 		async function loadChartData() {
 			try {
 				const response = await fetch('/api/daily-stats?days=30');
+				if (response.status === 401) {
+					window.location.href = '/login';
+					return;
+				}
+				if (!response.ok) {
+					throw new Error(`HTTP error! status: ${response.status}`);
+				}
 				const data = await response.json();
 
 				const labels = data.map(item => {

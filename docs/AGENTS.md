@@ -41,7 +41,15 @@ When extending the telemetry server:
 
 ### Data Storage
 
-Currently, telemetry events are logged to the console. When implementing persistent storage:
+The server stores telemetry events and user data in a database:
+
+- **SQLite** (default) - File-based database for development
+- **PostgreSQL** - Production-ready database for high-volume deployments
+- Both databases automatically create required tables on initialization:
+  - `telemetry_events` - Stores telemetry event data
+  - `users` - Stores user authentication data
+
+When implementing additional storage:
 
 - Consider using a database (PostgreSQL, MongoDB) for structured queries
 - Use cloud storage (S3, Azure Blob) for large datasets or logs
@@ -54,7 +62,38 @@ Currently, telemetry events are logged to the console. When implementing persist
 - Implement rate limiting to prevent abuse
 - Use HTTPS in production
 - Sanitize and validate all input data
-- Consider authentication for sensitive operations
+- Authentication and authorization are implemented
+
+### Authentication
+
+The server supports two authentication methods:
+
+1. **Environment Variables** (single user, backward compatible):
+   - `ADMIN_USERNAME` - Admin username (default: `admin`)
+   - `ADMIN_PASSWORD` - Plain password (will be hashed on first use)
+   - `ADMIN_PASSWORD_HASH` - Bcrypt password hash (recommended for production)
+
+2. **Database Users** (multiple users, recommended for production):
+   - Users are stored in the `users` table in the database
+   - Supports multiple users with individual passwords
+   - Passwords are hashed using bcrypt
+   - Last login timestamps are tracked
+
+**User Management API Endpoints:**
+- `GET /api/users` - List all users (requires authentication)
+- `POST /api/users` - Create a new user (requires authentication)
+- `DELETE /api/users/:username` - Delete a user (requires authentication)
+- `PUT /api/users/:username/password` - Update user password (requires authentication)
+
+**Creating Users:**
+- Via script: `npm run create-user <username> <password>`
+- Via API: `POST /api/users` with `{"username": "...", "password": "..."}`
+- Via environment variables: `ADMIN_USERNAME` and `ADMIN_PASSWORD` or `ADMIN_PASSWORD_HASH`
+
+**Authentication Priority:**
+1. First checks database users
+2. Falls back to environment variables if no database users exist
+3. Maintains backward compatibility with existing deployments
 
 ### Monitoring and Observability
 
@@ -99,4 +138,5 @@ Potential improvements to consider:
 - Support for multiple telemetry formats
 - Webhook notifications for specific events
 - Rate limiting and throttling
-- Authentication and authorization
+- User roles and permissions
+- Password reset functionality

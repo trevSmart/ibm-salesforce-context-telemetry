@@ -12,27 +12,34 @@
     "postinstall": "npm run build:css:prod || true",
     "start:electron": "npm run build:css:prod && electron electron.js",
     "dist:mac": "npm run build:css:prod && electron-builder --mac dmg zip --universal",
-    "postdist:mac": "npm rebuild better-sqlite3"
+    "postdist:mac": "npm rebuild better-sqlite3",
+    "generate-test-data": "node scripts/generate-test-data.js",
+    "generate-password-hash": "node scripts/generate-password-hash.js",
+    "create-user": "node scripts/create-user.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@fortawesome/fontawesome-free": "^7.1.0",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
+    "bcrypt": "^6.0.0",
     "better-sqlite3": "^12.4.6",
     "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
     "express": "^5.1.0",
+    "express-session": "^1.18.2",
     "pg": "^8.11.0",
-    "dotenv": "^16.4.5"
+    "uuid": "^13.0.0"
   },
   "devDependencies": {
     "autoprefixer": "^10.4.20",
-    "postcss": "^8.4.47",
-    "tailwindcss": "^3.4.13",
     "electron": "^35.7.5",
-    "electron-builder": "^25.1.8"
+    "electron-builder": "^25.1.8",
+    "postcss": "^8.4.47",
+    "tailwindcss": "^3.4.13"
   },
   "build": {
     "appId": "com.ibm.context.telemetry.viewer",

@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Login - IBM Salesforce Context Telemetry</title>
+	<link rel="icon" type="image/svg+xml" sizes="any" href="/resources/favicon.svg">
+	<link rel="icon" type="image/png" sizes="32x32" href="/resources/favicon.png">
+	<link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
+	<style>
+		* {
+			margin: 0;
+			padding: 0;
+			box-sizing: border-box;
+		}
+
+		body {
+			font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+			background: #f5f5f5;
+			min-height: 100vh;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			padding: 20px;
+		}
+
+		.login-card {
+			background: white;
+			border-radius: 16px;
+			box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+			width: 100%;
+			max-width: 900px;
+			display: flex;
+			overflow: hidden;
+			min-height: 500px;
+		}
+
+		.login-visual-panel {
+			flex: 0 0 35%;
+			background: linear-gradient(135deg, #e0b3ff 0%, #b380ff 50%, #8c5fd6 100%);
+			position: relative;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			padding: 40px;
+		}
+
+		.login-visual-panel::before {
+			content: '';
+			position: absolute;
+			top: 0;
+			left: 0;
+			right: 0;
+			bottom: 0;
+			background:
+				radial-gradient(circle at 20% 50%, rgba(140, 95, 214, 0.3) 0%, transparent 50%),
+				radial-gradient(circle at 80% 80%, rgba(179, 128, 255, 0.2) 0%, transparent 50%);
+			opacity: 0.6;
+		}
+
+		.login-visual-panel::after {
+			content: '';
+			position: absolute;
+			bottom: 0;
+			left: 0;
+			right: 0;
+			height: 40%;
+			background:
+				linear-gradient(to top, rgba(0, 0, 0, 0.1) 0%, transparent 100%),
+				url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 400"><path d="M0,400 L0,300 Q300,250 600,280 T1200,260 L1200,400 Z" fill="rgba(140,95,214,0.3)"/><path d="M0,400 L0,320 Q300,280 600,300 T1200,280 L1200,400 Z" fill="rgba(179,128,255,0.2)"/></svg>');
+			background-size: cover;
+			background-position: bottom;
+			opacity: 0.4;
+		}
+
+		.login-logo {
+			position: absolute;
+			top: 30px;
+			left: 30px;
+			width: 40px;
+			height: 40px;
+			background: white;
+			border-radius: 50%;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			z-index: 2;
+			box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+		}
+
+		.login-logo i {
+			color: #8c5fd6;
+			font-size: 20px;
+		}
+
+		.login-form-panel {
+			flex: 1;
+			padding: 60px 50px;
+			display: flex;
+			flex-direction: column;
+			justify-content: center;
+		}
+
+		.login-header {
+			margin-bottom: 40px;
+		}
+
+		.login-header h1 {
+			font-size: 28px;
+			font-weight: 600;
+			color: #3f3f46;
+			margin-bottom: 8px;
+			line-height: 1.2;
+		}
+
+		.login-header h1 .brand {
+			font-weight: 700;
+		}
+
+		.login-header p {
+			font-size: 15px;
+			color: #52525b;
+			line-height: 1.5;
+		}
+
+		.error-message {
+			background: #fef2f2;
+			border: 1px solid #fee2e2;
+			color: #991b1b;
+			padding: 12px 16px;
+			border-radius: 8px;
+			font-size: 14px;
+			margin-bottom: 24px;
+			display: none;
+		}
+
+		.error-message.show {
+			display: block;
+		}
+
+		.form-group {
+			margin-bottom: 24px;
+			position: relative;
+		}
+
+		.form-group label {
+			display: flex;
+			align-items: center;
+			gap: 12px;
+			font-size: 15px;
+			font-weight: 500;
+			color: #18181b;
+			margin-bottom: 8px;
+		}
+
+		.form-group label i {
+			color: #a1a1aa;
+			font-size: 16px;
+			width: 18px;
+		}
+
+		.form-group input {
+			width: 100%;
+			padding: 12px 0;
+			font-size: 15px;
+			border: none;
+			border-bottom: 2px solid #e4e4e7;
+			background: transparent;
+			transition: border-color 0.2s ease;
+			outline: none;
+		}
+
+		.form-group input:focus {
+			border-bottom-color: #8c5fd6;
+		}
+
+		.form-group input::placeholder {
+			color: #a1a1aa;
+		}
+
+		.login-button-container {
+			display: flex;
+			justify-content: flex-end;
+			margin-top: 8px;
+		}
+
+		.login-button {
+			padding: 12px 32px;
+			font-size: 15px;
+			font-weight: 600;
+			color: white;
+			background: #8c5fd6;
+			border: none;
+			border-radius: 24px;
+			cursor: pointer;
+			transition: all 0.2s ease;
+			min-width: 120px;
+		}
+
+		.login-button:hover {
+			background: #7a4fc4;
+			transform: translateY(-1px);
+			box-shadow: 0 4px 12px rgba(140, 95, 214, 0.3);
+		}
+
+		.login-button:active {
+			transform: translateY(0);
+		}
+
+		.login-button:disabled {
+			background: #94a3b8;
+			cursor: not-allowed;
+			transform: none;
+			box-shadow: none;
+		}
+
+		.login-footer {
+			margin-top: 24px;
+			text-align: center;
+		}
+
+		.login-footer a {
+			color: #a1a1aa;
+			font-size: 14px;
+			text-decoration: underline;
+			transition: color 0.2s ease;
+		}
+
+		.login-footer a:hover {
+			color: #52525b;
+		}
+
+		.loading {
+			display: none;
+			text-align: center;
+			color: #52525b;
+			font-size: 14px;
+			margin-top: 16px;
+		}
+
+		.loading.show {
+			display: block;
+		}
+
+		@media (max-width: 768px) {
+			.login-card {
+				flex-direction: column;
+				max-width: 100%;
+			}
+
+			.login-visual-panel {
+				flex: 0 0 200px;
+				min-height: 200px;
+			}
+
+			.login-form-panel {
+				padding: 40px 30px;
+			}
+
+			.login-header h1 {
+				font-size: 28px;
+			}
+		}
+	</style>
+</head>
+<body>
+	<div class="login-card">
+		<div class="login-visual-panel">
+			<div class="login-logo">
+				<i class="fas fa-cog"></i>
+			</div>
+		</div>
+		<div class="login-form-panel">
+			<div class="login-header">
+				<h1>IBM Salesforce Context Telemetry</h1>
+			</div>
+
+			<div id="errorMessage" class="error-message"></div>
+
+			<form id="loginForm">
+				<div class="form-group">
+					<label for="username">
+						<i class="far fa-envelope"></i>
+						<span>Email</span>
+					</label>
+					<input type="text" id="username" name="username" placeholder="Enter your username" required autofocus>
+				</div>
+
+				<div class="form-group">
+					<label for="password">
+						<i class="far fa-lock"></i>
+						<span>Password</span>
+					</label>
+					<input type="password" id="password" name="password" placeholder="Enter your password" required>
+				</div>
+
+				<div class="login-button-container">
+					<button type="submit" class="login-button" id="loginButton">
+						Log in
+					</button>
+				</div>
+			</form>
+
+			<div id="loading" class="loading">Signing in...</div>
+		</div>
+	</div>
+
+	<script>
+		const form = document.getElementById('loginForm');
+		const errorMessage = document.getElementById('errorMessage');
+		const loginButton = document.getElementById('loginButton');
+		const loading = document.getElementById('loading');
+
+		// Check for error in URL parameters
+		const urlParams = new URLSearchParams(window.location.search);
+		const error = urlParams.get('error');
+		if (error === 'missing_credentials') {
+			errorMessage.textContent = 'Username and password are required';
+			errorMessage.classList.add('show');
+		} else if (error === 'invalid_credentials') {
+			errorMessage.textContent = 'Invalid username or password';
+			errorMessage.classList.add('show');
+		} else if (error === 'server_error') {
+			errorMessage.textContent = 'An error occurred. Please try again.';
+			errorMessage.classList.add('show');
+		}
+
+		form.addEventListener('submit', async (e) => {
+			e.preventDefault();
+
+			const username = document.getElementById('username').value;
+			const password = document.getElementById('password').value;
+
+			// Hide error, show loading
+			errorMessage.classList.remove('show');
+			loginButton.disabled = true;
+			loading.classList.add('show');
+
+			try {
+				const response = await fetch('/login', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json'
+					},
+					body: JSON.stringify({ username, password })
+				});
+
+				const data = await response.json();
+
+				if (response.ok && data.status === 'ok') {
+					// Redirect to home page
+					window.location.href = '/';
+				} else {
+					// Show error
+					errorMessage.textContent = data.message || 'Invalid username or password';
+					errorMessage.classList.add('show');
+					loginButton.disabled = false;
+					loading.classList.remove('show');
+				}
+			} catch (error) {
+				errorMessage.textContent = 'An error occurred. Please try again.';
+				errorMessage.classList.add('show');
+				loginButton.disabled = false;
+				loading.classList.remove('show');
+			}
+		});
+
+		// Check if already logged in
+		(async () => {
+			try {
+				const response = await fetch('/api/auth/status');
+				const data = await response.json();
+				if (data.authenticated) {
+					window.location.href = '/';
+				}
+			} catch (error) {
+				// Ignore errors
+			}
+		})();
+	</script>
+</body>
+</html>

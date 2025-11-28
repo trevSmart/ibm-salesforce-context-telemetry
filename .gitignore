@@ -37,6 +37,9 @@ Thumbs.db
 public/css/output.css
 public/css/output.css.map
 
+# Font Awesome (vendored, should be committed)
+# public/vendor/fontawesome/
+
 # Temporary files
 tmp/
 temp/

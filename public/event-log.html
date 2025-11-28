@@ -7,7 +7,18 @@
 	<link rel="icon" type="image/svg+xml" sizes="any" href="/resources/favicon.svg">
 	<link rel="icon" type="image/png" sizes="32x32" href="/resources/favicon.png">
 	<link href="/css/output.css" rel="stylesheet">
-	<script src="https://kit.fontawesome.com/3991db92c8.js" crossorigin="anonymous"></script>
+	<link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
+	<link rel="stylesheet" href="/vendor/fontawesome/css/v4-shims.min.css">
+	<script>
+		// Apply theme immediately before page render to prevent flash
+		(function() {
+			const savedTheme = localStorage.getItem('theme');
+			const theme = savedTheme || 'dark';
+			if (theme === 'dark') {
+				document.documentElement.classList.add('dark');
+			}
+		})();
+	</script>
 	<style>
 		:root {
 			/* Light mode colors - matching Laravel Log Viewer */
@@ -85,16 +96,22 @@
 			box-sizing: border-box;
 		}
 
+		/* Prevent flash of unstyled content - hide body until theme is applied */
+		html:not(.dark) body {
+			visibility: hidden;
+		}
+
+		html.dark body {
+			visibility: visible;
+		}
+
 		body {
 			font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+			font-weight: 300;
 			background: linear-gradient(45deg, #a9c9ff, #f1d1ff);
 			min-height: 100vh;
 			padding: 20px 12px;
 			position: relative;
-		}
-
-		body, body * {
-			font-weight: 300 !important;
 		}
 
 		body::before {
@@ -484,7 +501,148 @@
 		.search-controls {
 			display: flex;
 			align-items: center;
-			gap: 10px;
+			gap: 0;
+		}
+
+		.search-controls .search-input {
+			margin-right: 10px;
+		}
+
+		.icon-buttons-group {
+			display: flex;
+			align-items: center;
+			gap: 0;
+			border-radius: 8px;
+			position: relative;
+		}
+
+		.icon-buttons-group::before {
+			content: '';
+			position: absolute;
+			top: -2px;
+			left: -2px;
+			right: -2px;
+			bottom: -2px;
+			border: 2px solid transparent;
+			border-radius: 8px;
+			pointer-events: none;
+			z-index: 10;
+			transition: border-color 0.2s ease;
+		}
+
+		.icon-buttons-group::after {
+			content: '';
+			position: absolute;
+			top: 0;
+			left: var(--hover-left, 0);
+			width: 40px;
+			height: 40px;
+			background: var(--hover-bg);
+			border-radius: 0;
+			pointer-events: none;
+			z-index: 1;
+			opacity: 0;
+			transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.15s ease, border-radius 0.3s cubic-bezier(0.4, 0, 0.2, 1), background 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+		}
+
+		.icon-buttons-group.no-transition::after {
+			transition: opacity 0.15s ease, border-radius 0.3s cubic-bezier(0.4, 0, 0.2, 1), background 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+		}
+
+		.icon-buttons-group:has(.icon-btn:hover)::before {
+			border-color: var(--border-color);
+		}
+
+		.icon-buttons-group:has(.icon-btn:nth-child(1):hover) {
+			--hover-left: 0;
+			--last-hover-left: 0;
+		}
+
+		.icon-buttons-group:has(.icon-btn:nth-child(1):hover)::after {
+			left: var(--hover-left);
+			opacity: 1;
+			border-top-left-radius: 8px;
+			border-bottom-left-radius: 8px;
+			border-top-right-radius: 0;
+			border-bottom-right-radius: 0;
+		}
+
+		.icon-buttons-group:has(.icon-btn:nth-child(2):hover) {
+			--hover-left: 40px;
+			--last-hover-left: 40px;
+		}
+
+		.icon-buttons-group:has(.icon-btn:nth-child(2):hover)::after {
+			left: var(--hover-left);
+			opacity: 1;
+			border-radius: 0;
+			background: #fee2e2;
+		}
+
+		html.dark .icon-buttons-group:has(.icon-btn:nth-child(2):hover)::after {
+			background: rgba(220, 38, 38, 0.2);
+		}
+
+		.icon-buttons-group:has(.icon-btn:nth-child(3):hover) {
+			--hover-left: 80px;
+			--last-hover-left: 80px;
+		}
+
+		.icon-buttons-group:has(.icon-btn:nth-child(3):hover)::after {
+			left: var(--hover-left);
+			opacity: 1;
+			border-radius: 0;
+		}
+
+		.icon-buttons-group:has(.icon-btn:nth-child(4):hover) {
+			--hover-left: 120px;
+			--last-hover-left: 120px;
+		}
+
+		.icon-buttons-group:has(.icon-btn:nth-child(4):hover)::after {
+			left: var(--hover-left);
+			opacity: 1;
+			border-radius: 0;
+		}
+
+		.icon-buttons-group:has(.icon-btn:nth-child(5):hover) {
+			--hover-left: 160px;
+			--last-hover-left: 160px;
+		}
+
+		.icon-buttons-group:has(.icon-btn:nth-child(5):hover)::after {
+			left: var(--hover-left);
+			opacity: 1;
+			border-top-left-radius: 0;
+			border-bottom-left-radius: 0;
+			border-top-right-radius: 8px;
+			border-bottom-right-radius: 8px;
+		}
+
+		.icon-buttons-group .icon-btn {
+			border-radius: 0;
+			position: relative;
+			z-index: 2;
+			background: transparent !important;
+		}
+
+		.icon-buttons-group .icon-btn:hover {
+			transform: scale(1.05);
+			background: transparent !important;
+		}
+
+		.icon-buttons-group .icon-btn:hover:not(.delete-all-btn):not(.notification-toggle.active) {
+			background: transparent !important;
+		}
+
+		.icon-buttons-group .icon-btn:first-of-type {
+			border-top-left-radius: 8px;
+			border-bottom-left-radius: 8px;
+		}
+
+		.icon-buttons-group .icon-btn:last-of-type {
+			border-top-right-radius: 8px;
+			border-bottom-right-radius: 8px;
 		}
 
 		.table-controls {
@@ -592,7 +750,7 @@
 			height: 40px;
 			border: none;
 			border-radius: 8px;
-			background: #f4f4f5;
+			background: var(--bg-table-header);
 			cursor: pointer;
 			display: flex;
 			align-items: center;
@@ -600,7 +758,7 @@
 			font-size: 1.125rem;
 			line-height: 1.75rem;
 			transition: background-color 0.2s ease, color 0.2s ease, transform 0.15s ease;
-			color: #a1a1aa;
+			color: var(--text-secondary);
 		}
 
 		.icon-btn:hover {
@@ -622,24 +780,32 @@
 		}
 
 		html.dark .icon-btn {
-			background: #3f3f46;
-			color: #71717a;
+			background: var(--bg-table-header);
+			color: var(--text-secondary);
 		}
 
-		.icon-btn:hover {
-			background: #e4e4e7;
-			color: #52525b;
+		.icon-btn:hover:not(.delete-all-btn):not(.notification-toggle.active) {
+			background: var(--hover-bg);
+			color: var(--text-primary);
 		}
 
-		html.dark .icon-btn:hover {
-			background: #52525b;
-			color: #a1a1aa;
+		html.dark .icon-btn:hover:not(.delete-all-btn):not(.notification-toggle.active) {
+			background: var(--hover-bg);
+			color: var(--text-primary);
+		}
+
+		.delete-all-btn {
+			background: var(--bg-table-header);
 		}
 
 		.delete-all-btn:hover {
 			background: #fee2e2;
 			color: #dc2626;
-			transform: scale(1.1) rotate(5deg);
+			transform: scale(1.1);
+		}
+
+		html.dark .delete-all-btn {
+			background: var(--bg-table-header);
 		}
 
 		html.dark .delete-all-btn:hover {
@@ -706,7 +872,7 @@
 			cursor: col-resize;
 			position: relative;
 			z-index: 10;
-			margin: 0 6px;
+			margin: 0;
 		}
 
 		.sidebar-resizer::after {
@@ -748,7 +914,9 @@
 
 		.sidebar-content {
 			flex: 1;
-			overflow-y: auto;
+			display: flex;
+			flex-direction: column;
+			overflow: hidden;
 			padding: 0 12px 20px 12px;
 			padding-top: 20px;
 		}
@@ -760,21 +928,38 @@
 			}
 		}
 
+		.all-sessions-container {
+			flex-shrink: 0;
+			margin-bottom: 0;
+		}
+
+		.all-sessions-container .server-item:last-child {
+			margin-bottom: 6px;
+		}
+
+		.sessions-scrollable {
+			flex: 1;
+			overflow-y: auto;
+			overflow-x: hidden;
+			margin-right: -14px;
+			padding-right: 6px;
+		}
+
+		.sessions-scrollable .server-list {
+			padding-right: 0;
+		}
+
 
 		.sidebar-title {
 			font-size: 0.75rem;
 			line-height: 1rem;
-			font-weight: 600;
-			color: #52525b;
+			font-weight: 300;
+			color: var(--text-muted);
 			margin-bottom: 12px;
 			margin-top: 0;
 			padding-top: 0;
 			text-transform: uppercase;
-			letter-spacing: 0.05em;
-		}
-
-		html.dark .sidebar-title {
-			color: #a1a1aa;
+			letter-spacing: 0.07em;
 		}
 
 		.server-list {
@@ -782,20 +967,34 @@
 		}
 
 		.server-item {
-			padding: 10px 12px;
+			padding: 10px 4px 10px 12px;
 			margin-bottom: 6px;
-			border-radius: 6px;
+			border-radius: 0;
 			cursor: pointer;
 			transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
 			display: flex;
 			align-items: center;
-			justify-content: space-between;
 			gap: 8px;
 			background: white;
 			border: 2px solid transparent;
 			position: relative;
 			min-height: 48px;
 			min-width: 0;
+		}
+
+		.server-item-left {
+			display: flex;
+			align-items: center;
+			flex: 1;
+			min-width: 0;
+			overflow: hidden;
+		}
+
+		.server-item-right {
+			display: flex;
+			align-items: center;
+			gap: 2px;
+			flex-shrink: 0;
 		}
 
 		.server-item:hover .server-item-actions {
@@ -844,13 +1043,22 @@
 			color: #e4e4e7;
 		}
 
+		.server-item.keyboard-selected {
+			background: var(--hover-bg);
+			outline: 2px solid var(--brand-500);
+			outline-offset: -2px;
+		}
+
+		html.dark .server-item.keyboard-selected {
+			background: var(--hover-bg);
+		}
+
 		.server-name {
 			font-size: 0.8125rem;
 			line-height: 1.15rem;
 			color: #18181b;
-			flex: 1 1 auto;
+			flex: 1;
 			min-width: 0;
-			max-width: 100%;
 			font-weight: 500;
 			transition: color 0.2s ease, font-weight 0.2s ease;
 			white-space: nowrap;
@@ -863,12 +1071,12 @@
 		}
 
 		.session-date {
-			font-weight: 400 !important;
+			font-weight: 400;
 			color: inherit;
 		}
 
 		.session-user {
-			font-weight: 300 !important;
+			font-weight: 300;
 			color: rgba(24, 24, 27, 0.75);
 		}
 
@@ -881,25 +1089,33 @@
 		}
 
 		.server-size {
-			font-size: 0.75rem;
+			background: rgba(0, 0, 0, 0.08);
+			padding: 1px 5px;
+			border-radius: 10px;
+			font-size: 0.6rem;
 			line-height: 1rem;
+			font-weight: 700;
 			color: #52525b;
-			margin-left: 8px;
 			flex-shrink: 0;
+			transition: background-color 0.2s ease, transform 0.2s ease;
 		}
 
 		html.dark .server-size {
+			background: rgba(255, 255, 255, 0.15);
 			color: #a1a1aa;
+		}
+
+		.server-item:hover .server-size {
+			transform: scale(1.05);
 		}
 
 		.server-item-actions {
 			position: relative;
-			margin-left: auto;
 			z-index: 10;
 			display: flex;
 			align-items: center;
 			justify-content: flex-end;
-			min-width: 48px;
+			min-width: 2px;
 			flex-shrink: 0;
 		}
 
@@ -979,12 +1195,13 @@
 			border: 1px solid var(--border-color);
 			border-radius: 14px;
 			padding: 16px 20px 12px 20px;
-			margin: 0 16px 12px 16px;
+			margin: 0 16px;
 			box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
 			transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 			display: flex;
 			flex-direction: column;
-			min-height: 250px;
+			min-height: 190px;
+			height: 240px;
 		}
 
 		.session-activity-card.hidden {
@@ -1001,11 +1218,11 @@
 
 		.session-activity-header .label {
 			font-size: 0.75rem;
-			letter-spacing: 0.08em;
+			letter-spacing: 0.07em;
 			text-transform: uppercase;
 			color: var(--text-muted);
 			margin-bottom: 4px;
-			font-weight: 600;
+			font-weight: 300;
 		}
 
 		.session-activity-header .subtitle {
@@ -1013,6 +1230,35 @@
 			color: var(--text-primary);
 			font-weight: 500;
 			display: none;
+		}
+
+		.date-nav-btn {
+			background: transparent;
+			border: none;
+			cursor: pointer;
+			padding: 4px 8px;
+			border-radius: 4px;
+			color: var(--text-secondary);
+			font-size: 0.875rem;
+			transition: background-color 0.2s ease, color 0.2s ease;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+		}
+
+		.date-nav-btn:hover {
+			background: var(--hover-bg);
+			color: var(--text-primary);
+		}
+
+		.date-nav-btn:disabled {
+			opacity: 0.3;
+			cursor: not-allowed;
+		}
+
+		.date-nav-btn:disabled:hover {
+			background: transparent;
+			color: var(--text-secondary);
 		}
 
 		.session-activity-legend-wrapper {
@@ -1028,7 +1274,7 @@
 			gap: 8px;
 			padding: 4px 10px;
 			border-radius: 999px;
-			border: 1px solid var(--border-color);
+			border: none;
 			background: rgba(255, 255, 255, 0.85);
 			color: var(--text-secondary);
 			font-size: 0.75rem;
@@ -1053,6 +1299,14 @@
 			box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.25);
 		}
 
+		.session-activity-legend-toggle-image {
+			width: 18px;
+			height: 18px;
+			display: inline-block;
+			object-fit: contain;
+			flex-shrink: 0;
+		}
+
 		html.dark .session-activity-legend-toggle-dot {
 			box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.35);
 		}
@@ -1071,8 +1325,8 @@
 			top: 120%;
 			right: 0;
 			z-index: 30;
-			min-width: 220px;
-			max-width: 360px;
+			min-width: 280px;
+			max-width: 450px;
 			max-height: 260px;
 			padding: 10px 12px;
 			border-radius: 10px;
@@ -1103,6 +1357,11 @@
 			display: inline-flex;
 			align-items: center;
 			gap: 6px;
+			white-space: nowrap;
+		}
+
+		.session-activity-legend .legend-item span:last-child {
+			white-space: nowrap;
 		}
 
 		.session-activity-legend .legend-dot {
@@ -1115,12 +1374,12 @@
 		#sessionActivityChart {
 			width: 100%;
 			flex: 1;
-			min-height: 140px;
+			min-height: 0;
 		}
 
 		.horizontal-resizer {
 			height: 12px;
-			margin: 6px 16px 16px 16px;
+			margin: 6px 16px;
 			position: relative;
 			cursor: row-resize;
 			flex-shrink: 0;
@@ -1144,7 +1403,7 @@
 			transform: translateY(-50%);
 			height: 3px;
 			border-radius: 999px;
-			background: rgba(255, 255, 255, 0.05);
+			background: transparent;
 			transition: background 0.15s ease;
 		}
 
@@ -1203,16 +1462,17 @@
 		.logs-table th {
 			padding: 12px 4px;
 			text-align: left;
-			font-weight: 700;
-			color: #52525b;
+			font-weight: 400;
+			color: var(--text-muted);
 			border-bottom: 2px solid #f4f4f5;
-			font-size: 0.84375rem;
+			font-size: 0.75rem;
 			line-height: 1;
-			letter-spacing: 0.05em;
+			letter-spacing: 0.07em;
+			text-transform: uppercase;
 		}
 
 		html.dark .logs-table th {
-			color: #a1a1aa;
+			color: var(--text-muted);
 			border-bottom: 2px solid #19181a;
 		}
 
@@ -1246,6 +1506,16 @@
 		html.dark .logs-table tbody tr:hover {
 			background-color: rgba(14, 165, 233, 0.15);
 			box-shadow: none;
+		}
+
+		.logs-table tbody tr.keyboard-selected {
+			background-color: rgba(14, 165, 233, 0.1);
+			outline: 2px solid var(--brand-500);
+			outline-offset: -2px;
+		}
+
+		html.dark .logs-table tbody tr.keyboard-selected {
+			background-color: rgba(14, 165, 233, 0.25);
 		}
 		/* Level-specific row hover colors */
 		.logs-table tbody tr.log-item-success:hover {
@@ -1297,6 +1567,8 @@
 			font-weight: 800;
 			text-transform: uppercase;
 			width: auto;
+			min-width: fit-content;
+			white-space: nowrap;
 			box-sizing: border-box;
 		}
 
@@ -1333,14 +1605,17 @@
 		.logs-table th.time-column,
 		.log-time {
 			font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-			color: #18181b;
-			font-weight: 400 !important;
-			min-width: 38px;
+			font-weight: 400;
+			min-width: 110px;
+			white-space: nowrap;
 		}
 
-		html.dark .logs-table th.time-column,
-		html.dark .log-time {
-			color: #e4e4e7;
+		.logs-table td.log-time {
+			color: #000000;
+		}
+
+		html.dark .logs-table td.log-time {
+			color: #ffffff;
 		}
 
 		.log-client {
@@ -1396,7 +1671,6 @@
 		}
 
 		.expand-btn:hover {
-			background: var(--hover-bg);
 			color: var(--text-primary);
 			transform: scale(1.1);
 		}
@@ -1411,25 +1685,18 @@
 
 		.log-item-expanded {
 			background: var(--bg-secondary) !important;
-			display: table-row;
-			transform: scaleY(0);
-			transform-origin: top;
-			height: 0;
-			overflow: hidden;
-			transition: transform 0.26s ease-out, height 0.26s ease-out;
+			display: none;
 		}
 
 		.log-item-expanded.expanded {
-			transform: scaleY(1);
-			height: auto;
-			transition: transform 0.34s cubic-bezier(0.25, 0.46, 0.45, 0.94), height 0.34s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+			display: table-row;
 		}
 
 		html.dark .log-item-expanded {
 			background: #18181b !important;
 		}
 
-		.log-item-expanded td {
+		.log-item-expanded.expanded td {
 			padding: 0 !important;
 			border: none !important;
 		}
@@ -1440,40 +1707,15 @@
 		}
 
 		.log-description-expanded {
-			padding: 0 !important;
-			border-top: 1px solid transparent;
-			max-height: 0;
-			overflow: hidden;
-			opacity: 0;
-			transition: max-height 0.26s ease-out, opacity 0.2s ease-out, padding 0.26s ease-out, border-color 0.2s ease-out, font-size 0.26s ease-out;
-		}
-
-		.log-item-expanded.expanded .log-description-expanded {
-			max-height: 5000px;
-			opacity: 1;
 			padding: 12px 16px !important;
-			border-top-color: var(--border-color);
-			transition: max-height 0.34s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94), padding 0.34s cubic-bezier(0.25, 0.46, 0.45, 0.94), border-color 0.2s ease-in, font-size 0.34s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+			border-top: 1px solid var(--border-color);
 		}
 
 		.log-item-expanded .json-pretty {
 			margin: 0;
 			padding: 0;
-			height: 0;
-			line-height: 0;
-			font-size: 0;
-			opacity: 0;
-			overflow: hidden;
-			transition: height 0.26s ease-out, line-height 0.26s ease-out, font-size 0.26s ease-out, padding 0.26s ease-out, opacity 0.2s ease-out;
-		}
-
-		.log-item-expanded.expanded .json-pretty {
-			height: auto;
 			line-height: 1.6;
 			font-size: 0.75rem;
-			opacity: 1;
-			padding: 0;
-			transition: height 0.34s cubic-bezier(0.25, 0.46, 0.45, 0.94), line-height 0.34s cubic-bezier(0.25, 0.46, 0.45, 0.94), font-size 0.34s cubic-bezier(0.25, 0.46, 0.45, 0.94), padding 0.34s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 		}
 
 		.json-pretty {
@@ -1674,20 +1916,20 @@
 		}
 
 		/* Scrollbar styling */
-		.sidebar-content::-webkit-scrollbar {
+		.sessions-scrollable::-webkit-scrollbar {
 			width: 8px;
 		}
 
-		.sidebar-content::-webkit-scrollbar-track {
+		.sessions-scrollable::-webkit-scrollbar-track {
 			background: var(--bg-secondary);
 		}
 
-		.sidebar-content::-webkit-scrollbar-thumb {
+		.sessions-scrollable::-webkit-scrollbar-thumb {
 			background: var(--border-color);
 			border-radius: 4px;
 		}
 
-		.sidebar-content::-webkit-scrollbar-thumb:hover {
+		.sessions-scrollable::-webkit-scrollbar-thumb:hover {
 			background: var(--text-secondary);
 		}
 
@@ -1761,18 +2003,20 @@
 		}
 
 		.actions-dropdown {
-			position: absolute;
-			right: 0;
-			top: 100%;
-			margin-top: 4px;
+			position: fixed;
 			background: white;
 			border: 1px solid var(--border-color);
 			border-radius: 6px;
 			box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 			min-width: 150px;
-			z-index: 100;
-			display: none;
+			z-index: 1000;
+			opacity: 0;
+			transform: scale(0.95) translateY(-4px);
+			pointer-events: none;
 			overflow: hidden;
+			display: block;
+			visibility: visible;
+			transition: opacity 0.15s ease-out, transform 0.15s ease-out;
 		}
 
 		html.dark .actions-dropdown {
@@ -1782,7 +2026,12 @@
 		}
 
 		.actions-dropdown.show {
+			opacity: 1;
+			transform: scale(1) translateY(0);
+			pointer-events: auto;
+			z-index: 10000;
 			display: block;
+			visibility: visible;
 		}
 
 		.actions-dropdown-item {
@@ -1819,15 +2068,26 @@
 			<div class="sidebar">
 				<div class="sidebar-header">
 					<div class="log-viewer-title text-xl font-semibold">Event log</div>
-					<a href="/" class="back-link text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200">← Back to Home</a>
+					<div style="display: flex; align-items: center; gap: 12px; margin-top: 8px;">
+						<a href="/" class="back-link text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200">← Back to Home</a>
+						<button onclick="handleLogout()" class="back-link text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200" style="background: none; border: none; cursor: pointer; padding: 0;">Logout</button>
+					</div>
 				</div>
 				<div class="sidebar-content">
 					<div class="sidebar-title text-xs font-semibold uppercase tracking-wider">Sessions</div>
-					<ul class="server-list list-none" id="sessionList">
-						<li class="server-item active" data-session="all">
-							<span class="server-name text-sm">All Sessions</span>
-							<span class="server-size text-xs" id="totalSize">-</span>
-						</li>
+					<div class="all-sessions-container">
+						<ul class="server-list list-none">
+							<li class="server-item active" data-session="all">
+								<div class="server-item-left">
+									<span class="server-name text-sm">All Sessions</span>
+								</div>
+								<div class="server-item-right">
+									<span class="server-size text-xs" id="totalSize">-</span>
+								</div>
+							</li>
+						</ul>
+					</div>
+					<ul class="server-list list-none sessions-scrollable" id="sessionList">
 					</ul>
 				</div>
 			</div>
@@ -1860,18 +2120,29 @@
 					</div>
 					<div class="search-controls">
 						<input type="text" class="search-input" id="searchInput" placeholder="Search">
-						<button type="button" class="icon-btn" onclick="refreshLogs(event)" title="Refresh"><i class="fa-solid fa-rotate-right"></i></button>
-						<button class="icon-btn delete-all-btn" onclick="confirmDeleteAll()" title="Delete all events"><i class="fa-regular fa-trash-can"></i></button>
-						<button class="icon-btn notification-toggle" onclick="toggleNotificationMode()" title="Enable notifications"><i class="fa-regular fa-bell"></i></button>
-						<button class="icon-btn theme-toggle" onclick="toggleTheme()" title="Toggle theme"><i class="fa-regular fa-moon"></i></button>
+						<div class="icon-buttons-group">
+							<button type="button" class="icon-btn" onclick="refreshLogs(event)" title="Refresh"><i class="fa fa-refresh"></i></button>
+							<button class="icon-btn delete-all-btn" onclick="confirmDeleteAll()" title="Delete all events"><i class="fa-regular fa-trash-can"></i></button>
+							<button class="icon-btn notification-toggle" onclick="toggleNotificationMode()" title="Enable notifications"><i class="fa-regular fa-bell"></i></button>
+							<button class="icon-btn theme-toggle" onclick="toggleTheme()" title="Toggle theme"><i class="fa-regular fa-moon"></i></button>
+							<button class="icon-btn user-btn" id="userBtn" title="User" onclick="showUserMenu(event)"><i class="fa-regular fa-user"></i></button>
+						</div>
 					</div>
 				</div>
 				<div class="main-content-body">
 					<div id="sessionActivityCard" class="session-activity-card hidden">
 						<div class="session-activity-header">
-							<div>
-								<p class="label">Activity overview</p>
-								<p id="sessionActivitySubtitle" class="subtitle">–</p>
+							<div style="display: flex; align-items: center; gap: 8px;">
+								<button class="date-nav-btn" id="prevDayBtn" onclick="navigateToPreviousDay()" title="Previous day">
+									<i class="fa-solid fa-chevron-left"></i>
+								</button>
+								<div>
+									<p id="sessionActivityTitle" class="label">Activity overview</p>
+									<p id="sessionActivitySubtitle" class="subtitle">–</p>
+								</div>
+								<button class="date-nav-btn" id="nextDayBtn" onclick="navigateToNextDay()" title="Next day">
+									<i class="fa-solid fa-chevron-right"></i>
+								</button>
 							</div>
 							<div class="session-activity-legend-wrapper">
 								<button
@@ -1879,23 +2150,24 @@
 									class="session-activity-legend-toggle"
 									title="Hover to see the sessions legend"
 								>
-									<span class="session-activity-legend-toggle-dot"></span>
-									<span>Sessions legend</span>
+									<img src="resources/colors.png" alt="" class="session-activity-legend-toggle-image">
+									<span>Legend</span>
 								</button>
-								<div id="sessionActivityLegend" class="session-activity-legend">
-									<span class="legend-item">
-										<span class="legend-dot" style="background: #0ea5e9;"></span>
-										<span>Events per slot</span>
-									</span>
-									<span class="legend-item">
-										<span class="legend-dot" style="background: rgba(16,185,129,0.7);"></span>
-										<span>Office window</span>
-									</span>
+							<div id="sessionActivityLegend" class="session-activity-legend">
+								<span class="legend-item">
+									<span class="legend-dot" style="background: #0ea5e9;"></span>
+									<span>Events per slot</span>
+								</span>
+								<span class="legend-item">
+									<span class="legend-dot" style="background: rgba(16,185,129,0.7);"></span>
+									<span>Office window</span>
+								</span>
 								</div>
 							</div>
 						</div>
 						<div id="sessionActivityChart"></div>
 					</div>
+					<div class="horizontal-resizer" id="horizontalResizer" aria-hidden="true"></div>
 					<div class="table-controls" id="tableControls" style="display: none;">
 						<div class="table-controls-right">
 							<select class="control-select" id="sortSelect">
@@ -1921,9 +2193,9 @@
 									<tr>
 										<th style="width: 40px;"></th>
 										<th style="width: 40px;"></th>
-										<th class="time-column">Time</th>
+										<th class="time-column" style="width: 110px;">Time</th>
 										<th style="width: 130px;">Event</th>
-										<th style="width: 200px;">Company Name</th>
+										<th style="width: 200px;">Company</th>
 										<th>Payload</th>
 										<th style="width: 50px;"></th>
 									</tr>
@@ -1941,13 +2213,14 @@
 					<div class="footer-info">
 						<span class="text-xs">Load time: <span id="durationInfo" class="font-semibold">-</span></span>
 						<span class="text-xs">Version: <span class="font-semibold">v1.0.0</span></span>
+						<span class="text-xs" id="dbSizeInfo" style="display: none;">DB size: <span id="dbSize" class="font-semibold">-</span></span>
 					</div>
 				</div>
 			</div>
 		</div>
 	</div>
 
-	<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+	<script src="/vendor/echarts/echarts.min.js"></script>
 	<script>
 		const detectElectronEnvironment = () => {
 			const userAgent = navigator?.userAgent?.toLowerCase() || '';
@@ -1970,10 +2243,72 @@
 		console.info(`[Telemetry Viewer] Runtime detected: ${isElectronRuntime ? 'Electron' : 'Browser'}`);
 	</script>
 	<script>
+		// Check authentication status on page load
+		(async () => {
+			try {
+				const response = await fetch('/api/auth/status');
+				const data = await response.json();
+				if (!data.authenticated) {
+					window.location.href = '/login';
+				}
+			} catch (error) {
+				console.error('Auth check failed:', error);
+				window.location.href = '/login';
+			}
+		})();
+
+		function showUserMenu(e) {
+			e.stopPropagation();
+			// For now, just show a simple alert with user info
+			// In the future, this could show a dropdown menu
+			fetch('/api/auth/status')
+				.then(response => response.json())
+				.then(data => {
+					if (data.authenticated && data.username) {
+						alert(`Logged in as: ${data.username}`);
+					} else {
+						handleLogout();
+					}
+				})
+				.catch(() => {
+					handleLogout();
+				});
+		}
+
+		async function handleLogout() {
+			try {
+				const response = await fetch('/logout', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json'
+					}
+				});
+				if (response.ok) {
+					window.location.href = '/login';
+				}
+			} catch (error) {
+				console.error('Logout error:', error);
+				window.location.href = '/login';
+			}
+		}
+
+		// Helper function to handle authentication errors
+		async function handleApiResponse(response) {
+			if (response.status === 401) {
+				window.location.href = '/login';
+				return null;
+			}
+			if (!response.ok) {
+				throw new Error(`HTTP error! status: ${response.status}`);
+			}
+			return response;
+		}
+
 		let currentOffset = 0;
 		let limit = 50;
 		let totalEvents = 0;
 		let selectedSession = 'all';
+		let selectedActivityDate = null; // null means use current day or event's day
 		let activeFilters = new Set(['tool_call', 'session_start', 'custom', 'tool_error']);
 		let searchQuery = '';
 		let sortOrder = 'DESC';
@@ -2004,6 +2339,9 @@
 		let isResizingSidebar = false;
 		let sidebarResizeStartX = 0;
 		let sidebarResizeStartWidth = 0;
+		let isResizingActivity = false;
+		let activityResizeStartY = 0;
+		let activityResizeStartHeight = 0;
 		const globalErrorMessages = [];
 		const MAX_GLOBAL_ERROR_MESSAGES = 3;
 
@@ -2142,6 +2480,83 @@
 			resizer.addEventListener('touchstart', startResize, { passive: false });
 		}
 
+		function setupHorizontalResizer() {
+			const resizer = document.getElementById('horizontalResizer');
+			const activityCard = document.getElementById('sessionActivityCard');
+			if (!resizer || !activityCard) {
+				console.warn('Horizontal resizer: resizer or activityCard not found', { resizer, activityCard });
+				return;
+			}
+
+			console.log('Horizontal resizer: setting up', { resizer, activityCard, isHidden: activityCard.classList.contains('hidden') });
+
+			const updateResizerVisibility = () => {
+				const isCardHidden = activityCard.classList.contains('hidden');
+				// TEMPORALMENT: sempre visible per depurar
+				// if (isCardHidden) {
+				// 	resizer.classList.add('hidden');
+				// } else {
+				// 	resizer.classList.remove('hidden');
+				// }
+				resizer.classList.remove('hidden'); // TEMPORAL: sempre visible
+				console.log('Horizontal resizer: visibility updated', { isCardHidden, resizerHidden: resizer.classList.contains('hidden'), resizerStyles: window.getComputedStyle(resizer) });
+			};
+
+			// Update visibility when card visibility changes
+			const observer = new MutationObserver(updateResizerVisibility);
+			observer.observe(activityCard, { attributes: true, attributeFilter: ['class'] });
+			updateResizerVisibility();
+
+			const startResize = (event) => {
+				const point = event.touches ? event.touches[0] : event;
+				isResizingActivity = true;
+				activityResizeStartY = point.clientY;
+				activityResizeStartHeight = activityCard.offsetHeight;
+				document.body.classList.add('activity-resizing');
+				document.addEventListener('mousemove', handleResize);
+				document.addEventListener('mouseup', stopResize);
+				document.addEventListener('touchmove', handleResize, { passive: false });
+				document.addEventListener('touchend', stopResize);
+				event.preventDefault();
+			};
+
+			const handleResize = (event) => {
+				if (!isResizingActivity) {
+					return;
+				}
+				const point = event.touches ? event.touches[0] : event;
+				const delta = point.clientY - activityResizeStartY;
+				let newHeight = activityResizeStartHeight + delta;
+				newHeight = Math.max(190, Math.min(600, newHeight));
+				activityCard.style.height = `${newHeight}px`;
+				// Redimensionar la gràfica per adaptar-se al nou espai
+				if (sessionActivityChart) {
+					sessionActivityChart.resize();
+				}
+			};
+
+			const stopResize = () => {
+				if (!isResizingActivity) {
+					return;
+				}
+				isResizingActivity = false;
+				document.body.classList.remove('activity-resizing');
+				document.removeEventListener('mousemove', handleResize);
+				document.removeEventListener('mouseup', stopResize);
+				document.removeEventListener('touchmove', handleResize);
+				document.removeEventListener('touchend', stopResize);
+				// Assegurar que la gràfica es redimensiona quan s'acaba el redimensionament
+				if (sessionActivityChart) {
+					setTimeout(() => {
+						sessionActivityChart.resize();
+					}, 0);
+				}
+			};
+
+			resizer.addEventListener('mousedown', startResize);
+			resizer.addEventListener('touchstart', startResize, { passive: false });
+		}
+
 		function initSessionActivityChart() {
 			if (sessionActivityChart) {
 				return sessionActivityChart;
@@ -2161,6 +2576,10 @@
 			const card = document.getElementById('sessionActivityCard');
 			if (card) {
 				card.classList.add('hidden');
+			}
+			const title = document.getElementById('sessionActivityTitle');
+			if (title) {
+				title.textContent = 'Activity overview';
 			}
 			const subtitle = document.getElementById('sessionActivitySubtitle');
 			if (subtitle) {
@@ -2187,10 +2606,9 @@
 			});
 
 			const response = await fetch(`/api/events?${params}`);
-			if (!response.ok) {
-				throw new Error(`HTTP error! status: ${response.status}`);
-			}
-			const data = await response.json();
+			const validResponse = await handleApiResponse(response);
+			if (!validResponse) return [];
+			const data = await validResponse.json();
 			return Array.isArray(data.events) ? data.events : [];
 		}
 
@@ -2226,10 +2644,9 @@
 					limit: SESSION_ACTIVITY_FETCH_LIMIT.toString()
 				});
 				const response = await fetch(`/api/events?${params}`);
-				if (!response.ok) {
-					throw new Error(`HTTP error! status: ${response.status}`);
-				}
-				const data = await response.json();
+				const validResponse = await handleApiResponse(response);
+				if (!validResponse) return;
+				const data = await validResponse.json();
 				if (!data.events || data.events.length === 0) {
 					hideSessionActivityCard();
 					return;
@@ -2267,7 +2684,10 @@
 			let multiSeriesEntries = [];
 
 			if (isAllSessionsView) {
-				const multiSeries = buildMultiSessionActivitySeries(events);
+				// For "All sessions", use selected date or current day
+				const useCurrentDay = selectedActivityDate === null;
+				const dateToUse = selectedActivityDate || new Date();
+				const multiSeries = buildMultiSessionActivitySeries(events, useCurrentDay, dateToUse);
 				windowStart = multiSeries.windowStart;
 				windowEnd = multiSeries.windowEnd;
 				referenceDate = multiSeries.referenceDate;
@@ -2276,7 +2696,10 @@
 				maxBucketCount = multiSeries.maxBucketCount;
 				multiSeriesEntries = multiSeries.seriesList;
 			} else {
-				const singleSeries = buildSessionActivitySeries(events);
+				// For specific session, use selected date or the session's day
+				const useCurrentDay = selectedActivityDate !== null;
+				const dateToUse = selectedActivityDate || null;
+				const singleSeries = buildSessionActivitySeries(events, useCurrentDay, dateToUse);
 				({
 					seriesData,
 					windowStart,
@@ -2290,9 +2713,19 @@
 
 			const totalEvents = events.length;
 			const sessionCount = uniqueSessions.length;
+			const formattedDate = formatHumanDate(referenceDate);
+
+			// Update the title with the date
+			const title = document.getElementById('sessionActivityTitle');
+			if (title) {
+				title.textContent = `Activity for ${formattedDate}`;
+			}
+
+			// Update navigation buttons state
+			updateDateNavigationButtons(referenceDate);
+
 			const subtitle = document.getElementById('sessionActivitySubtitle');
 			if (subtitle) {
-				const formattedDate = formatHumanDate(referenceDate);
 				const eventLabel = totalEvents === 1 ? 'event' : 'events';
 				if (isAllSessionsView) {
 					const sessionLabel = sessionCount === 1 ? 'session' : 'sessions';
@@ -2349,7 +2782,44 @@
 				tooltip: {
 					trigger: 'axis',
 					axisPointer: { type: 'line' },
-					valueFormatter: value => `${value} ${value === 1 ? 'event' : 'events'}`
+					formatter: function(params) {
+						if (!Array.isArray(params)) {
+							params = [params];
+						}
+						// Filtrar les sèries amb valor 0 o null
+						const filteredParams = params.filter(param => {
+							// Extract the actual numeric value from param.value
+							// For time-series data, value can be [timestamp, value] or just the value
+							let value = param.value;
+							if (Array.isArray(value) && value.length >= 2) {
+								// If it's an array, the second element is the actual value
+								value = value[1];
+							}
+							return value !== null && value !== undefined && value !== 0;
+						});
+						// Si no hi ha cap sèrie vàlida, no mostrar el tooltip
+						if (filteredParams.length === 0) {
+							return '';
+						}
+						// Construir el contingut del tooltip amb les sèries filtrades
+						let result = '';
+						if (filteredParams.length > 0 && filteredParams[0].axisValue) {
+							const date = new Date(filteredParams[0].axisValue);
+							result += `<div style="margin-bottom: 4px; font-weight: 500;">${formatHumanDate(date)} ${formatChartTimeLabel(date)}</div>`;
+						}
+						filteredParams.forEach(param => {
+							// Extract the actual numeric value
+							let value = param.value;
+							if (Array.isArray(value) && value.length >= 2) {
+								// If it's an array, the second element is the actual value
+								value = value[1];
+							}
+							const eventLabel = value === 1 ? 'event' : 'events';
+							const marker = `<span style="display:inline-block;margin-right:4px;border-radius:50%;width:10px;height:10px;background-color:${param.color};"></span>`;
+							result += `<div style="margin: 2px 0;">${marker}${param.seriesName}: <strong>${value} ${eventLabel}</strong></div>`;
+						});
+						return result;
+					}
 				},
 				series: chartSeries,
 				markArea: {
@@ -2370,8 +2840,16 @@
 			})) : null);
 		}
 
-		function buildSessionActivitySeries(events) {
-			const referenceDate = new Date(events[0].timestamp);
+		function buildSessionActivitySeries(events, useCurrentDay = false, customDate = null) {
+			// Use custom date if provided, otherwise use current day if useCurrentDay is true, otherwise use the session's day
+			let referenceDate;
+			if (customDate) {
+				referenceDate = new Date(customDate);
+			} else if (useCurrentDay) {
+				referenceDate = new Date();
+			} else {
+				referenceDate = new Date(events[0].timestamp);
+			}
 			const eventTimes = events
 				.map(event => Date.parse(event.timestamp))
 				.filter(time => !Number.isNaN(time));
@@ -2399,6 +2877,7 @@
 
 			const seriesData = buckets.map((count, index) => {
 				const ts = windowStart.getTime() + (index * slotMs);
+				// Use 0 for zero values so the line is always visible
 				return [ts, count];
 			});
 
@@ -2407,8 +2886,16 @@
 			return { seriesData, windowStart, windowEnd, referenceDate, officeStart, officeEnd, maxBucketCount };
 		}
 
-		function buildMultiSessionActivitySeries(events) {
-			const referenceDate = new Date(events[0].timestamp);
+		function buildMultiSessionActivitySeries(events, useCurrentDay = false, customDate = null) {
+			// Use custom date if provided, otherwise use current day if useCurrentDay is true, otherwise use the first event's day
+			let referenceDate;
+			if (customDate) {
+				referenceDate = new Date(customDate);
+			} else if (useCurrentDay) {
+				referenceDate = new Date();
+			} else {
+				referenceDate = new Date(events[0].timestamp);
+			}
 			const eventTimes = events
 				.map(event => Date.parse(event.timestamp))
 				.filter(time => !Number.isNaN(time));
@@ -2446,6 +2933,7 @@
 			sessionBuckets.forEach((buckets, sessionId) => {
 				const seriesData = buckets.map((count, index) => {
 					const ts = windowStart.getTime() + (index * slotMs);
+					// Use 0 for zero values so the line is always visible
 					return [ts, count];
 				});
 				maxBucketCount = Math.max(maxBucketCount, ...buckets, maxBucketCount);
@@ -2459,18 +2947,66 @@
 		}
 
 		function getExtendedWindow(referenceDate, minEventTime, maxEventTime) {
-			const start = new Date(referenceDate);
-			start.setHours(OFFICE_START.hour, OFFICE_START.minute, 0, 0);
-			start.setTime(start.getTime() - SESSION_ACTIVITY_MARGIN_MINUTES * 60 * 1000);
-			if (typeof minEventTime === 'number' && minEventTime < start.getTime()) {
-				start.setTime(minEventTime - SESSION_ACTIVITY_MARGIN_MINUTES * 60 * 1000);
+			// Start with office hours as base (9-18h)
+			const officeStart = new Date(referenceDate);
+			officeStart.setHours(OFFICE_START.hour, OFFICE_START.minute, 0, 0);
+			const officeEnd = new Date(referenceDate);
+			officeEnd.setHours(OFFICE_END.hour, OFFICE_END.minute, 0, 0);
+
+			// If we have event times, expand the window to include all events
+			// but keep it within the same day as referenceDate
+			let start = officeStart;
+			let end = officeEnd;
+
+			if (minEventTime !== null && maxEventTime !== null) {
+				const minEventDate = new Date(minEventTime);
+				const maxEventDate = new Date(maxEventTime);
+
+				// Get the day boundaries for referenceDate
+				const refDay = referenceDate.getDate();
+				const refMonth = referenceDate.getMonth();
+				const refYear = referenceDate.getFullYear();
+
+				// Check if events are on the same day as referenceDate
+				const minEventDay = minEventDate.getDate();
+				const minEventMonth = minEventDate.getMonth();
+				const minEventYear = minEventDate.getFullYear();
+				const maxEventDay = maxEventDate.getDate();
+				const maxEventMonth = maxEventDate.getMonth();
+				const maxEventYear = maxEventDate.getFullYear();
+
+				const isSameDay = (minEventDay === refDay && minEventMonth === refMonth && minEventYear === refYear) ||
+				                  (maxEventDay === refDay && maxEventMonth === refMonth && maxEventYear === refYear);
+
+				if (isSameDay) {
+					// Adjust start to include earliest event
+					const earliestEvent = new Date(minEventDate);
+					earliestEvent.setFullYear(refYear, refMonth, refDay);
+					if (earliestEvent < start) {
+						start = earliestEvent;
+						// Round down to the previous slot boundary
+						const slotMs = SESSION_ACTIVITY_SLOT_MINUTES * 60 * 1000;
+						const remainder = start.getTime() % slotMs;
+						if (remainder > 0) {
+							start = new Date(start.getTime() - remainder);
+						}
+					}
+
+					// Adjust end to include latest event
+					const latestEvent = new Date(maxEventDate);
+					latestEvent.setFullYear(refYear, refMonth, refDay);
+					if (latestEvent > end) {
+						end = latestEvent;
+						// Round up to the next slot boundary
+						const slotMs = SESSION_ACTIVITY_SLOT_MINUTES * 60 * 1000;
+						const remainder = end.getTime() % slotMs;
+						if (remainder > 0) {
+							end = new Date(end.getTime() + slotMs - remainder);
+						}
+					}
+				}
 			}
-			const end = new Date(referenceDate);
-			end.setHours(OFFICE_END.hour, OFFICE_END.minute, 0, 0);
-			end.setTime(end.getTime() + SESSION_ACTIVITY_MARGIN_MINUTES * 60 * 1000);
-			if (typeof maxEventTime === 'number' && maxEventTime > end.getTime()) {
-				end.setTime(maxEventTime + SESSION_ACTIVITY_MARGIN_MINUTES * 60 * 1000);
-			}
+
 			return { start, end };
 		}
 
@@ -2479,6 +3015,59 @@
 				return '';
 			}
 			return `${padNumber(dateObj.getHours())}:${padNumber(dateObj.getMinutes())}`;
+		}
+
+		function navigateToPreviousDay() {
+			if (!lastSessionActivityEvents || lastSessionActivityEvents.length === 0) {
+				return;
+			}
+
+			// Get current reference date
+			const currentDate = selectedActivityDate || new Date();
+			const previousDate = new Date(currentDate);
+			previousDate.setDate(previousDate.getDate() - 1);
+
+			selectedActivityDate = previousDate;
+			renderSessionActivityChart(lastSessionActivityEvents, { sessionId: selectedSession });
+		}
+
+		function navigateToNextDay() {
+			if (!lastSessionActivityEvents || lastSessionActivityEvents.length === 0) {
+				return;
+			}
+
+			// Get current reference date
+			const currentDate = selectedActivityDate || new Date();
+			const nextDate = new Date(currentDate);
+			nextDate.setDate(nextDate.getDate() + 1);
+
+			// Don't allow navigating to future dates
+			const today = new Date();
+			today.setHours(23, 59, 59, 999);
+			if (nextDate > today) {
+				return;
+			}
+
+			selectedActivityDate = nextDate;
+			renderSessionActivityChart(lastSessionActivityEvents, { sessionId: selectedSession });
+		}
+
+		function updateDateNavigationButtons(referenceDate) {
+			const prevBtn = document.getElementById('prevDayBtn');
+			const nextBtn = document.getElementById('nextDayBtn');
+
+			if (!prevBtn || !nextBtn) return;
+
+			// Disable next button if we're at today
+			const today = new Date();
+			today.setHours(23, 59, 59, 999);
+			const refDate = new Date(referenceDate);
+			refDate.setHours(23, 59, 59, 999);
+
+			nextBtn.disabled = refDate >= today;
+
+			// Previous button is always enabled (we can go back as far as we want)
+			prevBtn.disabled = false;
 		}
 
 		function formatHumanDate(dateObj) {
@@ -2547,7 +3136,8 @@
 				smooth: 0.25,
 				smoothMonotone: 'x', // prevent bezier overshoot while keeping curvature
 				showSymbol: false,
-				lineStyle: { width: 3, color: '#53cf98' },
+				connectNulls: true, // Connect valid points even if there are null values between them
+				lineStyle: { width: 3, color: hexToRgba('#53cf98', 0.5) }, // More transparent line
 				areaStyle: {
 					color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
 						{ offset: 0, color: 'rgba(133,230,185,0.45)' },
@@ -2568,7 +3158,8 @@
 				smooth: 0.65,
 				smoothMonotone: 'x',
 				showSymbol: false,
-				lineStyle: { width: 2.5, color },
+				connectNulls: true, // Connect valid points even if there are null values between them
+				lineStyle: { width: 2.5, color: hexToRgba(color, 0.5) }, // More transparent line
 				areaStyle: {
 					color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
 						{ offset: 0, color: startColor },
@@ -2626,11 +3217,11 @@
 			}
 
 			const day = parsedDate.getDate();
-			const month = parsedDate.getMonth() + 1;
-			const year = parsedDate.getFullYear().toString().slice(-2);
-			const hours = String(parsedDate.getHours()).padStart(2, '0');
+			const monthNames = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+			const month = monthNames[parsedDate.getMonth()];
+			const hours = parsedDate.getHours();
 			const minutes = String(parsedDate.getMinutes()).padStart(2, '0');
-			const dateStr = `${day}/${month}/${year} ${hours}:${minutes}`;
+			const dateStr = `${day} ${month} ${hours}:${minutes}`;
 			const dateHtml = `<span class="session-date">${escapeHtml(dateStr)}</span>`;
 
 			let userText = '';
@@ -2665,6 +3256,7 @@
 
 			legendEl.innerHTML = '';
 
+			// Only show legend when there are multiple series (multiple sessions)
 			if (Array.isArray(seriesEntries) && seriesEntries.length > 0) {
 				seriesEntries.forEach(entry => {
 					const safeName = escapeHtml(entry.name);
@@ -2676,23 +3268,8 @@
 					`;
 					legendEl.appendChild(item);
 				});
-			} else {
-				const defaultItem = document.createElement('span');
-				defaultItem.className = 'legend-item';
-				defaultItem.innerHTML = `
-					<span class="legend-dot" style="background: #53cf98;"></span>
-					<span>Events per slot</span>
-				`;
-				legendEl.appendChild(defaultItem);
 			}
-
-			const officeItem = document.createElement('span');
-			officeItem.className = 'legend-item';
-			officeItem.innerHTML = `
-				<span class="legend-dot" style="background: rgba(16,185,129,0.7); border: 1px solid rgba(16,185,129,0.8);"></span>
-				<span>Office window</span>
-			`;
-			legendEl.appendChild(officeItem);
+			// No legend for single session view - the chart is self-explanatory
 		}
 
 		function refreshSessionActivityTheme() {
@@ -2709,7 +3286,9 @@
 					? `?sessionId=${encodeURIComponent(sessionId)}`
 					: '';
 				const response = await fetch(`/api/event-types${params}`);
-				const stats = await response.json();
+				const validResponse = await handleApiResponse(response);
+				if (!validResponse) return;
+				const stats = await validResponse.json();
 
 				stats.forEach(stat => {
 					const countEl = document.getElementById(`count-${stat.event}`);
@@ -2732,10 +3311,9 @@
 		async function loadSessions() {
 			try {
 				const response = await fetch('/api/sessions');
-				if (!response.ok) {
-					throw new Error(`HTTP error! status: ${response.status}`);
-				}
-				const sessions = await response.json();
+				const validResponse = await handleApiResponse(response);
+				if (!validResponse) return;
+				const sessions = await validResponse.json();
 				const sessionList = document.getElementById('sessionList');
 
 				if (!sessionList) {
@@ -2743,15 +3321,13 @@
 					return;
 				}
 
-				// Keep the "All Sessions" item
-				const allSessionsItem = sessionList.querySelector('[data-session="all"]');
-				if (!allSessionsItem) {
-					console.error('All sessions item not found');
-					return;
-				}
-
+				// Clear the scrollable list (All Sessions is now separate)
 				sessionList.innerHTML = '';
-				sessionList.appendChild(allSessionsItem);
+
+				// Reset keyboard navigation for sessions when sessions are reloaded
+				if (keyboardNavigationMode === 'sessions') {
+					selectedSessionIndex = -1;
+				}
 
 				// Add each session
 				if (Array.isArray(sessions) && sessions.length > 0) {
@@ -2773,23 +3349,25 @@
 
 						const activeIndicator = session.is_active ? '<span class="session-active-indicator"></span>' : '';
 						li.innerHTML = `
-							<div style="display: flex; align-items: center; flex: 1;">
+							<div class="server-item-left">
 								${activeIndicator}
 								<span class="server-name text-sm">${sessionDisplayHtml}</span>
 							</div>
-							<span class="server-size text-xs">${session.count || 0}</span>
-							<div class="server-item-actions">
-								<button class="actions-btn" onclick="event.stopPropagation(); toggleSessionActionsDropdown(event, '${session.session_id}')" title="Actions">
-									<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-										<circle cx="8" cy="3" r="1.5"/>
-										<circle cx="8" cy="8" r="1.5"/>
-										<circle cx="8" cy="13" r="1.5"/>
-									</svg>
-								</button>
-								<div class="actions-dropdown" id="session-dropdown-${session.session_id}">
-									<div class="actions-dropdown-item delete" onclick="event.stopPropagation(); confirmDeleteSession('${session.session_id}')">
-										<span>🗑️</span>
-										<span>Delete</span>
+							<div class="server-item-right">
+								<span class="server-size text-xs">${session.count || 0}</span>
+								<div class="server-item-actions">
+									<button class="actions-btn" onclick="event.stopPropagation(); toggleSessionActionsDropdown(event, '${session.session_id}')" title="Actions">
+										<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+											<circle cx="8" cy="3" r="1.5"/>
+											<circle cx="8" cy="8" r="1.5"/>
+											<circle cx="8" cy="13" r="1.5"/>
+										</svg>
+									</button>
+									<div class="actions-dropdown" id="session-dropdown-${session.session_id}">
+										<div class="actions-dropdown-item delete" onclick="event.stopPropagation(); confirmDeleteSession('${session.session_id}')">
+											<span>🗑️</span>
+											<span>Delete</span>
+										</div>
 									</div>
 								</div>
 							</div>
@@ -2803,6 +3381,7 @@
 							document.querySelectorAll('.server-item').forEach(i => i.classList.remove('active'));
 							li.classList.add('active');
 							selectedSession = session.session_id;
+							selectedActivityDate = null; // Reset to default when changing session
 							// When a session is selected, default to ASC order (oldest first)
 							if (selectedSession !== 'all') {
 								sortOrder = 'ASC';
@@ -2901,7 +3480,9 @@
 				}
 
 				const response = await fetch(`/api/events?${params}`);
-				const data = await response.json();
+				const validResponse = await handleApiResponse(response);
+				if (!validResponse) return;
+				const data = await validResponse.json();
 
 				const duration = Math.round(performance.now() - startTime);
 				document.getElementById('durationInfo').textContent = `${duration}ms`;
@@ -2946,7 +3527,7 @@
 
 		function extractClientName(eventData) {
 			if (!eventData || typeof eventData !== 'object') {
-				return '-';
+				return '';
 			}
 			try {
 				// New format: data.state.org.companyDetails.Name
@@ -2971,12 +3552,17 @@
 			} catch (_error) {
 				// Ignore and fall through to default
 			}
-			return '-';
+			return '';
 		}
 
 		function displayEvents(events) {
 			const tbody = document.getElementById('logsBody');
 			tbody.innerHTML = '';
+
+			// Reset keyboard navigation for events when new events are loaded
+			if (keyboardNavigationMode === 'events') {
+				selectedEventIndex = -1;
+			}
 
 			events.forEach(event => {
 				const levelClass = getLevelClass(event.event);
@@ -3001,6 +3587,8 @@
 				const row = document.createElement('tr');
 				row.className = `log-item-${levelClass}`;
 				row.setAttribute('data-event-id', event.id);
+				// Store event data in the row element to avoid API call when copying payload
+				row.setAttribute('data-event', JSON.stringify(event));
 				row.innerHTML = `
 					<td style="text-align: center; padding: 2px 8px;">
 						<button class="expand-btn" type="button" id="expand-btn-${event.id}" title="Expand/Collapse">
@@ -3027,6 +3615,10 @@
 							</svg>
 						</button>
 						<div class="actions-dropdown" id="dropdown-${event.id}">
+							<div class="actions-dropdown-item" onclick="copyEventPayload(${event.id})">
+								<span>📋</span>
+								<span>Copy payload</span>
+							</div>
 							<div class="actions-dropdown-item delete" onclick="confirmDeleteEvent(${event.id})">
 								<span>🗑️</span>
 								<span>Delete</span>
@@ -3161,7 +3753,7 @@
 		}
 
 		function formatDate(dateString) {
-			if (!dateString) return '-';
+			if (!dateString) return '';
 			const date = new Date(dateString);
 			const day = date.getDate();
 			const month = date.getMonth() + 1;
@@ -3236,12 +3828,10 @@
 				const response = await fetch('/api/events', {
 					method: 'DELETE'
 				});
+				const validResponse = await handleApiResponse(response);
+				if (!validResponse) return;
 
-				if (!response.ok) {
-					throw new Error(`HTTP error! status: ${response.status}`);
-				}
-
-				const data = await response.json();
+				const data = await validResponse.json();
 				alert(`Successfully deleted ${data.deletedCount || 0} events.`);
 
 				// Reset confirmation flag
@@ -3473,6 +4063,7 @@
 				document.querySelectorAll('.server-item').forEach(i => i.classList.remove('active'));
 				item.classList.add('active');
 				selectedSession = 'all';
+				selectedActivityDate = null; // Reset to default when selecting all sessions
 				sortOrder = 'DESC';
 				document.getElementById('sortSelect').value = 'DESC';
 				currentOffset = 0;
@@ -3493,10 +4084,174 @@
 			}
 		});
 
+		// Keyboard navigation state
+		let keyboardNavigationMode = null; // 'sessions' or 'events'
+		let selectedSessionIndex = -1;
+		let selectedEventIndex = -1;
+
+		// Remove keyboard selection from all elements
+		function clearKeyboardSelection() {
+			document.querySelectorAll('.server-item.keyboard-selected').forEach(item => {
+				item.classList.remove('keyboard-selected');
+			});
+			document.querySelectorAll('.logs-table tbody tr.keyboard-selected').forEach(row => {
+				row.classList.remove('keyboard-selected');
+			});
+		}
+
+		// Get all session items (including "All Sessions")
+		function getAllSessionItems() {
+			const allSessionsItem = document.querySelector('.server-item[data-session="all"]');
+			const sessionItems = Array.from(document.querySelectorAll('#sessionList .server-item'));
+			return allSessionsItem ? [allSessionsItem, ...sessionItems] : sessionItems;
+		}
+
+		// Get all event rows (excluding expanded rows)
+		function getAllEventRows() {
+			return Array.from(document.querySelectorAll('#logsBody tr[data-event-id]')).filter(row => {
+				return !row.classList.contains('log-item-expanded');
+			});
+		}
+
+		// Navigate sessions with keyboard
+		function navigateSessions(direction) {
+			const sessions = getAllSessionItems();
+			if (sessions.length === 0) return;
+
+			clearKeyboardSelection();
+			keyboardNavigationMode = 'sessions';
+
+			if (selectedSessionIndex < 0) {
+				// Find currently active session
+				const activeIndex = sessions.findIndex(item => item.classList.contains('active'));
+				selectedSessionIndex = activeIndex >= 0 ? activeIndex : 0;
+			} else {
+				if (direction === 'down') {
+					selectedSessionIndex = Math.min(selectedSessionIndex + 1, sessions.length - 1);
+				} else if (direction === 'up') {
+					selectedSessionIndex = Math.max(selectedSessionIndex - 1, 0);
+				}
+			}
+
+			const selectedItem = sessions[selectedSessionIndex];
+			if (selectedItem) {
+				selectedItem.classList.add('keyboard-selected');
+				selectedItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+			}
+		}
+
+		// Navigate events with keyboard
+		function navigateEvents(direction) {
+			const events = getAllEventRows();
+			if (events.length === 0) return;
+
+			clearKeyboardSelection();
+			keyboardNavigationMode = 'events';
+
+			if (selectedEventIndex < 0) {
+				selectedEventIndex = 0;
+			} else {
+				if (direction === 'down') {
+					selectedEventIndex = Math.min(selectedEventIndex + 1, events.length - 1);
+				} else if (direction === 'up') {
+					selectedEventIndex = Math.max(selectedEventIndex - 1, 0);
+				}
+			}
+
+			const selectedRow = events[selectedEventIndex];
+			if (selectedRow) {
+				selectedRow.classList.add('keyboard-selected');
+				selectedRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+			}
+		}
+
+		// Activate selected session
+		function activateSelectedSession() {
+			const sessions = getAllSessionItems();
+			if (selectedSessionIndex >= 0 && selectedSessionIndex < sessions.length) {
+				const selectedItem = sessions[selectedSessionIndex];
+				selectedItem.click();
+			}
+		}
+
+		// Activate selected event (expand/collapse)
+		function activateSelectedEvent() {
+			const events = getAllEventRows();
+			if (selectedEventIndex >= 0 && selectedEventIndex < events.length) {
+				const selectedRow = events[selectedEventIndex];
+				const eventId = selectedRow.getAttribute('data-event-id');
+				if (eventId) {
+					toggleRowExpand(parseInt(eventId));
+				}
+			}
+		}
+
+		// Keyboard event handler
+		document.addEventListener('keydown', (e) => {
+			// Don't interfere with input fields or textareas
+			if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
+				return;
+			}
+
+			// Don't interfere with dropdowns
+			if (e.target.closest('.actions-dropdown')) {
+				return;
+			}
+
+			switch (e.key) {
+				case 'ArrowDown':
+					e.preventDefault();
+					// Determine which list to navigate based on focus or current mode
+					if (keyboardNavigationMode === 'sessions' || (!keyboardNavigationMode && document.activeElement.closest('.sidebar'))) {
+						navigateSessions('down');
+					} else {
+						navigateEvents('down');
+					}
+					break;
+
+				case 'ArrowUp':
+					e.preventDefault();
+					if (keyboardNavigationMode === 'sessions' || (!keyboardNavigationMode && document.activeElement.closest('.sidebar'))) {
+						navigateSessions('up');
+					} else {
+						navigateEvents('up');
+					}
+					break;
+
+				case 'Enter':
+					e.preventDefault();
+					if (keyboardNavigationMode === 'sessions') {
+						activateSelectedSession();
+					} else if (keyboardNavigationMode === 'events') {
+						activateSelectedEvent();
+					}
+					break;
+
+				case 'Escape':
+					clearKeyboardSelection();
+					keyboardNavigationMode = null;
+					selectedSessionIndex = -1;
+					selectedEventIndex = -1;
+					break;
+			}
+		});
+
+		// Reset keyboard navigation when clicking
+		document.addEventListener('click', (e) => {
+			// Don't reset if clicking on keyboard-selected items
+			if (!e.target.closest('.keyboard-selected')) {
+				clearKeyboardSelection();
+				keyboardNavigationMode = null;
+				selectedSessionIndex = -1;
+				selectedEventIndex = -1;
+			}
+		});
+
 		function toggleActionsDropdown(e, eventId) {
 			e.stopPropagation();
 			const dropdown = document.getElementById(`dropdown-${eventId}`);
 			const isShowing = dropdown.classList.contains('show');
+			const button = e.target.closest('.actions-btn');
 
 			// Close all other dropdowns
 			document.querySelectorAll('.actions-dropdown').forEach(d => {
@@ -3505,7 +4260,53 @@
 
 			// Toggle this dropdown
 			if (!isShowing) {
-				dropdown.classList.add('show');
+				// Calculate position relative to the button
+				if (button) {
+					const rect = button.getBoundingClientRect();
+
+					// Position dropdown to the left of the button, vertically centered
+					let right = window.innerWidth - rect.left + 4;
+					let top = rect.top + (rect.height / 2);
+
+					// Ensure dropdown doesn't go off-screen
+					// First, make it visible temporarily to measure its size
+					dropdown.style.visibility = 'hidden';
+					dropdown.style.display = 'block';
+					dropdown.style.opacity = '0';
+					const dropdownRect = dropdown.getBoundingClientRect();
+
+					// Center vertically on the button
+					top = top - (dropdownRect.height / 2);
+
+					// Check if dropdown would go off the top of the screen
+					if (top < 4) {
+						top = 4;
+					}
+
+					// Check if dropdown would go off the bottom of the screen
+					if (top + dropdownRect.height > window.innerHeight - 4) {
+						top = window.innerHeight - dropdownRect.height - 4;
+					}
+
+					// Check if dropdown would go off the left edge (since it's positioned to the left)
+					if (right + dropdownRect.width > window.innerWidth) {
+						// If not enough space on the left, position to the right of the button instead
+						right = window.innerWidth - rect.right - 4;
+					}
+
+					dropdown.style.top = `${Math.max(4, top)}px`;
+					dropdown.style.right = `${Math.max(4, right)}px`;
+					dropdown.style.left = 'auto';
+					dropdown.style.bottom = 'auto';
+					dropdown.style.visibility = 'visible';
+					dropdown.style.display = 'block';
+					dropdown.style.zIndex = '10000';
+				}
+
+				// Use requestAnimationFrame to ensure the element is visible before transition
+				requestAnimationFrame(() => {
+					dropdown.classList.add('show');
+				});
 			}
 		}
 
@@ -3532,6 +4333,67 @@
 			}
 		}
 
+		async function copyEventPayload(eventId) {
+			try {
+				// Get event data from the DOM element (already loaded, no API call needed)
+				const row = document.querySelector(`tr[data-event-id="${eventId}"]`);
+				if (!row) {
+					alert('Event not found');
+					return;
+				}
+
+				const eventDataStr = row.getAttribute('data-event');
+				if (!eventDataStr) {
+					alert('Event data not available');
+					return;
+				}
+
+				const event = JSON.parse(eventDataStr);
+
+				// Reconstruct the full payload as it was received
+				const payload = {
+					event: event.event,
+					timestamp: event.timestamp,
+					serverId: event.server_id || null,
+					version: event.version || null,
+					sessionId: event.session_id || null,
+					userId: event.user_id || null,
+					data: event.data || {}
+				};
+
+				// Remove null values to keep the JSON clean
+				Object.keys(payload).forEach(key => {
+					if (payload[key] === null) {
+						delete payload[key];
+					}
+				});
+
+				// Format as beautified JSON with proper indentation (2 spaces)
+				const beautifiedPayload = JSON.stringify(payload, null, 2);
+
+				// Copy to clipboard
+				await navigator.clipboard.writeText(beautifiedPayload);
+
+				// Close dropdown
+				document.querySelectorAll('.actions-dropdown').forEach(d => {
+					d.classList.remove('show');
+				});
+
+				// Show feedback (optional - could use a toast notification)
+				const btn = document.querySelector(`#dropdown-${eventId}`)?.previousElementSibling;
+				if (btn) {
+					const originalTitle = btn.getAttribute('title');
+					btn.setAttribute('title', 'Payload copied to clipboard!');
+					setTimeout(() => {
+						btn.setAttribute('title', originalTitle || 'Actions');
+					}, 2000);
+				}
+			} catch (error) {
+				console.error('Error copying payload:', error);
+				alert('Error copying payload: ' + error.message);
+			}
+		}
+
 		function confirmDeleteEvent(eventId) {
 			const confirmed = confirm('Are you sure you want to delete this event? This action cannot be undone.');
 			if (confirmed) {
@@ -3544,11 +4406,10 @@
 				const response = await fetch(`/api/events/${eventId}`, {
 					method: 'DELETE'
 				});
+				const validResponse = await handleApiResponse(response);
+				if (!validResponse) return;
 
-				if (!response.ok) {
-					const data = await response.json();
-					throw new Error(data.message || `HTTP error! status: ${response.status}`);
-				}
+				const data = await validResponse.json();
 
 				// Close dropdown
 				document.querySelectorAll('.actions-dropdown').forEach(d => {
@@ -3577,13 +4438,10 @@
 				const response = await fetch(`/api/events?sessionId=${encodeURIComponent(sessionId)}`, {
 					method: 'DELETE'
 				});
+				const validResponse = await handleApiResponse(response);
+				if (!validResponse) return;
 
-				if (!response.ok) {
-					const data = await response.json();
-					throw new Error(data.message || `HTTP error! status: ${response.status}`);
-				}
-
-				const data = await response.json();
+				const data = await validResponse.json();
 
 				// Close dropdown
 				document.querySelectorAll('.actions-dropdown').forEach(d => {
@@ -3596,6 +4454,7 @@
 				// If we were viewing this session, switch to "all"
 				if (selectedSession === sessionId) {
 					selectedSession = 'all';
+					selectedActivityDate = null; // Reset to default when selecting all sessions
 					document.querySelectorAll('.server-item').forEach(i => i.classList.remove('active'));
 					const allSessionsItem = document.querySelector('[data-session="all"]');
 					if (allSessionsItem) {
@@ -3678,18 +4537,95 @@
 			legend.addEventListener('mouseleave', handleLeave);
 		}
 
+		async function loadDatabaseSize() {
+			try {
+				const response = await fetch('/api/database-size');
+				const validResponse = await handleApiResponse(response);
+				if (!validResponse) return;
+				const data = await validResponse.json();
+				if (data.status === 'ok') {
+					const displayText = data.displayText || data.sizeFormatted;
+					if (displayText) {
+						const dbSizeElement = document.getElementById('dbSize');
+						dbSizeElement.textContent = displayText;
+
+						// Apply color based on percentage
+						if (data.percentage !== null && data.percentage !== undefined) {
+							if (data.percentage >= 80) {
+								// Red for 80% or more
+								dbSizeElement.style.color = 'var(--level-error)';
+							} else if (data.percentage >= 70) {
+								// Orange for 70% or more
+								dbSizeElement.style.color = 'var(--level-warning)';
+							} else {
+								// Default color (inherit from parent)
+								dbSizeElement.style.color = '';
+							}
+						}
+
+						document.getElementById('dbSizeInfo').style.display = '';
+					}
+				}
+			} catch (error) {
+				// Silently fail if database size is not available
+				console.debug('Database size not available:', error);
+			}
+		}
+
 		function initializeApp() {
 			runSafeInitStep('notification button state', updateNotificationButtonState);
 			runSafeInitStep('theme initialization', initTheme);
 			runSafeInitStep('level filters setup', setupLevelFilters);
 			runSafeInitStep('sidebar resizer setup', setupSidebarResizer);
+			runSafeInitStep('horizontal resizer setup', setupHorizontalResizer);
 			runSafeInitStep('session legend hover', setupSessionLegendHover);
 			runSafeAsyncInitStep('event type stats', () => loadEventTypeStats(selectedSession));
 			runSafeAsyncInitStep('sessions list', () => loadSessions());
 			runSafeAsyncInitStep('events table', () => loadEvents());
+			runSafeAsyncInitStep('database size', () => loadDatabaseSize());
 		}
 
 		initializeApp();
+		// Handle smooth hover animation for icon buttons group
+		(function() {
+			const iconButtonsGroup = document.querySelector('.icon-buttons-group');
+			if (!iconButtonsGroup) return;
+
+			let isInsideGroup = false;
+			let currentHoveredButton = null;
+
+			iconButtonsGroup.addEventListener('mouseenter', () => {
+				isInsideGroup = true;
+				iconButtonsGroup.classList.add('no-transition');
+			});
+
+			iconButtonsGroup.addEventListener('mouseleave', () => {
+				isInsideGroup = false;
+				currentHoveredButton = null;
+				iconButtonsGroup.classList.remove('no-transition');
+			});
+
+			const buttons = iconButtonsGroup.querySelectorAll('.icon-btn');
+			buttons.forEach((button, index) => {
+				button.addEventListener('mouseenter', () => {
+					if (currentHoveredButton !== null && currentHoveredButton !== index) {
+						// Moving from one button to another - enable transition
+						iconButtonsGroup.classList.remove('no-transition');
+					} else if (currentHoveredButton === null) {
+						// Entering from outside - no transition
+						iconButtonsGroup.classList.add('no-transition');
+					}
+					currentHoveredButton = index;
+
+					// Remove no-transition after a short delay to allow smooth transitions between buttons
+					setTimeout(() => {
+						if (isInsideGroup) {
+							iconButtonsGroup.classList.remove('no-transition');
+						}
+					}, 50);
+				});
+			});
+		})();
 	</script>
 </body>
 </html>

@@ -6,6 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const db = require('./storage/database');
 const logFormatter = require('./storage/log-formatter');
+const auth = require('./auth/auth');
 const app = express();
 const port = process.env.PORT || 3100;
 
@@ -19,6 +20,8 @@ const validate = ajv.compile(schema);
 // Middleware
 app.use(cors()); // Allow requests from any origin
 app.use(express.json()); // Parse JSON request bodies
+app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies (for login form)
+app.use(auth.initSessionMiddleware()); // Initialize session middleware
 
 // Serve static files from public directory
 app.use(express.static('public', {
@@ -177,8 +180,230 @@ app.get('/health', async (req, res) => {
 	}
 });
 
+// Authentication routes
+app.get('/login', auth.requireGuest, (req, res) => {
+	const loginPath = path.join(__dirname, 'public', 'login.html');
+	if (fs.existsSync(loginPath)) {
+		res.sendFile(loginPath);
+	} else {
+		res.status(404).send('Login page not found');
+	}
+});
+
+app.post('/login', auth.requireGuest, async (req, res) => {
+	try {
+		// Support both JSON and form-urlencoded
+		const username = req.body.username;
+		const password = req.body.password;
+
+		if (!username || !password) {
+			// If it's a form submission, redirect back with error
+			if (req.headers['content-type']?.includes('application/x-www-form-urlencoded')) {
+				return res.redirect('/login?error=missing_credentials');
+			}
+			return res.status(400).json({
+				status: 'error',
+				message: 'Username and password are required'
+			});
+		}
+
+		const isValid = await auth.authenticate(username, password);
+
+		if (isValid) {
+			req.session.authenticated = true;
+			req.session.username = username;
+
+			// If it's a form submission, redirect to home
+			if (req.headers['content-type']?.includes('application/x-www-form-urlencoded')) {
+				return res.redirect('/');
+			}
+
+			return res.json({
+				status: 'ok',
+				message: 'Login successful'
+			});
+		} else {
+			// If it's a form submission, redirect back with error
+			if (req.headers['content-type']?.includes('application/x-www-form-urlencoded')) {
+				return res.redirect('/login?error=invalid_credentials');
+			}
+
+			return res.status(401).json({
+				status: 'error',
+				message: 'Invalid username or password'
+			});
+		}
+	} catch (error) {
+		console.error('Login error:', error);
+
+		// If it's a form submission, redirect back with error
+		if (req.headers['content-type']?.includes('application/x-www-form-urlencoded')) {
+			return res.redirect('/login?error=server_error');
+		}
+
+		res.status(500).json({
+			status: 'error',
+			message: 'Internal server error'
+		});
+	}
+});
+
+app.post('/logout', (req, res) => {
+	req.session.destroy((err) => {
+		if (err) {
+			console.error('Logout error:', err);
+			return res.status(500).json({
+				status: 'error',
+				message: 'Failed to logout'
+			});
+		}
+		res.json({
+			status: 'ok',
+			message: 'Logout successful'
+		});
+	});
+});
+
+app.get('/api/auth/status', (req, res) => {
+	res.json({
+		authenticated: req.session && req.session.authenticated || false,
+		username: req.session && req.session.username || null
+	});
+});
+
+// User management API endpoints
+app.get('/api/users', auth.requireAuth, async (req, res) => {
+	try {
+		const users = await db.getAllUsers();
+		res.json({
+			status: 'ok',
+			users: users
+		});
+	} catch (error) {
+		console.error('Error fetching users:', error);
+		res.status(500).json({
+			status: 'error',
+			message: 'Failed to fetch users'
+		});
+	}
+});
+
+app.post('/api/users', auth.requireAuth, async (req, res) => {
+	try {
+		const { username, password } = req.body;
+
+		if (!username || !password) {
+			return res.status(400).json({
+				status: 'error',
+				message: 'Username and password are required'
+			});
+		}
+
+		// Check if user already exists
+		const existingUser = await db.getUserByUsername(username);
+		if (existingUser) {
+			return res.status(409).json({
+				status: 'error',
+				message: 'User already exists'
+			});
+		}
+
+		// Hash password
+		const passwordHash = await auth.hashPassword(password);
+
+		// Create user
+		const user = await db.createUser(username, passwordHash);
+
+		res.status(201).json({
+			status: 'ok',
+			message: 'User created successfully',
+			user: {
+				id: user.id,
+				username: user.username,
+				created_at: user.created_at
+			}
+		});
+	} catch (error) {
+		console.error('Error creating user:', error);
+		res.status(500).json({
+			status: 'error',
+			message: 'Failed to create user'
+		});
+	}
+});
+
+app.delete('/api/users/:username', auth.requireAuth, async (req, res) => {
+	try {
+		const { username } = req.params;
+
+		// Prevent deleting the current user
+		if (req.session && req.session.username === username) {
+			return res.status(400).json({
+				status: 'error',
+				message: 'Cannot delete your own user account'
+			});
+		}
+
+		const deleted = await db.deleteUser(username);
+		if (!deleted) {
+			return res.status(404).json({
+				status: 'error',
+				message: 'User not found'
+			});
+		}
+
+		res.json({
+			status: 'ok',
+			message: 'User deleted successfully'
+		});
+	} catch (error) {
+		console.error('Error deleting user:', error);
+		res.status(500).json({
+			status: 'error',
+			message: 'Failed to delete user'
+		});
+	}
+});
+
+app.put('/api/users/:username/password', auth.requireAuth, async (req, res) => {
+	try {
+		const { username } = req.params;
+		const { password } = req.body;
+
+		if (!password) {
+			return res.status(400).json({
+				status: 'error',
+				message: 'Password is required'
+			});
+		}
+
+		// Hash password
+		const passwordHash = await auth.hashPassword(password);
+
+		// Update password
+		const updated = await db.updateUserPassword(username, passwordHash);
+		if (!updated) {
+			return res.status(404).json({
+				status: 'error',
+				message: 'User not found'
+			});
+		}
+
+		res.json({
+			status: 'ok',
+			message: 'Password updated successfully'
+		});
+	} catch (error) {
+		console.error('Error updating password:', error);
+		res.status(500).json({
+			status: 'error',
+			message: 'Failed to update password'
+		});
+	}
+});
+
 // API endpoints for viewing telemetry data
-app.get('/api/events', async (req, res) => {
+app.get('/api/events', auth.requireAuth, async (req, res) => {
 	try {
 		const {
 			limit = 50,
@@ -217,7 +442,38 @@ app.get('/api/events', async (req, res) => {
 	}
 });
 
-app.get('/api/stats', async (req, res) => {
+app.get('/api/events/:id', auth.requireAuth, async (req, res) => {
+	try {
+		const eventId = parseInt(req.params.id);
+		if (isNaN(eventId)) {
+			return res.status(400).json({
+				status: 'error',
+				message: 'Invalid event ID'
+			});
+		}
+
+		const event = await db.getEventById(eventId);
+		if (!event) {
+			return res.status(404).json({
+				status: 'error',
+				message: 'Event not found'
+			});
+		}
+
+		res.json({
+			status: 'ok',
+			event: event
+		});
+	} catch (error) {
+		console.error('Error fetching event:', error);
+		res.status(500).json({
+			status: 'error',
+			message: 'Failed to fetch event'
+		});
+	}
+});
+
+app.get('/api/stats', auth.requireAuth, async (req, res) => {
 	try {
 		const { startDate, endDate, eventType } = req.query;
 		const stats = await db.getStats({ startDate, endDate, eventType });
@@ -231,7 +487,7 @@ app.get('/api/stats', async (req, res) => {
 	}
 });
 
-app.get('/api/event-types', async (req, res) => {
+app.get('/api/event-types', auth.requireAuth, async (req, res) => {
 	try {
 		const { sessionId } = req.query;
 		const stats = await db.getEventTypeStats({ sessionId });
@@ -245,7 +501,7 @@ app.get('/api/event-types', async (req, res) => {
 	}
 });
 
-app.get('/api/sessions', async (req, res) => {
+app.get('/api/sessions', auth.requireAuth, async (req, res) => {
 	try {
 		const sessions = await db.getSessions();
 		res.json(sessions);
@@ -258,7 +514,7 @@ app.get('/api/sessions', async (req, res) => {
 	}
 });
 
-app.get('/api/daily-stats', async (req, res) => {
+app.get('/api/daily-stats', auth.requireAuth, async (req, res) => {
 	try {
 		const days = parseInt(req.query.days) || 30;
 		const stats = await db.getDailyStats(days);
@@ -272,8 +528,51 @@ app.get('/api/daily-stats', async (req, res) => {
 	}
 });
 
+app.get('/api/database-size', auth.requireAuth, async (req, res) => {
+	try {
+		const sizeInfo = await db.getDatabaseSize();
+		if (sizeInfo === null) {
+			return res.status(404).json({
+				status: 'error',
+				message: 'Database size not available'
+			});
+		}
+
+		const { size, maxSize } = sizeInfo;
+		const sizeFormatted = formatBytes(size);
+		const maxSizeFormatted = maxSize ? formatBytes(maxSize) : null;
+		const percentage = maxSize ? Math.round((size / maxSize) * 100) : null;
+
+		res.json({
+			status: 'ok',
+			size: size,
+			maxSize: maxSize,
+			sizeFormatted: sizeFormatted,
+			maxSizeFormatted: maxSizeFormatted,
+			percentage: percentage,
+			displayText: maxSize
+				? `${percentage}% (${sizeFormatted} / ${maxSizeFormatted})`
+				: sizeFormatted
+		});
+	} catch (error) {
+		console.error('Error fetching database size:', error);
+		res.status(500).json({
+			status: 'error',
+			message: 'Failed to fetch database size'
+		});
+	}
+});
+
+function formatBytes(bytes) {
+	if (bytes === 0) return '0 Bytes';
+	const k = 1024;
+	const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+	const i = Math.floor(Math.log(bytes) / Math.log(k));
+	return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+}
+
 // Serve landing page
-app.get('/', (_req, res) => {
+app.get('/', auth.requireAuth, (_req, res) => {
 	const landingPath = path.join(__dirname, 'public', 'index.html');
 	if (fs.existsSync(landingPath)) {
 		res.sendFile(landingPath);
@@ -283,7 +582,7 @@ app.get('/', (_req, res) => {
 });
 
 // Serve event log page
-app.get('/event-log', (_req, res) => {
+app.get('/event-log', auth.requireAuth, (_req, res) => {
 	const eventLogPath = path.join(__dirname, 'public', 'event-log.html');
 	if (fs.existsSync(eventLogPath)) {
 		res.sendFile(eventLogPath);
@@ -293,7 +592,7 @@ app.get('/event-log', (_req, res) => {
 });
 
 // Serve OpenAPI specification
-app.get('/api-spec', (_req, res) => {
+app.get('/api-spec', auth.requireAuth, (_req, res) => {
 	const specPath = path.join(__dirname, 'api', 'api-spec.yaml');
 	if (fs.existsSync(specPath)) {
 		res.type('text/yaml');
@@ -304,12 +603,12 @@ app.get('/api-spec', (_req, res) => {
 });
 
 // Serve JSON schema
-app.get('/schema', (_req, res) => {
+app.get('/schema', auth.requireAuth, (_req, res) => {
 	res.json(schema);
 });
 
 // Export logs in JSON Lines (JSONL) format
-app.get('/api/export/logs', async (req, res) => {
+app.get('/api/export/logs', auth.requireAuth, async (req, res) => {
 	try {
 		const {
 			startDate,
@@ -349,7 +648,7 @@ app.get('/api/export/logs', async (req, res) => {
 });
 
 // Delete a single event by ID
-app.delete('/api/events/:id', async (req, res) => {
+app.delete('/api/events/:id', auth.requireAuth, async (req, res) => {
 	try {
 		const eventId = parseInt(req.params.id);
 		if (isNaN(eventId)) {
@@ -381,7 +680,7 @@ app.delete('/api/events/:id', async (req, res) => {
 });
 
 // Delete all events from database
-app.delete('/api/events', async (req, res) => {
+app.delete('/api/events', auth.requireAuth, async (req, res) => {
 	try {
 		const { sessionId } = req.query;
 
@@ -415,6 +714,10 @@ async function startServer() {
 	try {
 		await db.init();
 		console.log('Database initialized successfully');
+
+		// Initialize authentication with database
+		auth.init(db);
+		console.log('Authentication initialized with database support');
 
 		app.listen(port, () => {
 			console.log('\n' + '='.repeat(60));

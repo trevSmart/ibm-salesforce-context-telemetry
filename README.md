@@ -17,6 +17,12 @@ npm start
 # Test the server
 curl http://localhost:3100/
 
+# Create a user in the database
+npm run create-user admin my-password
+
+# Generate password hash
+npm run generate-password-hash "my-password"
+
 # Launch the event log desktop viewer
 npm run start:electron
 ```
@@ -54,6 +60,7 @@ This telemetry server receives telemetry events from IBM Salesforce Context MCP 
 * **Telemetry Collection**: Receives telemetry events via REST API
 * **Web Dashboard**: Beautiful web interface to view and analyze telemetry data
 * **Database Storage**: Stores events in SQLite (default) or PostgreSQL
+* **Multi-User Authentication**: Support for multiple users with database-backed authentication
 * **Standard Log Format**: Export logs in JSON Lines (JSONL) format - the industry standard
 * **Third-Party Integration**: Compatible with ELK Stack, Splunk, Datadog, Grafana Loki, BigQuery, and more
 * **Health Monitoring**: Provides health check endpoints for monitoring
@@ -242,6 +249,131 @@ Get statistics grouped by event type.
 ]
 ```
 
+### Authentication Endpoints
+
+All API endpoints (except `/telemetry`, `/health`, and `/login`) require authentication.
+
+**POST `/login`**
+
+Authenticate and create a session.
+
+**Request Body:**
+```json
+{
+  "username": "admin",
+  "password": "your-password"
+}
+```
+
+**Response:**
+```json
+{
+  "status": "ok",
+  "message": "Login successful"
+}
+```
+
+**GET `/api/auth/status`**
+
+Check authentication status.
+
+**Response:**
+```json
+{
+  "authenticated": true,
+  "username": "admin"
+}
+```
+
+**POST `/logout`**
+
+End the current session.
+
+**Response:**
+```json
+{
+  "status": "ok",
+  "message": "Logout successful"
+}
+```
+
+### User Management Endpoints
+
+**GET `/api/users`**
+
+List all users (requires authentication).
+
+**Response:**
+```json
+{
+  "status": "ok",
+  "users": [
+    {
+      "id": 1,
+      "username": "admin",
+      "created_at": "2024-01-15T10:30:00.000Z",
+      "last_login": "2024-01-15T12:00:00.000Z"
+    }
+  ]
+}
+```
+
+**POST `/api/users`**
+
+Create a new user (requires authentication).
+
+**Request Body:**
+```json
+{
+  "username": "newuser",
+  "password": "secure-password"
+}
+```
+
+**Response:**
+```json
+{
+  "status": "ok",
+  "message": "User created successfully",
+  "user": {
+    "id": 2,
+    "username": "newuser",
+    "created_at": "2024-01-15T10:30:00.000Z"
+  }
+}
+```
+
+**DELETE `/api/users/:username`**
+
+Delete a user (requires authentication). Cannot delete your own account.
+
+**Response:**
+```json
+{
+  "status": "ok",
+  "message": "User deleted successfully"
+}
+```
+
+**PUT `/api/users/:username/password`**
+
+Update a user's password (requires authentication).
+
+**Request Body:**
+```json
+{
+  "password": "new-secure-password"
+}
+```
+
+**Response:**
+```json
+{
+  "status": "ok",
+  "message": "Password updated successfully"
+}
+```
+
 ## Local Development
 
 ### Prerequisites
@@ -272,17 +404,76 @@ The server will start on port 3100 by default, or the port specified in the `POR
 | `DB_PATH` | Path to SQLite database file (SQLite only) | `./data/telemetry.db` |
 | `DATABASE_URL` | PostgreSQL connection string (PostgreSQL only) | - |
 | `DATABASE_SSL` | Enable SSL for PostgreSQL (`true`/`false`) | `false` |
+| `ADMIN_USERNAME` | Admin username (for single-user auth) | `admin` |
+| `ADMIN_PASSWORD` | Admin password in plain text (will be hashed) | - |
+| `ADMIN_PASSWORD_HASH` | Admin password as bcrypt hash (recommended) | - |
+| `SESSION_SECRET` | Secret key for session management (auto-generated if not set) | - |
+
+**Note**: For multi-user authentication, create users in the database using the API or scripts. Environment variables are used as a fallback for backward compatibility.
 
 ## Architecture
 
-The server stores telemetry events in a database:
+The server stores telemetry events and user data in a database:
 
 * **SQLite** (default) - File-based database, perfect for development and small deployments
 * **PostgreSQL** - Production-ready database for high-volume deployments
 
+The database automatically creates two tables:
+* `telemetry_events` - Stores all telemetry event data
+* `users` - Stores user authentication credentials (for multi-user support)
+
 See [docs/DATABASE.md](./docs/DATABASE.md) for complete database configuration and setup instructions.
 
 **⚠️ Important for Render deployments**: SQLite does not persist between deployments on Render. See [docs/RENDER_DEPLOYMENT.md](./docs/RENDER_DEPLOYMENT.md) for instructions on using PostgreSQL with Render.
+
+## Authentication
+
+The server supports two authentication methods:
+
+### Single User (Environment Variables)
+
+Configure authentication using environment variables:
+
+```bash
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=your-secure-password
+```
+
+Or use a password hash (more secure):
+
+```bash
+# Generate hash locally
+npm run generate-password-hash "your-password"
+
+# Add to environment
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD_HASH=$2b$10$...
+```
+
+### Multiple Users (Database)
+
+For production deployments with multiple users, create users in the database:
+
+**Via Script:**
+```bash
+npm run create-user admin secure-password
+npm run create-user user1 password1
+```
+
+**Via API (after initial login):**
+```bash
+# First login with environment variables, then create users via API
+curl -X POST http://localhost:3100/api/users \
+  -H "Content-Type: application/json" \
+  -d '{"username": "newuser", "password": "secure-password"}'
+```
+
+**Authentication Priority:**
+1. Database users are checked first
+2. Falls back to environment variables if no database users exist
+3. Maintains backward compatibility with existing deployments
+
+See [docs/RENDER_DEPLOYMENT.md](./docs/RENDER_DEPLOYMENT.md) for deployment-specific authentication setup.
 
 Future enhancements may include:
 

@@ -9,6 +9,9 @@
 const fs = require('fs');
 const path = require('path');
 
+// Database configuration constants
+const DEFAULT_MAX_DB_SIZE = 1024 * 1024 * 1024; // 1 GB in bytes
+
 let db = null;
 let dbType = process.env.DB_TYPE || 'sqlite';
 
@@ -28,7 +31,7 @@ async function init() {
 
 		db = new Database(dbPath);
 
-		// Create table if it doesn't exist
+		// Create tables if they don't exist
 		db.exec(`
 			CREATE TABLE IF NOT EXISTS telemetry_events (
 				id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -43,10 +46,19 @@ async function init() {
 				created_at TEXT DEFAULT CURRENT_TIMESTAMP
 			);
 
+			CREATE TABLE IF NOT EXISTS users (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				username TEXT NOT NULL UNIQUE,
+				password_hash TEXT NOT NULL,
+				created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+				last_login TEXT
+			);
+
 			CREATE INDEX IF NOT EXISTS idx_event ON telemetry_events(event);
 			CREATE INDEX IF NOT EXISTS idx_timestamp ON telemetry_events(timestamp);
 			CREATE INDEX IF NOT EXISTS idx_server_id ON telemetry_events(server_id);
 			CREATE INDEX IF NOT EXISTS idx_created_at ON telemetry_events(created_at);
+			CREATE INDEX IF NOT EXISTS idx_username ON users(username);
 		`);
 
 		console.log(`SQLite database initialized at: ${dbPath}`);
@@ -61,7 +73,7 @@ async function init() {
 		// Test connection
 		await pool.query('SELECT NOW()');
 
-		// Create table if it doesn't exist
+		// Create tables if they don't exist
 		await pool.query(`
 			CREATE TABLE IF NOT EXISTS telemetry_events (
 				id SERIAL PRIMARY KEY,
@@ -76,10 +88,19 @@ async function init() {
 				created_at TIMESTAMPTZ DEFAULT NOW()
 			);
 
+			CREATE TABLE IF NOT EXISTS users (
+				id SERIAL PRIMARY KEY,
+				username TEXT NOT NULL UNIQUE,
+				password_hash TEXT NOT NULL,
+				created_at TIMESTAMPTZ DEFAULT NOW(),
+				last_login TIMESTAMPTZ
+			);
+
 			CREATE INDEX IF NOT EXISTS idx_event ON telemetry_events(event);
 			CREATE INDEX IF NOT EXISTS idx_timestamp ON telemetry_events(timestamp);
 			CREATE INDEX IF NOT EXISTS idx_server_id ON telemetry_events(server_id);
 			CREATE INDEX IF NOT EXISTS idx_created_at ON telemetry_events(created_at);
+			CREATE INDEX IF NOT EXISTS idx_username ON users(username);
 		`);
 
 		db = pool;
@@ -335,6 +356,34 @@ async function getEvents(options = {}) {
 }
 
 /**
+ * Get a single event by ID
+ * @param {number} id - Event ID
+ * @returns {Object|null} Event object or null if not found
+ */
+async function getEventById(id) {
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
+
+	if (dbType === 'sqlite') {
+		const event = db.prepare('SELECT id, event, timestamp, server_id, version, session_id, user_id, data, received_at, created_at FROM telemetry_events WHERE id = ?').get(id);
+		if (!event) {
+			return null;
+		}
+		return {
+			...event,
+			data: JSON.parse(event.data)
+		};
+	} else {
+		const result = await db.query('SELECT id, event, timestamp, server_id, version, session_id, user_id, data, received_at, created_at FROM telemetry_events WHERE id = $1', [id]);
+		if (result.rows.length === 0) {
+			return null;
+		}
+		return result.rows[0];
+	}
+}
+
+/**
  * Get event type statistics
  * @returns {Array} Statistics by event type
  */
@@ -397,14 +446,14 @@ async function getSessions() {
 			SELECT
 				s.session_id,
 				COUNT(*) as count,
-				MIN(s.created_at) as first_event,
-				MAX(s.created_at) as last_event,
+				MIN(s.timestamp) as first_event,
+				MAX(s.timestamp) as last_event,
 				(SELECT user_id FROM telemetry_events
 				 WHERE session_id = s.session_id
-				 ORDER BY created_at ASC LIMIT 1) as user_id,
+				 ORDER BY timestamp ASC LIMIT 1) as user_id,
 				(SELECT data FROM telemetry_events
 				 WHERE session_id = s.session_id AND event = 'session_start'
-				 ORDER BY created_at ASC LIMIT 1) as session_start_data,
+				 ORDER BY timestamp ASC LIMIT 1) as session_start_data,
 				(SELECT COUNT(*) FROM telemetry_events
 				 WHERE session_id = s.session_id AND event = 'session_start') as has_start,
 				(SELECT COUNT(*) FROM telemetry_events
@@ -451,14 +500,14 @@ async function getSessions() {
 			SELECT
 				s.session_id,
 				COUNT(*) as count,
-				MIN(s.created_at) as first_event,
-				MAX(s.created_at) as last_event,
+				MIN(s.timestamp) as first_event,
+				MAX(s.timestamp) as last_event,
 				(SELECT user_id FROM telemetry_events
 				 WHERE session_id = s.session_id
-				 ORDER BY created_at ASC LIMIT 1) as user_id,
+				 ORDER BY timestamp ASC LIMIT 1) as user_id,
 				(SELECT data FROM telemetry_events
 				 WHERE session_id = s.session_id AND event = 'session_start'
-				 ORDER BY created_at ASC LIMIT 1) as session_start_data,
+				 ORDER BY timestamp ASC LIMIT 1) as session_start_data,
 				(SELECT COUNT(*) FROM telemetry_events
 				 WHERE session_id = s.session_id AND event = 'session_start') as has_start,
 				(SELECT COUNT(*) FROM telemetry_events
@@ -661,6 +710,51 @@ async function getDailyStats(days = 30) {
 }
 
 /**
+ * Get database size in bytes
+ * @returns {Promise<{size: number, maxSize: number|null}|null>} Database size info, or null if not available
+ */
+async function getDatabaseSize() {
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
+
+	try {
+		let size = null;
+		if (dbType === 'sqlite') {
+			// SQLite: get file size
+			const dbPath = process.env.DB_PATH || path.join(__dirname, '..', 'data', 'telemetry.db');
+			if (fs.existsSync(dbPath)) {
+				const stats = fs.statSync(dbPath);
+				size = stats.size;
+			}
+		} else if (dbType === 'postgresql') {
+			// PostgreSQL: use pg_database_size function
+			const result = await db.query(
+				"SELECT pg_database_size(current_database()) as size"
+			);
+			size = result.rows[0]?.size || null;
+		}
+
+		if (size === null) {
+			return null;
+		}
+
+		// Get max size from environment variable (in bytes) if set, otherwise use default
+		const maxSize = process.env.DB_MAX_SIZE
+			? parseInt(process.env.DB_MAX_SIZE)
+			: DEFAULT_MAX_DB_SIZE;
+
+		return {
+			size: size,
+			maxSize: maxSize
+		};
+	} catch (error) {
+		console.error('Error getting database size:', error);
+		return null;
+	}
+}
+
+/**
  * Close database connection
  */
 async function close() {
@@ -674,16 +768,160 @@ async function close() {
 	}
 }
 
+/**
+ * User management functions
+ */
+
+/**
+ * Get a user by username
+ * @param {string} username - Username to look up
+ * @returns {Promise<object|null>} User object or null if not found
+ */
+async function getUserByUsername(username) {
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
+
+	if (dbType === 'sqlite') {
+		const stmt = db.prepare('SELECT id, username, password_hash, created_at, last_login FROM users WHERE username = ?');
+		const user = stmt.get(username);
+		return user || null;
+	} else if (dbType === 'postgresql') {
+		const result = await db.query(
+			'SELECT id, username, password_hash, created_at, last_login FROM users WHERE username = $1',
+			[username]
+		);
+		return result.rows[0] || null;
+	}
+}
+
+/**
+ * Create a new user
+ * @param {string} username - Username
+ * @param {string} passwordHash - Bcrypt password hash
+ * @returns {Promise<object>} Created user object
+ */
+async function createUser(username, passwordHash) {
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
+
+	if (dbType === 'sqlite') {
+		const stmt = db.prepare('INSERT INTO users (username, password_hash) VALUES (?, ?)');
+		const result = stmt.run(username, passwordHash);
+		return {
+			id: result.lastInsertRowid,
+			username,
+			password_hash: passwordHash,
+			created_at: new Date().toISOString()
+		};
+	} else if (dbType === 'postgresql') {
+		const result = await db.query(
+			'INSERT INTO users (username, password_hash) VALUES ($1, $2) RETURNING id, username, password_hash, created_at',
+			[username, passwordHash]
+		);
+		return result.rows[0];
+	}
+}
+
+/**
+ * Update user's last login timestamp
+ * @param {string} username - Username
+ * @returns {Promise<void>}
+ */
+async function updateLastLogin(username) {
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
+
+	const now = new Date().toISOString();
+	if (dbType === 'sqlite') {
+		const stmt = db.prepare('UPDATE users SET last_login = ? WHERE username = ?');
+		stmt.run(now, username);
+	} else if (dbType === 'postgresql') {
+		await db.query('UPDATE users SET last_login = $1 WHERE username = $2', [now, username]);
+	}
+}
+
+/**
+ * Get all users
+ * @returns {Promise<Array>} Array of user objects (without password hashes)
+ */
+async function getAllUsers() {
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
+
+	if (dbType === 'sqlite') {
+		const stmt = db.prepare('SELECT id, username, created_at, last_login FROM users ORDER BY username');
+		return stmt.all();
+	} else if (dbType === 'postgresql') {
+		const result = await db.query('SELECT id, username, created_at, last_login FROM users ORDER BY username');
+		return result.rows;
+	}
+}
+
+/**
+ * Delete a user by username
+ * @param {string} username - Username to delete
+ * @returns {Promise<boolean>} True if user was deleted, false if not found
+ */
+async function deleteUser(username) {
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
+
+	if (dbType === 'sqlite') {
+		const stmt = db.prepare('DELETE FROM users WHERE username = ?');
+		const result = stmt.run(username);
+		return result.changes > 0;
+	} else if (dbType === 'postgresql') {
+		const result = await db.query('DELETE FROM users WHERE username = $1', [username]);
+		return result.rowCount > 0;
+	}
+}
+
+/**
+ * Update user password
+ * @param {string} username - Username
+ * @param {string} passwordHash - New bcrypt password hash
+ * @returns {Promise<boolean>} True if password was updated, false if user not found
+ */
+async function updateUserPassword(username, passwordHash) {
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
+
+	if (dbType === 'sqlite') {
+		const stmt = db.prepare('UPDATE users SET password_hash = ? WHERE username = ?');
+		const result = stmt.run(passwordHash, username);
+		return result.changes > 0;
+	} else if (dbType === 'postgresql') {
+		const result = await db.query('UPDATE users SET password_hash = $1 WHERE username = $2', [passwordHash, username]);
+		return result.rowCount > 0;
+	}
+}
+
 module.exports = {
 	init,
 	storeEvent,
 	getStats,
 	getEvents,
+	getEventById,
 	getEventTypeStats,
 	getSessions,
 	getDailyStats,
 	deleteEvent,
 	deleteAllEvents,
 	deleteEventsBySession,
-	close
+	getDatabaseSize,
+	close,
+	DEFAULT_MAX_DB_SIZE,
+	// User management
+	getUserByUsername,
+	createUser,
+	updateLastLogin,
+	getAllUsers,
+	deleteUser,
+	updateUserPassword
 };
