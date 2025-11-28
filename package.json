@@ -15,7 +15,9 @@
     "postdist:mac": "npm rebuild better-sqlite3",
     "generate-test-data": "node scripts/generate-test-data.js",
     "generate-password-hash": "node scripts/generate-password-hash.js",
-    "create-user": "node scripts/create-user.js"
+    "create-user": "node scripts/create-user.js",
+    "export-database": "node scripts/export-database.js",
+    "import-database": "node scripts/import-database.js"
   },
   "keywords": [],
   "author": "",

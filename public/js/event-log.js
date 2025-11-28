@@ -19,10 +19,18 @@ const detectElectronEnvironment = () => {
 	console.info(`[Telemetry Viewer] Runtime detected: ${isElectronRuntime ? 'Electron' : 'Browser'}`);
 
 
+	// Helper function for authenticated fetch requests
+	function authenticatedFetch(url, options = {}) {
+		return fetch(url, {
+			...options,
+			credentials: 'include'
+		});
+	}
+
 	// Check authentication status on page load
 	(async () => {
 		try {
-			const response = await fetch('/api/auth/status');
+			const response = await authenticatedFetch('/api/auth/status');
 			const data = await response.json();
 			if (!data.authenticated) {
 				window.location.href = '/login';
@@ -44,7 +52,7 @@ const detectElectronEnvironment = () => {
 		} else {
 			userMenu.style.display = 'block';
 			// Load user info
-			fetch('/api/auth/status')
+			authenticatedFetch('/api/auth/status')
 				.then(response => response.json())
 				.then(data => {
 					const usernameElement = document.getElementById('userMenuUsername');
@@ -82,7 +90,7 @@ const detectElectronEnvironment = () => {
 		}
 
 		try {
-			const response = await fetch('/logout', {
+			const response = await authenticatedFetch('/logout', {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json'
@@ -410,7 +418,7 @@ const detectElectronEnvironment = () => {
 			order: 'ASC'
 		});
 
-		const response = await fetch(`/api/events?${params}`);
+		const response = await authenticatedFetch(`/api/events?${params}`);
 		const validResponse = await handleApiResponse(response);
 		if (!validResponse) return [];
 		const data = await validResponse.json();
@@ -1151,7 +1159,7 @@ const detectElectronEnvironment = () => {
 			const params = sessionId && sessionId !== 'all'
 				? `?sessionId=${encodeURIComponent(sessionId)}`
 				: '';
-			const response = await fetch(`/api/event-types${params}`);
+			const response = await authenticatedFetch(`/api/event-types${params}`);
 			const validResponse = await handleApiResponse(response);
 			if (!validResponse) return;
 			const stats = await validResponse.json();
@@ -1176,7 +1184,7 @@ const detectElectronEnvironment = () => {
 
 	async function loadSessions() {
 		try {
-			const response = await fetch('/api/sessions');
+			const response = await authenticatedFetch('/api/sessions');
 			const validResponse = await handleApiResponse(response);
 			if (!validResponse) return;
 			const sessions = await validResponse.json();
@@ -1695,7 +1703,7 @@ const detectElectronEnvironment = () => {
 
 	async function deleteAllEvents() {
 		try {
-			const response = await fetch('/api/events', {
+			const response = await authenticatedFetch('/api/events', {
 				method: 'DELETE'
 			});
 			const validResponse = await handleApiResponse(response);
@@ -2339,7 +2347,7 @@ const detectElectronEnvironment = () => {
 
 	async function deleteEvent(eventId) {
 		try {
-			const response = await fetch(`/api/events/${eventId}`, {
+			const response = await authenticatedFetch(`/api/events/${eventId}`, {
 				method: 'DELETE'
 			});
 			const validResponse = await handleApiResponse(response);
@@ -2369,7 +2377,7 @@ const detectElectronEnvironment = () => {
 
 	async function deleteSession(sessionId) {
 		try {
-			const response = await fetch(`/api/events?sessionId=${encodeURIComponent(sessionId)}`, {
+			const response = await authenticatedFetch(`/api/events?sessionId=${encodeURIComponent(sessionId)}`, {
 				method: 'DELETE'
 			});
 			const validResponse = await handleApiResponse(response);
@@ -2468,7 +2476,7 @@ const detectElectronEnvironment = () => {
 
 	async function loadDatabaseSize() {
 		try {
-			const response = await fetch('/api/database-size');
+			const response = await authenticatedFetch('/api/database-size');
 			const validResponse = await handleApiResponse(response);
 			if (!validResponse) return;
 			const data = await validResponse.json();

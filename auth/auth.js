@@ -31,14 +31,16 @@ function init(databaseModule) {
  * Initialize session middleware
  */
 function initSessionMiddleware() {
+	const isProduction = process.env.NODE_ENV === 'production';
 	return session({
 		secret: SESSION_SECRET,
 		resave: false,
 		saveUninitialized: false,
 		cookie: {
-			secure: process.env.NODE_ENV === 'production', // Use secure cookies in production (HTTPS)
+			secure: isProduction, // Use secure cookies in production (HTTPS)
 			httpOnly: true,
-			maxAge: 24 * 60 * 60 * 1000 // 24 hours
+			maxAge: 24 * 60 * 60 * 1000, // 24 hours
+			sameSite: isProduction ? 'lax' : 'lax' // Use 'lax' for better compatibility
 		}
 	});
 }

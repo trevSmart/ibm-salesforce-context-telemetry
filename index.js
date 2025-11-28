@@ -213,9 +213,16 @@ app.post('/login', auth.requireGuest, async (req, res) => {
 			req.session.authenticated = true;
 			req.session.username = username;
 
-			// If it's a form submission, redirect to home
+			// If it's a form submission, save session and redirect to home
 			if (req.headers['content-type']?.includes('application/x-www-form-urlencoded')) {
-				return res.redirect('/');
+				req.session.save((err) => {
+					if (err) {
+						console.error('Error saving session:', err);
+						return res.redirect('/login?error=session_error');
+					}
+					return res.redirect('/');
+				});
+				return;
 			}
 
 			return res.json({

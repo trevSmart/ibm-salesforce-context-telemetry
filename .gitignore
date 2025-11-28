@@ -43,3 +43,4 @@ public/css/output.css.map
 # Temporary files
 tmp/
 temp/
+create-user-render.sh

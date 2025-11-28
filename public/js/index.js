@@ -1,7 +1,9 @@
 // Check authentication status on page load
 (async () => {
 	try {
-		const response = await fetch('/api/auth/status');
+		const response = await fetch('/api/auth/status', {
+			credentials: 'include'
+		});
 		const data = await response.json();
 		if (!data.authenticated) {
 			window.location.href = '/login';
@@ -35,7 +37,9 @@ let chart = null;
 
 async function loadChartData() {
 	try {
-		const response = await fetch('/api/daily-stats?days=30');
+		const response = await fetch('/api/daily-stats?days=30', {
+			credentials: 'include'
+		});
 		if (response.status === 401) {
 			window.location.href = '/login';
 			return;

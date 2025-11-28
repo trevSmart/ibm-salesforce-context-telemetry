@@ -782,7 +782,7 @@
     gap: 0;
     border-radius: 8px;
     position: relative;
-    overflow: hidden;
+    overflow: visible;
     flex-shrink: 0;
   }
 
@@ -1628,6 +1628,7 @@
     display: inline-block;
     object-fit: contain;
     flex-shrink: 0;
+    filter: saturate(0.7) hue-rotate(12deg);
   }
 
   html.dark .session-activity-legend-toggle-dot {
