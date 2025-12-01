@@ -1237,7 +1237,7 @@
 
   html.dark .search-input {
     border-color: #52525b3d;
-    background: #27272a;
+    background: #1e1e1e;
     color: #f4f4f5;
   }
 
@@ -1257,6 +1257,7 @@
   }
 
   html.dark .search-input:focus {
+    background: #27272a;
     border-color: #0369a1;
     box-shadow: 0 0 0 3px rgba(3, 105, 161, 0.3);
   }
@@ -1918,7 +1919,7 @@
   }
 
   .main-content-header {
-    padding: 20px 16px;
+    padding: 20px 10px;
     display: flex;
     align-items: center;
     justify-content: space-between;
