@@ -19,6 +19,16 @@
 			}
 		}
 
+		// Hide "Delete all events" option for basic users
+		const deleteAllMenuItem = document.querySelector('.delete-all-menu-item');
+		if (deleteAllMenuItem) {
+			if (data.role === 'advanced') {
+				deleteAllMenuItem.style.display = '';
+			} else {
+				deleteAllMenuItem.style.display = 'none';
+			}
+		}
+
 		// Only load chart data if authenticated
 		loadChartData();
 
@@ -71,6 +81,16 @@ function showUserMenu(e) {
 					usernameElement.innerHTML = '<i class="fa-regular fa-user user-menu-icon"></i>' + escapeHtml(data.username);
 				} else {
 					usernameElement.innerHTML = '<i class="fa-regular fa-user user-menu-icon"></i>Not authenticated';
+				}
+
+				// Hide "Delete all events" option for basic users
+				const deleteAllMenuItem = document.querySelector('.delete-all-menu-item');
+				if (deleteAllMenuItem) {
+					if (data.role === 'advanced') {
+						deleteAllMenuItem.style.display = '';
+					} else {
+						deleteAllMenuItem.style.display = 'none';
+					}
 				}
 			})
 			.catch(() => {
@@ -374,6 +394,15 @@ if (document.readyState === 'loading') {
 	setupUserMenuHover();
 }
 
+// Refresh dashboard function
+function refreshDashboard(event) {
+	if (event) {
+		event.stopPropagation();
+	}
+	// Reload chart data with current days setting
+	loadChartData(currentDays);
+}
+
 // Chart configuration
 let chart = null;
 let currentDays = 7;
@@ -407,7 +436,7 @@ async function loadChartData(days = currentDays) {
 
 		const isDark = document.documentElement.classList.contains('dark');
 		const textColor = isDark ? '#a1a1aa' : '#52525b';
-		const gridColor = isDark ? '#3f3f46' : '#e4e4e7';
+		const gridColor = isDark ? '#3f3f46' : '#f4f4f5';
 
 		// Colors for start sessions without end (match session badge blue)
 		const startSessionsBorderColor = '#2195cf';

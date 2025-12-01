@@ -3,6 +3,9 @@
  * Usage: node scripts/create-user.js <username> <password> [role]
  */
 
+// Load environment variables from .env file
+require('dotenv').config();
+
 const db = require('../storage/database');
 const auth = require('../auth/auth');
 

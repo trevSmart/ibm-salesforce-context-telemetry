@@ -65,6 +65,16 @@ const detectElectronEnvironment = () => {
 					} else {
 						usernameElement.innerHTML = '<i class="fa-regular fa-user user-menu-icon"></i>Not authenticated';
 					}
+
+					// Hide "Delete all events" option for basic users
+					const deleteAllMenuItem = document.querySelector('.delete-all-menu-item');
+					if (deleteAllMenuItem) {
+						if (data.role === 'advanced') {
+							deleteAllMenuItem.style.display = '';
+						} else {
+							deleteAllMenuItem.style.display = 'none';
+						}
+					}
 				})
 				.catch(() => {
 					const usernameElement = document.getElementById('userMenuUsername');
