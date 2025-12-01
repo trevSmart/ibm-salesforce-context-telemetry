@@ -51,6 +51,10 @@
 						<button class="tab-btn" id="usersTab" data-tab="users">
 							<span class="text-xs font-semibold uppercase tracking-wider">Users</span>
 						</button>
+						<button class="tab-btn" id="teamsTab" data-tab="teams">
+							<span class="text-xs font-semibold uppercase tracking-wider">Teams</span>
+						</button>
+						<div class="tab-indicator" id="tabIndicator"></div>
 					</div>
 					<div class="all-sessions-container" id="sessionsContainer">
 						<ul class="session-list list-none">
@@ -67,6 +71,8 @@
 					<ul class="session-list list-none sessions-scrollable" id="sessionList">
 					</ul>
 					<ul class="session-list list-none sessions-scrollable" id="userList" style="display: none;">
+					</ul>
+					<ul class="session-list list-none sessions-scrollable" id="teamList" style="display: none;">
 					</ul>
 				</div>
 			</div>
@@ -134,7 +140,7 @@
 									<i class="fa-solid fa-chevron-left"></i>
 								</button>
 								<div>
-									<p id="sessionActivityTitle" class="label">Activity overview</p>
+									<p id="sessionActivityTitle" class="label">Timeline</p>
 									<p id="sessionActivitySubtitle" class="subtitle">–</p>
 								</div>
 								<button class="date-nav-btn" id="nextDayBtn" onclick="navigateToNextDay()">
@@ -195,6 +201,7 @@
 						</div>
 					</div>
 					<div class="footer-info">
+						<span class="text-xs">Last updated: <span id="lastUpdatedInfo" class="font-semibold">never</span></span>
 						<span class="text-xs">Load time: <span id="durationInfo" class="font-semibold">-</span></span>
 						<span class="text-xs">Version: <span class="font-semibold">v1.0.0</span></span>
 						<span class="text-xs" id="dbSizeInfo" style="display: none;">DB size: <span id="dbSize" class="font-semibold">-</span></span>

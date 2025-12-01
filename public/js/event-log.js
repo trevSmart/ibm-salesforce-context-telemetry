@@ -180,6 +180,64 @@ const detectElectronEnvironment = () => {
 		return response;
 	}
 
+	// Format time ago in natural language
+	function formatTimeAgo(timestamp) {
+		if (!timestamp) {
+			return 'never';
+		}
+		const now = Date.now();
+		const diff = now - timestamp;
+		const seconds = Math.floor(diff / 1000);
+		const minutes = Math.floor(seconds / 60);
+		const hours = Math.floor(minutes / 60);
+		const days = Math.floor(hours / 24);
+
+		if (seconds < 10) {
+			return 'just now';
+		}
+		if (seconds < 60) {
+			return `${seconds} second${seconds !== 1 ? 's' : ''} ago`;
+		}
+		if (minutes < 60) {
+			return `${minutes} minute${minutes !== 1 ? 's' : ''} ago`;
+		}
+		if (hours < 24) {
+			const remainingMinutes = minutes % 60;
+			if (remainingMinutes === 0) {
+				return `${hours} hour${hours !== 1 ? 's' : ''} ago`;
+			}
+			return `${hours}h ${remainingMinutes}min ago`;
+		}
+		if (days === 1) {
+			const remainingHours = hours % 24;
+			if (remainingHours === 0) {
+				return '1 day ago';
+			}
+			return `1 day ${remainingHours}h ago`;
+		}
+		return `${days} days ago`;
+	}
+
+	// Update the "Last updated" text
+	function updateLastUpdatedText() {
+		const lastUpdatedEl = document.getElementById('lastUpdatedInfo');
+		if (lastUpdatedEl && lastFetchTime) {
+			lastUpdatedEl.textContent = formatTimeAgo(lastFetchTime);
+		} else if (lastUpdatedEl) {
+			lastUpdatedEl.textContent = 'never';
+		}
+	}
+
+	// Start interval to update "Last updated" text every minute
+	function startLastUpdatedInterval() {
+		if (lastUpdatedIntervalId) {
+			clearInterval(lastUpdatedIntervalId);
+		}
+		lastUpdatedIntervalId = setInterval(() => {
+			updateLastUpdatedText();
+		}, 60000); // Update every minute
+	}
+
 	let currentOffset = 0;
 	let limit = 50;
 	let totalEvents = 0;
@@ -198,6 +256,8 @@ const detectElectronEnvironment = () => {
 	let notificationModeEnabled = false;
 	let notificationRefreshIntervalId = null;
 	let lastKnownEventTimestamp = null;
+	let lastFetchTime = null; // Track when events were last fetched
+	let lastUpdatedIntervalId = null; // Interval to update "Last updated" text
 	const knownSessionIds = new Set();
 	const sessionDisplayMap = new Map();
 	let sessionActivityChart = null;
@@ -551,7 +611,7 @@ const detectElectronEnvironment = () => {
 		}
 		const title = document.getElementById('sessionActivityTitle');
 		if (title) {
-			title.textContent = 'Activity overview';
+			title.textContent = 'Timeline';
 		}
 		const subtitle = document.getElementById('sessionActivitySubtitle');
 		if (subtitle) {
@@ -835,12 +895,12 @@ const detectElectronEnvironment = () => {
 
 		const totalEvents = events.length;
 		const sessionCount = uniqueSessions.length;
-		const formattedDate = formatHumanDate(referenceDate);
+		const dateLabel = getRelativeDateLabel(referenceDate);
 
 		// Update the title with the date
 		const title = document.getElementById('sessionActivityTitle');
 		if (title) {
-			title.textContent = `Activity for ${formattedDate}`;
+			title.textContent = `Activity during ${dateLabel}`;
 		}
 
 		// Update navigation buttons state
@@ -849,6 +909,7 @@ const detectElectronEnvironment = () => {
 		const subtitle = document.getElementById('sessionActivitySubtitle');
 		if (subtitle) {
 			const eventLabel = totalEvents === 1 ? 'event' : 'events';
+			const formattedDate = formatHumanDate(referenceDate);
 			if (isAllSessionsView) {
 				const sessionLabel = sessionCount === 1 ? 'session' : 'sessions';
 				subtitle.textContent = `${formattedDate} · ${sessionCount} ${sessionLabel} · ${totalEvents} ${eventLabel}`;
@@ -1279,6 +1340,26 @@ const detectElectronEnvironment = () => {
 		return `${day}/${month}/${year}`;
 	}
 
+	function getRelativeDateLabel(dateObj) {
+		if (!(dateObj instanceof Date)) {
+			return '';
+		}
+		const today = new Date();
+		today.setHours(0, 0, 0, 0);
+		const yesterday = new Date(today);
+		yesterday.setDate(yesterday.getDate() - 1);
+		const dateToCheck = new Date(dateObj);
+		dateToCheck.setHours(0, 0, 0, 0);
+
+		if (dateToCheck.getTime() === today.getTime()) {
+			return 'today';
+		} else if (dateToCheck.getTime() === yesterday.getTime()) {
+			return 'yesterday';
+		} else {
+			return formatHumanDate(dateObj);
+		}
+	}
+
 	function padNumber(value) {
 		return String(value).padStart(2, '0');
 	}
@@ -1434,8 +1515,9 @@ const detectElectronEnvironment = () => {
 			return { html: dateHtml, text: dateStr };
 		}
 
-		const userHtml = `<span class="session-user"> • ${escapeHtml(userText)}</span>`;
-		return { html: `${dateHtml}${userHtml}`, text: `${dateStr} • ${userText}` };
+		const separatorHtml = `<span class="session-separator"><i class="fa-solid fa-circle"></i></span>`;
+		const userHtml = `<span class="session-user">${escapeHtml(userText)}</span>`;
+		return { html: `${dateHtml}${separatorHtml}${userHtml}`, text: `${dateStr} • ${userText}` };
 	}
 
 	function escapeHtml(str) {
@@ -1922,21 +2004,44 @@ const detectElectronEnvironment = () => {
 		}
 	}
 
+	function updateTabIndicator() {
+		const indicator = document.getElementById('tabIndicator');
+		if (!indicator) return;
+
+		const activeTabBtn = document.querySelector('.tab-btn.active');
+		if (!activeTabBtn) return;
+
+		const tabsContainer = activeTabBtn.closest('.tabs-container');
+		if (!tabsContainer) return;
+
+		const containerRect = tabsContainer.getBoundingClientRect();
+		const activeTabRect = activeTabBtn.getBoundingClientRect();
+
+		indicator.style.left = `${activeTabRect.left - containerRect.left}px`;
+		indicator.style.width = `${activeTabBtn.offsetWidth}px`;
+	}
+
 	function switchTab(tab) {
 		if (tab === activeTab) return;
 
 		activeTab = tab;
 		const sessionsTab = document.getElementById('sessionsTab');
 		const usersTab = document.getElementById('usersTab');
+		const teamsTab = document.getElementById('teamsTab');
 		const sessionsContainer = document.getElementById('sessionsContainer');
 		const sessionList = document.getElementById('sessionList');
 		const userList = document.getElementById('userList');
+		const teamList = document.getElementById('teamList');
 
 		// Update tab buttons
-		if (sessionsTab && usersTab) {
+		if (sessionsTab && usersTab && teamsTab) {
 			sessionsTab.classList.toggle('active', tab === 'sessions');
 			usersTab.classList.toggle('active', tab === 'users');
+			teamsTab.classList.toggle('active', tab === 'teams');
 		}
+
+		// Update indicator position
+		updateTabIndicator();
 
 		// Show/hide containers
 		if (sessionsContainer) {
@@ -1948,11 +2053,13 @@ const detectElectronEnvironment = () => {
 		if (userList) {
 			userList.style.display = tab === 'users' ? 'block' : 'none';
 		}
+		if (teamList) {
+			teamList.style.display = tab === 'teams' ? 'block' : 'none';
+		}
 	}
 
 	async function loadEvents(options = {}) {
 		const triggeredByNotification = Boolean(options.triggeredByNotification);
-		const skipUiReset = Boolean(options.skipUiReset);
 		const append = Boolean(options.append); // If true, append events instead of replacing
 
 		// Prevent multiple simultaneous loads
@@ -1977,11 +2084,6 @@ const detectElectronEnvironment = () => {
 		// if (loadingMessageEl && !append) {
 		// 	loadingMessageEl.style.display = 'none';
 		// }
-		if (!skipUiReset && !append) {
-			if (logsTableEl) {
-				logsTableEl.style.display = 'none';
-			}
-		}
 
 		if (errorMessageEl) {
 			errorMessageEl.style.display = 'none';
@@ -2036,6 +2138,13 @@ const detectElectronEnvironment = () => {
 			const validResponse = await handleApiResponse(response);
 			if (!validResponse) return;
 			const data = await validResponse.json();
+
+			// Update last fetch time when fetch is successful
+			lastFetchTime = Date.now();
+			updateLastUpdatedText();
+			if (!lastUpdatedIntervalId) {
+				startLastUpdatedInterval();
+			}
 
 			const duration = Math.round(performance.now() - startTime);
 			document.getElementById('durationInfo').textContent = `${duration}ms`;
@@ -2412,10 +2521,19 @@ const detectElectronEnvironment = () => {
 		if (event?.preventDefault) {
 			event.preventDefault();
 		}
+		// Rotate refresh icon
+		const button = event?.target?.closest('.icon-btn') || event?.currentTarget;
+		const refreshIcon = button?.querySelector('.fa-refresh') || (event?.target?.classList?.contains('fa-refresh') ? event.target : null);
+		if (refreshIcon) {
+			refreshIcon.classList.add('rotating');
+			refreshIcon.addEventListener('animationend', () => {
+				refreshIcon.classList.remove('rotating');
+			}, { once: true });
+		}
 		currentOffset = 0;
 		loadEventTypeStats(selectedSession);
 		loadSessions();
-		loadEvents({ skipUiReset: true });
+		loadEvents();
 	}
 
 	let deleteAllConfirmed = false;
@@ -2510,26 +2628,51 @@ const detectElectronEnvironment = () => {
 		}
 
 		notificationModeEnabled = true;
-		updateNotificationButtonState();
+		updateNotificationButtonState(true);
 		scheduleNotificationRefresh();
 	}
 
 	function disableNotificationMode() {
 		notificationModeEnabled = false;
-		updateNotificationButtonState();
+		updateNotificationButtonState(false); // No animation when disabling
 		clearNotificationInterval();
 	}
 
-	function updateNotificationButtonState() {
+	function updateNotificationButtonState(shouldAnimate = false) {
 		const button = document.querySelector('.notification-toggle');
 		if (!button) {
 			return;
 		}
 		button.classList.toggle('active', notificationModeEnabled);
 		button.setAttribute('title', notificationModeEnabled ? 'Disable notifications' : 'Enable notifications');
-		button.innerHTML = notificationModeEnabled
-			? '<i class="fa-solid fa-bell"></i>'
-			: '<i class="fa-regular fa-bell"></i>';
+
+		// Update the icon
+		const bellIconClass = notificationModeEnabled ? 'fa-solid fa-bell' : 'fa-regular fa-bell';
+		button.innerHTML = `<i class="${bellIconClass}"></i>`;
+
+		const bellIcon = button.querySelector('.fa-bell');
+		if (bellIcon) {
+			// Remove tilted class when disabling
+			if (!notificationModeEnabled) {
+				bellIcon.classList.remove('tilted');
+			}
+
+			// Add animation to the bell icon only when activating (shouldAnimate is true and notificationModeEnabled is true)
+			if (shouldAnimate && notificationModeEnabled) {
+				// Use requestAnimationFrame to ensure the icon is rendered before animating
+				requestAnimationFrame(() => {
+					bellIcon.classList.add('animating');
+					bellIcon.addEventListener('animationend', () => {
+						bellIcon.classList.remove('animating');
+						// Apply tilted class after animation ends to maintain the tilted position
+						bellIcon.classList.add('tilted');
+					}, { once: true });
+				});
+			} else if (notificationModeEnabled && !shouldAnimate) {
+				// If already enabled but no animation needed (e.g., on page load), just add tilted class
+				bellIcon.classList.add('tilted');
+			}
+		}
 	}
 
 	function scheduleNotificationRefresh() {
@@ -3553,6 +3696,7 @@ const detectElectronEnvironment = () => {
 	function setupTabs() {
 		const sessionsTab = document.getElementById('sessionsTab');
 		const usersTab = document.getElementById('usersTab');
+		const teamsTab = document.getElementById('teamsTab');
 
 		if (sessionsTab) {
 			sessionsTab.addEventListener('click', () => {
@@ -3565,6 +3709,31 @@ const detectElectronEnvironment = () => {
 				switchTab('users');
 			});
 		}
+
+		if (teamsTab) {
+			teamsTab.addEventListener('click', () => {
+				switchTab('teams');
+			});
+		}
+
+		// Initialize indicator position after a short delay to ensure DOM is ready
+		setTimeout(() => {
+			updateTabIndicator();
+		}, 0);
+
+		// Also initialize on next frame to ensure layout is complete
+		requestAnimationFrame(() => {
+			updateTabIndicator();
+		});
+
+		// Update indicator on window resize
+		let resizeTimeout;
+		window.addEventListener('resize', () => {
+			clearTimeout(resizeTimeout);
+			resizeTimeout = setTimeout(() => {
+				updateTabIndicator();
+			}, 100);
+		});
 	}
 
 	function initializeApp() {

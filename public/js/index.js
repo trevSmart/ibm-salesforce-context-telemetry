@@ -467,6 +467,15 @@ function refreshDashboard(event) {
 	if (event) {
 		event.stopPropagation();
 	}
+	// Rotate refresh icon
+	const button = event?.target?.closest('.icon-btn') || event?.currentTarget;
+	const refreshIcon = button?.querySelector('.fa-refresh') || (event?.target?.classList?.contains('fa-refresh') ? event.target : null);
+	if (refreshIcon) {
+		refreshIcon.classList.add('rotating');
+		refreshIcon.addEventListener('animationend', () => {
+			refreshIcon.classList.remove('rotating');
+		}, { once: true });
+	}
 	// Reload chart data with current days setting
 	loadChartData(currentDays);
 }

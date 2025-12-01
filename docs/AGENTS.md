@@ -102,6 +102,62 @@ The server supports two authentication methods:
 - Track telemetry volume and patterns
 - Set up alerts for server health issues
 
+## User Interface
+
+The telemetry server includes a web-based user interface built with:
+
+- **HTML/CSS/JavaScript** for the frontend
+- **Tailwind CSS** for styling
+- **Font Awesome** for icons
+- **Chart.js** for data visualization
+
+### Pages
+
+The application consists of three main pages:
+
+1. **Login Page** (`/login`)
+   - User authentication interface
+   - Supports username and password login
+
+2. **Dashboard** (`/`)
+   - Overview page showing telemetry statistics
+   - Displays charts with event data over time
+   - Time range selector (7, 15, 30, or 90 days)
+   - Accessible to all authenticated users
+   - Includes the preferences menu (accessible via wrench icon)
+
+3. **Event Logs** (`/event-log`)
+   - Main interface for viewing detailed telemetry events
+   - Two-column layout:
+     - **Left column**: Sidebar with tabs to switch between:
+       - **Sessions tab**: List of all sessions with session ID, date, and user information
+       - **Users tab**: List of all users with user information and date
+     - **Right column**: Main content area with:
+       - **Activity chart**: Visual representation of session activity over time
+       - **Events table**: Detailed table showing all telemetry events with filtering capabilities
+   - Advanced filtering options for event types and users
+   - Accessible to users with "advanced" role
+   - Includes the preferences menu (accessible via wrench icon)
+
+### Preferences Menu
+
+The **preferences menu** (also referred to as the user menu) is a dropdown menu accessible from both the Dashboard and Event Logs pages. It is triggered by clicking the wrench icon in the top navigation bar. The menu provides the following options:
+
+- **User information**: Displays the currently logged-in username
+- **Theme toggle**: Switch between light and dark themes
+- **Clear local data**: Clear all local browser data (theme preferences, filters, etc.)
+- **Delete all events**: Delete all telemetry events from the database (requires advanced role)
+- **Logout**: Sign out of the current session
+
+The menu uses Font Awesome icons for visual representation and is styled consistently across both pages.
+
+### Frontend Architecture
+
+- CSS is compiled from `input.css` using Tailwind CSS
+- JavaScript modules handle authentication, data fetching, and UI interactions
+- Responsive design with dark mode support
+- Session and user data displayed with formatted dates and user names
+
 ## Integration with IBM Salesforce Context
 
 The IBM Salesforce Context MCP server can be configured to send telemetry to this server by:
