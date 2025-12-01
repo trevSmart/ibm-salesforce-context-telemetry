@@ -388,10 +388,78 @@ if (document.readyState === 'loading') {
 	document.addEventListener('DOMContentLoaded', () => {
 		initTheme();
 		setupUserMenuHover();
+		setupIconButtonsGroupHover();
 	});
 } else {
 	initTheme();
 	setupUserMenuHover();
+	setupIconButtonsGroupHover();
+}
+
+// Handle smooth hover animation for icon buttons group
+function setupIconButtonsGroupHover() {
+	const iconButtonsGroup = document.querySelector('.icon-buttons-group');
+	if (!iconButtonsGroup) return;
+
+	let isInsideGroup = false;
+	let currentHoveredButton = null;
+	let hasEnteredFromOutside = false;
+
+	iconButtonsGroup.addEventListener('mouseenter', (e) => {
+		isInsideGroup = true;
+		hasEnteredFromOutside = true;
+		iconButtonsGroup.classList.add('no-transition');
+	});
+
+	iconButtonsGroup.addEventListener('mouseleave', () => {
+		isInsideGroup = false;
+		currentHoveredButton = null;
+		hasEnteredFromOutside = false;
+		iconButtonsGroup.classList.add('no-transition');
+		iconButtonsGroup.removeAttribute('data-hover-index');
+		requestAnimationFrame(() => {
+			iconButtonsGroup.classList.remove('no-transition');
+		});
+	});
+
+	const buttons = iconButtonsGroup.querySelectorAll('.icon-btn');
+	buttons.forEach((button, index) => {
+		button.addEventListener('mouseenter', (e) => {
+			const wasFromOutside = currentHoveredButton === null || hasEnteredFromOutside;
+
+			if (currentHoveredButton !== null && currentHoveredButton !== index && !wasFromOutside) {
+				// Moving from one button to another - enable transition
+				iconButtonsGroup.classList.remove('no-transition');
+				iconButtonsGroup.setAttribute('data-hover-index', index);
+			} else {
+				// Entering from outside or first hover - no transition
+				iconButtonsGroup.classList.add('no-transition');
+
+				// Set the hover index attribute which triggers CSS
+				iconButtonsGroup.setAttribute('data-hover-index', index);
+
+				// Force a reflow to ensure the position is set before removing no-transition
+				void iconButtonsGroup.offsetHeight;
+
+				// Remove no-transition after a short delay to allow smooth transitions between buttons
+				setTimeout(() => {
+					if (isInsideGroup && currentHoveredButton === index) {
+						iconButtonsGroup.classList.remove('no-transition');
+					}
+				}, 20);
+
+				hasEnteredFromOutside = false;
+			}
+			currentHoveredButton = index;
+		});
+
+		button.addEventListener('mouseleave', () => {
+			if (currentHoveredButton === index && !isInsideGroup) {
+				iconButtonsGroup.removeAttribute('data-hover-index');
+				currentHoveredButton = null;
+			}
+		});
+	});
 }
 
 // Refresh dashboard function

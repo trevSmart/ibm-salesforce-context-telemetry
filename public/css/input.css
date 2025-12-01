@@ -1106,6 +1106,7 @@
     left: 0;
     opacity: 1;
     border-radius: 0;
+    background: var(--hover-bg);
   }
 
   .icon-buttons-group[data-hover-index="1"]::after {
@@ -1123,18 +1124,21 @@
     left: 76px;
     opacity: 1;
     border-radius: 0;
+    background: var(--hover-bg);
   }
 
   .icon-buttons-group[data-hover-index="3"]::after {
     left: 114px;
     opacity: 1;
     border-radius: 0;
+    background: var(--hover-bg);
   }
 
   .icon-buttons-group[data-hover-index="4"]::after {
     left: 152px;
     opacity: 1;
     border-radius: 0;
+    background: var(--hover-bg);
   }
 
   .icon-buttons-group .icon-btn {
