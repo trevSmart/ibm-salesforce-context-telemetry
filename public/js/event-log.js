@@ -257,6 +257,7 @@ const detectElectronEnvironment = () => {
 	let notificationRefreshIntervalId = null;
 	let lastKnownEventTimestamp = null;
 	let lastFetchTime = null; // Track when events were last fetched
+	let isInitialChartLoad = true; // Track if this is the initial chart load
 	let lastUpdatedIntervalId = null; // Interval to update "Last updated" text
 	const knownSessionIds = new Set();
 	const sessionDisplayMap = new Map();
@@ -798,12 +799,22 @@ const detectElectronEnvironment = () => {
 				const allEvents = await fetchAllSessionsActivityEvents();
 				if (allEvents.length === 0) {
 					hideSessionActivityCard();
+					// If this is the initial load and there are no events, show the page anyway
+					if (isInitialChartLoad) {
+						isInitialChartLoad = false;
+						document.body.style.visibility = 'visible';
+					}
 					return;
 				}
 				renderSessionActivityChart(allEvents, { sessionId: 'all' });
 			} catch (error) {
 				handleInitializationError('all sessions activity chart', error);
 				hideSessionActivityCard();
+				// If this is the initial load and there's an error, show the page anyway
+				if (isInitialChartLoad) {
+					isInitialChartLoad = false;
+					document.body.style.visibility = 'visible';
+				}
 			}
 			return;
 		}
@@ -817,27 +828,62 @@ const detectElectronEnvironment = () => {
 			});
 			const response = await fetch(`/api/events?${params}`);
 			const validResponse = await handleApiResponse(response);
-			if (!validResponse) return;
+			if (!validResponse) {
+				// If this is the initial load and response is invalid, show the page anyway
+				if (isInitialChartLoad) {
+					isInitialChartLoad = false;
+					document.body.style.visibility = 'visible';
+				}
+				return;
+			}
 			const data = await validResponse.json();
 			if (!data.events || data.events.length === 0) {
 				hideSessionActivityCard();
+				// If this is the initial load and there are no events, show the page anyway
+				if (isInitialChartLoad) {
+					isInitialChartLoad = false;
+					const mainContainer = document.querySelector('.main-container');
+					if (mainContainer) {
+						mainContainer.style.visibility = 'visible';
+						mainContainer.style.opacity = '1';
+					}
+				}
 				return;
 			}
 			renderSessionActivityChart(data.events, { sessionId: targetSession });
 		} catch (error) {
 			console.error('Error loading session activity chart:', error);
 			hideSessionActivityCard();
+			// If this is the initial load and there's an error, show the page anyway
+			if (isInitialChartLoad) {
+				isInitialChartLoad = false;
+				document.body.style.visibility = 'visible';
+			}
 		}
 	}
 
 	function renderSessionActivityChart(events, options = {}) {
 		if (!Array.isArray(events) || events.length === 0) {
 			hideSessionActivityCard();
+			// If this is the initial load and there are no events, show the page anyway
+			if (isInitialChartLoad) {
+				isInitialChartLoad = false;
+				document.body.style.visibility = 'visible';
+			}
 			return;
 		}
 
 		const chartInstance = initSessionActivityChart();
 		if (!chartInstance) {
+			// If this is the initial load and chart can't be initialized, show the page anyway
+			if (isInitialChartLoad) {
+				isInitialChartLoad = false;
+				const mainContainer = document.querySelector('.main-container');
+				if (mainContainer) {
+					mainContainer.style.visibility = 'visible';
+					mainContainer.style.opacity = '1';
+				}
+			}
 			return;
 		}
 
@@ -1036,6 +1082,43 @@ const detectElectronEnvironment = () => {
 		}, !enableTransition); // notMerge: false when transition is enabled, true otherwise
 
 		chartInstance.resize();
+
+		// Listen for chart rendering completion
+		const onChartFinished = () => {
+			// Remove the listener after it fires once
+			chartInstance.off('finished', onChartFinished);
+
+			// Show the chart once rendering is complete
+			const chartEl = document.getElementById('sessionActivityChart');
+			if (chartEl) {
+				chartEl.style.visibility = 'visible';
+			}
+
+			// Call the callback if provided
+			if (options.onRenderComplete && typeof options.onRenderComplete === 'function') {
+				options.onRenderComplete();
+			}
+
+			// Dispatch a custom event for external listeners
+			const event = new CustomEvent('chartRenderComplete', {
+				detail: {
+					sessionId: targetSession,
+					eventCount: totalEvents,
+					timestamp: Date.now(),
+					isInitialLoad: isInitialChartLoad
+				}
+			});
+			window.dispatchEvent(event);
+
+			// Mark that initial load is complete
+			if (isInitialChartLoad) {
+				isInitialChartLoad = false;
+			}
+		};
+
+		// Register the listener for the 'finished' event
+		chartInstance.on('finished', onChartFinished);
+
 		// Filter legend to only show series with data during the displayed day
 		let legendEntries = null;
 		if (isAllSessionsView) {
@@ -3750,6 +3833,27 @@ const detectElectronEnvironment = () => {
 		runSafeAsyncInitStep('events table', () => loadEvents());
 		runSafeAsyncInitStep('database size', () => loadDatabaseSize());
 		runSafeAsyncInitStep('users list', () => loadUsersList());
+
+		// Listen for chart rendering completion
+		window.addEventListener('chartRenderComplete', (event) => {
+			const { isInitialLoad, sessionId, eventCount, timestamp } = event.detail;
+			if (isInitialLoad) {
+				console.log('Initial chart render completed:', {
+					sessionId,
+					eventCount,
+					renderTime: timestamp
+				});
+				// Show the page once initial chart render is complete
+				const mainContainer = document.querySelector('.main-container');
+				if (mainContainer) {
+					mainContainer.style.visibility = 'visible';
+					// Use requestAnimationFrame to ensure the visibility change is applied before opacity transition
+					requestAnimationFrame(() => {
+						mainContainer.style.opacity = '1';
+					});
+				}
+			}
+		});
 	}
 
 	initializeApp();

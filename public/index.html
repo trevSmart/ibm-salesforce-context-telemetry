@@ -21,20 +21,25 @@
 			if (theme === 'dark') {
 				document.documentElement.classList.add('dark');
 			}
-			// Make body visible after theme is applied
-			function makeBodyVisible() {
-				document.body.style.visibility = 'visible';
-			}
-			if (document.readyState === 'loading') {
-				document.addEventListener('DOMContentLoaded', makeBodyVisible);
-			} else {
-				// DOM already loaded, make visible immediately
-				makeBodyVisible();
-			}
+			// Don't make container visible here - wait for chart to render
+			// The container will be made visible when chart animation completes
+			// Fallback: if chart doesn't load within 5 seconds, show page anyway
+			setTimeout(() => {
+				const container = document.querySelector('.container');
+				if (container) {
+					const computedStyle = window.getComputedStyle(container);
+					if (computedStyle.visibility === 'hidden' || computedStyle.opacity === '0') {
+						container.style.visibility = 'visible';
+						requestAnimationFrame(() => {
+							container.style.opacity = '1';
+						});
+					}
+				}
+			}, 5000);
 		})();
 	</script>
 </head>
-<body class="index-page" style="visibility: hidden;">
+<body class="index-page">
 	<div class="container">
 		<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
 			<h1 class="log-viewer-title" style="margin: 0;">Dashboard</h1>

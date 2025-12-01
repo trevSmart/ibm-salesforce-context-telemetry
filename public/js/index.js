@@ -483,6 +483,7 @@ function refreshDashboard(event) {
 // Chart configuration
 let chart = null;
 let currentDays = 7;
+let isInitialChartLoad = true; // Track if this is the initial chart load
 
 async function loadChartData(days = currentDays) {
 	try {
@@ -501,6 +502,20 @@ async function loadChartData(days = currentDays) {
 
 		if (!Array.isArray(data)) {
 			throw new Error('Invalid stats response');
+		}
+
+		// If no data, show the page anyway
+		if (data.length === 0 && isInitialChartLoad) {
+			isInitialChartLoad = false;
+			const container = document.querySelector('.container');
+			if (container) {
+				container.style.visibility = 'visible';
+				container.style.opacity = '1';
+			}
+			const chartCanvas = document.getElementById('eventsChart');
+			if (chartCanvas) {
+				chartCanvas.style.visibility = 'visible';
+			}
 		}
 
 		const labels = data.map(item => {
@@ -620,6 +635,29 @@ async function loadChartData(days = currentDays) {
 			options: {
 				responsive: true,
 				maintainAspectRatio: false,
+				animation: {
+					duration: 750,
+					onComplete: () => {
+						// Show the chart once rendering is complete
+						const chartCanvas = document.getElementById('eventsChart');
+						if (chartCanvas) {
+							chartCanvas.style.visibility = 'visible';
+						}
+
+						// Show the container if this is the initial load
+						if (isInitialChartLoad) {
+							isInitialChartLoad = false;
+							const container = document.querySelector('.container');
+							if (container) {
+								container.style.visibility = 'visible';
+								// Use requestAnimationFrame to ensure the visibility change is applied before opacity transition
+								requestAnimationFrame(() => {
+									container.style.opacity = '1';
+								});
+							}
+						}
+					}
+				},
 				elements: {
 					point: {
 						radius: 1.5,
@@ -689,6 +727,15 @@ async function loadChartData(days = currentDays) {
 		});
 	} catch (error) {
 		console.error('Error loading chart data:', error);
+		// If this is the initial load and there's an error, show the page anyway
+		if (isInitialChartLoad) {
+			isInitialChartLoad = false;
+			const container = document.querySelector('.container');
+			if (container) {
+				container.style.visibility = 'visible';
+				container.style.opacity = '1';
+			}
+		}
 	}
 }
 

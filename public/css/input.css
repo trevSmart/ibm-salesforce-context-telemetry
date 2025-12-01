@@ -149,6 +149,9 @@
     max-width: none;
     backdrop-filter: blur(10px);
     height: calc(100vh - 50px);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.1s ease-in-out;
   }
 
   html[data-runtime="electron"] body.event-log-page {
@@ -353,6 +356,9 @@
     padding: 60px 40px;
     border-radius: 16px;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.1s ease-in-out;
   }
 
   html.dark .container {
@@ -362,7 +368,7 @@
   .dashboard-header {
     display: flex;
     justify-content: center;
-    margin-bottom: 20px;
+    margin-bottom: 36px;
   }
 
   .chart-container {
@@ -374,6 +380,7 @@
   #eventsChart {
     width: 100% !important;
     height: 300px !important;
+    visibility: hidden;
   }
 
   .chart-header {
@@ -1970,6 +1977,10 @@
   }
 
   .session-activity-card.hidden {
+    visibility: hidden;
+  }
+
+  #sessionActivityChart {
     visibility: hidden;
   }
 

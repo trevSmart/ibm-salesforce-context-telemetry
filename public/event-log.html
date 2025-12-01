@@ -20,16 +20,21 @@
 			if (theme === 'dark') {
 				document.documentElement.classList.add('dark');
 			}
-			// Make body visible after theme is applied
-			function makeBodyVisible() {
-				document.body.style.visibility = 'visible';
-			}
-			if (document.readyState === 'loading') {
-				document.addEventListener('DOMContentLoaded', makeBodyVisible);
-			} else {
-				// DOM already loaded, make visible immediately
-				makeBodyVisible();
-			}
+			// Don't make body visible here - wait for chart to render
+			// The body will be made visible when chartRenderComplete event fires
+			// Fallback: if chart doesn't load within 5 seconds, show page anyway
+			setTimeout(() => {
+				const mainContainer = document.querySelector('.main-container');
+				if (mainContainer) {
+					const computedStyle = window.getComputedStyle(mainContainer);
+					if (computedStyle.visibility === 'hidden' || computedStyle.opacity === '0') {
+						mainContainer.style.visibility = 'visible';
+						requestAnimationFrame(() => {
+							mainContainer.style.opacity = '1';
+						});
+					}
+				}
+			}, 5000);
 		})();
 	</script>
 </head>
