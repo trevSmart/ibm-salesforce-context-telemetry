@@ -36,7 +36,7 @@
     --brand-700: #0369a1;
     --brand-800: #075985;
     --brand-900: #0c4a6e;
-    --sidebar-width: 310px;
+    --sidebar-width: 340px;
 
     /* Level colors - matching Laravel Log Viewer */
     --level-success: #10b981;
@@ -563,18 +563,20 @@
   .user-filter-dropdown-btn {
     display: inline-flex;
     align-items: center;
-    gap: 2px;
-    padding: 4px 10px;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 4px 12px;
     border: 1px solid var(--border-color);
     border-radius: 6px;
-    font-size: 0.64375rem;
+    font-size: 13px;
     line-height: 1rem;
-    font-weight: 800;
+    font-weight: 300;
     cursor: pointer;
     transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
     background-color: var(--bg-secondary);
     color: var(--text-secondary);
     height: 100%;
+    min-width: 140px;
   }
 
   .user-filter-dropdown-btn:hover {
@@ -591,10 +593,15 @@
     background-color: var(--hover-bg);
   }
 
-  .user-filter-dropdown-btn i.fa-chevron-down,
-  .user-filter-dropdown-btn i.fa-chevron-up {
+  .user-filter-dropdown-btn > i {
+    font-size: 12px;
+  }
+
+  .user-filter-dropdown-btn i.fa-sort-down,
+  .user-filter-dropdown-btn i.fa-sort-up {
     font-size: 0.6rem;
     transition: transform 0.2s ease;
+    margin-left: auto;
   }
 
   .user-filter-dropdown {
@@ -1534,7 +1541,7 @@
     margin-bottom: 0;
   }
 
-  .all-sessions-container .server-item:last-child {
+  .all-sessions-container .session-item:last-child {
     margin-bottom: 6px;
   }
 
@@ -1546,7 +1553,7 @@
     padding-right: 6px;
   }
 
-  .sessions-scrollable .server-list {
+  .sessions-scrollable .session-list {
     padding-right: 0;
   }
 
@@ -1595,14 +1602,14 @@
     border-bottom-color: #3f3f46;
   }
 
-  .server-list {
+  .session-list {
     list-style: none;
   }
 
-  .server-item {
+  .session-item {
     padding: 10px 4px 10px 12px;
     margin-bottom: 6px;
-    border-radius: 0;
+    border-radius: 1px;
     cursor: pointer;
     transition: background-color 0.2s ease, border-color 0.2s ease;
     display: flex;
@@ -1616,25 +1623,25 @@
   }
 
   /* Active sessions: green left border instead of green dot */
-  .server-item[data-active="true"] {
+  .session-item[data-active="true"] {
     border-left: 4px solid #10b981 !important;
     padding-left: 8px;
   }
 
-  html.dark .server-item[data-active="true"] {
+  html.dark .session-item[data-active="true"] {
     border-left-color: #10b981 !important;
   }
 
   /* Ensure active border doesn't interfere with hover/active states */
-  .server-item[data-active="true"]:hover {
+  .session-item[data-active="true"]:hover {
     border-left: 4px solid #10b981 !important;
   }
 
-  .server-item[data-active="true"].active {
+  .session-item[data-active="true"].active {
     border-left: 4px solid #10b981 !important;
   }
 
-  .server-item-left {
+  .session-item-left {
     display: flex;
     align-items: center;
     flex: 1;
@@ -1642,7 +1649,7 @@
     overflow: hidden;
   }
 
-  .server-item-right {
+  .session-item-right {
     display: flex;
     align-items: center;
     gap: 2px;
@@ -1650,64 +1657,64 @@
   }
 
   /* Hide count for "All Sessions" button */
-  .server-item[data-session="all"] .server-item-right {
+  .session-item[data-session="all"] .session-item-right {
     display: none;
   }
 
-  .server-item:hover .server-item-actions {
+  .session-item:hover .session-item-actions {
     z-index: 1001;
   }
 
-  html.dark .server-item {
+  html.dark .session-item {
     background: #212125;
   }
 
-  .server-item:hover {
+  .session-item:hover {
     background: #e0f2fe;
     border-color: #0284c7;
   }
 
-  html.dark .server-item:hover {
+  html.dark .session-item:hover {
     background: #212125;
     border-color: #0369a1;
     box-shadow: inset 0 0 0 1px rgba(14, 165, 233, 0.2);
   }
 
-  .server-item.active {
+  .session-item.active {
     background: #7dd3fc;
     border-color: #0284c7;
     border-width: 2px;
     box-shadow: 0 2px 4px rgba(2, 132, 199, 0.2);
   }
 
-  html.dark .server-item.active {
+  html.dark .session-item.active {
     background: rgba(14, 165, 233, 0.35);
     border-color: #0ea5e9;
     border-width: 2px;
     box-shadow: 0 2px 6px rgba(14, 165, 233, 0.3);
   }
 
-  .server-item.active .server-name {
+  .session-item.active .session-name {
     color: #0c4a6e;
     font-weight: 700;
   }
 
-  html.dark .server-item.active .server-name {
+  html.dark .session-item.active .session-name {
     color: #e0f2fe;
     font-weight: 700;
   }
 
-  .server-item.keyboard-selected {
+  .session-item.keyboard-selected {
     background: var(--hover-bg);
     outline: 2px solid var(--brand-500);
     outline-offset: -2px;
   }
 
-  html.dark .server-item.keyboard-selected {
+  html.dark .session-item.keyboard-selected {
     background: var(--hover-bg);
   }
 
-  .server-name {
+  .session-name {
     font-size: 0.8125rem;
     line-height: 1.15rem;
     color: #18181b;
@@ -1720,12 +1727,12 @@
     text-overflow: ellipsis;
   }
 
-  html.dark .server-name {
+  html.dark .session-name {
     color: #e4e4e7;
   }
 
   .session-date {
-    font-weight: 400;
+    font-weight: 300;
     color: inherit;
   }
 
@@ -1739,48 +1746,48 @@
   }
 
   /* For user list items: user name in bold, date not bold */
-  .server-item[data-user] .session-user {
+  .session-item[data-user] .session-user {
     font-weight: 500;
     color: inherit;
   }
 
-  html.dark .server-item[data-user] .session-user {
+  html.dark .session-item[data-user] .session-user {
     color: inherit;
   }
 
-  .server-item[data-user] .session-date {
+  .session-item[data-user] .session-date {
     font-weight: 300;
     color: rgba(24, 24, 27, 0.75);
   }
 
-  html.dark .server-item[data-user] .session-date {
+  html.dark .session-item[data-user] .session-date {
     color: rgba(228, 228, 231, 0.7);
   }
 
-  .server-item.active .server-name {
+  .session-item.active .session-name {
     font-weight: 600;
   }
 
-  .server-item[data-session="all"] .server-name {
+  .session-item[data-session="all"] .session-name {
     font-weight: 300;
     color: rgba(24, 24, 27, 0.75);
   }
 
-  .server-item[data-session="all"].active .server-name {
+  .session-item[data-session="all"].active .session-name {
     font-weight: 700;
     color: #0c4a6e;
   }
 
-  html.dark .server-item[data-session="all"] .server-name {
+  html.dark .session-item[data-session="all"] .session-name {
     color: rgba(228, 228, 231, 0.7);
   }
 
-  html.dark .server-item[data-session="all"].active .server-name {
+  html.dark .session-item[data-session="all"].active .session-name {
     font-weight: 700;
     color: #e0f2fe;
   }
 
-  .server-size {
+  .session-size {
     background: rgba(0, 0, 0, 0.08);
     padding: 1px 5px;
     border-radius: 10px;
@@ -1792,16 +1799,16 @@
     transition: background-color 0.2s ease, transform 0.2s ease;
   }
 
-  html.dark .server-size {
+  html.dark .session-size {
     background: rgba(255, 255, 255, 0.15);
     color: #a1a1aa;
   }
 
-  .server-item:hover .server-size {
+  .session-item:hover .session-size {
     transform: scale(1.05);
   }
 
-  .server-item-actions {
+  .session-item-actions {
     position: relative;
     z-index: 10;
     display: flex;
@@ -1811,7 +1818,7 @@
     flex-shrink: 0;
   }
 
-  .server-item.dropdown-open {
+  .session-item.dropdown-open {
     z-index: 100;
   }
 

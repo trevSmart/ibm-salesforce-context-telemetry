@@ -53,20 +53,20 @@
 						</button>
 					</div>
 					<div class="all-sessions-container" id="sessionsContainer">
-						<ul class="server-list list-none">
-							<li class="server-item active" data-session="all">
-								<div class="server-item-left">
-									<span class="server-name text-sm">All Sessions</span>
+						<ul class="session-list list-none">
+							<li class="session-item active" data-session="all">
+								<div class="session-item-left">
+									<span class="session-name text-sm">All Sessions</span>
 								</div>
-								<div class="server-item-right">
-									<span class="server-size text-xs" id="totalSize">-</span>
+								<div class="session-item-right">
+									<span class="session-size text-xs" id="totalSize">-</span>
 								</div>
 							</li>
 						</ul>
 					</div>
-					<ul class="server-list list-none sessions-scrollable" id="sessionList">
+					<ul class="session-list list-none sessions-scrollable" id="sessionList">
 					</ul>
-					<ul class="server-list list-none sessions-scrollable" id="userList" style="display: none;">
+					<ul class="session-list list-none sessions-scrollable" id="userList" style="display: none;">
 					</ul>
 				</div>
 			</div>
@@ -80,7 +80,7 @@
 							<button class="user-filter-dropdown-btn" id="userFilterDropdownBtn" onclick="toggleUserFilterDropdown(event)">
 								<i class="fa-solid fa-users"></i>
 								<span class="text-sm font-medium">Users</span>
-								<i class="fa-solid fa-chevron-down" id="userFilterChevron"></i>
+								<i class="fa-solid fa-sort-down" id="userFilterChevron"></i>
 							</button>
 							<div class="user-filter-dropdown" id="userFilterDropdown">
 								<div class="user-filter-dropdown-content" id="userFilterDropdownContent">

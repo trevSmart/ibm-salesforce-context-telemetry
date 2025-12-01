@@ -623,7 +623,7 @@ const detectElectronEnvironment = () => {
 		selectedActivityDate = savedState.activityDate ? new Date(savedState.activityDate) : null;
 
 		// Restore the visual state of session buttons
-		document.querySelectorAll('.server-item').forEach(i => i.classList.remove('active'));
+		document.querySelectorAll('.session-item').forEach(i => i.classList.remove('active'));
 		document.querySelectorAll('[data-session="all"]').forEach(i => i.classList.remove('active'));
 
 		if (savedState.sessionId === 'all') {
@@ -633,7 +633,7 @@ const detectElectronEnvironment = () => {
 			});
 		} else {
 			// Restore the specific session as active
-			const sessionItem = document.querySelector(`.server-item[data-session="${savedState.sessionId}"]`);
+			const sessionItem = document.querySelector(`.session-item[data-session="${savedState.sessionId}"]`);
 			if (sessionItem) {
 				sessionItem.classList.add('active');
 			}
@@ -1595,7 +1595,7 @@ const detectElectronEnvironment = () => {
 					discoveredSessionIds.push(session.session_id);
 
 					const li = document.createElement('li');
-					li.className = 'server-item';
+					li.className = 'session-item';
 					li.setAttribute('data-session', session.session_id);
 					if (session.is_active) {
 						li.setAttribute('data-active', 'true');
@@ -1606,12 +1606,12 @@ const detectElectronEnvironment = () => {
 					sessionDisplayMap.set(session.session_id, sessionLabelText);
 
 					li.innerHTML = `
-						<div class="server-item-left">
-							<span class="server-name text-sm">${sessionDisplayHtml}</span>
+						<div class="session-item-left">
+							<span class="session-name text-sm">${sessionDisplayHtml}</span>
 						</div>
-						<div class="server-item-right">
-							<span class="server-size text-xs">${session.count || 0}</span>
-							<div class="server-item-actions">
+						<div class="session-item-right">
+							<span class="session-size text-xs">${session.count || 0}</span>
+							<div class="session-item-actions">
 								<button class="actions-btn" onclick="event.stopPropagation(); toggleSessionActionsDropdown(event, '${session.session_id}')">
 									<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
 										<circle cx="8" cy="3" r="1.5"/>
@@ -1630,7 +1630,7 @@ const detectElectronEnvironment = () => {
 
 					li.addEventListener('click', (e) => {
 						// Don't activate session if clicking on actions button
-						if (e.target.closest('.server-item-actions')) {
+						if (e.target.closest('.session-item-actions')) {
 							return;
 						}
 						// Cancel hover preview when clicking
@@ -1642,7 +1642,7 @@ const detectElectronEnvironment = () => {
 						if (selectedSession === session.session_id && li.classList.contains('active')) {
 							return;
 						}
-						document.querySelectorAll('.server-item').forEach(i => i.classList.remove('active'));
+						document.querySelectorAll('.session-item').forEach(i => i.classList.remove('active'));
 						li.classList.add('active');
 						selectedSession = session.session_id;
 						// Pin activity chart to this session's day (prefer last event, fall back to first)
@@ -1676,7 +1676,7 @@ const detectElectronEnvironment = () => {
 					// Add hover preview functionality
 					li.addEventListener('mouseenter', (e) => {
 						// Don't preview if hovering over actions button
-						if (e.target.closest('.server-item-actions')) {
+						if (e.target.closest('.session-item-actions')) {
 							return;
 						}
 						handleSessionHover(session.session_id, session);
@@ -1684,7 +1684,7 @@ const detectElectronEnvironment = () => {
 
 					li.addEventListener('mouseleave', (e) => {
 						// Don't restore if mouse is moving to actions button
-						if (e.relatedTarget && e.relatedTarget.closest('.server-item-actions')) {
+						if (e.relatedTarget && e.relatedTarget.closest('.session-item-actions')) {
 							return;
 						}
 						// Don't restore if mouse is still within the sessions area (sidebar-content)
@@ -1693,8 +1693,8 @@ const detectElectronEnvironment = () => {
 							e.relatedTarget.closest('.sidebar-content') ||
 							e.relatedTarget.closest('.all-sessions-container') ||
 							e.relatedTarget.closest('#sessionList') ||
-							e.relatedTarget.closest('.server-list') ||
-							e.relatedTarget.closest('.server-item')
+							e.relatedTarget.closest('.session-list') ||
+							e.relatedTarget.closest('.session-item')
 						)) {
 							return;
 						}
@@ -1878,7 +1878,7 @@ const detectElectronEnvironment = () => {
 			// Add each user to the list
 			usersWithStats.forEach(user => {
 				const li = document.createElement('li');
-				li.className = 'server-item';
+				li.className = 'session-item';
 				li.setAttribute('data-user', user.user_id);
 
 				const { html: userDisplayHtml } = formatUserDisplay({
@@ -1889,11 +1889,11 @@ const detectElectronEnvironment = () => {
 				});
 
 				li.innerHTML = `
-					<div class="server-item-left">
-						<span class="server-name text-sm">${userDisplayHtml}</span>
+					<div class="session-item-left">
+						<span class="session-name text-sm">${userDisplayHtml}</span>
 					</div>
-					<div class="server-item-right">
-						<span class="server-size text-xs">${user.count || 0}</span>
+					<div class="session-item-right">
+						<span class="session-size text-xs">${user.count || 0}</span>
 					</div>
 				`;
 
@@ -1906,7 +1906,7 @@ const detectElectronEnvironment = () => {
 					selectedUserIds.clear();
 					selectedUserIds.add(user.user_id);
 					// Update UI to reflect selection
-					document.querySelectorAll('.server-item[data-user]').forEach(i => i.classList.remove('active'));
+					document.querySelectorAll('.session-item[data-user]').forEach(i => i.classList.remove('active'));
 					li.classList.add('active');
 					// Switch to sessions tab and reload
 					switchTab('sessions');
@@ -2726,7 +2726,7 @@ const detectElectronEnvironment = () => {
 			if (selectedSession === 'all' && item.classList.contains('active')) {
 				return;
 			}
-			document.querySelectorAll('.server-item').forEach(i => i.classList.remove('active'));
+			document.querySelectorAll('.session-item').forEach(i => i.classList.remove('active'));
 			item.classList.add('active');
 			selectedSession = 'all';
 			selectedActivityDate = null; // Reset to default when selecting all sessions
@@ -2754,8 +2754,8 @@ const detectElectronEnvironment = () => {
 				e.relatedTarget.closest('.sidebar-content') ||
 				e.relatedTarget.closest('.all-sessions-container') ||
 				e.relatedTarget.closest('#sessionList') ||
-				e.relatedTarget.closest('.server-list') ||
-				e.relatedTarget.closest('.server-item')
+				e.relatedTarget.closest('.session-list') ||
+				e.relatedTarget.closest('.session-item')
 			)) {
 				return;
 			}
@@ -2772,14 +2772,14 @@ const detectElectronEnvironment = () => {
 		document.querySelectorAll('.actions-dropdown').forEach(dropdown => {
 			dropdown.classList.remove('show');
 		});
-		document.querySelectorAll('.server-item').forEach(item => {
+		document.querySelectorAll('.session-item').forEach(item => {
 			item.classList.remove('dropdown-open');
 		});
 	}
 
 	// Close dropdowns when clicking outside
 	document.addEventListener('click', (e) => {
-		if (!e.target.closest('.actions-cell') && !e.target.closest('.server-item-actions')) {
+		if (!e.target.closest('.actions-cell') && !e.target.closest('.session-item-actions')) {
 			closeAllDropdowns();
 		}
 	});
@@ -2818,7 +2818,7 @@ const detectElectronEnvironment = () => {
 
 	// Remove keyboard selection from all elements
 	function clearKeyboardSelection() {
-		document.querySelectorAll('.server-item.keyboard-selected').forEach(item => {
+		document.querySelectorAll('.session-item.keyboard-selected').forEach(item => {
 			item.classList.remove('keyboard-selected');
 		});
 		document.querySelectorAll('.logs-table tbody tr.keyboard-selected').forEach(row => {
@@ -2828,8 +2828,8 @@ const detectElectronEnvironment = () => {
 
 	// Get all session items (including "All Sessions")
 	function getAllSessionItems() {
-		const allSessionsItem = document.querySelector('.server-item[data-session="all"]');
-		const sessionItems = Array.from(document.querySelectorAll('#sessionList .server-item'));
+		const allSessionsItem = document.querySelector('.session-item[data-session="all"]');
+		const sessionItems = Array.from(document.querySelectorAll('#sessionList .session-item'));
 		return allSessionsItem ? [allSessionsItem, ...sessionItems] : sessionItems;
 	}
 
@@ -3040,7 +3040,7 @@ const detectElectronEnvironment = () => {
 		if (!dropdown) return;
 		const isShowing = dropdown.classList.contains('show');
 		const button = e.currentTarget || e.target.closest('.actions-btn') || e.target.closest('button');
-		const serverItem = dropdown.closest('.server-item');
+		const sessionItem = dropdown.closest('.session-item');
 
 		closeAllDropdowns();
 		dropdown.classList.add('dropdown-right');
@@ -3085,8 +3085,8 @@ const detectElectronEnvironment = () => {
 				dropdown.classList.add('show');
 			});
 
-			if (serverItem) {
-				serverItem.classList.add('dropdown-open');
+			if (sessionItem) {
+				sessionItem.classList.add('dropdown-open');
 			}
 		}
 	}
@@ -3220,7 +3220,7 @@ const detectElectronEnvironment = () => {
 			if (selectedSession === sessionId) {
 				selectedSession = 'all';
 				selectedActivityDate = null; // Reset to default when selecting all sessions
-				document.querySelectorAll('.server-item').forEach(i => i.classList.remove('active'));
+				document.querySelectorAll('.session-item').forEach(i => i.classList.remove('active'));
 				const allSessionsItem = document.querySelector('[data-session="all"]');
 				if (allSessionsItem) {
 					allSessionsItem.classList.add('active');
@@ -3517,13 +3517,13 @@ const detectElectronEnvironment = () => {
 
 		const isVisible = dropdown.classList.contains('show');
 		if (isVisible) {
-			dropdown.classList.remove('show');
-			chevron.classList.remove('fa-chevron-up');
-			chevron.classList.add('fa-chevron-down');
-		} else {
-			dropdown.classList.add('show');
-			chevron.classList.remove('fa-chevron-down');
-			chevron.classList.add('fa-chevron-up');
+		dropdown.classList.remove('show');
+		chevron.classList.remove('fa-sort-up');
+		chevron.classList.add('fa-sort-down');
+	} else {
+		dropdown.classList.add('show');
+		chevron.classList.remove('fa-sort-down');
+		chevron.classList.add('fa-sort-up');
 			// Load users if not already loaded
 			const dropdownContent = document.getElementById('userFilterDropdownContent');
 			if (dropdownContent && dropdownContent.children.length === 0) {
@@ -3543,8 +3543,8 @@ const detectElectronEnvironment = () => {
 				dropdown.classList.remove('show');
 				const chevron = document.getElementById('userFilterChevron');
 				if (chevron) {
-					chevron.classList.remove('fa-chevron-up');
-					chevron.classList.add('fa-chevron-down');
+					chevron.classList.remove('fa-sort-up');
+					chevron.classList.add('fa-sort-down');
 				}
 			}
 		}
