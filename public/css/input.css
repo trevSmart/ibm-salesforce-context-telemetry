@@ -437,6 +437,7 @@
     color: var(--text-secondary);
     margin-bottom: 40px;
     line-height: 1.6;
+    cursor: default;
   }
 
   .event-log-link {
@@ -487,8 +488,8 @@
 
 
   .log-viewer-title {
-    font-size: 1.25rem;
-    line-height: 1.75rem;
+    font-size: 2.25rem;
+    line-height: 2.5rem;
     font-weight: 600;
     color: #10b981;
     display: flex;
@@ -508,8 +509,8 @@
 
   .back-link {
     letter-spacing: 0.05em;
-    font-size: 11px;
-    line-height: 0.35rem;
+    font-size: 13px;
+    line-height: 1.2rem;
     color: #52525b;
     text-decoration: none;
     margin-left: 0;
@@ -530,6 +531,13 @@
   }
 
 
+  .filters-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
   .level-filters {
     display: flex;
     gap: 10px;
@@ -538,7 +546,9 @@
 
   .user-filter-dropdown-container {
     position: relative;
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    height: 100%;
   }
 
   .user-filter-dropdown-btn {
@@ -555,7 +565,7 @@
     transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
     background-color: var(--bg-secondary);
     color: var(--text-secondary);
-    min-height: 28px;
+    height: 100%;
   }
 
   .user-filter-dropdown-btn:hover {
@@ -736,14 +746,14 @@
     align-items: center;
     gap: 6px;
     padding: 4px 10px;
-    border: 1px solid;
+    border: none;
     border-radius: 6px;
     font-size: 0.64375rem;
     line-height: 1rem;
     font-weight: 800;
     text-transform: uppercase;
     cursor: pointer;
-    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+    transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
     position: relative;
     height: 100%;
     min-height: 28px;
@@ -926,61 +936,61 @@
 
   .level-filter-btn.level-debug.active {
     background: #8e81ea;
-    border-color: #8e81ea;
+    border: none;
     color: white;
   }
 
   .level-filter-btn.level-info.active {
     background: #2195cf;
-    border-color: #2195cf;
+    border: none;
     color: white;
   }
 
   html.dark .level-filter-btn.level-debug.active {
     background: #8e81ea;
-    border-color: #8e81ea;
+    border: none;
     color: white;
   }
 
   html.dark .level-filter-btn.level-info.active {
     background: #2195cf;
-    border-color: #2195cf;
+    border: none;
     color: white;
   }
 
   .level-filter-btn.level-warning.active {
     background: #DB9139;
-    border-color: #DB9139;
+    border: none;
     color: white;
   }
 
   html.dark .level-filter-btn.level-warning.active {
     background: #DB9139;
-    border-color: #DB9139;
+    border: none;
     color: white;
   }
 
   .level-filter-btn.level-error.active {
     background: #ea6280;
-    border-color: #ea6280;
+    border: none;
     color: white;
   }
 
   html.dark .level-filter-btn.level-error.active {
     background: #ea6280;
-    border-color: #ea6280;
+    border: none;
     color: white;
   }
 
   .level-filter-btn.level-success.active {
     background: #a7f3d0;
-    border-color: #6ee7b7;
+    border: none;
     color: #065f46;
   }
 
   html.dark .level-filter-btn.level-success.active {
     background: #a7f3d0;
-    border-color: #6ee7b7;
+    border: none;
     color: #065f46;
   }
 
@@ -1229,6 +1239,27 @@
     background: var(--hover-bg);
   }
 
+  .user-menu-item.delete-all-menu-item {
+    color: #dc2626;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .user-menu-item.delete-all-menu-item:hover {
+    background: #fee2e2;
+    color: #dc2626;
+  }
+
+  html.dark .user-menu-item.delete-all-menu-item {
+    color: #fb7185;
+  }
+
+  html.dark .user-menu-item.delete-all-menu-item:hover {
+    background: rgba(220, 38, 38, 0.2);
+    color: #fb7185;
+  }
+
   .table-controls {
     padding: 0 16px;
     display: flex;
@@ -1244,20 +1275,21 @@
   }
 
   .search-input {
+    will-change: width;
     padding: 6px 12px;
-    border: 1px solid #d4d4d8;
+    border: 1px solid #d4d4d82e;
     border-radius: 6px;
     font-size: 0.875rem;
     line-height: 1.25rem;
-    width: 250px;
+    width: 160px;
     min-width: 100px;
     background: white;
     color: #18181b;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease, width 0.2s ease;
   }
 
   html.dark .search-input {
-    border-color: #52525b;
+    border-color: #52525b3d;
     background: #27272a;
     color: #f4f4f5;
   }
@@ -1274,6 +1306,7 @@
     outline: none;
     border-color: #0ea5e9;
     box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
+    width: 270px;
   }
 
   html.dark .search-input:focus {
@@ -1344,6 +1377,51 @@
     line-height: 1.75rem;
     transition: background-color 0.2s ease, color 0.2s ease, transform 0.15s ease;
     color: var(--text-secondary);
+  }
+
+  .icon-btn.sort-btn {
+    width: auto;
+    height: auto;
+    padding: 4px;
+    min-width: auto;
+    min-height: auto;
+    margin-left: auto;
+  }
+
+  .icon-btn.sort-btn img {
+    width: 16px;
+    height: 16px;
+    display: block;
+    opacity: 0.6;
+    transition: opacity 0.2s ease, filter 0.2s ease;
+  }
+
+  .icon-btn.sort-btn:hover img {
+    opacity: 1;
+  }
+
+  html.dark .icon-btn.sort-btn img {
+    opacity: 1;
+    filter: invert(1) brightness(0.63);
+  }
+
+  html.dark .icon-btn.sort-btn:hover img {
+    opacity: 1;
+    filter: invert(1) brightness(0.8);
+  }
+
+  /* Make the sort button icon match the header text color in dark mode */
+  html.dark .logs-table th.time-column .icon-btn.sort-btn img {
+    filter: invert(1) brightness(0.63);
+  }
+
+  html.dark .logs-table th.time-column .icon-btn.sort-btn:hover img {
+    filter: invert(1) brightness(0.8);
+  }
+
+  .logs-table th.time-column .icon-btn.sort-btn {
+    margin-left: 0;
+    flex-shrink: 0;
   }
 
   .icon-btn:hover {
@@ -1548,6 +1626,38 @@
     letter-spacing: 0.07em;
   }
 
+  .tabs-container {
+    display: flex;
+    gap: 0;
+    margin-bottom: 12px;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .tab-btn {
+    flex: 1;
+    background: transparent;
+    border: none;
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    color: var(--text-muted);
+  }
+
+  .tab-btn:hover {
+    color: var(--text-color);
+  }
+
+  .tab-btn.active {
+    color: var(--text-color);
+    border-bottom-color: var(--primary-color);
+  }
+
+  html.dark .tabs-container {
+    border-bottom-color: #3f3f46;
+  }
+
   .server-list {
     list-style: none;
   }
@@ -1566,6 +1676,25 @@
     position: relative;
     min-height: 48px;
     min-width: 0;
+  }
+
+  /* Active sessions: green left border instead of green dot */
+  .server-item[data-active="true"] {
+    border-left: 4px solid #10b981 !important;
+    padding-left: 8px;
+  }
+
+  html.dark .server-item[data-active="true"] {
+    border-left-color: #10b981 !important;
+  }
+
+  /* Ensure active border doesn't interfere with hover/active states */
+  .server-item[data-active="true"]:hover {
+    border-left: 4px solid #10b981 !important;
+  }
+
+  .server-item[data-active="true"].active {
+    border-left: 4px solid #10b981 !important;
   }
 
   .server-item-left {
@@ -1593,7 +1722,7 @@
   }
 
   html.dark .server-item {
-    background: #27272c;
+    background: #212125;
   }
 
   .server-item:hover {
@@ -1602,7 +1731,7 @@
   }
 
   html.dark .server-item:hover {
-    background: #27272c;
+    background: #212125;
     border-color: #0369a1;
     box-shadow: inset 0 0 0 1px rgba(14, 165, 233, 0.2);
   }
@@ -1672,6 +1801,25 @@
     color: rgba(228, 228, 231, 0.7);
   }
 
+  /* For user list items: user name in bold, date not bold */
+  .server-item[data-user] .session-user {
+    font-weight: 500;
+    color: inherit;
+  }
+
+  html.dark .server-item[data-user] .session-user {
+    color: inherit;
+  }
+
+  .server-item[data-user] .session-date {
+    font-weight: 300;
+    color: rgba(24, 24, 27, 0.75);
+  }
+
+  html.dark .server-item[data-user] .session-date {
+    color: rgba(228, 228, 231, 0.7);
+  }
+
   .server-item.active .server-name {
     font-weight: 600;
   }
@@ -1730,19 +1878,6 @@
     z-index: 100;
   }
 
-  .session-active-indicator {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background-color: #10b981;
-    margin-right: 8px;
-    flex-shrink: 0;
-  }
-
-  html.dark .session-active-indicator {
-    background-color: #10b981;
-  }
-
   .main-content {
     flex: 1;
     display: flex;
@@ -1765,6 +1900,10 @@
     gap: 16px;
     border-bottom: none;
     flex-shrink: 0;
+  }
+
+  .main-content-header .filters-group {
+    flex: 0 0 auto;
   }
 
   .main-content-body {
@@ -1810,8 +1949,6 @@
 
   .session-activity-header {
     display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
     gap: 16px;
     margin-bottom: 10px;
   }
@@ -1821,7 +1958,7 @@
     letter-spacing: 0.07em;
     text-transform: uppercase;
     color: var(--text-muted);
-    margin-bottom: 4px;
+    margin-bottom: 0;
     font-weight: 300;
   }
 
@@ -1891,7 +2028,7 @@
     box-shadow: 0 8px 18px rgba(0, 0, 0, 0.06);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
-    transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, transform 0.12s ease;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
   }
 
   html.dark .session-activity-legend-toggle {
@@ -1925,8 +2062,6 @@
   .session-activity-legend-wrapper.is-open .session-activity-legend-toggle {
     background: var(--bg-primary);
     border-color: var(--brand-500);
-    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.09);
-    transform: translateY(-1px);
   }
 
   .session-activity-legend {
@@ -1936,7 +2071,7 @@
     z-index: 30;
     min-width: 280px;
     max-width: 450px;
-    max-height: 260px;
+    max-height: 460px;
     padding: 10px 12px;
     border-radius: 10px;
     background: var(--bg-primary);
@@ -2082,7 +2217,7 @@
 
   html.dark .logs-table th {
     color: var(--text-secondary);
-    border-bottom: 2px solid #19181a;
+    border-bottom: 4px solid #19181a;
   }
 
   .logs-table td {
@@ -2095,7 +2230,7 @@
   }
 
   html.dark .logs-table td {
-    border-bottom: 2px solid #19181a;
+    border-bottom: 4px solid #19181a;
   }
 
   .logs-table tbody tr {
@@ -2105,7 +2240,7 @@
   }
 
   html.dark .logs-table tbody tr {
-    background: #1f1f23;
+    background: #212125;
   }
 
   .logs-table tbody tr:hover {
@@ -2170,6 +2305,7 @@
     gap: 6px;
     padding: 4px 10px;
     border-radius: 6px;
+    border: none;
     transition: opacity 0.2s ease, transform 0.15s ease;
     font-size: 0.64375rem;
     line-height: 1rem;
@@ -2179,6 +2315,10 @@
     min-width: fit-content;
     white-space: nowrap;
     box-sizing: border-box;
+  }
+
+  .level-badge:hover {
+    border: none;
   }
 
   .level-badge.debug {
@@ -2211,6 +2351,16 @@
     line-height: 1rem;
   }
 
+  .logs-table th.time-column {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .logs-table th.time-column span {
+    flex-shrink: 0;
+  }
+
   .logs-table th.time-column,
   .log-time {
     font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -2239,6 +2389,21 @@
   }
 
   html.dark .log-client {
+    color: #e4e4e7;
+  }
+
+  .log-tool-name {
+    font-size: 0.75rem;
+    line-height: 1.4;
+    min-width: 0;
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #18181b;
+  }
+
+  html.dark .log-tool-name {
     color: #e4e4e7;
   }
 
@@ -2364,7 +2529,7 @@
   }
 
   html.dark .status-indicator.ok {
-    background-color: #007a52;
+    background-color: #00af76;
   }
 
   .status-indicator.ko {
@@ -2562,6 +2727,9 @@
   }
 
   @media (max-width: 1200px) {
+    .filters-group {
+      width: 100%;
+    }
     .level-filters {
       width: 100%;
     }
@@ -2617,7 +2785,7 @@
     min-width: 150px;
     z-index: 1000;
     opacity: 0;
-    transform: translateX(-12px) scale(0.95);
+    transform: scale(0.95);
     pointer-events: none;
     overflow: hidden;
     display: block;
@@ -2633,7 +2801,7 @@
 
   .actions-dropdown.show {
     opacity: 1;
-    transform: translateX(0) scale(1);
+    transform: scale(1);
     pointer-events: auto;
     z-index: 10000;
     display: block;
@@ -2641,11 +2809,11 @@
   }
 
   .actions-dropdown.dropdown-right {
-    transform: translateX(12px) scale(0.95);
+    transform: scale(0.95);
   }
 
   .actions-dropdown.dropdown-right.show {
-    transform: translateX(0) scale(1);
+    transform: scale(1);
   }
 
   .actions-dropdown-item {

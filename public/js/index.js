@@ -65,14 +65,14 @@ function showUserMenu(e) {
 			.then(data => {
 				const usernameElement = document.getElementById('userMenuUsername');
 				if (data.authenticated && data.username) {
-					usernameElement.innerHTML = '<i class="fa-regular fa-user user-menu-icon"></i>' + escapeHtml(data.username);
+					usernameElement.innerHTML = '<i class="fa-solid fa-wrench user-menu-icon"></i>' + escapeHtml(data.username);
 				} else {
-					usernameElement.innerHTML = '<i class="fa-regular fa-user user-menu-icon"></i>Not authenticated';
+					usernameElement.innerHTML = '<i class="fa-solid fa-wrench user-menu-icon"></i>Not authenticated';
 				}
 			})
 			.catch(() => {
 				const usernameElement = document.getElementById('userMenuUsername');
-				usernameElement.innerHTML = '<i class="fa-regular fa-user user-menu-icon"></i>Error loading user';
+				usernameElement.innerHTML = '<i class="fa-solid fa-wrench user-menu-icon"></i>Error loading user';
 			});
 	}
 }
@@ -167,13 +167,13 @@ async function loadChartData(days = currentDays) {
 		const textColor = isDark ? '#a1a1aa' : '#52525b';
 		const gridColor = isDark ? '#3f3f46' : '#e4e4e7';
 
-		// Colors for start sessions without end
-		const startSessionsBorderColor = isDark ? '#10b981' : '#059669';
-		const startSessionsBackgroundColor = isDark ? 'rgba(16, 185, 129, 0.1)' : 'rgba(5, 150, 105, 0.1)';
+		// Colors for start sessions without end (match session badge blue)
+		const startSessionsBorderColor = '#2195cf';
+		const startSessionsBackgroundColor = 'rgba(33, 149, 207, 0.15)';
 
-		// Colors for tool events
-		const toolEventsBorderColor = isDark ? '#0ea5e9' : '#0284c7';
-		const toolEventsBackgroundColor = isDark ? 'rgba(14, 165, 233, 0.1)' : 'rgba(2, 132, 199, 0.1)';
+		// Colors for tool events (match tool badge purple)
+		const toolEventsBorderColor = '#8e81ea';
+		const toolEventsBackgroundColor = 'rgba(142, 129, 234, 0.15)';
 		const totalEventsBorderColor = toolEventsBorderColor;
 		const totalEventsBackgroundColor = toolEventsBackgroundColor;
 

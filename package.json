@@ -6,6 +6,8 @@
   "scripts": {
     "prestart": "lsof -ti :3100 | xargs kill -9 2>/dev/null || true",
     "start": "npm run build:css && node index.js",
+    "dev": "concurrently \"npm run dev:css\" \"nodemon index.js\"",
+    "dev:css": "tailwindcss -i ./public/css/input.css -o ./public/css/output.css --watch",
     "build": "npm run build:css:prod",
     "build:css": "tailwindcss -i ./public/css/input.css -o ./public/css/output.css",
     "build:css:prod": "tailwindcss -i ./public/css/input.css -o ./public/css/output.css --minify",
@@ -39,8 +41,12 @@
   },
   "devDependencies": {
     "autoprefixer": "^10.4.20",
+    "concurrently": "^9.1.0",
+    "connect-livereload": "^0.6.1",
     "electron": "^35.7.5",
     "electron-builder": "^25.1.8",
+    "livereload": "^0.9.3",
+    "nodemon": "^3.1.0",
     "postcss": "^8.4.47",
     "tailwindcss": "^3.4.13"
   },

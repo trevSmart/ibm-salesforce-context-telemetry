@@ -174,32 +174,60 @@ function getNormalizedSessionId(eventData = {}) {
  * @param {object} eventData
  * @returns {string|null}
  */
+function sanitizeUserIdentifier(value) {
+	if (value === undefined || value === null) {
+		return null;
+	}
+	if (typeof value === 'string') {
+		const trimmed = value.trim();
+		return trimmed === '' ? null : trimmed;
+	}
+	const stringValue = String(value);
+	return stringValue === '' ? null : stringValue;
+}
+
+function extractUserDisplayName(data = {}) {
+	if (!data || typeof data !== 'object') {
+		return null;
+	}
+
+	const displayName =
+		(typeof data.userName === 'string' && data.userName.trim() !== '' && data.userName.trim()) ||
+		(typeof data.user_name === 'string' && data.user_name.trim() !== '' && data.user_name.trim()) ||
+		(typeof data.user === 'object' && typeof data.user?.name === 'string' && data.user.name.trim() !== '' && data.user.name.trim()) ||
+		null;
+
+	return displayName;
+}
+
 function getNormalizedUserId(eventData = {}) {
 	// Try direct fields first
-	const directId = eventData.userId || eventData.user_id;
+	const directId = sanitizeUserIdentifier(eventData.userId || eventData.user_id);
 	if (directId) {
 		return directId;
 	}
 
 	// Try nested in data object (for userId/user_id)
-	const dataUserId =
+	const dataUserId = sanitizeUserIdentifier(
 		eventData.data?.userId ||
 		eventData.data?.user_id ||
 		eventData.data?.user?.id ||
 		eventData.data?.user?.userId ||
 		eventData.data?.user?.user_id ||
-		null;
+		null
+	);
 	if (dataUserId) {
 		return dataUserId;
 	}
 
 	// Try user name from data field (same logic as in getSessions for display)
 	// This is what appears in the session buttons
-	const userName =
+	const userName = sanitizeUserIdentifier(
 		eventData.data?.userName ||
 		eventData.data?.user_name ||
 		(eventData.data?.user && eventData.data.user.name) ||
-		null;
+		null
+	);
 
 	return userName || null;
 }
@@ -1328,82 +1356,66 @@ async function updateEventData(id, data) {
 
 /**
  * Get unique user IDs from all events
- * Extracts user names from the data field (userName, user_name, user.name) similar to how sessions display them
- * @returns {Array} Array of unique user IDs/names, sorted alphabetically
+ * Returns both the identifier used for filtering and a human readable label
+ * @returns {Array<{id: string, label: string}>} Sorted array of unique users
  */
 async function getUniqueUserIds() {
 	if (!db) {
 		throw new Error('Database not initialized. Call init() first.');
 	}
 
-	let events;
+	let rows;
 	if (dbType === 'sqlite') {
-		const result = db.prepare(`
-			SELECT data
+		rows = db.prepare(`
+			SELECT user_id, data
 			FROM telemetry_events
-			WHERE data IS NOT NULL AND data != ''
+			WHERE user_id IS NOT NULL OR (data IS NOT NULL AND data != '')
 		`).all();
-		events = result.map(row => {
-			try {
-				return typeof row.data === 'string' ? JSON.parse(row.data) : row.data;
-			} catch (e) {
-				return null;
-			}
-		}).filter(data => data !== null);
 	} else {
 		const result = await db.query(`
-			SELECT data
+			SELECT user_id, data
 			FROM telemetry_events
-			WHERE data IS NOT NULL
+			WHERE user_id IS NOT NULL OR data IS NOT NULL
 		`);
-		events = result.rows.map(row => {
-			try {
-				return typeof row.data === 'string' ? JSON.parse(row.data) : row.data;
-			} catch (e) {
-				return null;
-			}
-		}).filter(data => data !== null);
+		rows = result.rows;
 	}
 
-	// Extract user names from data field (same logic as in getSessions)
-	const userIds = new Set();
-	events.forEach(data => {
-		if (!data) return;
+	const userMap = new Map();
 
-		// Try multiple paths: userName (camelCase), user_name (snake_case), or data.user.name (nested)
-		const userName = data.userName || data.user_name || (data.user && data.user.name) || null;
-		if (userName && typeof userName === 'string' && userName.trim() !== '') {
-			userIds.add(userName.trim());
+	rows.forEach(row => {
+		let parsedData = null;
+		if (row.data) {
+			try {
+				parsedData = typeof row.data === 'string' ? JSON.parse(row.data) : row.data;
+			} catch (error) {
+				parsedData = null;
+			}
+		}
+
+		const normalizedId = getNormalizedUserId({
+			userId: row.user_id,
+			data: parsedData
+		});
+
+		if (!normalizedId) {
+			return;
+		}
+
+		const displayName = extractUserDisplayName(parsedData);
+		const label = displayName && displayName.toLowerCase() !== normalizedId.toLowerCase()
+			? `${displayName} (${normalizedId})`
+			: normalizedId;
+
+		const existing = userMap.get(normalizedId);
+		if (!existing || (existing.label === normalizedId && label !== normalizedId)) {
+			userMap.set(normalizedId, {
+				id: normalizedId,
+				label
+			});
 		}
 	});
 
-	// Also include user_id from the database column if it exists
-	if (dbType === 'sqlite') {
-		const dbUserIds = db.prepare(`
-			SELECT DISTINCT user_id
-			FROM telemetry_events
-			WHERE user_id IS NOT NULL AND user_id != ''
-		`).all();
-		dbUserIds.forEach(row => {
-			if (row.user_id && row.user_id.trim() !== '') {
-				userIds.add(row.user_id.trim());
-			}
-		});
-	} else {
-		const dbUserIds = await db.query(`
-			SELECT DISTINCT user_id
-			FROM telemetry_events
-			WHERE user_id IS NOT NULL AND user_id != ''
-		`);
-		dbUserIds.rows.forEach(row => {
-			if (row.user_id && row.user_id.trim() !== '') {
-				userIds.add(row.user_id.trim());
-			}
-		});
-	}
-
-	// Convert to array and sort alphabetically
-	return Array.from(userIds).sort();
+	return Array.from(userMap.values()).sort((a, b) => a.label.localeCompare(b.label));
 }
 
 /**
@@ -1430,7 +1442,7 @@ async function ensureUserRoleColumn() {
 				db.exec("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'advanced'");
 			}
 		} else if (dbType === 'postgresql') {
-			await db.query('ALTER TABLE IF EXISTS users ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT $1', ['advanced']);
+			await db.query("ALTER TABLE IF EXISTS users ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'advanced'");
 		}
 	} catch (error) {
 		console.error('Error ensuring user role column:', error);

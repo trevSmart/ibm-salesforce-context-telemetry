@@ -1,0 +1,20 @@
+{
+  "watch": [
+    "index.js",
+    "storage",
+    "auth",
+    "api"
+  ],
+  "ext": "js,json",
+  "ignore": [
+    "public/**/*",
+    "node_modules/**/*",
+    "*.log",
+    "*.db",
+    "*.sqlite",
+    "*.sqlite3"
+  ],
+  "exec": "node index.js",
+  "delay": 500
+}
+

@@ -9,6 +9,7 @@ const logFormatter = require('./storage/log-formatter');
 const auth = require('./auth/auth');
 const app = express();
 const port = process.env.PORT || 3100;
+const isDevelopment = process.env.NODE_ENV !== 'production';
 
 // Trust reverse proxy headers so secure cookies work behind Render/Cloudflare
 app.set('trust proxy', 1);
@@ -24,6 +25,34 @@ const validate = ajv.compile(schema);
 app.use(cors()); // Allow requests from any origin
 app.use(express.json()); // Parse JSON request bodies
 app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies (for login form)
+
+// Live reload middleware (development only)
+if (isDevelopment) {
+	try {
+		const livereload = require('livereload');
+		const connectLivereload = require('connect-livereload');
+
+		// Create livereload server
+		const liveReloadServer = livereload.createServer({
+			port: 35729,
+			exts: ['html', 'css', 'js', 'json']
+		});
+
+		// Watch public directory for changes
+		liveReloadServer.watch(path.join(__dirname, 'public'));
+
+		// Inject livereload script into HTML responses
+		app.use(connectLivereload({
+			port: 35729
+		}));
+
+		console.log('🔄 Live reload enabled on port 35729');
+	} catch (error) {
+		// Live reload dependencies not installed, continue without it
+		console.log('⚠️  Live reload not available (install dev dependencies: npm install)');
+	}
+}
+
 // Initialize session middleware early (will use MemoryStore initially, then upgrade to PostgreSQL if available)
 app.use(auth.initSessionMiddleware());
 
@@ -32,9 +61,11 @@ app.use(express.static('public', {
 	// Prevent automatic index.html serving so auth guard can handle "/"
 	index: false,
 	// Ensure CSS files are served with correct MIME type
-	setHeaders: (res, path) => {
-		if (path.endsWith('.css')) {
+	setHeaders: (res, filePath) => {
+		if (filePath.endsWith('.css')) {
 			res.type('text/css');
+		} else if (filePath.endsWith('sort-desc') || filePath.endsWith('sort-asc')) {
+			res.type('image/svg+xml');
 		}
 	}
 }));
@@ -831,6 +862,20 @@ async function startServer() {
 	try {
 		await db.init();
 		console.log('Database initialized successfully');
+
+		// Send a START event to local database
+		const startEvent = {
+			event: 'session_start',
+			timestamp: new Date().toISOString(),
+			serverId: 'local-server',
+			version: '1.0.0',
+			data: {
+				message: 'Server started',
+				environment: process.env.NODE_ENV || 'development'
+			}
+		};
+		await db.storeEvent(startEvent, new Date().toISOString());
+		console.log('START event sent to local database');
 
 		// Initialize authentication with database
 		auth.init(db);

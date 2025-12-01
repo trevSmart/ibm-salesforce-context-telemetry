@@ -44,8 +44,15 @@
 					<div class="log-viewer-title text-xl font-semibold">Event log</div>
 				</div>
 				<div class="sidebar-content">
-					<div class="sidebar-title text-xs font-semibold uppercase tracking-wider">Sessions</div>
-					<div class="all-sessions-container">
+					<div class="tabs-container">
+						<button class="tab-btn active" id="sessionsTab" data-tab="sessions">
+							<span class="text-xs font-semibold uppercase tracking-wider">Sessions</span>
+						</button>
+						<button class="tab-btn" id="usersTab" data-tab="users">
+							<span class="text-xs font-semibold uppercase tracking-wider">Users</span>
+						</button>
+					</div>
+					<div class="all-sessions-container" id="sessionsContainer">
 						<ul class="server-list list-none">
 							<li class="server-item active" data-session="all">
 								<div class="server-item-left">
@@ -59,6 +66,8 @@
 					</div>
 					<ul class="server-list list-none sessions-scrollable" id="sessionList">
 					</ul>
+					<ul class="server-list list-none sessions-scrollable" id="userList" style="display: none;">
+					</ul>
 				</div>
 			</div>
 
@@ -66,51 +75,53 @@
 
 			<div class="main-content">
 				<div class="main-content-header">
-					<div class="level-filters">
-						<button class="level-filter-btn level-info" data-level="session_start">
-							<input type="checkbox" checked id="filter-session_start" class="w-4 h-4 cursor-pointer">
-							<span class="text-sm font-medium">Session</span>
-							<span class="level-count text-xs" id="count-session_start">0</span>
-						</button>
-						<button class="level-filter-btn level-debug" data-level="tool_call">
-							<input type="checkbox" checked id="filter-tool_call" class="w-4 h-4 cursor-pointer">
-							<span class="text-sm font-medium">Tool</span>
-							<span class="level-count text-xs" id="count-tool_call">0</span>
-						</button>
-						<button class="level-filter-btn level-warning" data-level="custom">
-							<input type="checkbox" checked id="filter-custom" class="w-4 h-4 cursor-pointer">
-							<span class="text-sm font-medium">Custom</span>
-							<span class="level-count text-xs" id="count-custom">0</span>
-						</button>
-						<button class="level-filter-btn level-error" data-level="tool_error">
-							<input type="checkbox" checked id="filter-tool_error" class="w-4 h-4 cursor-pointer">
-							<span class="text-sm font-medium">Error</span>
-							<span class="level-count text-xs" id="count-tool_error">0</span>
-						</button>
-					</div>
-					<div class="user-filter-dropdown-container">
-						<button class="user-filter-dropdown-btn" id="userFilterDropdownBtn" onclick="toggleUserFilterDropdown(event)">
-							<i class="fa-solid fa-users"></i>
-							<span class="text-sm font-medium">Users</span>
-							<i class="fa-solid fa-chevron-down" id="userFilterChevron"></i>
-						</button>
-						<div class="user-filter-dropdown" id="userFilterDropdown">
-							<div class="user-filter-dropdown-content" id="userFilterDropdownContent">
-								<!-- User list will be populated by JavaScript -->
+					<div class="filters-group">
+						<div class="user-filter-dropdown-container">
+							<button class="user-filter-dropdown-btn" id="userFilterDropdownBtn" onclick="toggleUserFilterDropdown(event)">
+								<i class="fa-solid fa-users"></i>
+								<span class="text-sm font-medium">Users</span>
+								<i class="fa-solid fa-chevron-down" id="userFilterChevron"></i>
+							</button>
+							<div class="user-filter-dropdown" id="userFilterDropdown">
+								<div class="user-filter-dropdown-content" id="userFilterDropdownContent">
+									<!-- User list will be populated by JavaScript -->
+								</div>
 							</div>
+						</div>
+						<div class="level-filters">
+							<button class="level-filter-btn level-info" data-level="session_start">
+								<input type="checkbox" checked id="filter-session_start" class="w-4 h-4 cursor-pointer">
+								<span class="text-sm font-medium">Session</span>
+								<span class="level-count text-xs" id="count-session_start">0</span>
+							</button>
+							<button class="level-filter-btn level-debug" data-level="tool_call">
+								<input type="checkbox" checked id="filter-tool_call" class="w-4 h-4 cursor-pointer">
+								<span class="text-sm font-medium">Tool</span>
+								<span class="level-count text-xs" id="count-tool_call">0</span>
+							</button>
+							<button class="level-filter-btn level-warning" data-level="custom">
+								<input type="checkbox" checked id="filter-custom" class="w-4 h-4 cursor-pointer">
+								<span class="text-sm font-medium">Custom</span>
+								<span class="level-count text-xs" id="count-custom">0</span>
+							</button>
+							<button class="level-filter-btn level-error" data-level="tool_error">
+								<input type="checkbox" checked id="filter-tool_error" class="w-4 h-4 cursor-pointer">
+								<span class="text-sm font-medium">Error</span>
+								<span class="level-count text-xs" id="count-tool_error">0</span>
+							</button>
 						</div>
 					</div>
 					<div class="search-controls">
 						<input type="text" class="search-input" id="searchInput" placeholder="Search">
 						<div class="icon-buttons-group">
 							<button type="button" class="icon-btn" onclick="refreshLogs(event)"><i class="fa fa-refresh"></i></button>
-							<button class="icon-btn delete-all-btn" onclick="confirmDeleteAll()"><i class="fa-solid fa-broom"></i></button>
 							<button class="icon-btn notification-toggle" onclick="toggleNotificationMode()"><i class="fa-regular fa-bell"></i></button>
 							<button class="icon-btn theme-toggle" onclick="toggleTheme()"><i class="fa-regular fa-moon"></i></button>
 							<div class="user-menu-container" style="position: relative;">
-								<button class="icon-btn user-btn" id="userBtn" onclick="showUserMenu(event)"><i class="fa-regular fa-user"></i></button>
+								<button class="icon-btn user-btn" id="userBtn" onclick="showUserMenu(event)"><i class="fa-solid fa-wrench"></i></button>
 								<div class="user-menu" id="userMenu">
-									<div class="user-menu-item" id="userMenuUsername"><i class="fa-regular fa-user user-menu-icon"></i>Loading...</div>
+									<div class="user-menu-item" id="userMenuUsername"><i class="fa-solid fa-wrench user-menu-icon"></i>Loading...</div>
+									<button class="user-menu-item delete-all-menu-item" onclick="handleDeleteAll()"><i class="fa-solid fa-broom user-menu-icon"></i>Delete all events</button>
 									<button class="user-menu-item" onclick="handleLogout()">Logout</button>
 								</div>
 							</div>
@@ -138,7 +149,6 @@
 									class="session-activity-legend-toggle"
 								>
 									<img src="resources/colors.png" alt="" class="session-activity-legend-toggle-image">
-									<span>Legend</span>
 								</button>
 							<div id="sessionActivityLegend" class="session-activity-legend">
 								<span class="legend-item">
@@ -155,47 +165,35 @@
 						<div id="sessionActivityChart"></div>
 					</div>
 					<div class="horizontal-resizer" id="horizontalResizer" aria-hidden="true"></div>
-					<div class="table-controls" id="tableControls" style="display: none;">
-						<div class="table-controls-right">
-							<select class="control-select" id="sortSelect">
-								<option value="DESC">Newest first</option>
-								<option value="ASC">Oldest first</option>
-							</select>
-							<select class="control-select" id="limitSelect">
-								<option value="25">25 items per page</option>
-								<option value="50" selected>50 items per page</option>
-								<option value="100">100 items per page</option>
-							</select>
-						</div>
-					</div>
 					<div class="logs-table-container" id="logsTableContainer">
-						<div id="loadingMessage" class="loading">Loading events...</div>
+						<!-- <div id="loadingMessage" class="loading">Loading events...</div> -->
 						<div id="errorMessage" class="error-message" style="display: none;"></div>
 						<div id="emptyState" class="empty-state" style="display: none;">
 							<div class="font-semibold mt-2.5">No events found</div>
 						</div>
 						<div id="logsTableScroll" style="flex: 1; overflow-y: auto; min-height: 0;">
 							<table class="logs-table" id="logsTable" style="display: none;">
-								<thead>
-									<tr>
-										<th style="width: 40px;"></th>
-										<th style="width: 40px;"></th>
-										<th class="time-column" style="width: 110px;">Time</th>
-										<th style="width: 130px;">Event</th>
-										<th style="width: 200px;">Company</th>
-										<th>Payload</th>
-										<th style="width: 50px;"></th>
-									</tr>
-								</thead>
+							<thead>
+								<tr>
+									<th style="width: 40px;"></th>
+									<th style="width: 40px;"></th>
+									<th class="time-column" style="width: 110px;">
+										<span>Time</span>
+										<button class="icon-btn sort-btn" id="sortBtn" title="Toggle sort order">
+											<img src="/resources/sort-desc" alt="Sort descending" id="sortIcon" style="width: 16px; height: 16px;">
+										</button>
+									</th>
+									<th style="width: 130px;">Event</th>
+									<th style="width: 200px;">Company</th>
+									<th style="width: 150px;">Tool name</th>
+									<th>Payload</th>
+									<th style="width: 50px;"></th>
+								</tr>
+							</thead>
 								<tbody id="logsBody">
 								</tbody>
 							</table>
 						</div>
-					</div>
-					<div class="pagination" id="pagination" style="display: none;">
-						<button class="pagination-btn" onclick="previousPage()" id="prevBtn">← Previous</button>
-						<span class="pagination-info" id="pageInfo"></span>
-						<button class="pagination-btn" onclick="nextPage()" id="nextBtn">Next →</button>
 					</div>
 					<div class="footer-info">
 						<span class="text-xs">Load time: <span id="durationInfo" class="font-semibold">-</span></span>

@@ -58,14 +58,14 @@ const detectElectronEnvironment = () => {
 				.then(data => {
 					const usernameElement = document.getElementById('userMenuUsername');
 					if (data.authenticated && data.username) {
-						usernameElement.innerHTML = '<i class="fa-regular fa-user user-menu-icon"></i>' + escapeHtml(data.username);
+						usernameElement.innerHTML = '<i class="fa-solid fa-wrench user-menu-icon"></i>' + escapeHtml(data.username);
 					} else {
-						usernameElement.innerHTML = '<i class="fa-regular fa-user user-menu-icon"></i>Not authenticated';
+						usernameElement.innerHTML = '<i class="fa-solid fa-wrench user-menu-icon"></i>Not authenticated';
 					}
 				})
 				.catch(() => {
 					const usernameElement = document.getElementById('userMenuUsername');
-					usernameElement.innerHTML = '<i class="fa-regular fa-user user-menu-icon"></i>Error loading user';
+					usernameElement.innerHTML = '<i class="fa-solid fa-wrench user-menu-icon"></i>Error loading user';
 				});
 		}
 	}
@@ -82,6 +82,16 @@ const detectElectronEnvironment = () => {
 			}
 		}
 	});
+
+	function handleDeleteAll() {
+		// Close menu
+		const userMenu = document.getElementById('userMenu');
+		if (userMenu) {
+			userMenu.classList.remove('show');
+		}
+		// Call delete all confirmation
+		confirmDeleteAll();
+	}
 
 	async function handleLogout() {
 		// Close menu
@@ -121,6 +131,9 @@ const detectElectronEnvironment = () => {
 	let currentOffset = 0;
 	let limit = 50;
 	let totalEvents = 0;
+	let hasMoreEvents = true;
+	let isLoadingMore = false;
+	let allLoadedEvents = []; // Accumulative array of all loaded events
 	let selectedSession = 'all';
 	let selectedActivityDate = null; // null means use current day by default
 	let activeFilters = new Set(['tool_call', 'session_start', 'custom', 'tool_error']);
@@ -137,6 +150,7 @@ const detectElectronEnvironment = () => {
 	const sessionDisplayMap = new Map();
 	let sessionActivityChart = null;
 	let lastSessionActivityEvents = [];
+	let activeTab = 'sessions'; // 'sessions' or 'users'
 	const SESSION_ACTIVITY_FETCH_LIMIT = 1000;
 	// State for hover preview functionality
 	let hoverPreviewState = null;
@@ -726,9 +740,13 @@ const detectElectronEnvironment = () => {
 		// Configure animation for smooth transitions
 		const animationConfig = enableTransition ? {
 			animation: true,
-			animationDuration: 500,
+			animationDuration: 200,
 			animationEasing: 'cubicOut'
-		} : {};
+		} : {
+			animation: true,
+			animationDuration: 200,
+			animationEasing: 'cubicOut'
+		};
 
 		chartInstance.setOption({
 			...animationConfig,
@@ -759,7 +777,14 @@ const detectElectronEnvironment = () => {
 			},
 			tooltip: {
 				trigger: 'axis',
-				axisPointer: { type: 'line' },
+				axisPointer: {
+					type: 'line',
+					lineStyle: {
+						type: 'solid',
+						color: 'rgba(14, 165, 233, 0.6)',
+						width: 1
+					}
+				},
 				formatter: function(params) {
 					if (!Array.isArray(params)) {
 						params = [params];
@@ -1434,15 +1459,16 @@ const detectElectronEnvironment = () => {
 					const li = document.createElement('li');
 					li.className = 'server-item';
 					li.setAttribute('data-session', session.session_id);
+					if (session.is_active) {
+						li.setAttribute('data-active', 'true');
+					}
 
 					// Format session display: date and user
 					const { html: sessionDisplayHtml, text: sessionLabelText } = formatSessionDisplay(session);
 					sessionDisplayMap.set(session.session_id, sessionLabelText);
 
-					const activeIndicator = session.is_active ? '<span class="session-active-indicator"></span>' : '';
 					li.innerHTML = `
 						<div class="server-item-left">
-							${activeIndicator}
 							<span class="server-name text-sm">${sessionDisplayHtml}</span>
 						</div>
 						<div class="server-item-right">
@@ -1457,7 +1483,6 @@ const detectElectronEnvironment = () => {
 								</button>
 								<div class="actions-dropdown" id="session-dropdown-${session.session_id}">
 									<div class="actions-dropdown-item delete" onclick="event.stopPropagation(); confirmDeleteSession('${session.session_id}')">
-										<span>🗑️</span>
 										<span>Delete</span>
 									</div>
 								</div>
@@ -1491,10 +1516,19 @@ const detectElectronEnvironment = () => {
 						// When a session is selected, default to ASC order (oldest first)
 						if (selectedSession !== 'all') {
 							sortOrder = 'ASC';
-							document.getElementById('sortSelect').value = 'ASC';
 						} else {
 							sortOrder = 'DESC';
-							document.getElementById('sortSelect').value = 'DESC';
+						}
+						// Update sort icon
+						const sortIconEl = document.getElementById('sortIcon');
+						if (sortIconEl) {
+							if (sortOrder === 'DESC') {
+								sortIconEl.src = '/resources/sort-desc';
+								sortIconEl.alt = 'Sort descending';
+							} else {
+								sortIconEl.src = '/resources/sort-asc';
+								sortIconEl.alt = 'Sort ascending';
+							}
 						}
 						currentOffset = 0;
 						loadEvents();
@@ -1556,29 +1590,258 @@ const detectElectronEnvironment = () => {
 		}
 	}
 
+	function formatUserDisplay(user) {
+		const fallbackId = user?.user_id || 'Unknown user';
+		const fallbackShort = fallbackId.length > 20 ? `${fallbackId.substring(0, 20)}...` : fallbackId;
+		const fallbackHtml = `<span class="session-date">${escapeHtml(fallbackShort)}</span>`;
+
+		if (!user || !user.last_event) {
+			return { html: fallbackHtml, text: fallbackShort };
+		}
+
+		const parsedDate = new Date(user.last_event);
+		if (Number.isNaN(parsedDate.getTime())) {
+			return { html: fallbackHtml, text: fallbackShort };
+		}
+
+		const day = parsedDate.getDate();
+		const monthNames = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+		const month = monthNames[parsedDate.getMonth()];
+		const hours = parsedDate.getHours();
+		const minutes = String(parsedDate.getMinutes()).padStart(2, '0');
+		const dateStr = `${day} ${month} ${hours}:${minutes}`;
+		const dateHtml = `<span class="session-date">${escapeHtml(dateStr)}</span>`;
+
+		let userText = '';
+		if (user.user_name) {
+			userText = user.user_name;
+		} else if (user.user_id) {
+			userText = user.user_id;
+		}
+
+		if (!userText) {
+			return { html: dateHtml, text: dateStr };
+		}
+
+		const userHtml = `<span class="session-user">${escapeHtml(userText)}</span>`;
+		return { html: `${userHtml} <span class="session-date">${escapeHtml(dateStr)}</span>`, text: `${userText} • ${dateStr}` };
+	}
+
+	async function loadUsersList() {
+		try {
+			const response = await fetch('/api/telemetry-users', {
+				credentials: 'include'
+			});
+			const validResponse = await handleApiResponse(response);
+			if (!validResponse) return;
+			const data = await validResponse.json();
+
+			// Check if response is an error object
+			if (data && data.status === 'error') {
+				console.error('Error loading users:', data.message);
+				return;
+			}
+
+			const userList = document.getElementById('userList');
+			if (!userList) {
+				console.error('userList element not found');
+				return;
+			}
+
+			// Clear the list
+			userList.innerHTML = '';
+
+			// Normalize API response to consistent objects { id, label }
+			const normalizedUsers = (Array.isArray(data) ? data : [])
+				.map(entry => {
+					if (entry && typeof entry === 'object' && typeof entry.id === 'string') {
+						const trimmedId = entry.id.trim();
+						if (!trimmedId) {
+							return null;
+						}
+						const label = typeof entry.label === 'string' && entry.label.trim() !== ''
+							? entry.label.trim()
+							: trimmedId;
+						return { id: trimmedId, label };
+					}
+					if (typeof entry === 'string') {
+						const trimmedValue = entry.trim();
+						return trimmedValue ? { id: trimmedValue, label: trimmedValue } : null;
+					}
+					return null;
+				})
+				.filter(Boolean)
+				.reduce((acc, user) => {
+					if (!acc.seen.has(user.id)) {
+						acc.seen.add(user.id);
+						acc.values.push(user);
+					}
+					return acc;
+				}, { seen: new Set(), values: [] }).values;
+
+			if (normalizedUsers.length === 0) {
+				return;
+			}
+
+			// Get sessions to calculate user statistics
+			const sessionsResponse = await fetch('/api/sessions', {
+				credentials: 'include'
+			});
+			const sessionsValidResponse = await handleApiResponse(sessionsResponse);
+			const sessions = sessionsValidResponse ? await sessionsValidResponse.json() : [];
+
+			// Create a map of user_id -> sessions for quick lookup
+			const userSessionsMap = new Map();
+			sessions.forEach(session => {
+				if (session && session.user_id) {
+					if (!userSessionsMap.has(session.user_id)) {
+						userSessionsMap.set(session.user_id, []);
+					}
+					userSessionsMap.get(session.user_id).push(session);
+				}
+			});
+
+			// Sort users by last activity (most recent first)
+			const usersWithStats = normalizedUsers.map(user => {
+				const userSessions = userSessionsMap.get(user.id) || [];
+				let lastEvent = null;
+				let totalCount = 0;
+				let user_name = null;
+
+				if (userSessions.length > 0) {
+					// Sort sessions by last_event DESC
+					userSessions.sort((a, b) => {
+						const dateA = new Date(a.last_event || 0);
+						const dateB = new Date(b.last_event || 0);
+						return dateB - dateA;
+					});
+					lastEvent = userSessions[0].last_event;
+					totalCount = userSessions.reduce((sum, s) => sum + (s.count || 0), 0);
+					user_name = userSessions[0].user_name;
+				}
+
+				return {
+					user_id: user.id,
+					label: user.label,
+					count: totalCount,
+					last_event: lastEvent,
+					user_name: user_name
+				};
+			}).sort((a, b) => {
+				// Sort by last_event DESC, users without events go to the end
+				if (!a.last_event && !b.last_event) return 0;
+				if (!a.last_event) return 1;
+				if (!b.last_event) return -1;
+				const dateA = new Date(a.last_event);
+				const dateB = new Date(b.last_event);
+				return dateB - dateA;
+			});
+
+			// Add each user to the list
+			usersWithStats.forEach(user => {
+				const li = document.createElement('li');
+				li.className = 'server-item';
+				li.setAttribute('data-user', user.user_id);
+
+				const { html: userDisplayHtml } = formatUserDisplay({
+					user_id: user.user_id,
+					user_name: user.user_name || user.label,
+					last_event: user.last_event,
+					count: user.count
+				});
+
+				li.innerHTML = `
+					<div class="server-item-left">
+						<span class="server-name text-sm">${userDisplayHtml}</span>
+					</div>
+					<div class="server-item-right">
+						<span class="server-size text-xs">${user.count || 0}</span>
+					</div>
+				`;
+
+				li.addEventListener('click', (e) => {
+					// Avoid flickering if clicking on the same user that's already selected
+					if (selectedUserIds.has(user.user_id) && selectedUserIds.size === 1) {
+						return;
+					}
+					// Select only this user
+					selectedUserIds.clear();
+					selectedUserIds.add(user.user_id);
+					// Update UI to reflect selection
+					document.querySelectorAll('.server-item[data-user]').forEach(i => i.classList.remove('active'));
+					li.classList.add('active');
+					// Switch to sessions tab and reload
+					switchTab('sessions');
+					loadSessions();
+					loadEvents();
+					loadEventTypeStats(selectedSession);
+				});
+
+				userList.appendChild(li);
+			});
+		} catch (error) {
+			console.error('Error loading users list:', error);
+		}
+	}
+
+	function switchTab(tab) {
+		if (tab === activeTab) return;
+
+		activeTab = tab;
+		const sessionsTab = document.getElementById('sessionsTab');
+		const usersTab = document.getElementById('usersTab');
+		const sessionsContainer = document.getElementById('sessionsContainer');
+		const sessionList = document.getElementById('sessionList');
+		const userList = document.getElementById('userList');
+
+		// Update tab buttons
+		if (sessionsTab && usersTab) {
+			sessionsTab.classList.toggle('active', tab === 'sessions');
+			usersTab.classList.toggle('active', tab === 'users');
+		}
+
+		// Show/hide containers
+		if (sessionsContainer) {
+			sessionsContainer.style.display = tab === 'sessions' ? 'block' : 'none';
+		}
+		if (sessionList) {
+			sessionList.style.display = tab === 'sessions' ? 'block' : 'none';
+		}
+		if (userList) {
+			userList.style.display = tab === 'users' ? 'block' : 'none';
+		}
+	}
+
 	async function loadEvents(options = {}) {
 		const triggeredByNotification = Boolean(options.triggeredByNotification);
 		const skipUiReset = Boolean(options.skipUiReset);
+		const append = Boolean(options.append); // If true, append events instead of replacing
+
+		// Prevent multiple simultaneous loads
+		if (isLoadingMore && append) {
+			return;
+		}
+
+		if (append) {
+			isLoadingMore = true;
+		} else {
+			currentOffset = 0;
+			hasMoreEvents = true;
+			allLoadedEvents = [];
+		}
+
 		startTime = performance.now();
-		const loadingMessageEl = document.getElementById('loadingMessage');
+		// const loadingMessageEl = document.getElementById('loadingMessage');
 		const logsTableEl = document.getElementById('logsTable');
-		const paginationEl = document.getElementById('pagination');
-		const tableControlsEl = document.getElementById('tableControls');
 		const errorMessageEl = document.getElementById('errorMessage');
 		const emptyStateEl = document.getElementById('emptyState');
 
-		if (loadingMessageEl) {
-			loadingMessageEl.style.display = 'none';
-		}
-		if (!skipUiReset) {
+		// if (loadingMessageEl && !append) {
+		// 	loadingMessageEl.style.display = 'none';
+		// }
+		if (!skipUiReset && !append) {
 			if (logsTableEl) {
 				logsTableEl.style.display = 'none';
-			}
-			if (paginationEl) {
-				paginationEl.style.display = 'none';
-			}
-			if (tableControlsEl) {
-				tableControlsEl.style.display = 'none';
 			}
 		}
 
@@ -1640,26 +1903,30 @@ const detectElectronEnvironment = () => {
 			document.getElementById('durationInfo').textContent = `${duration}ms`;
 
 			if (data.events && data.events.length > 0) {
-				displayEvents(data.events);
-				updatePagination(data);
+				displayEvents(data.events, append);
+				hasMoreEvents = data.hasMore || false;
+				currentOffset += data.events.length;
 				document.getElementById('logsTable').style.display = 'table';
-				document.getElementById('pagination').style.display = 'flex';
-				document.getElementById('tableControls').style.display = 'flex';
 				handleNotificationState(data.events, triggeredByNotification);
-				updateSessionActivityChart({ sessionId: selectedSession });
+				if (!append) {
+					updateSessionActivityChart({ sessionId: selectedSession });
+				}
 			} else {
-				document.getElementById('emptyState').style.display = 'block';
-				document.getElementById('tableControls').style.display = 'none';
-				hideSessionActivityCard();
+				hasMoreEvents = false;
+				if (!append) {
+					document.getElementById('emptyState').style.display = 'block';
+					hideSessionActivityCard();
+				}
 			}
 		} catch (error) {
 			console.error('Error loading events:', error);
 			document.getElementById('errorMessage').textContent = 'Error loading events: ' + error.message;
 			document.getElementById('errorMessage').style.display = 'block';
 		} finally {
-			if (loadingMessageEl) {
-				loadingMessageEl.style.display = 'none';
-			}
+			isLoadingMore = false;
+			// if (loadingMessageEl && !append) {
+			// 	loadingMessageEl.style.display = 'none';
+			// }
 		}
 	}
 
@@ -1707,13 +1974,15 @@ const detectElectronEnvironment = () => {
 		return '';
 	}
 
-	function displayEvents(events) {
+	function displayEvents(events, append = false) {
 		const tbody = document.getElementById('logsBody');
-		tbody.innerHTML = '';
-
-		// Reset keyboard navigation for events when new events are loaded
-		if (keyboardNavigationMode === 'events') {
-			selectedEventIndex = -1;
+		if (!append) {
+			tbody.innerHTML = '';
+			allLoadedEvents = [];
+			// Reset keyboard navigation for events when new events are loaded
+			if (keyboardNavigationMode === 'events') {
+				selectedEventIndex = -1;
+			}
 		}
 
 		events.forEach(event => {
@@ -1734,6 +2003,12 @@ const detectElectronEnvironment = () => {
 			const isError = event.event === 'tool_error' || event.event === 'error' || isToolFailure;
 			const statusClass = isError ? 'ko' : 'ok';
 			const statusLabel = isError ? 'KO' : 'OK';
+
+			// Extract tool name for tool events (tool_call or tool_error)
+			const isToolEvent = event.event === 'tool_call' || event.event === 'tool_error';
+			const toolName = isToolEvent && eventData.toolName
+				? escapeHtml(String(eventData.toolName))
+				: '';
 
 			// Main row
 			const row = document.createElement('tr');
@@ -1757,6 +2032,7 @@ const detectElectronEnvironment = () => {
 					</span>
 				</td>
 				<td class="log-client">${escapeHtml(clientName)}</td>
+				<td class="log-tool-name">${toolName}</td>
 				<td class="log-description">${description}</td>
 				<td class="actions-cell">
 					<button class="actions-btn" onclick="toggleActionsDropdown(event, ${event.id})">
@@ -1768,11 +2044,9 @@ const detectElectronEnvironment = () => {
 					</button>
 					<div class="actions-dropdown" id="dropdown-${event.id}">
 						<div class="actions-dropdown-item" onclick="copyEventPayload(${event.id})">
-							<span>📋</span>
 							<span>Copy payload</span>
 						</div>
 						<div class="actions-dropdown-item delete" onclick="confirmDeleteEvent(${event.id})">
-							<span>🗑️</span>
 							<span>Delete</span>
 						</div>
 					</div>
@@ -1807,7 +2081,7 @@ const detectElectronEnvironment = () => {
 			expandedRow.id = `expanded-${event.id}`;
 
 			const expandedTd = document.createElement('td');
-			expandedTd.colSpan = 6;
+			expandedTd.colSpan = 7;
 			expandedTd.className = 'log-description-expanded';
 
 			const pre = document.createElement('pre');
@@ -1819,6 +2093,13 @@ const detectElectronEnvironment = () => {
 			expandedRow.appendChild(expandedTd);
 			tbody.appendChild(expandedRow);
 		});
+
+		// Add events to accumulative array
+		if (append) {
+			allLoadedEvents.push(...events);
+		} else {
+			allLoadedEvents = [...events];
+		}
 	}
 
 	function getLevelClass(eventType) {
@@ -1926,26 +2207,22 @@ const detectElectronEnvironment = () => {
 		return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
 	}
 
-	function updatePagination(data) {
-		const pageInfo = document.getElementById('pageInfo');
-		const currentPage = Math.floor(data.offset / data.limit) + 1;
-		const totalPages = Math.ceil(data.total / data.limit);
-		pageInfo.textContent = `Page ${currentPage} of ${totalPages} (${data.total} total)`;
-
-		document.getElementById('prevBtn').disabled = currentOffset === 0;
-		document.getElementById('nextBtn').disabled = !data.hasMore;
-	}
-
-	function previousPage() {
-		if (currentOffset >= limit) {
-			currentOffset -= limit;
-			loadEvents();
+	// Infinite scroll handler
+	function handleScroll() {
+		const scrollContainer = document.getElementById('logsTableScroll');
+		if (!scrollContainer || isLoadingMore || !hasMoreEvents) {
+			return;
 		}
-	}
 
-	function nextPage() {
-		currentOffset += limit;
-		loadEvents();
+		// Check if user is near the bottom (within 200px)
+		const scrollTop = scrollContainer.scrollTop;
+		const scrollHeight = scrollContainer.scrollHeight;
+		const clientHeight = scrollContainer.clientHeight;
+		const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+
+		if (distanceFromBottom < 200) {
+			loadEvents({ append: true });
+		}
 	}
 
 	function refreshLogs(event) {
@@ -2192,27 +2469,53 @@ const detectElectronEnvironment = () => {
 	}
 
 	// Sort order change
-	const sortSelectEl = document.getElementById('sortSelect');
-	if (sortSelectEl) {
-		sortSelectEl.addEventListener('change', (e) => {
-			sortOrder = e.target.value;
+	const sortBtnEl = document.getElementById('sortBtn');
+	const sortIconEl = document.getElementById('sortIcon');
+	if (sortBtnEl && sortIconEl) {
+		// Update icon based on current sort order
+		function updateSortIcon() {
+			if (sortOrder === 'DESC') {
+				sortIconEl.src = '/resources/sort-desc';
+				sortIconEl.alt = 'Sort descending';
+				sortBtnEl.title = 'Sort: Newest first (click to change)';
+			} else {
+				sortIconEl.src = '/resources/sort-asc';
+				sortIconEl.alt = 'Sort ascending';
+				sortBtnEl.title = 'Sort: Oldest first (click to change)';
+			}
+		}
+
+		// Initialize icon
+		updateSortIcon();
+
+		sortBtnEl.addEventListener('click', (e) => {
+			// Toggle sort order
+			sortOrder = sortOrder === 'DESC' ? 'ASC' : 'DESC';
 			currentOffset = 0;
+			updateSortIcon();
 			loadEvents();
 		});
 	} else {
-		handleInitializationError('sort select binding', new Error('Sort select not found'));
+		handleInitializationError('sort button binding', new Error('Sort button not found'));
 	}
 
-	// Limit change
-	const limitSelectEl = document.getElementById('limitSelect');
-	if (limitSelectEl) {
-		limitSelectEl.addEventListener('change', (e) => {
-			limit = parseInt(e.target.value);
-			currentOffset = 0;
-			loadEvents();
-		});
+	// Infinite scroll setup
+	const scrollContainer = document.getElementById('logsTableScroll');
+	if (scrollContainer) {
+		// Use throttling to improve performance
+		let scrollTimeout;
+		const throttledHandleScroll = () => {
+			if (scrollTimeout) {
+				return;
+			}
+			scrollTimeout = setTimeout(() => {
+				handleScroll();
+				scrollTimeout = null;
+			}, 100);
+		};
+		scrollContainer.addEventListener('scroll', throttledHandleScroll);
 	} else {
-		handleInitializationError('limit select binding', new Error('Items-per-page select not found'));
+		handleInitializationError('scroll container binding', new Error('Scroll container not found'));
 	}
 
 	// Session selection (for "All Sessions" item)
@@ -2232,7 +2535,12 @@ const detectElectronEnvironment = () => {
 			selectedSession = 'all';
 			selectedActivityDate = null; // Reset to default when selecting all sessions
 			sortOrder = 'DESC';
-			document.getElementById('sortSelect').value = 'DESC';
+			sortOrder = 'DESC';
+			const sortIconEl = document.getElementById('sortIcon');
+			if (sortIconEl) {
+				sortIconEl.src = '/resources/sort-desc';
+				sortIconEl.alt = 'Sort descending';
+			}
 			currentOffset = 0;
 			loadEvents();
 			loadEventTypeStats(selectedSession);
@@ -2708,7 +3016,12 @@ const detectElectronEnvironment = () => {
 					allSessionsItem.classList.add('active');
 				}
 				sortOrder = 'DESC';
-				document.getElementById('sortSelect').value = 'DESC';
+				sortOrder = 'DESC';
+			const sortIconEl = document.getElementById('sortIcon');
+			if (sortIconEl) {
+				sortIconEl.src = '/resources/sort-desc';
+				sortIconEl.alt = 'Sort descending';
+			}
 			}
 
 			// Refresh the view
@@ -2841,26 +3154,71 @@ const detectElectronEnvironment = () => {
 				return;
 			}
 
-			// Ensure data is an array
-			const userIds = Array.isArray(data) ? data : [];
-
 			const dropdownContent = document.getElementById('userFilterDropdownContent');
 			if (!dropdownContent) return;
 
 			dropdownContent.innerHTML = '';
 
-			if (userIds.length === 0) {
+			// Normalize API response to consistent objects { id, label }
+			const normalizedUsers = (Array.isArray(data) ? data : [])
+				.map(entry => {
+					if (entry && typeof entry === 'object' && typeof entry.id === 'string') {
+						const trimmedId = entry.id.trim();
+						if (!trimmedId) {
+							return null;
+						}
+						const label = typeof entry.label === 'string' && entry.label.trim() !== ''
+							? entry.label.trim()
+							: trimmedId;
+						return { id: trimmedId, label };
+					}
+					if (typeof entry === 'string') {
+						const trimmedValue = entry.trim();
+						return trimmedValue ? { id: trimmedValue, label: trimmedValue } : null;
+					}
+					return null;
+				})
+				.filter(Boolean)
+				.reduce((acc, user) => {
+					if (!acc.seen.has(user.id)) {
+						acc.seen.add(user.id);
+						acc.values.push(user);
+					}
+					return acc;
+				}, { seen: new Set(), values: [] }).values;
+
+			if (normalizedUsers.length === 0) {
+				allUserIds = new Set();
+				selectedUserIds.clear();
 				dropdownContent.innerHTML = '<div class="user-filter-empty">No users found</div>';
 				return;
 			}
 
+			const allIdsArray = normalizedUsers.map(user => user.id);
+
 			// Update allUserIds and select all users by default if this is the first load
-			allUserIds = new Set(userIds);
-			const isFirstLoad = selectedUserIds.size === 0;
+			const previousSelection = new Set(selectedUserIds);
+			allUserIds = new Set(allIdsArray);
+			const isFirstLoad = previousSelection.size === 0;
 			if (isFirstLoad) {
 				// Select all users by default
-				selectedUserIds = new Set(userIds);
+				selectedUserIds = new Set(allIdsArray);
+			} else {
+				// Keep only IDs that still exist
+				selectedUserIds = new Set(
+					Array.from(previousSelection).filter(userId => allUserIds.has(userId))
+				);
 			}
+
+			const syncCheckboxStates = () => {
+				dropdownContent.querySelectorAll('.user-filter-checkbox').forEach(checkbox => {
+					const checkboxUserId = checkbox.getAttribute('data-user-id');
+					if (!checkboxUserId) {
+						return;
+					}
+					checkbox.checked = selectedUserIds.has(checkboxUserId);
+				});
+			};
 
 			// Add "Select all" button at the top
 			const selectAllButton = document.createElement('button');
@@ -2869,14 +3227,8 @@ const detectElectronEnvironment = () => {
 			selectAllButton.addEventListener('click', (e) => {
 				e.stopPropagation();
 				// Select all users
-				selectedUserIds = new Set(userIds);
-				// Update all individual checkboxes
-				userIds.forEach(userId => {
-					const checkbox = document.getElementById(`user-filter-${userId}`);
-					if (checkbox) {
-						checkbox.checked = true;
-					}
-				});
+				selectedUserIds = new Set(allIdsArray);
+				syncCheckboxStates();
 				currentOffset = 0;
 				loadEvents();
 				loadEventTypeStats(selectedSession);
@@ -2893,13 +3245,7 @@ const detectElectronEnvironment = () => {
 				e.stopPropagation();
 				// Deselect all users
 				selectedUserIds.clear();
-				// Update all individual checkboxes
-				userIds.forEach(userId => {
-					const checkbox = document.getElementById(`user-filter-${userId}`);
-					if (checkbox) {
-						checkbox.checked = false;
-					}
-				});
+				syncCheckboxStates();
 				currentOffset = 0;
 				loadEvents();
 				loadEventTypeStats(selectedSession);
@@ -2913,12 +3259,16 @@ const detectElectronEnvironment = () => {
 			separator.className = 'user-filter-separator';
 			dropdownContent.appendChild(separator);
 
-			userIds.forEach(userId => {
+			let userCheckboxCounter = 0;
+			normalizedUsers.forEach(user => {
+				const userId = user.id;
+				const userLabel = user.label || userId;
+				const checkboxId = `user-filter-${userCheckboxCounter++}`;
 				const userItem = document.createElement('div');
 				userItem.className = 'user-filter-item';
 				userItem.innerHTML = `
-					<input type="checkbox" id="user-filter-${userId}" class="user-filter-checkbox" data-user-id="${userId}">
-					<label for="user-filter-${userId}" class="user-filter-label">${escapeHtml(userId)}</label>
+					<input type="checkbox" id="${checkboxId}" class="user-filter-checkbox" data-user-id="${escapeHtml(userId)}">
+					<label for="${checkboxId}" class="user-filter-label">${escapeHtml(userLabel)}</label>
 				`;
 
 				const checkbox = userItem.querySelector('input[type="checkbox"]');
@@ -2926,10 +3276,14 @@ const detectElectronEnvironment = () => {
 				checkbox.checked = selectedUserIds.has(userId);
 
 				checkbox.addEventListener('change', (e) => {
+					const targetUserId = e.target.getAttribute('data-user-id');
+					if (!targetUserId) {
+						return;
+					}
 					if (e.target.checked) {
-						selectedUserIds.add(userId);
+						selectedUserIds.add(targetUserId);
 					} else {
-						selectedUserIds.delete(userId);
+						selectedUserIds.delete(targetUserId);
 					}
 					// No need to update button states - they're always available
 					currentOffset = 0;
@@ -2986,6 +3340,23 @@ const detectElectronEnvironment = () => {
 		}
 	});
 
+	function setupTabs() {
+		const sessionsTab = document.getElementById('sessionsTab');
+		const usersTab = document.getElementById('usersTab');
+
+		if (sessionsTab) {
+			sessionsTab.addEventListener('click', () => {
+				switchTab('sessions');
+			});
+		}
+
+		if (usersTab) {
+			usersTab.addEventListener('click', () => {
+				switchTab('users');
+			});
+		}
+	}
+
 	function initializeApp() {
 		runSafeInitStep('notification button state', updateNotificationButtonState);
 		runSafeInitStep('theme initialization', initTheme);
@@ -2993,11 +3364,12 @@ const detectElectronEnvironment = () => {
 		runSafeInitStep('sidebar resizer setup', setupSidebarResizer);
 		runSafeInitStep('horizontal resizer setup', setupHorizontalResizer);
 		runSafeInitStep('session legend hover', setupSessionLegendHover);
+		runSafeInitStep('tabs setup', setupTabs);
 		runSafeAsyncInitStep('event type stats', () => loadEventTypeStats(selectedSession));
 		runSafeAsyncInitStep('sessions list', () => loadSessions());
 		runSafeAsyncInitStep('events table', () => loadEvents());
 		runSafeAsyncInitStep('database size', () => loadDatabaseSize());
-		runSafeAsyncInitStep('users list', () => loadUsers());
+		runSafeAsyncInitStep('users list', () => loadUsersList());
 	}
 
 	initializeApp();
