@@ -1113,11 +1113,11 @@
     left: 38px;
     opacity: 1;
     border-radius: 0;
-    background: #fee2e2;
+    background: var(--hover-bg);
   }
 
   html.dark .icon-buttons-group[data-hover-index="1"]::after {
-    background: rgba(220, 38, 38, 0.2);
+    background: var(--hover-bg);
   }
 
   .icon-buttons-group[data-hover-index="2"]::after {

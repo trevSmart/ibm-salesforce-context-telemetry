@@ -56,13 +56,13 @@
 
 		.login-card {
 			background: white;
-			border-radius: 16px;
+			border-radius: 11px;
 			box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
 			width: 100%;
 			max-width: 900px;
 			display: flex;
 			overflow: hidden;
-			min-height: 500px;
+			min-height: 442px;
 		}
 
 		html.dark .login-card {
@@ -72,12 +72,13 @@
 
 		.login-visual-panel {
 			flex: 0 0 35%;
-			background: linear-gradient(135deg, #e0b3ff 0%, #b380ff 50%, #8c5fd6 100%);
+			background: url('/resources/telemetry.png') center center / cover no-repeat;
 			position: relative;
 			display: flex;
 			align-items: center;
 			justify-content: center;
 			padding: 40px;
+			opacity: 0.8;
 		}
 
 		.login-visual-panel::before {
@@ -93,20 +94,6 @@
 			opacity: 0.6;
 		}
 
-		.login-visual-panel::after {
-			content: '';
-			position: absolute;
-			bottom: 0;
-			left: 0;
-			right: 0;
-			height: 40%;
-			background:
-				linear-gradient(to top, rgba(0, 0, 0, 0.1) 0%, transparent 100%),
-				url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 400"><path d="M0,400 L0,300 Q300,250 600,280 T1200,260 L1200,400 Z" fill="rgba(140,95,214,0.3)"/><path d="M0,400 L0,320 Q300,280 600,300 T1200,280 L1200,400 Z" fill="rgba(179,128,255,0.2)"/></svg>');
-			background-size: cover;
-			background-position: bottom;
-			opacity: 0.4;
-		}
 
 		.login-logo {
 			position: absolute;
@@ -146,7 +133,7 @@
 		}
 
 		.login-header h1 {
-			font-size: 28px;
+			font-size: 25px;
 			font-weight: 600;
 			color: #3f3f46;
 			margin-bottom: 8px;
@@ -202,7 +189,7 @@
 			align-items: center;
 			gap: 12px;
 			font-size: 15px;
-			font-weight: 500;
+			font-weight: 200;
 			color: #18181b;
 			margin-bottom: 8px;
 		}
@@ -214,6 +201,7 @@
 		.form-group label i {
 			color: #a1a1aa;
 			font-size: 16px;
+			font-weight: 600;
 			width: 18px;
 		}
 
@@ -225,7 +213,7 @@
 			width: 100%;
 			padding: 10px 12px;
 			font-size: 15px;
-			border-radius: 2px;
+			border-radius: 4px;
 			border: 1px solid #e4e4e7;
 			background: #f4f4ff;
 			transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;

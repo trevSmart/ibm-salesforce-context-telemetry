@@ -628,7 +628,9 @@ async function loadChartData(days = currentDays) {
 								size: 12
 							},
 							usePointStyle: true,
-							padding: 15
+							padding: 15,
+							boxWidth: 12,
+							boxPadding: 8
 						}
 					},
 					tooltip: {
