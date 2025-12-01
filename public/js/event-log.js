@@ -383,31 +383,21 @@ const detectElectronEnvironment = () => {
 	// Level filter management
 	function setupLevelFilters() {
 		document.querySelectorAll('.level-filter-btn').forEach(btn => {
-			const checkbox = btn.querySelector('input[type="checkbox"]');
 			const level = btn.dataset.level;
 
 			function updateButtonState() {
-				if (checkbox.checked) {
-					btn.classList.add('active');
+				if (btn.classList.contains('active')) {
 					activeFilters.add(level);
 				} else {
-					btn.classList.remove('active');
 					activeFilters.delete(level);
 				}
 			}
 
-			checkbox.addEventListener('change', () => {
+			btn.addEventListener('click', (e) => {
+				btn.classList.toggle('active');
 				updateButtonState();
 				currentOffset = 0;
 				loadEvents();
-			});
-
-			btn.addEventListener('click', (e) => {
-				if (e.target !== checkbox) {
-					checkbox.checked = !checkbox.checked;
-					updateButtonState();
-					checkbox.dispatchEvent(new Event('change'));
-				}
 			});
 
 			// Initialize button state

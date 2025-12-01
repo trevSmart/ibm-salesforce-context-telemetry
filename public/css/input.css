@@ -265,9 +265,6 @@
     border-color: #059669;
   }
 
-  .level-filter-btn input[type="checkbox"] {
-    accent-color: rgba(255, 255, 255, 0.8);
-  }
 
   .level-filter-btn .level-count {
     background: rgba(0, 0, 0, 0.1);
@@ -771,92 +768,6 @@
     min-height: 28px;
   }
 
-  .level-filter-btn input[type="checkbox"] {
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    width: 14px;
-    height: 14px;
-    margin-right: 2px;
-    cursor: pointer;
-    background-color: white;
-    border: 1px solid #d1d5db;
-    border-radius: 3px;
-    position: relative;
-    flex-shrink: 0;
-  }
-
-  .level-filter-btn input[type="checkbox"]:checked {
-    background-color: white;
-    border-color: #6b7280;
-  }
-
-  .level-filter-btn input[type="checkbox"]:checked::after {
-    content: '';
-    position: absolute;
-    left: 4px;
-    top: 1px;
-    width: 5px;
-    height: 9px;
-    border: solid #6b7280;
-    border-width: 0 2px 2px 0;
-    transform: rotate(45deg);
-  }
-
-  /* Checkbox mark color matches button background when active */
-  .level-filter-btn.level-debug.active input[type="checkbox"]:checked::after {
-    border-color: #8e81ea;
-  }
-
-  .level-filter-btn.level-info.active input[type="checkbox"]:checked::after {
-    border-color: #2195cf;
-  }
-
-  .level-filter-btn.level-warning.active input[type="checkbox"]:checked::after {
-    border-color: #DB9139;
-  }
-
-  .level-filter-btn.level-error.active input[type="checkbox"]:checked::after {
-    border-color: #ea6280;
-  }
-
-  .level-filter-btn.level-success.active input[type="checkbox"]:checked::after {
-    border-color: #065f46;
-  }
-
-  html.dark .level-filter-btn input[type="checkbox"] {
-    background-color: white;
-    border-color: #9ca3af;
-  }
-
-  html.dark .level-filter-btn input[type="checkbox"]:checked {
-    background-color: white;
-    border-color: #6b7280;
-  }
-
-  html.dark .level-filter-btn input[type="checkbox"]:checked::after {
-    border-color: #6b7280;
-  }
-
-  html.dark .level-filter-btn.level-debug.active input[type="checkbox"]:checked::after {
-    border-color: #8e81ea;
-  }
-
-  html.dark .level-filter-btn.level-info.active input[type="checkbox"]:checked::after {
-    border-color: #2195cf;
-  }
-
-  html.dark .level-filter-btn.level-warning.active input[type="checkbox"]:checked::after {
-    border-color: #DB9139;
-  }
-
-  html.dark .level-filter-btn.level-error.active input[type="checkbox"]:checked::after {
-    border-color: #ea6280;
-  }
-
-  html.dark .level-filter-btn.level-success.active input[type="checkbox"]:checked::after {
-    border-color: #065f46;
-  }
 
   .level-filter-btn.level-debug {
     background: #f0f9ff;
@@ -1959,7 +1870,7 @@
     border: 1px solid var(--border-color);
     border-radius: 10px;
     padding: 16px 20px 12px 20px;
-    margin: 0 16px;
+    margin: 0 4px;
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
     transition: border-color 0.2s ease, box-shadow 0.2s ease, visibility 0.2s ease;
     display: flex;
