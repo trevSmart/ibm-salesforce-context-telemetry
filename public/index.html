@@ -37,37 +37,42 @@
 <body class="index-page" style="visibility: hidden;">
 	<div class="container">
 		<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-			<h1 style="margin: 0;">IBM Salesforce Context Telemetry Server</h1>
+			<h1 class="log-viewer-title" style="margin: 0;">Dashboard</h1>
 			<div class="user-menu-container" style="position: relative;">
 				<button class="icon-btn user-btn" id="userBtn" onclick="showUserMenu(event)"><i class="fa-solid fa-wrench"></i></button>
 				<div class="user-menu" id="userMenu">
-					<div class="user-menu-item" id="userMenuUsername"><i class="fa-solid fa-wrench user-menu-icon"></i>Loading...</div>
-					<button class="user-menu-item" onclick="handleLogout()">Logout</button>
+					<div class="user-menu-item" id="userMenuUsername"><i class="fa-regular fa-user user-menu-icon"></i>Loading...</div>
+					<button class="user-menu-item" id="themeToggleMenuItem" onclick="toggleTheme()"><i class="fa-regular fa-moon user-menu-icon"></i>Toggle theme</button>
+					<button class="user-menu-item clear-data-menu-item" onclick="clearLocalData()"><i class="fa-regular fa-trash-can user-menu-icon"></i>Clear local data</button>
+					<button class="user-menu-item delete-all-menu-item" onclick="handleDeleteAll()"><i class="fa-solid fa-broom user-menu-icon"></i>Delete all events</button>
+					<div class="user-menu-separator"></div>
+					<button class="user-menu-item" onclick="handleLogout()"><i class="fa-solid fa-arrow-right-from-bracket user-menu-icon"></i>Logout</button>
 				</div>
 			</div>
 		</div>
 
-		<div class="chart-container">
-			<div class="chart-header">
-				<div class="chart-title">Events per day</div>
-				<select id="timeRangeSelect" class="time-range-select">
-					<option value="7" selected>Last 7 days</option>
-					<option value="15">Last 15 days</option>
-					<option value="30">Last 30 days</option>
-					<option value="90">Last 3 months</option>
-				</select>
-			</div>
-			<canvas id="eventsChart"></canvas>
+		<div class="dashboard-header">
+			<a href="/event-log" class="event-log-link" id="eventLogLink" style="display: none;">Event logs</a>
 		</div>
 
-		<a href="/event-log" class="event-log-link" id="eventLogLink" style="display: none;">Event log</a>
+		<div class="chart-header">
+			<div class="chart-title">Date range</div>
+			<select id="timeRangeSelect" class="time-range-select">
+				<option value="7" selected>Last 7 days</option>
+				<option value="15">Last 15 days</option>
+				<option value="30">Last 30 days</option>
+				<option value="90">Last 3 months</option>
+			</select>
+		</div>
+
+		<div class="chart-container">
+			<canvas id="eventsChart"></canvas>
+		</div>
 		<div class="status-info">
-			<p>Server is running ✅</p>
-			<p>
-				<a href="/health">Health Check</a> •
-				<a href="/api/events">API</a> •
-				<a href="/schema">Schema</a>
-			</p>
+				Server is running •
+			<a href="/health">Health Check</a> •
+			<a href="/api/events">API</a> •
+			<a href="/schema">Schema</a>
 		</div>
 	</div>
 

@@ -981,6 +981,23 @@ async function getDailyStatsByEventType(days = 30) {
 			toolEventsMap.set(dateStr, parseInt(row.count));
 		});
 
+		// Get error events (tool_error only)
+		const errorEvents = db.prepare(`
+			SELECT
+				date(timestamp, 'utc') as date,
+				COUNT(*) as count
+			FROM telemetry_events
+			WHERE timestamp >= ? AND event = 'tool_error'
+			GROUP BY date(timestamp, 'utc')
+		`).all(startDateISO);
+
+		const errorEventsMap = new Map();
+		errorEvents.forEach(row => {
+			let dateStr = String(row.date);
+			dateStr = dateStr.split('T')[0].split(' ')[0];
+			errorEventsMap.set(dateStr, parseInt(row.count));
+		});
+
 		// Fill in missing days with 0 counts
 		const filledResults = [];
 		for (let i = 0; i < rangeDays; i++) {
@@ -990,7 +1007,8 @@ async function getDailyStatsByEventType(days = 30) {
 			filledResults.push({
 				date: dateStr,
 				startSessionsWithoutEnd: startSessionsMap.get(dateStr) || 0,
-				toolEvents: toolEventsMap.get(dateStr) || 0
+				toolEvents: toolEventsMap.get(dateStr) || 0,
+				errorEvents: errorEventsMap.get(dateStr) || 0
 			});
 		}
 
@@ -1041,6 +1059,24 @@ async function getDailyStatsByEventType(days = 30) {
 			toolEventsMap.set(dateValue, parseInt(row.count));
 		});
 
+		// Get error events (tool_error only)
+		const errorEventsResult = await db.query(`
+			SELECT
+				DATE(timestamp AT TIME ZONE 'UTC') as date,
+				COUNT(*) as count
+			FROM telemetry_events
+			WHERE timestamp >= $1 AND event = 'tool_error'
+			GROUP BY DATE(timestamp AT TIME ZONE 'UTC')
+		`, [startDateISO]);
+
+		const errorEventsMap = new Map();
+		errorEventsResult.rows.forEach(row => {
+			const dateValue = row.date instanceof Date
+				? row.date.toISOString().split('T')[0]
+				: row.date.split('T')[0];
+			errorEventsMap.set(dateValue, parseInt(row.count));
+		});
+
 		// Fill in missing days with 0 counts
 		const filledResults = [];
 		for (let i = 0; i < rangeDays; i++) {
@@ -1050,7 +1086,8 @@ async function getDailyStatsByEventType(days = 30) {
 			filledResults.push({
 				date: dateStr,
 				startSessionsWithoutEnd: startSessionsMap.get(dateStr) || 0,
-				toolEvents: toolEventsMap.get(dateStr) || 0
+				toolEvents: toolEventsMap.get(dateStr) || 0,
+				errorEvents: errorEventsMap.get(dateStr) || 0
 			});
 		}
 

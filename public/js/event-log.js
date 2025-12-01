@@ -40,6 +40,9 @@ const detectElectronEnvironment = () => {
 		}
 	})();
 
+	let userMenuHideTimeout = null;
+	const USER_MENU_HIDE_DELAY_MS = 300;
+
 	function showUserMenu(e) {
 		e.stopPropagation();
 		const userMenu = document.getElementById('userMenu');
@@ -58,14 +61,14 @@ const detectElectronEnvironment = () => {
 				.then(data => {
 					const usernameElement = document.getElementById('userMenuUsername');
 					if (data.authenticated && data.username) {
-						usernameElement.innerHTML = '<i class="fa-solid fa-wrench user-menu-icon"></i>' + escapeHtml(data.username);
+						usernameElement.innerHTML = '<i class="fa-regular fa-user user-menu-icon"></i>' + escapeHtml(data.username);
 					} else {
-						usernameElement.innerHTML = '<i class="fa-solid fa-wrench user-menu-icon"></i>Not authenticated';
+						usernameElement.innerHTML = '<i class="fa-regular fa-user user-menu-icon"></i>Not authenticated';
 					}
 				})
 				.catch(() => {
 					const usernameElement = document.getElementById('userMenuUsername');
-					usernameElement.innerHTML = '<i class="fa-solid fa-wrench user-menu-icon"></i>Error loading user';
+					usernameElement.innerHTML = '<i class="fa-regular fa-user user-menu-icon"></i>Error loading user';
 				});
 		}
 	}
@@ -82,6 +85,45 @@ const detectElectronEnvironment = () => {
 			}
 		}
 	});
+
+	function setupUserMenuHover() {
+		const container = document.querySelector('.user-menu-container');
+		if (!container) {
+			return;
+		}
+
+		container.addEventListener('mouseenter', (event) => {
+			const userMenu = document.getElementById('userMenu');
+			if (!userMenu) {
+				return;
+			}
+
+			if (userMenuHideTimeout) {
+				clearTimeout(userMenuHideTimeout);
+				userMenuHideTimeout = null;
+			}
+
+			// Only open if it's not already visible
+			if (!userMenu.classList.contains('show')) {
+				showUserMenu(event);
+			}
+		});
+
+		container.addEventListener('mouseleave', () => {
+			const userMenu = document.getElementById('userMenu');
+			if (!userMenu) {
+				return;
+			}
+
+			if (userMenuHideTimeout) {
+				clearTimeout(userMenuHideTimeout);
+			}
+			userMenuHideTimeout = setTimeout(() => {
+				userMenu.classList.remove('show');
+				userMenuHideTimeout = null;
+			}, USER_MENU_HIDE_DELAY_MS);
+		});
+	}
 
 	function handleDeleteAll() {
 		// Close menu
@@ -208,15 +250,111 @@ const detectElectronEnvironment = () => {
 		refreshSessionActivityTheme();
 	}
 
-	function updateThemeIcon(theme) {
-		const iconBtn = document.querySelector('.theme-toggle');
-		if (iconBtn) {
-			if (theme === 'dark') {
-				iconBtn.innerHTML = '<i class="fa-regular fa-sun"></i>';
-			} else {
-				iconBtn.innerHTML = '<i class="fa-regular fa-moon"></i>';
+	function clearLocalData() {
+		openConfirmModal({
+			title: 'Clear local data',
+			message: 'This will clear all local data stored in this browser for the telemetry UI (theme, filters, etc.).',
+			confirmLabel: 'Clear data',
+			destructive: true
+		}).then((confirmed) => {
+			if (!confirmed) {
+				return;
 			}
+
+			try {
+				localStorage.clear();
+			} catch (error) {
+				console.error('Error clearing local storage:', error);
+			}
+
+			window.location.reload();
+		});
+	}
+
+	function openConfirmModal({ title, message, confirmLabel = 'Confirm', cancelLabel = 'Cancel', destructive = false }) {
+		return new Promise((resolve) => {
+			const existing = document.querySelector('.confirm-modal-backdrop');
+			if (existing) {
+				existing.remove();
+			}
+
+			const backdrop = document.createElement('div');
+			backdrop.className = 'confirm-modal-backdrop';
+
+			const modal = document.createElement('div');
+			modal.className = 'confirm-modal';
+			modal.innerHTML = `
+				<div class="confirm-modal-title">${escapeHtml(title || 'Confirm action')}</div>
+				<div class="confirm-modal-message">${escapeHtml(message || '')}</div>
+				<div class="confirm-modal-actions">
+					<button type="button" class="confirm-modal-btn confirm-modal-btn-cancel">${escapeHtml(cancelLabel)}</button>
+					<button type="button" class="confirm-modal-btn ${destructive ? 'confirm-modal-btn-destructive' : 'confirm-modal-btn-confirm'}">${escapeHtml(confirmLabel)}</button>
+				</div>
+			`;
+
+			backdrop.appendChild(modal);
+			document.body.appendChild(backdrop);
+
+			// Trigger enter transition on next frame
+			requestAnimationFrame(() => {
+				backdrop.classList.add('visible');
+			});
+
+			function animateAndResolve(result) {
+				const handleTransitionEnd = () => {
+					backdrop.removeEventListener('transitionend', handleTransitionEnd);
+					backdrop.remove();
+				};
+
+				backdrop.addEventListener('transitionend', handleTransitionEnd);
+				backdrop.classList.remove('visible');
+				backdrop.classList.add('hiding');
+
+				// Fallback in case transitionend does not fire
+				setTimeout(() => {
+					if (document.body.contains(backdrop)) {
+						backdrop.removeEventListener('transitionend', handleTransitionEnd);
+						backdrop.remove();
+					}
+				}, 220);
+
+				resolve(result);
+			}
+
+			const [cancelBtn, confirmBtn] = modal.querySelectorAll('.confirm-modal-btn');
+			cancelBtn.addEventListener('click', () => animateAndResolve(false));
+			confirmBtn.addEventListener('click', () => animateAndResolve(true));
+
+			backdrop.addEventListener('click', (e) => {
+				if (e.target === backdrop) {
+					animateAndResolve(false);
+				}
+			});
+
+			document.addEventListener(
+				'keydown',
+				function handleKeydown(e) {
+					if (e.key === 'Escape') {
+						document.removeEventListener('keydown', handleKeydown);
+						if (document.body.contains(backdrop)) {
+							animateAndResolve(false);
+						}
+					}
+				}
+			);
+		});
+	}
+
+	function updateThemeIcon(theme) {
+		const btn = document.getElementById('themeToggleMenuItem');
+		if (!btn) {
+			return;
 		}
+
+		const isDark = theme === 'dark';
+		const iconClass = isDark ? 'fa-regular fa-sun' : 'fa-regular fa-moon';
+		const label = isDark ? 'Light theme' : 'Dark theme';
+		btn.innerHTML = `<i class="${iconClass} user-menu-icon"></i>${label}`;
 	}
 
 	// Listen for system theme changes and update if no manual preference is set
@@ -1974,6 +2112,37 @@ const detectElectronEnvironment = () => {
 		return '';
 	}
 
+	function extractUserLabelFromEvent(event, eventData) {
+		if (!event) {
+			return '';
+		}
+
+		// Prefer explicit user name fields from event data when available
+		if (eventData && typeof eventData === 'object') {
+			try {
+				const fromData =
+					(typeof eventData.userName === 'string' && eventData.userName.trim()) ||
+					(typeof eventData.user_name === 'string' && eventData.user_name.trim()) ||
+					(eventData.user &&
+						typeof eventData.user.name === 'string' &&
+						eventData.user.name.trim());
+
+				if (fromData) {
+					return String(fromData);
+				}
+			} catch (_error) {
+				// Ignore and fall through to other sources
+			}
+		}
+
+		// Fallback to user_id from the event itself
+		if (event.user_id) {
+			return String(event.user_id);
+		}
+
+		return '';
+	}
+
 	function displayEvents(events, append = false) {
 		const tbody = document.getElementById('logsBody');
 		if (!append) {
@@ -1985,12 +2154,21 @@ const detectElectronEnvironment = () => {
 			}
 		}
 
+		const showUserColumn = selectedSession === 'all';
+
+		// Toggle header visibility based on current view
+		const userHeader = document.querySelector('th.user-column');
+		if (userHeader) {
+			userHeader.style.display = showUserColumn ? '' : 'none';
+		}
+
 		events.forEach(event => {
 			const levelClass = getLevelClass(event.event);
 			const description = formatDescription(event);
 			const descriptionPretty = formatDescriptionPretty(event);
 			const eventData = normalizeEventData(event.data);
 			const clientName = extractClientName(eventData);
+			const userLabel = extractUserLabelFromEvent(event, eventData);
 			const dataStatus = typeof eventData.status === 'string'
 				? eventData.status.toLowerCase()
 				: null;
@@ -2016,6 +2194,10 @@ const detectElectronEnvironment = () => {
 			row.setAttribute('data-event-id', event.id);
 			// Store event data in the row element to avoid API call when copying payload
 			row.setAttribute('data-event', JSON.stringify(event));
+			const userCellHtml = showUserColumn
+				? `<td class="log-user">${escapeHtml(userLabel)}</td>`
+				: '';
+
 			row.innerHTML = `
 				<td style="text-align: center; padding: 2px 8px;">
 					<button class="expand-btn" type="button" id="expand-btn-${event.id}">
@@ -2026,6 +2208,7 @@ const detectElectronEnvironment = () => {
 					<span class="status-indicator ${statusClass}">${statusLabel}</span>
 				</td>
 				<td class="log-time">${formatDate(event.timestamp)}</td>
+				${userCellHtml}
 				<td>
 					<span class="level-badge ${levelClass}">
 						${event.event.replace('_', ' ')}
@@ -2081,7 +2264,7 @@ const detectElectronEnvironment = () => {
 			expandedRow.id = `expanded-${event.id}`;
 
 			const expandedTd = document.createElement('td');
-			expandedTd.colSpan = 7;
+			expandedTd.colSpan = showUserColumn ? 8 : 7;
 			expandedTd.className = 'log-description-expanded';
 
 			const pre = document.createElement('pre');
@@ -2240,21 +2423,34 @@ const detectElectronEnvironment = () => {
 	function confirmDeleteAll() {
 		if (!deleteAllConfirmed) {
 			deleteAllConfirmed = true;
-			const confirmed = confirm('Are you sure you want to delete ALL events? This action cannot be undone.\n\nClick OK to confirm, or Cancel to abort.');
-			if (!confirmed) {
-				deleteAllConfirmed = false;
-				return;
-			}
-			// Second confirmation
-			const secondConfirmed = confirm('FINAL WARNING: This will permanently delete ALL events from the database.\n\nAre you absolutely sure?');
-			if (!secondConfirmed) {
-				deleteAllConfirmed = false;
-				return;
-			}
-		}
+			openConfirmModal({
+				title: 'Delete all events',
+				message: 'Are you sure you want to delete ALL events? This action cannot be undone.',
+				confirmLabel: 'Delete all events',
+				destructive: true
+			}).then((firstConfirmed) => {
+				if (!firstConfirmed) {
+					deleteAllConfirmed = false;
+					return;
+				}
 
-		// Perform deletion
-		deleteAllEvents();
+				openConfirmModal({
+					title: 'Final warning',
+					message: 'This will permanently delete ALL events from the database.\nAre you absolutely sure?',
+					confirmLabel: 'Yes, delete everything',
+					destructive: true
+				}).then((secondConfirmed) => {
+					if (!secondConfirmed) {
+						deleteAllConfirmed = false;
+						return;
+					}
+					// Perform deletion
+					deleteAllEvents();
+				});
+			});
+		} else {
+			deleteAllEvents();
+		}
 	}
 
 	async function deleteAllEvents() {
@@ -2955,10 +3151,17 @@ const detectElectronEnvironment = () => {
 	}
 
 	function confirmDeleteEvent(eventId) {
-		const confirmed = confirm('Are you sure you want to delete this event? This action cannot be undone.');
-		if (confirmed) {
+		openConfirmModal({
+			title: 'Delete event',
+			message: 'Are you sure you want to delete this event? This action cannot be undone.',
+			confirmLabel: 'Delete event',
+			destructive: true
+		}).then((confirmed) => {
+			if (!confirmed) {
+				return;
+			}
 			deleteEvent(eventId);
-		}
+		});
 	}
 
 	async function deleteEvent(eventId) {
@@ -2986,10 +3189,17 @@ const detectElectronEnvironment = () => {
 	}
 
 	function confirmDeleteSession(sessionId) {
-		const confirmed = confirm('Are you sure you want to delete all events from this session? This action cannot be undone.');
-		if (confirmed) {
+		openConfirmModal({
+			title: 'Delete session events',
+			message: 'Are you sure you want to delete all events from this session? This action cannot be undone.',
+			confirmLabel: 'Delete session events',
+			destructive: true
+		}).then((confirmed) => {
+			if (!confirmed) {
+				return;
+			}
 			deleteSession(sessionId);
-		}
+		});
 	}
 
 	async function deleteSession(sessionId) {
@@ -3360,6 +3570,7 @@ const detectElectronEnvironment = () => {
 	function initializeApp() {
 		runSafeInitStep('notification button state', updateNotificationButtonState);
 		runSafeInitStep('theme initialization', initTheme);
+		runSafeInitStep('user menu hover', setupUserMenuHover);
 		runSafeInitStep('level filters setup', setupLevelFilters);
 		runSafeInitStep('sidebar resizer setup', setupSidebarResizer);
 		runSafeInitStep('horizontal resizer setup', setupHorizontalResizer);

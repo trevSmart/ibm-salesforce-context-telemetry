@@ -39,9 +39,9 @@
 			<div class="sidebar">
 				<div class="sidebar-header">
 					<div style="display: flex; align-items: center; gap: 12px; margin-top: 8px;">
-						<a href="/" class="back-link subtitle">← Back to Home</a>
+						<a href="/" class="back-link subtitle">← Back to Dashboard</a>
 					</div>
-					<div class="log-viewer-title text-xl font-semibold">Event log</div>
+					<div class="log-viewer-title font-semibold">Event logs</div>
 				</div>
 				<div class="sidebar-content">
 					<div class="tabs-container">
@@ -116,13 +116,15 @@
 						<div class="icon-buttons-group">
 							<button type="button" class="icon-btn" onclick="refreshLogs(event)"><i class="fa fa-refresh"></i></button>
 							<button class="icon-btn notification-toggle" onclick="toggleNotificationMode()"><i class="fa-regular fa-bell"></i></button>
-							<button class="icon-btn theme-toggle" onclick="toggleTheme()"><i class="fa-regular fa-moon"></i></button>
 							<div class="user-menu-container" style="position: relative;">
 								<button class="icon-btn user-btn" id="userBtn" onclick="showUserMenu(event)"><i class="fa-solid fa-wrench"></i></button>
 								<div class="user-menu" id="userMenu">
-									<div class="user-menu-item" id="userMenuUsername"><i class="fa-solid fa-wrench user-menu-icon"></i>Loading...</div>
+									<div class="user-menu-item" id="userMenuUsername"><i class="fa-regular fa-user user-menu-icon"></i>Loading...</div>
+									<button class="user-menu-item" id="themeToggleMenuItem" onclick="toggleTheme()"><i class="fa-regular fa-moon user-menu-icon"></i>Toggle theme</button>
+									<button class="user-menu-item clear-data-menu-item" onclick="clearLocalData()"><i class="fa-regular fa-trash-can user-menu-icon"></i>Clear local data</button>
 									<button class="user-menu-item delete-all-menu-item" onclick="handleDeleteAll()"><i class="fa-solid fa-broom user-menu-icon"></i>Delete all events</button>
-									<button class="user-menu-item" onclick="handleLogout()">Logout</button>
+									<div class="user-menu-separator"></div>
+									<button class="user-menu-item" onclick="handleLogout()"><i class="fa-solid fa-arrow-right-from-bracket user-menu-icon"></i>Logout</button>
 								</div>
 							</div>
 						</div>
@@ -183,6 +185,7 @@
 											<img src="/resources/sort-desc" alt="Sort descending" id="sortIcon" style="width: 16px; height: 16px;">
 										</button>
 									</th>
+									<th class="user-column" style="width: 180px;">User</th>
 									<th style="width: 130px;">Event</th>
 									<th style="width: 200px;">Company</th>
 									<th style="width: 150px;">Tool name</th>

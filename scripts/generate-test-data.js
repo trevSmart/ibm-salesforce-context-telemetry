@@ -41,10 +41,30 @@ const OPERATIONS = ['query', 'create', 'update', 'delete', 'get', 'describe'];
 
 // Projects configuration
 const PROJECTS = [
-	{ name: 'Project Alpha', orgId: 'org-alpha-dev', users: [0, 1, 2, 3, 4] },
-	{ name: 'Project Beta', orgId: 'org-beta-dev', users: [5, 6, 7, 8, 9] },
-	{ name: 'Project Gamma', orgId: 'org-gamma-dev', users: [10, 11, 12, 13, 14] },
-	{ name: 'Project Delta', orgId: 'org-delta-dev', users: [15, 16, 17, 18, 19] }
+	{
+		name: 'Project Alpha',
+		orgId: 'org-alpha-dev',
+		companyName: 'Alpha Technologies S.A.',
+		users: [0, 1, 2, 3, 4]
+	},
+	{
+		name: 'Project Beta',
+		orgId: 'org-beta-dev',
+		companyName: 'Beta Solutions SL',
+		users: [5, 6, 7, 8, 9]
+	},
+	{
+		name: 'Project Gamma',
+		orgId: 'org-gamma-dev',
+		companyName: 'Gamma Innovations Corp',
+		users: [10, 11, 12, 13, 14]
+	},
+	{
+		name: 'Project Delta',
+		orgId: 'org-delta-dev',
+		companyName: 'Delta Analytics Group',
+		users: [15, 16, 17, 18, 19]
+	}
 ];
 
 // User names (real Spanish/Catalan names)
@@ -131,7 +151,14 @@ function generateSessionStart(sessionId, userId, serverId, version, timestamp, p
 			transport: 'stdio',
 			clientVersion: '1.0.0',
 			orgId: project.orgId,
-			projectName: project.name
+			projectName: project.name,
+			state: {
+				org: {
+					companyDetails: {
+						Name: project.companyName
+					}
+				}
+			}
 		}
 	};
 }
@@ -273,23 +300,34 @@ function generateSession(userId, project, startDate, endDate) {
 /**
  * Generate all test data
  */
-async function generateTestData() {
-	console.log('🗑️  Deleting all existing data...');
-	const deletedCount = await db.deleteAllEvents();
-	console.log(`   Deleted ${deletedCount} existing events\n`);
+async function generateTestData(targetDay, shouldDeleteExisting) {
+	if (shouldDeleteExisting) {
+		console.log('🗑️  Deleting all existing data...');
+		const deletedCount = await db.deleteAllEvents();
+		console.log(`   Deleted ${deletedCount} existing events\n`);
+	} else {
+		console.log('🗂️  Keeping existing data (no delete requested)\n');
+	}
 
 	console.log('📊 Generating test data...');
 	console.log(`   Users: ${NUM_USERS}`);
 	console.log(`   Projects: ${NUM_PROJECTS}`);
 	console.log(`   Period: ${WEEKS} weeks\n`);
 
-	// Calculate date range (2 weeks back from today)
-	const endDate = new Date();
-	endDate.setHours(23, 59, 59, 999);
+	// Base day for data generation (center of the period)
+	const baseDate = targetDay ? new Date(targetDay) : new Date();
+	baseDate.setHours(0, 0, 0, 0);
 
-	const startDate = new Date(endDate);
-	startDate.setDate(startDate.getDate() - (WEEKS * 7 - 1));
+	// Calculate date range (WEEKS centered around baseDate)
+	const halfRangeDays = (WEEKS * 7) / 2; // e.g. 7 days when WEEKS = 2
+
+	const startDate = new Date(baseDate);
+	startDate.setDate(startDate.getDate() - halfRangeDays);
 	startDate.setHours(0, 0, 0, 0);
+
+	const endDate = new Date(baseDate);
+	endDate.setDate(endDate.getDate() + halfRangeDays - 1);
+	endDate.setHours(23, 59, 59, 999);
 
 	console.log(`   Date range: ${startDate.toISOString().split('T')[0]} to ${endDate.toISOString().split('T')[0]}\n`);
 
@@ -369,8 +407,32 @@ async function generateTestData() {
 // Run the script
 (async () => {
 	try {
+		const dayArg = process.argv[2];
+		const deleteArg = process.argv[3];
+		let targetDay = null;
+		let shouldDeleteExisting = false;
+
+		if (dayArg) {
+			const parsed = new Date(dayArg);
+			if (Number.isNaN(parsed.getTime())) {
+				console.error('❌ Invalid date format. Use YYYY-MM-DD, e.g. 2025-12-01');
+				process.exit(1);
+			}
+			targetDay = parsed;
+			console.log(`📅 Using target day: ${dayArg}`);
+		} else {
+			console.log('📅 No target day provided, using today as center of the period');
+		}
+
+		if (typeof deleteArg === 'string') {
+			const normalized = deleteArg.toLowerCase();
+			shouldDeleteExisting = normalized === 'true' || normalized === '1' || normalized === 'yes';
+		}
+
+		console.log(`🧹 Delete existing data before insert: ${shouldDeleteExisting ? 'YES' : 'NO'}`);
+
 		await db.init();
-		await generateTestData();
+		await generateTestData(targetDay, shouldDeleteExisting);
 		await db.close();
 		process.exit(0);
 	} catch (error) {

@@ -47,6 +47,9 @@ function escapeHtml(str) {
 }
 
 // User menu functions
+let userMenuHideTimeout = null;
+const USER_MENU_HIDE_DELAY_MS = 300;
+
 function showUserMenu(e) {
 	e.stopPropagation();
 	const userMenu = document.getElementById('userMenu');
@@ -65,14 +68,14 @@ function showUserMenu(e) {
 			.then(data => {
 				const usernameElement = document.getElementById('userMenuUsername');
 				if (data.authenticated && data.username) {
-					usernameElement.innerHTML = '<i class="fa-solid fa-wrench user-menu-icon"></i>' + escapeHtml(data.username);
+					usernameElement.innerHTML = '<i class="fa-regular fa-user user-menu-icon"></i>' + escapeHtml(data.username);
 				} else {
-					usernameElement.innerHTML = '<i class="fa-solid fa-wrench user-menu-icon"></i>Not authenticated';
+					usernameElement.innerHTML = '<i class="fa-regular fa-user user-menu-icon"></i>Not authenticated';
 				}
 			})
 			.catch(() => {
 				const usernameElement = document.getElementById('userMenuUsername');
-				usernameElement.innerHTML = '<i class="fa-solid fa-wrench user-menu-icon"></i>Error loading user';
+				usernameElement.innerHTML = '<i class="fa-regular fa-user user-menu-icon"></i>Error loading user';
 			});
 	}
 }
@@ -89,6 +92,45 @@ document.addEventListener('click', function(event) {
 		}
 	}
 });
+
+function setupUserMenuHover() {
+	const container = document.querySelector('.user-menu-container');
+	if (!container) {
+		return;
+	}
+
+	container.addEventListener('mouseenter', (event) => {
+		const userMenu = document.getElementById('userMenu');
+		if (!userMenu) {
+			return;
+		}
+
+		if (userMenuHideTimeout) {
+			clearTimeout(userMenuHideTimeout);
+			userMenuHideTimeout = null;
+		}
+
+		// Only open if it's not already visible
+		if (!userMenu.classList.contains('show')) {
+			showUserMenu(event);
+		}
+	});
+
+	container.addEventListener('mouseleave', () => {
+		const userMenu = document.getElementById('userMenu');
+		if (!userMenu) {
+			return;
+		}
+
+		if (userMenuHideTimeout) {
+			clearTimeout(userMenuHideTimeout);
+		}
+		userMenuHideTimeout = setTimeout(() => {
+			userMenu.classList.remove('show');
+			userMenuHideTimeout = null;
+		}, USER_MENU_HIDE_DELAY_MS);
+	});
+}
 
 async function handleLogout() {
 	// Close menu
@@ -114,23 +156,223 @@ async function handleLogout() {
 	}
 }
 
+function handleDeleteAll() {
+	// Close menu
+	const userMenu = document.getElementById('userMenu');
+	if (userMenu) {
+		userMenu.classList.remove('show');
+	}
+	// Call delete all confirmation
+	confirmDeleteAll();
+}
+
+let deleteAllConfirmed = false;
+
+function confirmDeleteAll() {
+	if (!deleteAllConfirmed) {
+		deleteAllConfirmed = true;
+		openConfirmModal({
+			title: 'Delete all events',
+			message: 'Are you sure you want to delete ALL events? This action cannot be undone.',
+			confirmLabel: 'Delete all events',
+			destructive: true
+		}).then((firstConfirmed) => {
+			if (!firstConfirmed) {
+				deleteAllConfirmed = false;
+				return;
+			}
+
+			openConfirmModal({
+				title: 'Final warning',
+				message: 'This will permanently delete ALL events from the database.\nAre you absolutely sure?',
+				confirmLabel: 'Yes, delete everything',
+				destructive: true
+			}).then((secondConfirmed) => {
+				if (!secondConfirmed) {
+					deleteAllConfirmed = false;
+					return;
+				}
+				// Perform deletion
+				deleteAllEvents();
+			});
+		});
+	} else {
+		deleteAllEvents();
+	}
+}
+
+async function deleteAllEvents() {
+	try {
+		const response = await fetch('/api/events', {
+			method: 'DELETE',
+			credentials: 'include' // Ensure cookies are sent
+		});
+
+		if (response.status === 401) {
+			window.location.href = '/login';
+			return;
+		}
+		if (!response.ok) {
+			throw new Error(`HTTP error! status: ${response.status}`);
+		}
+
+		const data = await response.json();
+		alert(`Successfully deleted ${data.deletedCount || 0} events.`);
+
+		// Reset confirmation flag
+		deleteAllConfirmed = false;
+
+		// Refresh chart data
+		loadChartData(currentDays);
+	} catch (error) {
+		console.error('Error deleting events:', error);
+		alert('Error deleting events: ' + error.message);
+		deleteAllConfirmed = false;
+	}
+}
+
 // Detect system theme
 function getSystemTheme() {
 	return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 
-function initTheme() {
-	const savedTheme = localStorage.getItem('theme');
-	const theme = savedTheme || getSystemTheme();
+function applyTheme(theme) {
 	if (theme === 'dark') {
 		document.documentElement.classList.add('dark');
 	} else {
 		document.documentElement.classList.remove('dark');
 	}
+	updateThemeMenuItem(theme);
+}
+
+function initTheme() {
+	const savedTheme = localStorage.getItem('theme');
+	const theme = savedTheme || getSystemTheme();
+	applyTheme(theme);
+}
+
+function toggleTheme() {
+	const isDark = document.documentElement.classList.contains('dark');
+	const newTheme = isDark ? 'light' : 'dark';
+	localStorage.setItem('theme', newTheme);
+	applyTheme(newTheme);
+}
+
+function updateThemeMenuItem(theme) {
+	const btn = document.getElementById('themeToggleMenuItem');
+	if (!btn) {
+		return;
+	}
+
+	const isDark = theme === 'dark';
+	const iconClass = isDark ? 'fa-regular fa-sun' : 'fa-regular fa-moon';
+	const label = isDark ? 'Light theme' : 'Dark theme';
+	btn.innerHTML = `<i class="${iconClass} user-menu-icon"></i>${label}`;
+}
+
+function clearLocalData() {
+	openConfirmModal({
+		title: 'Clear local data',
+		message: 'This will clear all local data stored in this browser for the telemetry UI (theme, filters, etc.).',
+		confirmLabel: 'Clear data',
+		destructive: true
+	}).then((confirmed) => {
+		if (!confirmed) {
+			return;
+		}
+		try {
+			localStorage.clear();
+		} catch (error) {
+			console.error('Error clearing local storage:', error);
+		}
+		window.location.reload();
+	});
+}
+
+function openConfirmModal({ title, message, confirmLabel = 'Confirm', cancelLabel = 'Cancel', destructive = false }) {
+	return new Promise((resolve) => {
+		const existing = document.querySelector('.confirm-modal-backdrop');
+		if (existing) {
+			existing.remove();
+		}
+
+		const backdrop = document.createElement('div');
+		backdrop.className = 'confirm-modal-backdrop';
+
+		const modal = document.createElement('div');
+		modal.className = 'confirm-modal';
+		modal.innerHTML = `
+			<div class="confirm-modal-title">${escapeHtml(title || 'Confirm action')}</div>
+			<div class="confirm-modal-message">${escapeHtml(message || '')}</div>
+			<div class="confirm-modal-actions">
+				<button type="button" class="confirm-modal-btn confirm-modal-btn-cancel">${escapeHtml(cancelLabel)}</button>
+				<button type="button" class="confirm-modal-btn ${destructive ? 'confirm-modal-btn-destructive' : 'confirm-modal-btn-confirm'}">${escapeHtml(confirmLabel)}</button>
+			</div>
+		`;
+
+		backdrop.appendChild(modal);
+		document.body.appendChild(backdrop);
+
+		// Trigger enter transition on next frame
+		requestAnimationFrame(() => {
+			backdrop.classList.add('visible');
+		});
+
+		function animateAndResolve(result) {
+			const handleTransitionEnd = () => {
+				backdrop.removeEventListener('transitionend', handleTransitionEnd);
+				backdrop.remove();
+			};
+
+			backdrop.addEventListener('transitionend', handleTransitionEnd);
+			backdrop.classList.remove('visible');
+			backdrop.classList.add('hiding');
+
+			// Fallback in case transitionend does not fire
+			setTimeout(() => {
+				if (document.body.contains(backdrop)) {
+					backdrop.removeEventListener('transitionend', handleTransitionEnd);
+					backdrop.remove();
+				}
+			}, 220);
+
+			resolve(result);
+		}
+
+		const [cancelBtn, confirmBtn] = modal.querySelectorAll('.confirm-modal-btn');
+		cancelBtn.addEventListener('click', () => animateAndResolve(false));
+		confirmBtn.addEventListener('click', () => animateAndResolve(true));
+
+		backdrop.addEventListener('click', (e) => {
+			if (e.target === backdrop) {
+				animateAndResolve(false);
+			}
+		});
+
+		document.addEventListener(
+			'keydown',
+			function handleKeydown(e) {
+				if (e.key === 'Escape') {
+					document.removeEventListener('keydown', handleKeydown);
+					if (document.body.contains(backdrop)) {
+						animateAndResolve(false);
+					}
+				}
+			}
+		);
+	});
 }
 
 // Initialize theme
-initTheme();
+if (document.readyState === 'loading') {
+	document.addEventListener('DOMContentLoaded', () => {
+		initTheme();
+		setupUserMenuHover();
+	});
+} else {
+	initTheme();
+	setupUserMenuHover();
+}
 
 // Chart configuration
 let chart = null;
@@ -174,6 +416,11 @@ async function loadChartData(days = currentDays) {
 		// Colors for tool events (match tool badge purple)
 		const toolEventsBorderColor = '#8e81ea';
 		const toolEventsBackgroundColor = 'rgba(142, 129, 234, 0.15)';
+
+		// Colors for error events (red)
+		const errorEventsBorderColor = '#f97373';
+		const errorEventsBackgroundColor = 'rgba(248, 113, 113, 0.18)';
+
 		const totalEventsBorderColor = toolEventsBorderColor;
 		const totalEventsBackgroundColor = toolEventsBackgroundColor;
 
@@ -186,6 +433,7 @@ async function loadChartData(days = currentDays) {
 		if (hasBreakdown) {
 			const startSessionsData = data.map(item => Number(item.startSessionsWithoutEnd) || 0);
 			const toolEventsData = data.map(item => Number(item.toolEvents) || 0);
+			const errorEventsData = data.map(item => Number(item.errorEvents) || 0);
 
 			datasets = [
 				{
@@ -196,11 +444,11 @@ async function loadChartData(days = currentDays) {
 					borderWidth: 2,
 					fill: true,
 					tension: 0.25,
-					pointRadius: 3,
-					pointHoverRadius: 5,
+					pointRadius: 2,
+					pointHoverRadius: 4,
 					pointBackgroundColor: startSessionsBorderColor,
 					pointBorderColor: '#ffffff',
-					pointBorderWidth: 2,
+					pointBorderWidth: 1,
 					spanGaps: false
 				},
 				{
@@ -211,11 +459,26 @@ async function loadChartData(days = currentDays) {
 					borderWidth: 2,
 					fill: true,
 					tension: 0.25,
-					pointRadius: 3,
-					pointHoverRadius: 5,
+					pointRadius: 2,
+					pointHoverRadius: 4,
 					pointBackgroundColor: toolEventsBorderColor,
 					pointBorderColor: '#ffffff',
-					pointBorderWidth: 2,
+					pointBorderWidth: 1,
+					spanGaps: false
+				},
+				{
+					label: 'Errors',
+					data: errorEventsData,
+					borderColor: errorEventsBorderColor,
+					backgroundColor: errorEventsBackgroundColor,
+					borderWidth: 2,
+					fill: true,
+					tension: 0.25,
+					pointRadius: 2,
+					pointHoverRadius: 4,
+					pointBackgroundColor: errorEventsBorderColor,
+					pointBorderColor: '#ffffff',
+					pointBorderWidth: 1,
 					spanGaps: false
 				}
 			];
@@ -231,11 +494,11 @@ async function loadChartData(days = currentDays) {
 					borderWidth: 2,
 					fill: true,
 					tension: 0.1,
-					pointRadius: 3,
-					pointHoverRadius: 5,
+					pointRadius: 2,
+					pointHoverRadius: 4,
 					pointBackgroundColor: totalEventsBorderColor,
 					pointBorderColor: '#ffffff',
-					pointBorderWidth: 2,
+					pointBorderWidth: 1,
 					spanGaps: false
 				}
 			];
@@ -251,6 +514,13 @@ async function loadChartData(days = currentDays) {
 			options: {
 				responsive: true,
 				maintainAspectRatio: false,
+				elements: {
+					point: {
+						radius: 1.5,
+						hoverRadius: 3,
+						borderWidth: 1
+					}
+				},
 				plugins: {
 					legend: {
 						display: true,

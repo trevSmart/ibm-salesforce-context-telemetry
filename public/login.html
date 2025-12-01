@@ -223,23 +223,46 @@
 
 		.form-group input {
 			width: 100%;
-			padding: 12px 0;
+			padding: 10px 12px;
 			font-size: 15px;
-			border: none;
-			border-bottom: 2px solid #e4e4e7;
-			background: transparent;
-			transition: border-color 0.2s ease;
+			border-radius: 2px;
+			border: 1px solid #e4e4e7;
+			background: #f4f4ff;
+			transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
 			outline: none;
 			color: #18181b;
 		}
 
 		html.dark .form-group input {
 			color: #e4e4e7;
-			border-bottom-color: #3f3f46;
+			border-color: #3f3f46;
+			background: #18181b;
 		}
 
 		.form-group input:focus {
-			border-bottom-color: #8c5fd6;
+			border-color: #8c5fd6;
+			box-shadow: 0 0 0 1px rgba(140, 95, 214, 0.3);
+			background: #ffffff;
+		}
+
+		html.dark .form-group input:focus {
+			background: #27272a;
+		}
+
+		/* Override browser autofill styles so dark mode colors are respected */
+		.form-group input:-webkit-autofill,
+		.form-group input:-webkit-autofill:hover,
+		.form-group input:-webkit-autofill:focus {
+			-webkit-box-shadow: 0 0 0px 1000px #f4f4ff inset;
+			-webkit-text-fill-color: #18181b;
+			transition: background-color 9999s ease-out, color 9999s ease-out;
+		}
+
+		html.dark .form-group input:-webkit-autofill,
+		html.dark .form-group input:-webkit-autofill:hover,
+		html.dark .form-group input:-webkit-autofill:focus {
+			-webkit-box-shadow: 0 0 0px 1000px #18181b inset;
+			-webkit-text-fill-color: #e4e4e7;
 		}
 
 		.form-group input::placeholder {
@@ -350,9 +373,6 @@
 <body>
 	<div class="login-card">
 		<div class="login-visual-panel">
-			<div class="login-logo">
-				<i class="fas fa-cog"></i>
-			</div>
 		</div>
 		<div class="login-form-panel">
 			<div class="login-header">

@@ -735,7 +735,7 @@ app.get('/event-log', auth.requireAuth, auth.requireRole('advanced'), (_req, res
 	if (fs.existsSync(eventLogPath)) {
 		res.sendFile(eventLogPath);
 	} else {
-		res.status(404).send('Event log page not found');
+		res.status(404).send('Event logs page not found');
 	}
 });
 
