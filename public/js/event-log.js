@@ -44,14 +44,16 @@ const detectElectronEnvironment = () => {
 	const USER_MENU_HIDE_DELAY_MS = 300;
 
 	function showUserMenu(e) {
-		e.stopPropagation();
+		if (e) {
+			e.stopPropagation();
+		}
 		const userMenu = document.getElementById('userMenu');
-		const isVisible = userMenu.classList.contains('show');
+		if (!userMenu) {
+			return;
+		}
 
-		// Toggle menu visibility
-		if (isVisible) {
-			userMenu.classList.remove('show');
-		} else {
+		// Only open the menu; do not toggle/close it from this handler
+		if (!userMenu.classList.contains('show')) {
 			userMenu.classList.add('show');
 			// Load user info
 			fetch('/api/auth/status', {
@@ -60,10 +62,12 @@ const detectElectronEnvironment = () => {
 				.then(response => response.json())
 				.then(data => {
 					const usernameElement = document.getElementById('userMenuUsername');
-					if (data.authenticated && data.username) {
-						usernameElement.innerHTML = '<i class="fa-regular fa-user user-menu-icon"></i>' + escapeHtml(data.username);
-					} else {
-						usernameElement.innerHTML = '<i class="fa-regular fa-user user-menu-icon"></i>Not authenticated';
+					if (usernameElement) {
+						if (data.authenticated && data.username) {
+							usernameElement.innerHTML = '<i class="fa-regular fa-user user-menu-icon"></i>' + escapeHtml(data.username);
+						} else {
+							usernameElement.innerHTML = '<i class="fa-regular fa-user user-menu-icon"></i>Not authenticated';
+						}
 					}
 
 					// Hide "Delete all events" option for basic users
@@ -78,7 +82,9 @@ const detectElectronEnvironment = () => {
 				})
 				.catch(() => {
 					const usernameElement = document.getElementById('userMenuUsername');
-					usernameElement.innerHTML = '<i class="fa-regular fa-user user-menu-icon"></i>Error loading user';
+					if (usernameElement) {
+						usernameElement.innerHTML = '<i class="fa-regular fa-user user-menu-icon"></i>Error loading user';
+					}
 				});
 		}
 	}
@@ -133,6 +139,261 @@ const detectElectronEnvironment = () => {
 				userMenuHideTimeout = null;
 			}, USER_MENU_HIDE_DELAY_MS);
 		});
+	}
+
+	const ORG_TEAM_MAPPING_STORAGE_KEY = 'orgTeamMappings';
+
+	function getOrgTeamMappings() {
+		try {
+			const raw = localStorage.getItem(ORG_TEAM_MAPPING_STORAGE_KEY);
+			if (!raw) {
+				return [];
+			}
+			const parsed = JSON.parse(raw);
+			return Array.isArray(parsed) ? parsed : [];
+		} catch (error) {
+			console.error('Error parsing org-team mappings from localStorage:', error);
+			return [];
+		}
+	}
+
+	function saveOrgTeamMappings(mappings) {
+		try {
+			localStorage.setItem(ORG_TEAM_MAPPING_STORAGE_KEY, JSON.stringify(mappings || []));
+		} catch (error) {
+			console.error('Error saving org-team mappings to localStorage:', error);
+		}
+	}
+
+	function ensureUserMenuStructure() {
+		const userMenu = document.getElementById('userMenu');
+		if (!userMenu || userMenu.dataset.initialized === 'true') {
+			return;
+		}
+
+		userMenu.innerHTML = `
+			<div class="user-menu-item" id="userMenuUsername">
+				<i class="fa-regular fa-user user-menu-icon"></i>Loading...
+			</div>
+			<div class="user-menu-item">
+				<button type="button" id="themeToggleMenuItem" onclick="toggleTheme()">
+					<i class="fa-regular fa-moon user-menu-icon"></i>Dark theme
+				</button>
+			</div>
+			<div class="user-menu-item">
+				<button type="button" id="openSettingsMenuItem" onclick="openSettingsModal()">
+					<i class="fa-solid fa-sliders user-menu-icon"></i>Settings
+				</button>
+			</div>
+			<div class="user-menu-item clear-data-menu-item">
+				<button type="button" onclick="clearLocalData()">
+					<i class="fa-solid fa-broom user-menu-icon"></i>Clear local data
+				</button>
+			</div>
+			<div class="user-menu-item delete-all-menu-item">
+				<button type="button" onclick="handleDeleteAll()">
+					<i class="fa-regular fa-trash-can user-menu-icon"></i>Delete all events
+				</button>
+			</div>
+			<div class="user-menu-separator"></div>
+			<div class="user-menu-item">
+				<button type="button" onclick="handleLogout()">
+					<i class="fa-solid fa-right-from-bracket user-menu-icon"></i>Logout
+				</button>
+			</div>
+		`;
+
+		userMenu.dataset.initialized = 'true';
+	}
+
+	function openSettingsModal() {
+		const existing = document.querySelector('.confirm-modal-backdrop.settings-backdrop');
+		if (existing) {
+			return;
+		}
+
+		const backdrop = document.createElement('div');
+		backdrop.className = 'confirm-modal-backdrop settings-backdrop';
+
+		const modal = document.createElement('div');
+		modal.className = 'confirm-modal settings-modal';
+
+		// Get current settings
+		const savedTheme = localStorage.getItem('theme') || getSystemTheme();
+		const isDarkTheme = savedTheme === 'dark';
+		const showServerStats = localStorage.getItem('showServerStats') !== 'false';
+
+		modal.innerHTML = `
+			<div class="confirm-modal-title">Settings</div>
+			<div class="settings-layout flex flex-col md:flex-row md:gap-8 mt-2">
+				<aside class="settings-sidebar-nav md:w-56 border-b md:border-b-0 md:border-r border-[color:var(--border-color)] pb-3 md:pb-0 md:pr-3">
+					<div class="confirm-modal-message mb-3">
+						<p class="settings-modal-placeholder-text">
+							Configure local preferences for the telemetry dashboard.
+						</p>
+					</div>
+					<nav class="flex md:flex-col gap-2 text-sm" aria-label="Settings sections">
+						<a href="#settings-appearance" class="settings-sidebar-link flex items-center gap-2 rounded-md px-2 py-1.5 text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-secondary)]">
+							<span class="w-4 h-4 flex items-center justify-center rounded-full border border-[color:var(--border-color)] bg-[color:var(--bg-secondary)]">
+								<i class="fa-regular fa-moon text-[10px]"></i>
+							</span>
+							<span class="font-medium">Appearance</span>
+						</a>
+						<a href="#settings-events" class="settings-sidebar-link flex items-center gap-2 rounded-md px-2 py-1.5 text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-secondary)]">
+							<span class="w-4 h-4 flex items-center justify-center rounded-full border border-[color:var(--border-color)] bg-[color:var(--bg-secondary)]">
+								<i class="fa-solid fa-chart-line text-[10px]"></i>
+							</span>
+							<span class="font-medium">Events</span>
+						</a>
+						<a href="#settings-danger" class="settings-sidebar-link flex items-center gap-2 rounded-md px-2 py-1.5 text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-secondary)]">
+							<span class="w-4 h-4 flex items-center justify-center rounded-full border border-[color:var(--border-color)] bg-[color:var(--bg-secondary)]">
+								<i class="fa-solid fa-triangle-exclamation text-[10px]"></i>
+							</span>
+							<span class="font-medium">Danger zone</span>
+						</a>
+					</nav>
+				</aside>
+				<div class="settings-main flex-1 flex flex-col gap-4 mt-3 md:mt-0">
+					<section id="settings-appearance" class="settings-section">
+						<div class="settings-modal-placeholder-title">Appearance</div>
+						<label class="flex items-center justify-between cursor-pointer py-2">
+							<div class="flex flex-col">
+								<span class="text-sm font-medium text-[color:var(--text-primary)]">Show server stats</span>
+								<span class="text-xs text-[color:var(--text-secondary)]">Display server information in the footer (last updated, load time, version, etc.).</span>
+							</div>
+							<input type="checkbox" class="sr-only peer" id="showServerStatsToggle" ${showServerStats ? 'checked' : ''}>
+							<div class="relative w-11 h-6 bg-gray-200 dark:bg-gray-700 rounded-full peer peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600 transition-colors duration-200 ease-in-out">
+								<div class="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform duration-200 ease-in-out transform peer-checked:translate-x-5"></div>
+							</div>
+						</label>
+						<label class="flex items-center justify-between cursor-pointer py-2">
+							<div class="flex flex-col">
+								<span class="text-sm font-medium text-[color:var(--text-primary)]">Dark theme</span>
+								<span class="text-xs text-[color:var(--text-secondary)]">Switch between light and dark color scheme.</span>
+							</div>
+							<input type="checkbox" class="sr-only peer" id="darkThemeToggle" ${isDarkTheme ? 'checked' : ''}>
+							<div class="relative w-11 h-6 bg-gray-200 dark:bg-gray-700 rounded-full peer peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600 transition-colors duration-200 ease-in-out">
+								<div class="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform duration-200 ease-in-out transform peer-checked:translate-x-5"></div>
+							</div>
+						</label>
+					</section>
+					<section id="settings-events" class="settings-section">
+						<div class="settings-modal-placeholder-title">Events</div>
+						<div class="settings-toggle-row">
+							<div class="settings-toggle-text">
+								<div class="settings-toggle-title">Org – Client – Team mapping</div>
+								<div class="settings-toggle-description">
+									Define how Salesforce org identifiers map to clients and teams. This mapping is used to group telemetry in the Teams view.
+								</div>
+							</div>
+							<button type="button" class="confirm-modal-btn" id="manageOrgTeamMappingBtn">
+								<i class="fa-solid fa-users user-menu-icon"></i>Manage teams
+							</button>
+						</div>
+					</section>
+					<section id="settings-danger" class="settings-danger-section">
+						<div class="settings-modal-placeholder-title">Danger zone</div>
+						<div class="settings-modal-placeholder-text">
+							<div class="settings-toggle-row" style="align-items: flex-start;">
+								<div class="settings-toggle-text">
+									<div class="settings-toggle-title">Clear local data</div>
+									<div class="settings-toggle-description">
+										Remove all local preferences and cached data stored in this browser for the telemetry dashboard (theme, filters, mappings, etc.).
+									</div>
+								</div>
+							</div>
+							<div class="settings-toggle-row" style="align-items: flex-start; margin-top: 8px;">
+								<div class="settings-toggle-text">
+									<div class="settings-toggle-title">Delete all events</div>
+									<div class="settings-toggle-description">
+										Permanently delete all telemetry events from the server database. This action cannot be undone.
+									</div>
+								</div>
+							</div>
+						</div>
+					</section>
+					<div class="confirm-modal-actions" style="margin-top: 4px;">
+						<button type="button" class="confirm-modal-btn confirm-modal-btn-cancel" id="settingsCloseBtn">
+							Close
+						</button>
+					</div>
+				</div>
+			</div>
+		`;
+
+		backdrop.appendChild(modal);
+		document.body.appendChild(backdrop);
+
+		requestAnimationFrame(() => {
+			backdrop.classList.add('visible');
+		});
+
+		function closeSettingsModal() {
+			backdrop.classList.remove('visible');
+			backdrop.classList.add('hiding');
+			const handleTransitionEnd = () => {
+				backdrop.removeEventListener('transitionend', handleTransitionEnd);
+				backdrop.remove();
+			};
+			backdrop.addEventListener('transitionend', handleTransitionEnd);
+			setTimeout(() => {
+				if (document.body.contains(backdrop)) {
+					backdrop.removeEventListener('transitionend', handleTransitionEnd);
+					backdrop.remove();
+				}
+			}, 220);
+		}
+
+		const closeBtn = modal.querySelector('#settingsCloseBtn');
+		if (closeBtn) {
+			closeBtn.addEventListener('click', closeSettingsModal);
+		}
+
+		const manageBtn = modal.querySelector('#manageOrgTeamMappingBtn');
+		if (manageBtn) {
+			manageBtn.addEventListener('click', () => {
+				openOrgTeamMappingModal();
+			});
+		}
+
+		// Handle dark theme toggle
+		const darkThemeToggle = modal.querySelector('#darkThemeToggle');
+		if (darkThemeToggle) {
+			darkThemeToggle.addEventListener('change', (e) => {
+				const newTheme = e.target.checked ? 'dark' : 'light';
+				localStorage.setItem('theme', newTheme);
+				applyTheme(newTheme);
+			});
+		}
+
+		// Handle show server stats toggle
+		const showServerStatsToggle = modal.querySelector('#showServerStatsToggle');
+		if (showServerStatsToggle) {
+			showServerStatsToggle.addEventListener('change', (e) => {
+				localStorage.setItem('showServerStats', e.target.checked ? 'true' : 'false');
+				// Reload page to apply changes
+				window.location.reload();
+			});
+		}
+
+		document.addEventListener(
+			'keydown',
+			function handleKeydown(e) {
+				if (e.key === 'Escape') {
+					document.removeEventListener('keydown', handleKeydown);
+					if (document.body.contains(backdrop)) {
+						closeSettingsModal();
+					}
+				}
+			}
+		);
+	}
+
+	function openOrgTeamMappingModal() {
+		// Use the shared org–team mapping modal implementation defined in the dashboard script
+		if (typeof window.openOrgTeamMappingModal === 'function') {
+			window.openOrgTeamMappingModal();
+		}
 	}
 
 	function handleDeleteAll() {
@@ -251,6 +512,7 @@ const detectElectronEnvironment = () => {
 	let allUserIds = new Set(); // Track all available user IDs
 	let selectedSessionsForDeletion = new Set(); // Track sessions selected for deletion
 	let selectionMode = false; // Track if selection mode is active
+	let lastSelectedSessionId = null; // Track last selected session for shift-click range selection
 	let searchQuery = '';
 	let sortOrder = 'DESC';
 	let startTime = performance.now();
@@ -307,12 +569,26 @@ const detectElectronEnvironment = () => {
 			document.documentElement.classList.remove('dark');
 		}
 		updateThemeIcon(theme);
+		// Update toggle in settings modal if it exists
+		const darkThemeToggle = document.querySelector('#darkThemeToggle');
+		if (darkThemeToggle) {
+			darkThemeToggle.checked = theme === 'dark';
+		}
 	}
 
 	function initTheme() {
 		const savedTheme = localStorage.getItem('theme');
 		const theme = savedTheme || 'dark';
 		applyTheme(theme);
+		updateServerStatsVisibility();
+	}
+
+	function updateServerStatsVisibility() {
+		const showServerStats = localStorage.getItem('showServerStats') !== 'false';
+		const footerInfo = document.querySelector('.footer-info');
+		if (footerInfo) {
+			footerInfo.style.display = showServerStats ? '' : 'none';
+		}
 	}
 
 	function toggleTheme() {
@@ -2145,6 +2421,7 @@ const detectElectronEnvironment = () => {
 		// Clear session selection and exit selection mode when switching tabs
 		if (tab !== 'sessions') {
 			selectedSessionsForDeletion.clear();
+			lastSelectedSessionId = null;
 			selectionMode = false;
 			const toggleBtn = document.getElementById('toggleSelectionModeBtn');
 			if (toggleBtn) {
@@ -2638,7 +2915,7 @@ const detectElectronEnvironment = () => {
 		}
 	}
 
-	function refreshLogs(event) {
+	async function refreshLogs(event) {
 		if (event?.preventDefault) {
 			event.preventDefault();
 		}
@@ -2647,14 +2924,25 @@ const detectElectronEnvironment = () => {
 		const refreshIcon = button?.querySelector('.fa-refresh') || (event?.target?.classList?.contains('fa-refresh') ? event.target : null);
 		if (refreshIcon) {
 			refreshIcon.classList.add('rotating');
-			refreshIcon.addEventListener('animationend', () => {
-				refreshIcon.classList.remove('rotating');
-			}, { once: true });
 		}
 		currentOffset = 0;
-		loadEventTypeStats(selectedSession);
-		loadSessions();
-		loadEvents();
+
+		try {
+			// Esperem a que es completin totes les càrregues relacionades amb el refresc.
+			await Promise.all([
+				loadEventTypeStats(selectedSession),
+				loadSessions(),
+				loadEvents()
+			]);
+		} catch (error) {
+			// Les funcions internes ja gestionen i mostren errors (inclòs timeout);
+			// mantenim aquest catch per assegurar-nos que la rotació sempre s'atura.
+			console.error('Error refreshing logs:', error);
+		} finally {
+			if (refreshIcon) {
+				refreshIcon.classList.remove('rotating');
+			}
+		}
 	}
 
 	let deleteAllConfirmed = false;
@@ -3464,6 +3752,7 @@ const detectElectronEnvironment = () => {
 				toggleBtn.classList.remove('active');
 				// Clear selection when exiting selection mode
 				selectedSessionsForDeletion.clear();
+				lastSelectedSessionId = null;
 			}
 		}
 		// Update delete button visibility
@@ -3499,10 +3788,95 @@ const detectElectronEnvironment = () => {
 		})();
 	}
 
+	function selectSessionRange(startSessionId, endSessionId) {
+		// Get all session items from the DOM
+		const sessionItems = Array.from(document.querySelectorAll('#sessionList .session-item'));
+
+		// Find indices of start and end sessions
+		let startIndex = -1;
+		let endIndex = -1;
+
+		sessionItems.forEach((item, index) => {
+			const sessionId = item.getAttribute('data-session');
+			if (sessionId === startSessionId) {
+				startIndex = index;
+			}
+			if (sessionId === endSessionId) {
+				endIndex = index;
+			}
+		});
+
+		// If either session not found, return
+		if (startIndex === -1 || endIndex === -1) {
+			return;
+		}
+
+		// Ensure startIndex is less than endIndex
+		if (startIndex > endIndex) {
+			[startIndex, endIndex] = [endIndex, startIndex];
+		}
+
+		// Save scroll position
+		const sessionList = document.getElementById('sessionList');
+		const scrollTop = sessionList ? sessionList.scrollTop : 0;
+
+		// Select all sessions in the range
+		for (let i = startIndex; i <= endIndex; i++) {
+			const item = sessionItems[i];
+			const sessionId = item.getAttribute('data-session');
+
+			// Only add if not already selected (to avoid unnecessary animations)
+			if (!selectedSessionsForDeletion.has(sessionId)) {
+				selectedSessionsForDeletion.add(sessionId);
+				const checkbox = document.getElementById(`session-checkbox-${sessionId}`);
+				if (checkbox) {
+					checkbox.checked = true;
+					// Trigger animation
+					checkbox.classList.remove('just-unchecked');
+					void checkbox.offsetWidth; // Force reflow
+					checkbox.classList.add('just-checked');
+
+					// Restore scroll position
+					if (sessionList) {
+						requestAnimationFrame(() => {
+							sessionList.scrollTop = scrollTop;
+						});
+					}
+
+					// Clean up animation class
+					const handleAnimationEnd = (e) => {
+						if (e.animationName === 'checkboxCheck') {
+							checkbox.classList.remove('just-checked');
+							if (sessionList) {
+								requestAnimationFrame(() => {
+									sessionList.scrollTop = scrollTop;
+								});
+							}
+							checkbox.removeEventListener('animationend', handleAnimationEnd);
+						}
+					};
+					checkbox.addEventListener('animationend', handleAnimationEnd);
+				}
+			}
+		}
+
+		updateDeleteSelectedButton();
+	}
+
 	function toggleSessionSelection(sessionId, event) {
 		if (event) {
 			event.stopPropagation();
 		}
+
+		// Handle shift-click for range selection
+		if (event && event.shiftKey && lastSelectedSessionId !== null && lastSelectedSessionId !== sessionId) {
+			// Select range from last selected to current
+			selectSessionRange(lastSelectedSessionId, sessionId);
+			// Update last selected to the current one
+			lastSelectedSessionId = sessionId;
+			return;
+		}
+
 		// Save scroll position to prevent scroll jump during animation
 		// The scrollable container is the parent ul with class 'sessions-scrollable'
 		const sessionList = document.getElementById('sessionList');
@@ -3568,6 +3942,10 @@ const detectElectronEnvironment = () => {
 				checkbox.addEventListener('animationend', handleAnimationEnd);
 			}
 		}
+
+		// Update last selected session (for shift-click range selection)
+		lastSelectedSessionId = sessionId;
+
 		updateDeleteSelectedButton();
 	}
 
@@ -3685,6 +4063,7 @@ const detectElectronEnvironment = () => {
 
 			// Clear selection
 			selectedSessionsForDeletion.clear();
+			lastSelectedSessionId = null;
 
 			// If we were viewing one of the deleted sessions, switch to "all"
 			if (sessionsToDelete.includes(selectedSession)) {
@@ -3984,15 +4363,15 @@ const detectElectronEnvironment = () => {
 		const chevron = document.getElementById('userFilterChevron');
 		if (!dropdown || !chevron) return;
 
-		const isVisible = dropdown.classList.contains('show');
+		const isVisible = !dropdown.classList.contains('hidden');
 		if (isVisible) {
-		dropdown.classList.remove('show');
-		chevron.classList.remove('fa-sort-up');
-		chevron.classList.add('fa-sort-down');
-	} else {
-		dropdown.classList.add('show');
-		chevron.classList.remove('fa-sort-down');
-		chevron.classList.add('fa-sort-up');
+			dropdown.classList.add('hidden');
+			chevron.classList.remove('fa-sort-up');
+			chevron.classList.add('fa-sort-down');
+		} else {
+			dropdown.classList.remove('hidden');
+			chevron.classList.remove('fa-sort-down');
+			chevron.classList.add('fa-sort-up');
 			// Load users if not already loaded
 			const dropdownContent = document.getElementById('userFilterDropdownContent');
 			if (dropdownContent && dropdownContent.children.length === 0) {
@@ -4007,9 +4386,9 @@ const detectElectronEnvironment = () => {
 		const dropdownBtn = document.getElementById('userFilterDropdownBtn');
 		const dropdownContainer = event.target.closest('.user-filter-dropdown-container');
 
-		if (dropdown && dropdown.classList.contains('show')) {
+		if (dropdown && !dropdown.classList.contains('hidden')) {
 			if (!dropdownContainer && !dropdown.contains(event.target)) {
-				dropdown.classList.remove('show');
+				dropdown.classList.add('hidden');
 				const chevron = document.getElementById('userFilterChevron');
 				if (chevron) {
 					chevron.classList.remove('fa-sort-up');
@@ -4065,6 +4444,7 @@ const detectElectronEnvironment = () => {
 	function initializeApp() {
 		runSafeInitStep('notification button state', updateNotificationButtonState);
 		runSafeInitStep('theme initialization', initTheme);
+		runSafeInitStep('user menu structure', ensureUserMenuStructure);
 		runSafeInitStep('user menu hover', setupUserMenuHover);
 		runSafeInitStep('level filters setup', setupLevelFilters);
 		runSafeInitStep('sidebar resizer setup', setupSidebarResizer);
@@ -4169,10 +4549,10 @@ const detectElectronEnvironment = () => {
 function toggleMobileSidebar() {
 	const sidebar = document.querySelector('.sidebar');
 	const overlay = document.getElementById('mobileSidebarOverlay');
-	
+
 	if (sidebar && overlay) {
 		const isVisible = sidebar.classList.contains('mobile-visible');
-		
+
 		if (isVisible) {
 			sidebar.classList.remove('mobile-visible');
 			overlay.classList.remove('visible');

@@ -46,6 +46,7 @@ async function init() {
 				server_id TEXT,
 				version TEXT,
 				session_id TEXT,
+				parent_session_id TEXT,
 				user_id TEXT,
 				data TEXT NOT NULL,
 				received_at TEXT NOT NULL,
@@ -96,6 +97,7 @@ async function init() {
 				server_id TEXT,
 				version TEXT,
 				session_id TEXT,
+				parent_session_id TEXT,
 				user_id TEXT,
 				data JSONB NOT NULL,
 				received_at TIMESTAMPTZ NOT NULL,
@@ -122,6 +124,7 @@ async function init() {
 			CREATE INDEX IF NOT EXISTS idx_timestamp ON telemetry_events(timestamp);
 			CREATE INDEX IF NOT EXISTS idx_server_id ON telemetry_events(server_id);
 			CREATE INDEX IF NOT EXISTS idx_created_at ON telemetry_events(created_at);
+			CREATE INDEX IF NOT EXISTS idx_parent_session_id ON telemetry_events(parent_session_id);
 			CREATE INDEX IF NOT EXISTS idx_username ON users(username);
 		`);
 
@@ -132,6 +135,7 @@ async function init() {
 	}
 
 	await ensureUserRoleColumn();
+	await ensureTelemetryParentSessionColumn();
 }
 
 /**
@@ -302,6 +306,162 @@ async function upsertOrgCompanyName(serverId, companyName) {
 }
 
 /**
+ * Compute the logical parent session identifier for an event.
+ *
+ * Rules:
+ * - Key is user (user_id) + org (server_id)
+ * - If another START SESSION exists for same user+org within 3 hours, reuse that
+ *   session as the logical parent.
+ * - Otherwise, the current sessionId becomes the new logical parent.
+ *
+ * For non-start events we try to inherit the parent_session_id from existing
+ * events with the same session_id.
+ *
+ * @param {object} eventData - Raw telemetry event data
+ * @param {string|null} normalizedSessionId - Normalized session identifier
+ * @param {string|null} normalizedUserId - Normalized user identifier
+ * @returns {Promise<string|null>}
+ */
+async function computeParentSessionId(eventData, normalizedSessionId, normalizedUserId) {
+	if (!normalizedSessionId || !db) {
+		return null;
+	}
+
+	const eventType = eventData.event;
+	const serverId = eventData.serverId || null;
+
+	// For non-start events, try to inherit an existing parent_session_id
+	if (eventType !== 'session_start') {
+		if (dbType === 'sqlite') {
+			const existing = db.prepare(`
+				SELECT parent_session_id
+				FROM telemetry_events
+				WHERE session_id = ? AND parent_session_id IS NOT NULL
+				ORDER BY timestamp DESC
+				LIMIT 1
+			`).get(normalizedSessionId);
+			if (existing && existing.parent_session_id) {
+				return existing.parent_session_id;
+			}
+		} else if (dbType === 'postgresql') {
+			const result = await db.query(
+				`SELECT parent_session_id
+				 FROM telemetry_events
+				 WHERE session_id = $1 AND parent_session_id IS NOT NULL
+				 ORDER BY timestamp DESC
+				 LIMIT 1`,
+				[normalizedSessionId]
+			);
+			if (result.rows.length > 0 && result.rows[0].parent_session_id) {
+				return result.rows[0].parent_session_id;
+			}
+		}
+
+		// If we could not find a parent yet, try to base it on any START SESSION
+		// event with this session_id
+		if (dbType === 'sqlite') {
+			const startRow = db.prepare(`
+				SELECT parent_session_id, session_id
+				FROM telemetry_events
+				WHERE session_id = ? AND event = 'session_start'
+				ORDER BY timestamp ASC
+				LIMIT 1
+			`).get(normalizedSessionId);
+			if (startRow) {
+				return startRow.parent_session_id || startRow.session_id || normalizedSessionId;
+			}
+		} else if (dbType === 'postgresql') {
+			const result = await db.query(
+				`SELECT parent_session_id, session_id
+				 FROM telemetry_events
+				 WHERE session_id = $1 AND event = 'session_start'
+				 ORDER BY timestamp ASC
+				 LIMIT 1`,
+				[normalizedSessionId]
+			);
+			if (result.rows.length > 0) {
+				const row = result.rows[0];
+				return row.parent_session_id || row.session_id || normalizedSessionId;
+			}
+		}
+
+		// Fallback: treat the physical sessionId as the logical parent
+		return normalizedSessionId;
+	}
+
+	// From here, we are dealing with a session_start event
+	// If we don't have user or org information, we cannot safely merge sessions
+	if (!normalizedUserId || !serverId) {
+		return normalizedSessionId;
+	}
+
+	const currentTs = eventData.timestamp ? new Date(eventData.timestamp) : new Date();
+	if (Number.isNaN(currentTs.getTime())) {
+		return normalizedSessionId;
+	}
+
+	const THREE_HOURS_MS = 3 * 60 * 60 * 1000;
+
+	if (dbType === 'sqlite') {
+		const lastStart = db.prepare(`
+			SELECT timestamp, parent_session_id, session_id
+			FROM telemetry_events
+			WHERE event = 'session_start'
+			  AND server_id = ?
+			  AND user_id = ?
+			ORDER BY timestamp DESC
+			LIMIT 1
+		`).get(serverId, normalizedUserId);
+
+		if (!lastStart) {
+			return normalizedSessionId;
+		}
+
+		const lastTs = new Date(lastStart.timestamp);
+		if (Number.isNaN(lastTs.getTime())) {
+			return normalizedSessionId;
+		}
+
+		const diffMs = currentTs - lastTs;
+		if (diffMs <= THREE_HOURS_MS) {
+			// Same logical session as the previous START SESSION
+			return lastStart.parent_session_id || lastStart.session_id || normalizedSessionId;
+		}
+
+		return normalizedSessionId;
+	}
+
+	// PostgreSQL implementation
+	const result = await db.query(
+		`SELECT timestamp, parent_session_id, session_id
+		 FROM telemetry_events
+		 WHERE event = 'session_start'
+		   AND server_id = $1
+		   AND user_id = $2
+		 ORDER BY timestamp DESC
+		 LIMIT 1`,
+		[serverId, normalizedUserId]
+	);
+
+	if (result.rows.length === 0) {
+		return normalizedSessionId;
+	}
+
+	const row = result.rows[0];
+	const lastTs = new Date(row.timestamp);
+	if (Number.isNaN(lastTs.getTime())) {
+		return normalizedSessionId;
+	}
+
+	const diffMs = currentTs - lastTs;
+	if (diffMs <= THREE_HOURS_MS) {
+		return row.parent_session_id || row.session_id || normalizedSessionId;
+	}
+
+	return normalizedSessionId;
+}
+
+/**
  * Store a telemetry event
  * @param {object} eventData - The telemetry event data
  * @param {string} receivedAt - ISO timestamp when event was received
@@ -315,12 +475,17 @@ async function storeEvent(eventData, receivedAt) {
 	try {
 		const normalizedSessionId = getNormalizedSessionId(eventData);
 		const normalizedUserId = getNormalizedUserId(eventData);
+		const parentSessionId = await computeParentSessionId(
+			eventData,
+			normalizedSessionId,
+			normalizedUserId
+		);
 
 		if (dbType === 'sqlite') {
 			const stmt = db.prepare(`
 				INSERT INTO telemetry_events
-				(event, timestamp, server_id, version, session_id, user_id, data, received_at)
-				VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+				(event, timestamp, server_id, version, session_id, parent_session_id, user_id, data, received_at)
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 			`);
 
 			stmt.run(
@@ -329,6 +494,7 @@ async function storeEvent(eventData, receivedAt) {
 				eventData.serverId || null,
 				eventData.version || null,
 				normalizedSessionId || null,
+				parentSessionId || null,
 				normalizedUserId || null,
 				JSON.stringify(eventData.data || {}),
 				receivedAt
@@ -336,14 +502,15 @@ async function storeEvent(eventData, receivedAt) {
 		} else if (dbType === 'postgresql') {
 			await db.query(
 				`INSERT INTO telemetry_events
-				(event, timestamp, server_id, version, session_id, user_id, data, received_at)
-				VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+				(event, timestamp, server_id, version, session_id, parent_session_id, user_id, data, received_at)
+				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
 				[
 					eventData.event,
 					eventData.timestamp,
 					eventData.serverId || null,
 					eventData.version || null,
 					normalizedSessionId || null,
+					parentSessionId || null,
 					normalizedUserId || null,
 					eventData.data || {},
 					receivedAt
@@ -465,8 +632,14 @@ async function getEvents(options = {}) {
 		params.push(serverId);
 	}
 	if (sessionId) {
-		whereClause += dbType === 'sqlite' ? ' AND session_id = ?' : ` AND session_id = $${paramIndex++}`;
-		params.push(sessionId);
+		// Filter by logical session: parent_session_id when set, otherwise raw session_id
+		if (dbType === 'sqlite') {
+			whereClause += ' AND (parent_session_id = ? OR (parent_session_id IS NULL AND session_id = ?))';
+		} else {
+			whereClause += ` AND (parent_session_id = $${paramIndex} OR (parent_session_id IS NULL AND session_id = $${paramIndex + 1}))`;
+		}
+		params.push(sessionId, sessionId);
+		paramIndex += dbType === 'sqlite' ? 0 : 2;
 	}
 	if (startDate) {
 		whereClause += dbType === 'sqlite' ? ' AND created_at >= ?' : ` AND created_at >= $${paramIndex++}`;
@@ -579,8 +752,9 @@ async function getEventTypeStats(options = {}) {
 		const params = [];
 		const conditions = [];
 		if (sessionId) {
-			conditions.push('session_id = ?');
-			params.push(sessionId);
+			// Logical session filter
+			conditions.push('(parent_session_id = ? OR (parent_session_id IS NULL AND session_id = ?))');
+			params.push(sessionId, sessionId);
 		}
 		if (userIds && Array.isArray(userIds) && userIds.length > 0) {
 			const placeholders = userIds.map(() => '?').join(', ');
@@ -606,8 +780,9 @@ async function getEventTypeStats(options = {}) {
 		const conditions = [];
 		let paramIndex = 1;
 		if (sessionId) {
-			conditions.push(`session_id = $${paramIndex++}`);
-			params.push(sessionId);
+			conditions.push(`(parent_session_id = $${paramIndex} OR (parent_session_id IS NULL AND session_id = $${paramIndex + 1}))`);
+			params.push(sessionId, sessionId);
+			paramIndex += 2;
 		}
 		if (userIds && Array.isArray(userIds) && userIds.length > 0) {
 			const placeholders = userIds.map(() => `$${paramIndex++}`).join(', ');
@@ -641,7 +816,8 @@ async function getSessions(options = {}) {
 	}
 
 	if (dbType === 'sqlite') {
-		let whereClause = 'WHERE s.session_id IS NOT NULL';
+		// Group by logical session: parent_session_id when available, otherwise session_id
+		let whereClause = 'WHERE s.session_id IS NOT NULL OR s.parent_session_id IS NOT NULL';
 		const params = [];
 		if (userIds && Array.isArray(userIds) && userIds.length > 0) {
 			const placeholders = userIds.map(() => '?').join(', ');
@@ -650,23 +826,26 @@ async function getSessions(options = {}) {
 		}
 		const result = db.prepare(`
 			SELECT
-				s.session_id,
+				COALESCE(s.parent_session_id, s.session_id) AS logical_session_id,
 				COUNT(*) as count,
 				MIN(s.timestamp) as first_event,
 				MAX(s.timestamp) as last_event,
 				(SELECT user_id FROM telemetry_events
-				 WHERE session_id = s.session_id
+				 WHERE COALESCE(parent_session_id, session_id) = COALESCE(s.parent_session_id, s.session_id)
 				 ORDER BY timestamp ASC LIMIT 1) as user_id,
 				(SELECT data FROM telemetry_events
-				 WHERE session_id = s.session_id AND event = 'session_start'
+				 WHERE COALESCE(parent_session_id, session_id) = COALESCE(s.parent_session_id, s.session_id)
+				   AND event = 'session_start'
 				 ORDER BY timestamp ASC LIMIT 1) as session_start_data,
 				(SELECT COUNT(*) FROM telemetry_events
-				 WHERE session_id = s.session_id AND event = 'session_start') as has_start,
+				 WHERE COALESCE(parent_session_id, session_id) = COALESCE(s.parent_session_id, s.session_id)
+				   AND event = 'session_start') as has_start,
 				(SELECT COUNT(*) FROM telemetry_events
-				 WHERE session_id = s.session_id AND event = 'session_end') as has_end
+				 WHERE COALESCE(parent_session_id, session_id) = COALESCE(s.parent_session_id, s.session_id)
+				   AND event = 'session_end') as has_end
 			FROM telemetry_events s
 			${whereClause}
-			GROUP BY s.session_id
+			GROUP BY COALESCE(s.parent_session_id, s.session_id)
 			ORDER BY last_event DESC
 		`).all(...params);
 		return result.map(row => {
@@ -692,7 +871,7 @@ async function getSessions(options = {}) {
 			const isActive = hasStart && !hasEnd && hoursSinceLastEvent < 2;
 
 			return {
-				session_id: row.session_id,
+				session_id: row.logical_session_id,
 				count: parseInt(row.count),
 				first_event: row.first_event,
 				last_event: row.last_event,
@@ -702,7 +881,7 @@ async function getSessions(options = {}) {
 			};
 		});
 	} else {
-		let whereClause = 'WHERE s.session_id IS NOT NULL';
+		let whereClause = 'WHERE s.session_id IS NOT NULL OR s.parent_session_id IS NOT NULL';
 		const params = [];
 		let paramIndex = 1;
 		if (userIds && Array.isArray(userIds) && userIds.length > 0) {
@@ -712,23 +891,26 @@ async function getSessions(options = {}) {
 		}
 		const result = await db.query(`
 			SELECT
-				s.session_id,
+				COALESCE(s.parent_session_id, s.session_id) AS logical_session_id,
 				COUNT(*) as count,
 				MIN(s.timestamp) as first_event,
 				MAX(s.timestamp) as last_event,
 				(SELECT user_id FROM telemetry_events
-				 WHERE session_id = s.session_id
+				 WHERE COALESCE(parent_session_id, session_id) = COALESCE(s.parent_session_id, s.session_id)
 				 ORDER BY timestamp ASC LIMIT 1) as user_id,
 				(SELECT data FROM telemetry_events
-				 WHERE session_id = s.session_id AND event = 'session_start'
+				 WHERE COALESCE(parent_session_id, session_id) = COALESCE(s.parent_session_id, s.session_id)
+				   AND event = 'session_start'
 				 ORDER BY timestamp ASC LIMIT 1) as session_start_data,
 				(SELECT COUNT(*) FROM telemetry_events
-				 WHERE session_id = s.session_id AND event = 'session_start') as has_start,
+				 WHERE COALESCE(parent_session_id, session_id) = COALESCE(s.parent_session_id, s.session_id)
+				   AND event = 'session_start') as has_start,
 				(SELECT COUNT(*) FROM telemetry_events
-				 WHERE session_id = s.session_id AND event = 'session_end') as has_end
+				 WHERE COALESCE(parent_session_id, session_id) = COALESCE(s.parent_session_id, s.session_id)
+				   AND event = 'session_end') as has_end
 			FROM telemetry_events s
 			${whereClause}
-			GROUP BY s.session_id
+			GROUP BY COALESCE(s.parent_session_id, s.session_id)
 			ORDER BY last_event DESC
 		`, params);
 		return result.rows.map(row => {
@@ -756,7 +938,7 @@ async function getSessions(options = {}) {
 			const isActive = hasStart && !hasEnd && hoursSinceLastEvent < 2;
 
 			return {
-				session_id: row.session_id,
+				session_id: row.logical_session_id,
 				count: parseInt(row.count),
 				first_event: row.first_event,
 				last_event: row.last_event,
@@ -1483,6 +1665,28 @@ async function ensureUserRoleColumn() {
 		}
 	} catch (error) {
 		console.error('Error ensuring user role column:', error);
+	}
+}
+
+async function ensureTelemetryParentSessionColumn() {
+	if (!db) {
+		return;
+	}
+
+	try {
+		if (dbType === 'sqlite') {
+			const columns = db.prepare('PRAGMA table_info(telemetry_events)').all();
+			const hasParentColumn = columns.some(column => column.name === 'parent_session_id');
+			if (!hasParentColumn) {
+				db.exec('ALTER TABLE telemetry_events ADD COLUMN parent_session_id TEXT');
+				db.exec('CREATE INDEX IF NOT EXISTS idx_parent_session_id ON telemetry_events(parent_session_id)');
+			}
+		} else if (dbType === 'postgresql') {
+			await db.query("ALTER TABLE IF EXISTS telemetry_events ADD COLUMN IF NOT EXISTS parent_session_id TEXT");
+			await db.query("CREATE INDEX IF NOT EXISTS idx_parent_session_id ON telemetry_events(parent_session_id)");
+		}
+	} catch (error) {
+		console.error('Error ensuring telemetry parent_session_id column:', error);
 	}
 }
 

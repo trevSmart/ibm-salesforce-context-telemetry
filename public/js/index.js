@@ -61,14 +61,16 @@ let userMenuHideTimeout = null;
 const USER_MENU_HIDE_DELAY_MS = 300;
 
 function showUserMenu(e) {
-	e.stopPropagation();
+	if (e) {
+		e.stopPropagation();
+	}
 	const userMenu = document.getElementById('userMenu');
-	const isVisible = userMenu.classList.contains('show');
+	if (!userMenu) {
+		return;
+	}
 
-	// Toggle menu visibility
-	if (isVisible) {
-		userMenu.classList.remove('show');
-	} else {
+	// Only open the menu; do not toggle/close it from this handler
+	if (!userMenu.classList.contains('show')) {
 		userMenu.classList.add('show');
 		// Load user info
 		fetch('/api/auth/status', {
@@ -77,10 +79,12 @@ function showUserMenu(e) {
 			.then(response => response.json())
 			.then(data => {
 				const usernameElement = document.getElementById('userMenuUsername');
-				if (data.authenticated && data.username) {
-					usernameElement.innerHTML = '<i class="fa-regular fa-user user-menu-icon"></i>' + escapeHtml(data.username);
-				} else {
-					usernameElement.innerHTML = '<i class="fa-regular fa-user user-menu-icon"></i>Not authenticated';
+				if (usernameElement) {
+					if (data.authenticated && data.username) {
+						usernameElement.innerHTML = '<i class="fa-regular fa-user user-menu-icon"></i>' + escapeHtml(data.username);
+					} else {
+						usernameElement.innerHTML = '<i class="fa-regular fa-user user-menu-icon"></i>Not authenticated';
+					}
 				}
 
 				// Hide "Delete all events" option for basic users
@@ -95,7 +99,9 @@ function showUserMenu(e) {
 			})
 			.catch(() => {
 				const usernameElement = document.getElementById('userMenuUsername');
-				usernameElement.innerHTML = '<i class="fa-regular fa-user user-menu-icon"></i>Error loading user';
+				if (usernameElement) {
+					usernameElement.innerHTML = '<i class="fa-regular fa-user user-menu-icon"></i>Error loading user';
+				}
 			});
 	}
 }
@@ -363,12 +369,6 @@ function openConfirmModal({ title, message, confirmLabel = 'Confirm', cancelLabe
 		cancelBtn.addEventListener('click', () => animateAndResolve(false));
 		confirmBtn.addEventListener('click', () => animateAndResolve(true));
 
-		backdrop.addEventListener('click', (e) => {
-			if (e.target === backdrop) {
-				animateAndResolve(false);
-			}
-		});
-
 		document.addEventListener(
 			'keydown',
 			function handleKeydown(e) {
@@ -383,10 +383,495 @@ function openConfirmModal({ title, message, confirmLabel = 'Confirm', cancelLabe
 	});
 }
 
+// Settings modal & org–client–team mapping
+const ORG_TEAM_MAPPING_STORAGE_KEY = 'orgTeamMappings';
+
+function getOrgTeamMappings() {
+	try {
+		const raw = localStorage.getItem(ORG_TEAM_MAPPING_STORAGE_KEY);
+		if (!raw) {
+			return [];
+		}
+		const parsed = JSON.parse(raw);
+		return Array.isArray(parsed) ? parsed : [];
+	} catch (error) {
+		console.error('Error parsing org-team mappings from localStorage:', error);
+		return [];
+	}
+}
+
+function saveOrgTeamMappings(mappings) {
+	try {
+		localStorage.setItem(ORG_TEAM_MAPPING_STORAGE_KEY, JSON.stringify(mappings || []));
+	} catch (error) {
+		console.error('Error saving org-team mappings to localStorage:', error);
+	}
+}
+
+function ensureUserMenuStructure() {
+	const userMenu = document.getElementById('userMenu');
+	if (!userMenu || userMenu.dataset.initialized === 'true') {
+		return;
+	}
+
+	// Basic preferences menu used on dashboard and event log
+	userMenu.innerHTML = `
+		<div class="user-menu-item" id="userMenuUsername">
+			<i class="fa-regular fa-user user-menu-icon"></i>Loading...
+		</div>
+		<div class="user-menu-item">
+			<button type="button" id="themeToggleMenuItem" onclick="toggleTheme()">
+				<i class="fa-regular fa-moon user-menu-icon"></i>Dark theme
+			</button>
+		</div>
+		<div class="user-menu-item">
+			<button type="button" id="openSettingsMenuItem" onclick="openSettingsModal()">
+				<i class="fa-solid fa-sliders user-menu-icon"></i>Settings
+			</button>
+		</div>
+		<div class="user-menu-item clear-data-menu-item">
+			<button type="button" onclick="clearLocalData()">
+				<i class="fa-solid fa-broom user-menu-icon"></i>Clear local data
+			</button>
+		</div>
+		<div class="user-menu-item delete-all-menu-item">
+			<button type="button" onclick="handleDeleteAll()">
+				<i class="fa-regular fa-trash-can user-menu-icon"></i>Delete all events
+			</button>
+		</div>
+		<div class="user-menu-separator"></div>
+		<div class="user-menu-item">
+			<button type="button" onclick="handleLogout()">
+				<i class="fa-solid fa-right-from-bracket user-menu-icon"></i>Logout
+			</button>
+		</div>
+	`;
+
+	userMenu.dataset.initialized = 'true';
+}
+
+// Shared settings modal used by both dashboard and event log pages
+function openSettingsModal() {
+	const existing = document.querySelector('.confirm-modal-backdrop.settings-backdrop');
+	if (existing) {
+		return;
+	}
+
+	const backdrop = document.createElement('div');
+	backdrop.className = 'confirm-modal-backdrop settings-backdrop';
+
+	const modal = document.createElement('div');
+	modal.className = 'confirm-modal settings-modal';
+
+	// Get current settings
+	const savedTheme = localStorage.getItem('theme') || getSystemTheme();
+	const isDarkTheme = savedTheme === 'dark';
+	const showServerStats = localStorage.getItem('showServerStats') !== 'false';
+
+	modal.innerHTML = `
+		<div class="confirm-modal-title">Settings</div>
+		<div class="settings-layout flex flex-col md:flex-row md:gap-8 mt-2">
+			<aside class="settings-sidebar-nav md:w-56 border-b md:border-b-0 md:border-r border-[color:var(--border-color)] pb-3 md:pb-0 md:pr-3">
+				<div class="confirm-modal-message mb-3">
+					<p class="settings-modal-placeholder-text">
+						Configure local preferences for the telemetry dashboard.
+					</p>
+				</div>
+				<nav class="flex md:flex-col gap-2 text-sm" aria-label="Settings sections">
+					<a href="#settings-appearance" class="settings-sidebar-link flex items-center gap-2 rounded-md px-2 py-1.5 text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-secondary)]">
+						<span class="w-4 h-4 flex items-center justify-center rounded-full border border-[color:var(--border-color)] bg-[color:var(--bg-secondary)]">
+							<i class="fa-regular fa-moon text-[10px]"></i>
+						</span>
+						<span class="font-medium">Appearance</span>
+					</a>
+					<a href="#settings-events" class="settings-sidebar-link flex items-center gap-2 rounded-md px-2 py-1.5 text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-secondary)]">
+						<span class="w-4 h-4 flex items-center justify-center rounded-full border border-[color:var(--border-color)] bg-[color:var(--bg-secondary)]">
+							<i class="fa-solid fa-chart-line text-[10px]"></i>
+						</span>
+						<span class="font-medium">Events</span>
+					</a>
+					<a href="#settings-danger" class="settings-sidebar-link flex items-center gap-2 rounded-md px-2 py-1.5 text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-secondary)]">
+						<span class="w-4 h-4 flex items-center justify-center rounded-full border border-[color:var(--border-color)] bg-[color:var(--bg-secondary)]">
+							<i class="fa-solid fa-triangle-exclamation text-[10px]"></i>
+						</span>
+						<span class="font-medium">Danger zone</span>
+					</a>
+				</nav>
+			</aside>
+			<div class="settings-main flex-1 flex flex-col gap-4 mt-3 md:mt-0">
+				<section id="settings-appearance" class="settings-section">
+					<div class="settings-modal-placeholder-title">Appearance</div>
+					<label class="flex items-center justify-between cursor-pointer py-2">
+						<div class="flex flex-col">
+							<span class="text-sm font-medium text-[color:var(--text-primary)]">Show server stats</span>
+							<span class="text-xs text-[color:var(--text-secondary)]">Display server information in the footer (last updated, load time, version, etc.).</span>
+						</div>
+						<input type="checkbox" class="sr-only peer" id="showServerStatsToggle" ${showServerStats ? 'checked' : ''}>
+						<div class="relative w-11 h-6 bg-gray-200 dark:bg-gray-700 rounded-full peer peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600 transition-colors duration-200 ease-in-out">
+							<div class="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform duration-200 ease-in-out transform peer-checked:translate-x-5"></div>
+						</div>
+					</label>
+					<label class="flex items-center justify-between cursor-pointer py-2">
+						<div class="flex flex-col">
+							<span class="text-sm font-medium text-[color:var(--text-primary)]">Dark theme</span>
+							<span class="text-xs text-[color:var(--text-secondary)]">Switch between light and dark color scheme.</span>
+						</div>
+						<input type="checkbox" class="sr-only peer" id="darkThemeToggle" ${isDarkTheme ? 'checked' : ''}>
+						<div class="relative w-11 h-6 bg-gray-200 dark:bg-gray-700 rounded-full peer peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600 transition-colors duration-200 ease-in-out">
+							<div class="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform duration-200 ease-in-out transform peer-checked:translate-x-5"></div>
+						</div>
+					</label>
+				</section>
+				<section id="settings-events" class="settings-section">
+					<div class="settings-modal-placeholder-title">Events</div>
+					<div class="settings-toggle-row">
+						<div class="settings-toggle-text">
+							<div class="settings-toggle-title">Org – Client – Team mapping</div>
+							<div class="settings-toggle-description">
+								Define how Salesforce org identifiers map to clients and teams. This mapping is used to group telemetry in the Teams view.
+							</div>
+						</div>
+						<button type="button" class="confirm-modal-btn" id="manageOrgTeamMappingBtn">
+							<i class="fa-solid fa-users user-menu-icon"></i>Manage teams
+						</button>
+					</div>
+				</section>
+				<section id="settings-danger" class="settings-danger-section">
+					<div class="settings-modal-placeholder-title">Danger zone</div>
+					<div class="settings-modal-placeholder-text">
+						<div class="settings-toggle-row" style="align-items: flex-start;">
+							<div class="settings-toggle-text">
+								<div class="settings-toggle-title">Clear local data</div>
+								<div class="settings-toggle-description">
+									Remove all local preferences and cached data stored in this browser for the telemetry dashboard (theme, filters, mappings, etc.).
+								</div>
+							</div>
+						</div>
+						<div class="settings-toggle-row" style="align-items: flex-start; margin-top: 8px;">
+							<div class="settings-toggle-text">
+								<div class="settings-toggle-title">Delete all events</div>
+								<div class="settings-toggle-description">
+									Permanently delete all telemetry events from the server database. This action cannot be undone.
+								</div>
+							</div>
+						</div>
+					</div>
+				</section>
+				<div class="confirm-modal-actions" style="margin-top: 4px;">
+					<button type="button" class="confirm-modal-btn confirm-modal-btn-cancel" id="settingsCloseBtn">
+						Close
+					</button>
+				</div>
+			</div>
+		</div>
+	`;
+
+	backdrop.appendChild(modal);
+	document.body.appendChild(backdrop);
+
+	requestAnimationFrame(() => {
+		backdrop.classList.add('visible');
+	});
+
+	function closeSettingsModal() {
+		backdrop.classList.remove('visible');
+		backdrop.classList.add('hiding');
+		const handleTransitionEnd = () => {
+			backdrop.removeEventListener('transitionend', handleTransitionEnd);
+			backdrop.remove();
+		};
+		backdrop.addEventListener('transitionend', handleTransitionEnd);
+		setTimeout(() => {
+			if (document.body.contains(backdrop)) {
+				backdrop.removeEventListener('transitionend', handleTransitionEnd);
+				backdrop.remove();
+			}
+		}, 220);
+	}
+
+	const closeBtn = modal.querySelector('#settingsCloseBtn');
+	if (closeBtn) {
+		closeBtn.addEventListener('click', closeSettingsModal);
+	}
+
+	const manageBtn = modal.querySelector('#manageOrgTeamMappingBtn');
+	if (manageBtn) {
+		manageBtn.addEventListener('click', () => {
+			openOrgTeamMappingModal();
+		});
+	}
+
+	document.addEventListener(
+		'keydown',
+		function handleKeydown(e) {
+			if (e.key === 'Escape') {
+				document.removeEventListener('keydown', handleKeydown);
+				if (document.body.contains(backdrop)) {
+					closeSettingsModal();
+				}
+			}
+		}
+	);
+}
+
+function openOrgTeamMappingModal() {
+	const existing = document.querySelector('.confirm-modal-backdrop.org-team-mapping-backdrop');
+	if (existing) {
+		return;
+	}
+
+	const backdrop = document.createElement('div');
+	backdrop.className = 'confirm-modal-backdrop org-team-mapping-backdrop';
+
+	const modal = document.createElement('div');
+	modal.className = 'confirm-modal settings-modal';
+	modal.innerHTML = `
+		<div class="confirm-modal-title">Org – Client – Team mapping</div>
+		<div class="confirm-modal-message">
+			<p class="settings-modal-placeholder-text">
+				Manage how Salesforce org identifiers are associated with clients and teams. This configuration is stored only in this browser.
+			</p>
+		</div>
+		<div style="display: flex; flex-direction: column; gap: 12px;">
+			<div id="orgTeamMappingList" style="max-height: 260px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 10px;">
+			</div>
+			<form id="orgTeamMappingForm" class="settings-toggle-row" style="flex-direction: column; align-items: stretch; gap: 10px; padding-top: 4px; padding-bottom: 0;">
+				<input type="hidden" id="orgTeamMappingEditingId" value="">
+				<div style="display: flex; flex-direction: column; gap: 6px;">
+					<label class="settings-modal-placeholder-text">
+						Salesforce org identifier
+						<input id="orgIdentifierInput" type="text" placeholder="Org ID or unique org key"
+							style="margin-top: 2px; width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 0.8rem;">
+					</label>
+					<label class="settings-modal-placeholder-text">
+						Client name
+						<input id="clientNameInput" type="text" placeholder="Client"
+							style="margin-top: 2px; width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 0.8rem;">
+					</label>
+					<label class="settings-modal-placeholder-text">
+						Team name
+						<input id="teamNameInput" type="text" placeholder="Team"
+							style="margin-top: 2px; width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 0.8rem;">
+					</label>
+					<label class="settings-modal-placeholder-text">
+						Color (optional)
+						<input id="teamColorInput" type="text" placeholder="#2195cf or CSS color name"
+							style="margin-top: 2px; width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 0.8rem;">
+					</label>
+					<label class="settings-modal-placeholder-text" style="display: flex; align-items: center; gap: 6px; margin-top: 4px;">
+						<input id="mappingActiveInput" type="checkbox" checked style="width: 14px; height: 14px;">
+						<span>Active mapping</span>
+					</label>
+				</div>
+				<div class="confirm-modal-actions" style="width: 100%; justify-content: space-between; margin-top: 4px;">
+					<button type="button" class="confirm-modal-btn confirm-modal-btn-cancel" id="resetOrgTeamMappingFormBtn">
+						Clear form
+					</button>
+					<button type="submit" class="confirm-modal-btn confirm-modal-btn-confirm">
+						Save mapping
+					</button>
+				</div>
+			</form>
+		</div>
+		<div class="confirm-modal-actions" style="margin-top: 16px;">
+			<button type="button" class="confirm-modal-btn confirm-modal-btn-cancel" id="orgTeamMappingCloseBtn">
+				Close
+			</button>
+		</div>
+	`;
+
+	backdrop.appendChild(modal);
+	document.body.appendChild(backdrop);
+
+	function closeMappingModal() {
+		backdrop.classList.remove('visible');
+		backdrop.classList.add('hiding');
+		const handleTransitionEnd = () => {
+			backdrop.removeEventListener('transitionend', handleTransitionEnd);
+			backdrop.remove();
+		};
+		backdrop.addEventListener('transitionend', handleTransitionEnd);
+		setTimeout(() => {
+			if (document.body.contains(backdrop)) {
+				backdrop.removeEventListener('transitionend', handleTransitionEnd);
+				backdrop.remove();
+			}
+		}, 220);
+	}
+
+	const closeBtn = modal.querySelector('#orgTeamMappingCloseBtn');
+	if (closeBtn) {
+		closeBtn.addEventListener('click', closeMappingModal);
+	}
+
+	document.addEventListener(
+		'keydown',
+		function handleKeydown(e) {
+			if (e.key === 'Escape') {
+				document.removeEventListener('keydown', handleKeydown);
+				if (document.body.contains(backdrop)) {
+					closeMappingModal();
+				}
+			}
+		}
+	);
+
+	const listContainer = modal.querySelector('#orgTeamMappingList');
+	const form = modal.querySelector('#orgTeamMappingForm');
+	const editingIdInput = modal.querySelector('#orgTeamMappingEditingId');
+	const orgInput = modal.querySelector('#orgIdentifierInput');
+	const clientInput = modal.querySelector('#clientNameInput');
+	const teamInput = modal.querySelector('#teamNameInput');
+	const colorInput = modal.querySelector('#teamColorInput');
+	const activeInput = modal.querySelector('#mappingActiveInput');
+	const resetFormBtn = modal.querySelector('#resetOrgTeamMappingFormBtn');
+
+	function renderMappings() {
+		if (!listContainer) {
+			return;
+		}
+		const mappings = getOrgTeamMappings();
+		if (!mappings.length) {
+			listContainer.innerHTML = `
+				<div class="settings-modal-placeholder-text">
+					No mappings defined yet. Add a mapping using the form below.
+				</div>
+			`;
+			return;
+		}
+
+		const rowsHtml = mappings
+			.map((mapping, index) => {
+				const safeOrg = escapeHtml(mapping.orgIdentifier || '');
+				const safeClient = escapeHtml(mapping.clientName || '');
+				const safeTeam = escapeHtml(mapping.teamName || '');
+				const safeColor = escapeHtml(mapping.color || '');
+				const status = mapping.active === false ? 'Inactive' : 'Active';
+				return `
+					<div class="settings-toggle-row" data-mapping-index="${index}" style="padding-top: 6px; padding-bottom: 6px; border-bottom: 1px solid var(--border-color);">
+						<div class="settings-toggle-text">
+							<div class="settings-toggle-title">${safeTeam || '(Unnamed team)'} ${safeClient ? '· ' + safeClient : ''}</div>
+							<div class="settings-toggle-description">
+								Org: <code>${safeOrg || '-'}</code>
+								${safeColor ? ` · Color: <span style="display:inline-flex;align-items:center;gap:4px;"><span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:${safeColor};border:1px solid var(--border-color);"></span>${safeColor}</span>` : ''}
+								 · Status: ${status}
+							</div>
+						</div>
+						<div class="confirm-modal-actions" style="gap: 6px;">
+							<button type="button" class="confirm-modal-btn" data-action="edit" data-index="${index}">Edit</button>
+							<button type="button" class="confirm-modal-btn confirm-modal-btn-destructive" data-action="delete" data-index="${index}">Delete</button>
+						</div>
+					</div>
+				`;
+			})
+			.join('');
+
+		listContainer.innerHTML = rowsHtml;
+
+		listContainer.querySelectorAll('button[data-action="edit"]').forEach((btn) => {
+			btn.addEventListener('click', () => {
+				const idx = Number(btn.dataset.index);
+				const mappingsData = getOrgTeamMappings();
+				const mapping = mappingsData[idx];
+				if (!mapping) {
+					return;
+				}
+				editingIdInput.value = String(idx);
+				orgInput.value = mapping.orgIdentifier || '';
+				clientInput.value = mapping.clientName || '';
+				teamInput.value = mapping.teamName || '';
+				colorInput.value = mapping.color || '';
+				activeInput.checked = mapping.active !== false;
+			});
+		});
+
+		listContainer.querySelectorAll('button[data-action="delete"]').forEach((btn) => {
+			btn.addEventListener('click', () => {
+				const idx = Number(btn.dataset.index);
+				const mappingsData = getOrgTeamMappings();
+				if (idx >= 0 && idx < mappingsData.length) {
+					mappingsData.splice(idx, 1);
+					saveOrgTeamMappings(mappingsData);
+					renderMappings();
+				}
+			});
+		});
+	}
+
+	function resetForm() {
+		if (!editingIdInput || !orgInput || !clientInput || !teamInput || !colorInput || !activeInput) {
+			return;
+		}
+		editingIdInput.value = '';
+		orgInput.value = '';
+		clientInput.value = '';
+		teamInput.value = '';
+		colorInput.value = '';
+		activeInput.checked = true;
+	}
+
+	if (resetFormBtn) {
+		resetFormBtn.addEventListener('click', (e) => {
+			e.preventDefault();
+			resetForm();
+		});
+	}
+
+	if (form) {
+		form.addEventListener('submit', (e) => {
+			e.preventDefault();
+			const orgIdentifier = orgInput.value.trim();
+			const clientName = clientInput.value.trim();
+			const teamName = teamInput.value.trim();
+			const color = colorInput.value.trim();
+			const active = !!activeInput.checked;
+
+			if (!orgIdentifier || !clientName || !teamName) {
+				alert('Org identifier, client name and team name are required.');
+				return;
+			}
+
+			const mappings = getOrgTeamMappings();
+			const editingIndex = editingIdInput.value !== '' ? Number(editingIdInput.value) : -1;
+
+			// Prevent duplicate org identifiers when creating a new mapping
+			const duplicateIndex = mappings.findIndex((m, idx) => m.orgIdentifier === orgIdentifier && idx !== editingIndex);
+			if (duplicateIndex !== -1) {
+				alert('There is already a mapping for this org identifier. Edit the existing mapping instead.');
+				return;
+			}
+
+			const mappingData = {
+				orgIdentifier,
+				clientName,
+				teamName,
+				color,
+				active
+			};
+
+			if (editingIndex >= 0 && editingIndex < mappings.length) {
+				mappings[editingIndex] = mappingData;
+			} else {
+				mappings.push(mappingData);
+			}
+			saveOrgTeamMappings(mappings);
+			renderMappings();
+			resetForm();
+		});
+	}
+
+	renderMappings();
+
+	requestAnimationFrame(() => {
+		backdrop.classList.add('visible');
+	});
+}
+
 // Initialize theme
 if (document.readyState === 'loading') {
 	document.addEventListener('DOMContentLoaded', () => {
 		initTheme();
+		ensureUserMenuStructure();
 		setupUserMenuHover();
 		setupIconButtonsGroupHover();
 	});
@@ -463,7 +948,7 @@ function setupIconButtonsGroupHover() {
 }
 
 // Refresh dashboard function
-function refreshDashboard(event) {
+async function refreshDashboard(event) {
 	if (event) {
 		event.stopPropagation();
 	}
@@ -472,12 +957,19 @@ function refreshDashboard(event) {
 	const refreshIcon = button?.querySelector('.fa-refresh') || (event?.target?.classList?.contains('fa-refresh') ? event.target : null);
 	if (refreshIcon) {
 		refreshIcon.classList.add('rotating');
-		refreshIcon.addEventListener('animationend', () => {
-			refreshIcon.classList.remove('rotating');
-		}, { once: true });
 	}
 	// Reload chart data with current days setting
-	loadChartData(currentDays);
+	try {
+		await loadChartData(currentDays);
+	} catch (error) {
+		// Any errors are already logged inside loadChartData; this catch
+		// simply ensures we always stop the spinner.
+		console.error('Error refreshing dashboard:', error);
+	} finally {
+		if (refreshIcon) {
+			refreshIcon.classList.remove('rotating');
+		}
+	}
 }
 
 // Chart configuration
@@ -614,7 +1106,7 @@ async function loadChartData(days = currentDays) {
 					backgroundColor: totalEventsBackgroundColor,
 					borderWidth: 2,
 					fill: true,
-					tension: 0.1,
+					tension: 0,
 					pointRadius: 2,
 					pointHoverRadius: 4,
 					pointBackgroundColor: totalEventsBorderColor,
@@ -636,7 +1128,7 @@ async function loadChartData(days = currentDays) {
 				responsive: true,
 				maintainAspectRatio: false,
 				animation: {
-					duration: 750,
+					duration: 350,
 					onComplete: () => {
 						// Show the chart once rendering is complete
 						const chartCanvas = document.getElementById('eventsChart');
