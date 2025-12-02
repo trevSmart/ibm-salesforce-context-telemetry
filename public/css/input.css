@@ -107,7 +107,7 @@
 
   html.dark body {
     background: #18181b url("/resources/bg-01.jpg") center center / cover no-repeat fixed;
-    background-blend-mode: overlay;
+    background-blend-mode: soft-light;
   }
 
   /* Event-log page specific body styles */
@@ -119,7 +119,7 @@
 
   html.dark body.event-log-page {
     background: #18181b url("/resources/bg-01.jpg") center center / cover no-repeat fixed;
-    background-blend-mode: overlay;
+    background-blend-mode: soft-light;
   }
 
   /* Index page specific body styles */
