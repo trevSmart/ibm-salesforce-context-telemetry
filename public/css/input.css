@@ -3395,17 +3395,15 @@
       padding: 0 12px 16px 12px;
     }
 
-    /* Make session activity card height flexible and prevent overlap */
+    /* Override session activity card for extra small screens */
     .session-activity-card {
       height: auto;
       min-height: 200px;
       max-height: 300px;
-      margin: 0 2px 12px 2px;
     }
 
     #sessionActivityChart {
       height: 180px !important;
-      min-height: 180px;
     }
 
     /* Adjust legend for small screens */
@@ -3423,7 +3421,7 @@
       transform: translateX(-50%) translateY(0);
     }
 
-    /* Adjust date navigation buttons */
+    /* Adjust date navigation buttons for small screens */
     .date-nav-btn {
       padding: 2px 6px;
       font-size: 0.75rem;
@@ -3439,30 +3437,6 @@
 
     .session-activity-header .subtitle {
       font-size: 0.85rem;
-    }
-
-    /* Ensure table is horizontally scrollable */
-    .logs-table-container {
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
-    }
-
-    #logsTableScroll {
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
-    }
-
-    .logs-table {
-      min-width: 600px;
-    }
-
-    /* Ensure main content takes full height */
-    .main-content {
-      min-height: 0;
-    }
-
-    .main-content-body {
-      overflow-y: auto;
     }
   }
 
