@@ -47,14 +47,7 @@
 				<button type="button" class="icon-btn" onclick="refreshDashboard(event)"><i class="fa fa-refresh"></i></button>
 				<div class="user-menu-container" style="position: relative;">
 					<button class="icon-btn user-btn" id="userBtn" onclick="showUserMenu(event)"><i class="fa-solid fa-wrench"></i></button>
-					<div class="user-menu" id="userMenu">
-						<div class="user-menu-item" id="userMenuUsername"><i class="fa-regular fa-user user-menu-icon"></i>Loading...</div>
-						<button class="user-menu-item" id="themeToggleMenuItem" onclick="toggleTheme()"><i class="fa-regular fa-moon user-menu-icon"></i>Toggle theme</button>
-						<button class="user-menu-item clear-data-menu-item" onclick="clearLocalData()"><i class="fa-regular fa-trash-can user-menu-icon"></i>Clear local data</button>
-						<button class="user-menu-item delete-all-menu-item" onclick="handleDeleteAll()"><i class="fa-solid fa-broom user-menu-icon"></i>Delete all events</button>
-						<div class="user-menu-separator"></div>
-						<button class="user-menu-item" onclick="handleLogout()"><i class="fa-solid fa-arrow-right-from-bracket user-menu-icon"></i>Logout</button>
-					</div>
+					<div class="user-menu" id="userMenu"></div>
 				</div>
 			</div>
 		</div>
@@ -85,6 +78,7 @@
 	</div>
 
 	<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+	<script src="/js/user-menu.js"></script>
 	<script src="/js/index.js"></script>
 </body>
 </html>

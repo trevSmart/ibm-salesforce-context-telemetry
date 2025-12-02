@@ -136,14 +136,7 @@
 							<button class="icon-btn notification-toggle" onclick="toggleNotificationMode()"><i class="fa-regular fa-bell"></i></button>
 							<div class="user-menu-container" style="position: relative;">
 								<button class="icon-btn user-btn" id="userBtn" onclick="showUserMenu(event)"><i class="fa-solid fa-wrench"></i></button>
-								<div class="user-menu" id="userMenu">
-									<div class="user-menu-item" id="userMenuUsername"><i class="fa-regular fa-user user-menu-icon"></i>Loading...</div>
-									<button class="user-menu-item" id="themeToggleMenuItem" onclick="toggleTheme()"><i class="fa-regular fa-moon user-menu-icon"></i>Toggle theme</button>
-									<button class="user-menu-item clear-data-menu-item" onclick="clearLocalData()"><i class="fa-regular fa-trash-can user-menu-icon"></i>Clear local data</button>
-									<button class="user-menu-item delete-all-menu-item" onclick="handleDeleteAll()"><i class="fa-solid fa-broom user-menu-icon"></i>Delete all events</button>
-									<div class="user-menu-separator"></div>
-									<button class="user-menu-item" onclick="handleLogout()"><i class="fa-solid fa-arrow-right-from-bracket user-menu-icon"></i>Logout</button>
-								</div>
+								<div class="user-menu" id="userMenu"></div>
 							</div>
 						</div>
 					</div>
@@ -216,20 +209,22 @@
 							</table>
 						</div>
 					</div>
-					<div class="footer-info">
-						<span class="text-xs">Last updated: <span id="lastUpdatedInfo" class="font-semibold">never</span></span>
-						<span class="text-xs">Load time: <span id="durationInfo" class="font-semibold">-</span></span>
-						<span class="text-xs">Version: <span class="font-semibold">v1.0.0</span></span>
-						<span class="text-xs" id="dbSizeInfo" style="display: none;">DB size: <span id="dbSize" class="font-semibold">-</span></span>
-					</div>
+
 				</div>
 			</div>
+		</div>
+		<div class="footer-info">
+			<span class="text-xs">Last updated: <span id="lastUpdatedInfo" class="font-semibold">never</span></span>
+			<span class="text-xs">Load time: <span id="durationInfo" class="font-semibold">-</span></span>
+			<span class="text-xs">Version: <span class="font-semibold">v1.0.0</span></span>
+			<span class="text-xs" id="dbSizeInfo" style="display: none;">DB size: <span id="dbSize" class="font-semibold">-</span></span>
 		</div>
 	</div>
 
 	<div class="mobile-sidebar-overlay" id="mobileSidebarOverlay" onclick="toggleMobileSidebar()"></div>
 
 	<script src="/vendor/echarts/echarts.min.js"></script>
+	<script src="/js/user-menu.js"></script>
 	<script src="/js/event-log.js"></script>
 </body>
 </html>
