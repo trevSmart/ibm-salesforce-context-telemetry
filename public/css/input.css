@@ -2820,11 +2820,11 @@
     color: #52525b;
     background: var(--bg-secondary);
     padding: 12px 14px;
-    backdrop-filter: blur(3px);
+    backdrop-filter: blur(3.5px);
     border-radius: 8px;
     font-weight: 200;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    opacity: 0.7;
+    opacity: 0.6;
     border: 1px solid #3f3f4615;
     transition: opacity 0.18s ease-out, backdrop-filter 0.18s ease-out;
   }
@@ -2931,6 +2931,24 @@
 
   .logs-table-container:hover > div:last-child::-webkit-scrollbar-thumb:hover {
     background: var(--text-secondary);
+  }
+
+  /* Hide event type button labels when space is limited, before Users button gets hidden */
+  @media (max-width: 1400px) {
+    .level-filter-btn span:not(.level-count) {
+      display: none;
+    }
+    .level-filter-btn {
+      padding: 4px 8px;
+      min-width: auto;
+    }
+  }
+
+  /* Hide event type buttons completely when space is very limited, before Users button gets hidden */
+  @media (max-width: 1100px) {
+    .level-filters {
+      display: none;
+    }
   }
 
   @media (max-width: 1200px) {

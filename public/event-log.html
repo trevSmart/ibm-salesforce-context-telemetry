@@ -10,8 +10,10 @@
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-	<link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
-	<link rel="stylesheet" href="/vendor/fontawesome/css/v4-shims.min.css">
+	<link rel="preload" href="/vendor/fontawesome/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+	<noscript><link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css"></noscript>
+	<link rel="preload" href="/vendor/fontawesome/css/v4-shims.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+	<noscript><link rel="stylesheet" href="/vendor/fontawesome/css/v4-shims.min.css"></noscript>
 	<script>
 		// Apply theme immediately before page render to prevent flash
 		(function() {
@@ -227,8 +229,20 @@
 
 	<div class="mobile-sidebar-overlay" id="mobileSidebarOverlay" onclick="toggleMobileSidebar()"></div>
 
-	<script src="/vendor/echarts/echarts.min.js"></script>
-	<script src="/js/user-menu.js"></script>
-	<script src="/js/event-log.js"></script>
+	<script>
+		// Load ECharts asynchronously to avoid blocking initial render
+		(function() {
+			const script = document.createElement('script');
+			script.src = '/vendor/echarts/echarts.min.js';
+			script.async = true;
+			script.onload = function() {
+				// Dispatch event when ECharts is loaded
+				window.dispatchEvent(new CustomEvent('echartsLoaded'));
+			};
+			document.head.appendChild(script);
+		})();
+	</script>
+	<script src="/js/user-menu.js" defer></script>
+	<script src="/js/event-log.js" defer></script>
 </body>
 </html>

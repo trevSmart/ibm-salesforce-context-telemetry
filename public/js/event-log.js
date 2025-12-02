@@ -171,13 +171,18 @@ const detectElectronEnvironment = () => {
 			return;
 		}
 
+		// Get current theme to initialize menu with correct label
+		const isDark = document.documentElement.classList.contains('dark');
+		const themeIcon = isDark ? 'fa-regular fa-sun' : 'fa-regular fa-moon';
+		const themeLabel = isDark ? 'Light theme' : 'Dark theme';
+
 		userMenu.innerHTML = `
 			<div class="user-menu-item" id="userMenuUsername">
 				<i class="fa-regular fa-user user-menu-icon"></i>Loading...
 			</div>
 			<div class="user-menu-item">
 				<button type="button" id="themeToggleMenuItem" onclick="toggleTheme()">
-					<i class="fa-regular fa-moon user-menu-icon"></i>Dark theme
+					<i class="${themeIcon} user-menu-icon"></i>${themeLabel}
 				</button>
 			</div>
 			<div class="user-menu-item">
@@ -391,8 +396,13 @@ const detectElectronEnvironment = () => {
 
 	function openOrgTeamMappingModal() {
 		// Use the shared org–team mapping modal implementation defined in the dashboard script
-		if (typeof window.openOrgTeamMappingModal === 'function') {
-			window.openOrgTeamMappingModal();
+		// Get a fresh reference to avoid infinite recursion
+		const globalOpenOrgTeamMappingModal = window.openOrgTeamMappingModal;
+		// Only call if it exists and is not this function itself
+		if (typeof globalOpenOrgTeamMappingModal === 'function' && globalOpenOrgTeamMappingModal !== openOrgTeamMappingModal) {
+			globalOpenOrgTeamMappingModal();
+		} else {
+			console.error('openOrgTeamMappingModal: The global function is not available. Make sure index.js is loaded.');
 		}
 	}
 
@@ -868,7 +878,15 @@ const detectElectronEnvironment = () => {
 			return sessionActivityChart;
 		}
 		const chartEl = document.getElementById('sessionActivityChart');
-		if (!chartEl || typeof echarts === 'undefined') {
+		if (!chartEl) {
+			return null;
+		}
+		// Wait for ECharts to load if not available yet
+		if (typeof echarts === 'undefined') {
+			window.addEventListener('echartsLoaded', function onEChartsLoaded() {
+				window.removeEventListener('echartsLoaded', onEChartsLoaded);
+				initSessionActivityChart();
+			}, { once: true });
 			return null;
 		}
 		sessionActivityChart = echarts.init(chartEl);

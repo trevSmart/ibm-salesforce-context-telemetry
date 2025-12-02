@@ -414,6 +414,11 @@ function ensureUserMenuStructure() {
 		return;
 	}
 
+	// Get current theme to initialize menu with correct label
+	const isDark = document.documentElement.classList.contains('dark');
+	const themeIcon = isDark ? 'fa-regular fa-sun' : 'fa-regular fa-moon';
+	const themeLabel = isDark ? 'Light theme' : 'Dark theme';
+
 	// Basic preferences menu used on dashboard and event log
 	userMenu.innerHTML = `
 		<div class="user-menu-item" id="userMenuUsername">
@@ -421,7 +426,7 @@ function ensureUserMenuStructure() {
 		</div>
 		<div class="user-menu-item">
 			<button type="button" id="themeToggleMenuItem" onclick="toggleTheme()">
-				<i class="fa-regular fa-moon user-menu-icon"></i>Dark theme
+				<i class="${themeIcon} user-menu-icon"></i>${themeLabel}
 			</button>
 		</div>
 		<div class="user-menu-item">
