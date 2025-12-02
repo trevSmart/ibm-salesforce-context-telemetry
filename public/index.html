@@ -1,85 +1,622 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>IBM Salesforce Context Telemetry</title>
-	<link rel="icon" type="image/svg+xml" sizes="any" href="/resources/favicon.svg">
-	<link rel="icon" type="image/png" sizes="32x32" href="/resources/favicon.png">
-	<link href="/css/output.css" rel="stylesheet">
-	<link rel="preconnect" href="https://fonts.googleapis.com">
-	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-	<link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
-	<link rel="stylesheet" href="/vendor/fontawesome/css/v4-shims.min.css">
-	<script>
-		// Apply theme immediately before page render to prevent flash
-		(function() {
-			const savedTheme = localStorage.getItem('theme');
-			const systemTheme = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-			const theme = savedTheme || systemTheme;
-			if (theme === 'dark') {
-				document.documentElement.classList.add('dark');
-			}
-			// Don't make container visible here - wait for chart to render
-			// The container will be made visible when chart animation completes
-			// Fallback: if chart doesn't load within 5 seconds, show page anyway
-			setTimeout(() => {
-				const container = document.querySelector('.container');
-				if (container) {
-					const computedStyle = window.getComputedStyle(container);
-					if (computedStyle.visibility === 'hidden' || computedStyle.opacity === '0') {
-						container.style.visibility = 'visible';
-						requestAnimationFrame(() => {
-							container.style.opacity = '1';
-						});
-					}
-				}
-			}, 5000);
-		})();
-	</script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IBM Salesforce Context Telemetry</title>
+  <link rel="icon" type="image/svg+xml" sizes="any" href="/resources/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="/resources/favicon.png">
+  <link href="/css/output.css" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
+  <link rel="stylesheet" href="/vendor/fontawesome/css/v4-shims.min.css">
+  <style>
+    body.index-page {
+      background: radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.35), transparent 30%),
+        radial-gradient(circle at 90% 10%, rgba(120, 150, 255, 0.18), transparent 32%),
+        radial-gradient(circle at 0% 90%, rgba(255, 210, 140, 0.2), transparent 30%),
+        linear-gradient(180deg, #f2f4f8 0%, #e5e8ee 40%, #dfe4ef 100%);
+      font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      color: #1f2937;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 32px auto;
+      padding: 12px 12px 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .dashboard-shell {
+      background: rgba(255, 255, 255, 0.78);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.7);
+      box-shadow: 0 20px 60px rgba(31, 41, 55, 0.18);
+      border-radius: 20px;
+      padding: 20px;
+      gap: 18px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .top-nav {
+      display: grid;
+      grid-template-columns: 1fr 1.1fr 0.6fr;
+      gap: 14px;
+      align-items: center;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 18px;
+    }
+
+    .brand .logo-dot {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #1d4ed8, #6b21a8);
+      display: grid;
+      place-items: center;
+      color: #fff;
+      font-weight: 800;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .nav-links a {
+      padding: 8px 12px;
+      border-radius: 12px;
+      color: #4b5563;
+      text-decoration: none;
+      font-weight: 600;
+      transition: background 0.2s ease, color 0.2s ease;
+    }
+
+    .nav-links a:hover {
+      background: rgba(55, 65, 81, 0.08);
+      color: #111827;
+    }
+
+    .search-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(255, 255, 255, 0.9);
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      padding: 10px 12px;
+      border-radius: 16px;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    }
+
+    .search-bar i {
+      color: #9ca3af;
+    }
+
+    .search-input {
+      flex: 1;
+      border: none;
+      outline: none;
+      background: transparent;
+      font-weight: 600;
+      color: #374151;
+    }
+
+    .search-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .avatar-group {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 10px;
+      background: #f3f4f6;
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      display: grid;
+      place-items: center;
+      font-weight: 700;
+      color: #1f2937;
+    }
+
+    .search-actions .icon-btn {
+      background: #fff;
+      border: 1px solid rgba(148, 163, 184, 0.45);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+    }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 1.55fr 1fr;
+      gap: 14px;
+    }
+
+    .secondary-grid {
+      display: grid;
+      grid-template-columns: 1fr 1.1fr 1fr;
+      gap: 14px;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 16px;
+      border: 1px solid rgba(226, 232, 240, 0.9);
+      box-shadow: 0 16px 36px rgba(148, 163, 184, 0.22);
+      padding: 16px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .card h2 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 700;
+      color: #111827;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .badge.cool {
+      background: #eef2ff;
+      color: #4338ca;
+    }
+
+    .badge.warm {
+      background: #fff4ed;
+      color: #9a3412;
+    }
+
+    .badge.minor {
+      background: #eef2ff;
+      color: #4338ca;
+    }
+
+    .badge.remote {
+      background: #ecfdf3;
+      color: #15803d;
+    }
+
+    .badge.inline {
+      background: #fff7ed;
+      color: #c2410c;
+    }
+
+    .badge.germany {
+      background: #eff6ff;
+      color: #1d4ed8;
+    }
+
+    .income-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .income-meta {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .income-chart {
+      height: 260px;
+      background: linear-gradient(180deg, rgba(226, 232, 240, 0.55) 0%, rgba(255, 255, 255, 0.55) 100%);
+      border-radius: 14px;
+      padding: 10px 12px;
+      border: 1px solid rgba(226, 232, 240, 0.8);
+    }
+
+    .income-chart canvas {
+      width: 100% !important;
+      height: 100% !important;
+    }
+
+    .income-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .metrics {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .metric-box {
+      background: #f8fafc;
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-weight: 700;
+      border: 1px solid rgba(226, 232, 240, 0.9);
+    }
+
+    .time-range-select {
+      padding: 8px 10px;
+      border-radius: 12px;
+      border: 1px solid rgba(148, 163, 184, 0.45);
+      background: #fff;
+      font-weight: 600;
+      color: #374151;
+    }
+
+    .project-list,
+    .progress-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .project-item,
+    .progress-item {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(226, 232, 240, 0.9);
+      background: #f8fafc;
+    }
+
+    .project-title {
+      font-weight: 700;
+      color: #111827;
+    }
+
+    .project-meta {
+      display: flex;
+      gap: 8px;
+      margin-top: 6px;
+      flex-wrap: wrap;
+    }
+
+    .progress-bars {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .progress-bar {
+      height: 12px;
+      flex: 1;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #1e3a8a, #6366f1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .progress-bar.red {
+      background: linear-gradient(90deg, #b91c1c, #f97316);
+    }
+
+    .progress-bar.orange {
+      background: linear-gradient(90deg, #c2410c, #fb923c);
+    }
+
+    .progress-bar span {
+      position: absolute;
+      top: 50%;
+      left: 10px;
+      transform: translateY(-50%);
+      font-size: 11px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .profile {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .profile img {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: #e5e7eb;
+    }
+
+    .profile-details {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .profile-details strong {
+      color: #111827;
+    }
+
+    .profile-details span {
+      color: #4b5563;
+      font-weight: 600;
+    }
+
+    .actions-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .primary-btn,
+    .ghost-btn {
+      border: none;
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .primary-btn {
+      background: linear-gradient(90deg, #2563eb, #7c3aed);
+      color: #fff;
+    }
+
+    .ghost-btn {
+      background: #fff;
+      color: #374151;
+      border: 1px solid rgba(148, 163, 184, 0.45);
+    }
+
+    .status-info {
+      text-align: center;
+      color: #6b7280;
+      font-weight: 600;
+      margin-top: 6px;
+    }
+
+    @media (max-width: 1100px) {
+      .top-nav {
+        grid-template-columns: 1fr;
+      }
+
+      .dashboard-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .secondary-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        padding: 10px;
+      }
+
+      .dashboard-shell {
+        padding: 14px;
+      }
+    }
+  </style>
+  <script>
+    // Apply theme immediately before page render to prevent flash
+    (function() {
+      const savedTheme = localStorage.getItem('theme');
+      const systemTheme = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      const theme = savedTheme || systemTheme;
+      if (theme === 'dark') {
+        document.documentElement.classList.add('dark');
+      }
+      // Don't make container visible here - wait for chart to render
+      // The container will be made visible when chart animation completes
+      // Fallback: if chart doesn't load within 5 seconds, show page anyway
+      setTimeout(() => {
+        const container = document.querySelector('.container');
+        if (container) {
+          const computedStyle = window.getComputedStyle(container);
+          if (computedStyle.visibility === 'hidden' || computedStyle.opacity === '0') {
+            container.style.visibility = 'visible';
+            requestAnimationFrame(() => {
+              container.style.opacity = '1';
+            });
+          }
+        }
+      }, 5000);
+    })();
+  </script>
 </head>
 <body class="index-page">
-	<div class="container">
-		<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-			<h1 class="log-viewer-title" style="margin: 0;">Dashboard</h1>
-			<div class="icon-buttons-group">
-				<button type="button" class="icon-btn" onclick="refreshDashboard(event)"><i class="fa fa-refresh"></i></button>
-				<div class="user-menu-container" style="position: relative;">
-					<button class="icon-btn user-btn" id="userBtn" onclick="showUserMenu(event)"><i class="fa-solid fa-wrench"></i></button>
-					<div class="user-menu" id="userMenu"></div>
-				</div>
-			</div>
-		</div>
+  <div class="container dashboard-shell">
+    <div class="top-nav">
+      <div class="brand">
+        <div class="logo-dot">IT</div>
+        <span>Income Tracker</span>
+        <span class="badge cool"><i class="fa fa-snowflake"></i> Cool</span>
+      </div>
+      <nav class="nav-links">
+        <a href="#">Home</a>
+        <a href="#">Messages</a>
+        <a href="#">Discover</a>
+        <a href="#">Wallet</a>
+        <a href="#">Projects</a>
+      </nav>
+      <div class="search-bar">
+        <i class="fa fa-search"></i>
+        <input class="search-input" placeholder="Enter your search request here..." />
+        <div class="search-actions">
+          <div class="avatar-group">
+            <div class="avatar">S</div>
+            <div class="avatar">B</div>
+          </div>
+          <button type="button" class="icon-btn" aria-label="notifications"><i class="fa-regular fa-bell"></i></button>
+          <button type="button" class="icon-btn" onclick="refreshDashboard(event)" aria-label="Refresh"><i class="fa fa-refresh"></i></button>
+          <div class="user-menu-container" style="position: relative;">
+            <button class="icon-btn user-btn" id="userBtn" onclick="showUserMenu(event)"><i class="fa-regular fa-square-check"></i></button>
+            <div class="user-menu" id="userMenu"></div>
+          </div>
+        </div>
+      </div>
+    </div>
 
-		<div class="dashboard-header">
-			<a href="/event-log" class="event-log-link" id="eventLogLink" style="display: none;">Event logs</a>
-		</div>
+    <div class="dashboard-grid">
+      <section class="card">
+        <div class="income-header">
+          <div class="income-meta">
+            <h2>Income Tracker</h2>
+            <span class="badge warm">+20%</span>
+          </div>
+          <div class="actions-row" style="justify-content: flex-end; gap: 8px;">
+            <div class="badge minor"><i class="fa fa-circle-info"></i> Minor</div>
+            <select id="timeRangeSelect" class="time-range-select">
+              <option value="7" selected>Last 7 days</option>
+              <option value="15">Last 15 days</option>
+              <option value="30">Last 30 days</option>
+              <option value="90">Last 3 months</option>
+            </select>
+          </div>
+        </div>
+        <p style="margin: 0; color: #4b5563; font-weight: 600;">Track changes in income in more detail and see detailed stats on each project and partner impressions.</p>
+        <div class="income-chart">
+          <canvas id="eventsChart"></canvas>
+        </div>
+        <div class="income-footer">
+          <div class="badge warm" style="padding: 10px 14px; font-size: 14px;">+20%</div>
+          <div class="metrics">
+            <div class="metric-box">128 <span style="font-weight: 600; color: #6b7280;">Meetings</span></div>
+            <div class="metric-box">25 <span style="font-weight: 600; color: #6b7280;">Projects</span></div>
+            <div class="metric-box">23 <span style="font-weight: 600; color: #6b7280;">Clients</span></div>
+          </div>
+        </div>
+      </section>
 
-		<div class="chart-header">
-			<div class="chart-title">Date range</div>
-			<select id="timeRangeSelect" class="time-range-select">
-				<option value="7" selected>Last 7 days</option>
-				<option value="15">Last 15 days</option>
-				<option value="30">Last 30 days</option>
-				<option value="90">Last 3 months</option>
-			</select>
-		</div>
+      <section class="card">
+        <div class="actions-row">
+          <h2 style="margin: 0;">Your Recent Projects</h2>
+          <a href="#" class="badge inline" style="text-decoration: none;">See all Project</a>
+        </div>
+        <div class="project-list">
+          <div class="project-item">
+            <div>
+              <div class="project-title">Web Development Project</div>
+              <div class="project-meta">
+                <span class="badge remote">Remote</span>
+                <span class="badge inline">Part-time</span>
+                <span class="badge germany"><i class="fa fa-location-dot"></i> Germany</span>
+              </div>
+            </div>
+            <div class="badge cool">🔥</div>
+          </div>
+          <div class="project-item">
+            <div>
+              <div class="project-title">Copyright Project</div>
+              <div class="project-meta">
+                <span class="badge inline">Half-time</span>
+                <span class="badge minor">APIs</span>
+              </div>
+            </div>
+            <div class="badge warm">⭐</div>
+          </div>
+          <div class="project-item">
+            <div>
+              <div class="project-title">Web Design Project</div>
+              <div class="project-meta">
+                <span class="badge remote">Remote</span>
+                <span class="badge germany"><i class="fa fa-location-dot"></i> Germany</span>
+              </div>
+            </div>
+            <div class="badge cool">🎨</div>
+          </div>
+        </div>
+      </section>
+    </div>
 
-		<div class="chart-container">
-			<canvas id="eventsChart"></canvas>
-		</div>
-		<div class="status-info">
-				Server is running •
-			<a href="/health">Health Check</a> •
-			<a href="/api/events">API</a> •
-			<a href="/schema">Schema</a>
-		</div>
-	</div>
+    <div class="secondary-grid">
+      <section class="card">
+        <div class="profile">
+          <img alt="Profile" />
+          <div class="profile-details">
+            <strong>Randy Gouse</strong>
+            <span>Senior UI/UX Designer</span>
+            <a href="/event-log" class="event-log-link" id="eventLogLink" style="display: none; text-decoration: none; color: #2563eb; font-weight: 700;">Event logs</a>
+          </div>
+        </div>
+        <div class="actions-row">
+          <button class="primary-btn">Set Reminder</button>
+          <button class="ghost-btn">All Projects</button>
+        </div>
+      </section>
 
-	<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-	<script src="/js/user-menu.js"></script>
-	<script src="/js/index.js"></script>
+      <section class="card">
+        <h2>Unlock Premium Features</h2>
+        <p style="margin: 0; color: #4b5563; font-weight: 600;">Use all the nice designs and subscription features to expand your freelancing opportunities.</p>
+        <div class="actions-row">
+          <button class="primary-btn" style="min-width: 140px;">View Plans</button>
+          <button class="ghost-btn">View more</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="actions-row">
+          <h2 style="margin: 0;">Proposal Progress</h2>
+          <span class="badge cool">April 11, 2024</span>
+        </div>
+        <div class="progress-list">
+          <div class="progress-item">
+            <div>
+              <div class="project-title">Research Proposal</div>
+              <div class="progress-bars">
+                <div class="progress-bar"><span>64</span></div>
+                <div class="progress-bar orange"><span>12</span></div>
+                <div class="progress-bar red"><span>10</span></div>
+              </div>
+            </div>
+            <div class="badge minor">📝</div>
+          </div>
+          <div class="progress-item">
+            <div>
+              <div class="project-title">Proposal Overview</div>
+              <div class="progress-bars">
+                <div class="progress-bar" style="flex: 0.4"><span>3</span></div>
+                <div class="progress-bar orange" style="flex: 0.2"><span>3</span></div>
+                <div class="progress-bar red" style="flex: 0.6"><span>14</span></div>
+              </div>
+            </div>
+            <div class="badge warm">📑</div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div class="status-info">
+      Server is running •
+      <a href="/health">Health Check</a> •
+      <a href="/api/events">API</a> •
+      <a href="/schema">Schema</a>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="/js/user-menu.js"></script>
+  <script src="/js/index.js"></script>
 </body>
 </html>
-
