@@ -3001,6 +3001,47 @@
     }
   }
 
+  /* Medium viewport adjustments (481px - 1024px) */
+  @media (min-width: 481px) and (max-width: 1024px) {
+    /* Adjust session activity card for medium screens */
+    .session-activity-card {
+      height: auto;
+      min-height: 200px;
+      max-height: 400px;
+    }
+
+    #sessionActivityChart {
+      height: 220px !important;
+    }
+
+    /* Make filters more compact */
+    .level-filters {
+      gap: 8px;
+    }
+
+    .level-filter-btn {
+      padding: 6px 12px;
+      min-width: auto;
+    }
+
+    /* Adjust main content header spacing */
+    .main-content-header {
+      padding: 16px 12px;
+      gap: 12px;
+    }
+
+    /* Ensure table can scroll horizontally if needed */
+    .logs-table-container {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    #logsTableScroll {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+  }
+
   /* Mobile responsiveness for small screens */
   @media (max-width: 768px) {
     /* Dashboard (index.html) mobile styles */
@@ -3137,6 +3178,7 @@
 
     .main-content {
       width: 100%;
+      overflow: hidden;
     }
 
     .main-content-header {
@@ -3144,6 +3186,15 @@
       flex-direction: column;
       align-items: stretch;
       gap: 12px;
+      flex-shrink: 0;
+    }
+
+    .main-content-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      min-height: 0;
     }
 
     .filters-group {
@@ -3185,6 +3236,7 @@
     /* Make table more compact on mobile */
     .logs-table {
       font-size: 0.75rem;
+      min-width: 600px;
     }
 
     .logs-table th,
@@ -3216,16 +3268,37 @@
       display: none;
     }
 
-    /* Make session activity card more compact */
+    /* Ensure table container is horizontally scrollable */
+    .logs-table-container {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    #logsTableScroll {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* Make session activity card more compact and prevent overlap */
     .session-activity-card {
       min-height: 150px;
-      height: 180px;
+      height: auto;
+      max-height: 250px;
       padding: 12px 16px 8px 16px;
-      margin: 0 2px;
+      margin: 0 2px 12px 2px;
+      overflow: hidden;
     }
 
     .session-activity-header {
       margin-bottom: 8px;
+      flex-shrink: 0;
+    }
+
+    #sessionActivityChart {
+      height: 160px !important;
+      min-height: 160px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
     }
 
     /* Adjust footer info for mobile */
@@ -3320,6 +3393,76 @@
 
     .sidebar-content {
       padding: 0 12px 16px 12px;
+    }
+
+    /* Make session activity card height flexible and prevent overlap */
+    .session-activity-card {
+      height: auto;
+      min-height: 200px;
+      max-height: 300px;
+      margin: 0 2px 12px 2px;
+    }
+
+    #sessionActivityChart {
+      height: 180px !important;
+      min-height: 180px;
+    }
+
+    /* Adjust legend for small screens */
+    .session-activity-legend {
+      min-width: 200px;
+      max-width: calc(100vw - 40px);
+      right: auto;
+      left: 50%;
+      transform: translateX(-50%) translateY(6px);
+    }
+
+    .session-activity-legend-wrapper:hover .session-activity-legend,
+    .session-activity-legend-wrapper:focus-within .session-activity-legend,
+    .session-activity-legend-wrapper.is-open .session-activity-legend {
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* Adjust date navigation buttons */
+    .date-nav-btn {
+      padding: 2px 6px;
+      font-size: 0.75rem;
+    }
+
+    .session-activity-header {
+      font-size: 0.85rem;
+    }
+
+    .session-activity-header .label {
+      font-size: 0.65rem;
+    }
+
+    .session-activity-header .subtitle {
+      font-size: 0.85rem;
+    }
+
+    /* Ensure table is horizontally scrollable */
+    .logs-table-container {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    #logsTableScroll {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .logs-table {
+      min-width: 600px;
+    }
+
+    /* Ensure main content takes full height */
+    .main-content {
+      min-height: 0;
+    }
+
+    .main-content-body {
+      overflow-y: auto;
     }
   }
 
