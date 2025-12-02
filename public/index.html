@@ -2,16 +2,17 @@
 <html lang="en">
 <head>
 	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>IBM Salesforce Context Telemetry</title>
-	<link rel="icon" type="image/svg+xml" sizes="any" href="/resources/favicon.svg">
-	<link rel="icon" type="image/png" sizes="32x32" href="/resources/favicon.png">
-	<link href="/css/output.css" rel="stylesheet">
-	<link rel="preconnect" href="https://fonts.googleapis.com">
-	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-	<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;300;400;500;600;700;800&display=swap" rel="stylesheet">
-	<link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
-	<link rel="stylesheet" href="/vendor/fontawesome/css/v4-shims.min.css">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>IBM Salesforce Context Telemetry</title>
+        <link rel="icon" type="image/svg+xml" sizes="any" href="/resources/favicon.svg">
+        <link rel="icon" type="image/png" sizes="32x32" href="/resources/favicon.png">
+        <link href="/css/output.css" rel="stylesheet">
+        <link rel="stylesheet" href="/css/dashboard-custom.css">
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;300;400;500;600;700;800&display=swap" rel="stylesheet">
+        <link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
+        <link rel="stylesheet" href="/vendor/fontawesome/css/v4-shims.min.css">
 	<script>
 		// Apply theme immediately before page render to prevent flash
 		(function() {
@@ -64,45 +65,198 @@
 				</div>
 				<button type="button" class="icon-btn"><i class="fa fa-user"></i></button>
 			</div>
-		</nav>
-		<div class="container-content">
-			<div class="dashboard-layout">
-				<div class="dashboard-chart-column">
-					<div class="dashboard-row-top">
-						<div class="chart-container">
-							<h1 class="log-viewer-title" style="margin: 0 0 16px 0;">Dashboard</h1>
-							<div id="eventsChart"></div>
-						</div>
-					</div>
-					<div class="dashboard-row-bottom">
-						<!-- Content for bottom row of left column -->
-					</div>
-				</div>
-				<div class="dashboard-side-column">
-					<div class="dashboard-row-top">
-						<div class="chart-header">
-							<div class="chart-title">Date range</div>
-							<select id="timeRangeSelect" class="time-range-select">
-								<option value="7" selected>Last 7 days</option>
-								<option value="15">Last 15 days</option>
-								<option value="30">Last 30 days</option>
-								<option value="90">Last 3 months</option>
-							</select>
-						</div>
-					</div>
-					<div class="dashboard-row-bottom">
-						<!-- Content for bottom row of right column -->
-					</div>
-				</div>
-			</div>
-			<div class="dashboard-header">
-				Server is running •
-				<a href="/health">Health Check</a> •
-				<a href="/api/events">API</a> •
-				<a href="/schema">Schema</a>
-			</div>
-		</div>
-	</div>
+                </nav>
+                <div class="container-content">
+                        <div class="dashboard-shell">
+                                <div class="dashboard-row top-row">
+                                        <section class="card income-card">
+                                                <div class="card-header">
+                                                        <div>
+                                                                <h1 class="log-viewer-title" style="margin: 0;">Income Tracker</h1>
+                                                                <p class="card-subtitle">Track changes in income over time and access detailed data on each trend.</p>
+                                                        </div>
+                                                        <div class="pill-group" aria-label="Chart range">
+                                                                <button class="pill active" type="button" data-range="7">Week</button>
+                                                                <button class="pill" type="button" data-range="30">Month</button>
+                                                                <button class="pill" type="button" data-range="90">Year</button>
+                                                        </div>
+                                                </div>
+                                                <div class="income-meta">
+                                                        <i class="fa-regular fa-calendar"></i>
+                                                        <span>Last 7 days</span>
+                                                        <select id="timeRangeSelect" class="visually-hidden">
+                                                                <option value="7" selected>Last 7 days</option>
+                                                                <option value="15">Last 15 days</option>
+                                                                <option value="30">Last 30 days</option>
+                                                                <option value="90">Last 3 months</option>
+                                                        </select>
+                                                </div>
+                                                <div class="income-change">+20%</div>
+                                                <div class="income-chart-card">
+                                                        <div class="income-chart-placeholder" aria-hidden="true">
+                                                                <div class="income-bar" style="height: 55%;">
+                                                                        <span class="income-bar-value">+12</span>
+                                                                        <span class="income-bar-label">S</span>
+                                                                </div>
+                                                                <div class="income-bar" style="height: 62%;">
+                                                                        <span class="income-bar-value">+14</span>
+                                                                        <span class="income-bar-label">M</span>
+                                                                </div>
+                                                                <div class="income-bar" style="height: 50%;">
+                                                                        <span class="income-bar-value">+11</span>
+                                                                        <span class="income-bar-label">T</span>
+                                                                </div>
+                                                                <div class="income-bar primary" style="height: 92%;">
+                                                                        <span class="income-bar-value">+24</span>
+                                                                        <span class="income-bar-label">W</span>
+                                                                </div>
+                                                                <div class="income-bar" style="height: 70%;">
+                                                                        <span class="income-bar-value">+18</span>
+                                                                        <span class="income-bar-label">T</span>
+                                                                </div>
+                                                                <div class="income-bar" style="height: 60%;">
+                                                                        <span class="income-bar-value">+16</span>
+                                                                        <span class="income-bar-label">F</span>
+                                                                </div>
+                                                                <div class="income-bar" style="height: 48%;">
+                                                                        <span class="income-bar-value">+10</span>
+                                                                        <span class="income-bar-label">S</span>
+                                                                </div>
+                                                        </div>
+                                                        <div class="echart-wrapper" id="eventsChart"></div>
+                                                </div>
+                                        </section>
+                                        <section class="card projects-card">
+                                                <div class="card-header">
+                                                        <div>
+                                                                <h2 style="margin: 0;">Your Recent Projects</h2>
+                                                                <p class="card-subtitle">See all projects</p>
+                                                        </div>
+                                                        <i class="fa-regular fa-folder-open" style="color: var(--muted);"></i>
+                                                </div>
+                                                <div class="search-field">
+                                                        <i class="fa fa-search" aria-hidden="true"></i>
+                                                        <input type="text" placeholder="Enter your search request..." aria-label="Search projects">
+                                                </div>
+                                                <div class="projects-list">
+                                                        <div class="project-item">
+                                                                <div class="meta">
+                                                                        <strong>Web Development Project</strong>
+                                                                        <div class="badges">
+                                                                                <span class="badge">Remote</span>
+                                                                                <span>$50/hour</span>
+                                                                                <span class="badge" style="background: #eaf7f3; color: #1f9b67;">Active</span>
+                                                                        </div>
+                                                                        <span class="location"><i class="fa fa-map-marker-alt"></i> Germany • 32 Tasks</span>
+                                                                </div>
+                                                                <i class="fa fa-ellipsis-h" aria-hidden="true" style="color: var(--muted);"></i>
+                                                        </div>
+                                                        <div class="project-item">
+                                                                <div class="meta">
+                                                                        <strong>Copyright Project</strong>
+                                                                        <div class="badges">
+                                                                                <span class="badge">Remote</span>
+                                                                                <span>$20/hour</span>
+                                                                                <span class="badge" style="background: #fef3c7; color: #b45309;">Planned</span>
+                                                                        </div>
+                                                                        <span class="location"><i class="fa fa-map-marker-alt"></i> Switzerland • 8 Tasks</span>
+                                                                </div>
+                                                                <i class="fa fa-ellipsis-h" aria-hidden="true" style="color: var(--muted);"></i>
+                                                        </div>
+                                                        <div class="project-item">
+                                                                <div class="meta">
+                                                                        <strong>Web Design Project</strong>
+                                                                        <div class="badges">
+                                                                                <span class="badge">Remote</span>
+                                                                                <span>$25/hour</span>
+                                                                                <span class="badge" style="background: #ede9fe; color: #5b21b6;">Active</span>
+                                                                        </div>
+                                                                        <span class="location"><i class="fa fa-map-marker-alt"></i> USA • 12 Tasks</span>
+                                                                </div>
+                                                                <i class="fa fa-ellipsis-h" aria-hidden="true" style="color: var(--muted);"></i>
+                                                        </div>
+                                                </div>
+                                        </section>
+                                </div>
+                                <div class="dashboard-row bottom-row">
+                                        <section class="card connect-card">
+                                                <div class="card-header">
+                                                        <div>
+                                                                <h2 style="margin: 0;">Let's Connect</h2>
+                                                                <p class="card-subtitle">Stay in touch with your collaborators.</p>
+                                                        </div>
+                                                        <i class="fa-regular fa-comment-dots" style="color: var(--muted);"></i>
+                                                </div>
+                                                <div class="contact-list">
+                                                        <div class="contact-item">
+                                                                <div class="avatar">RP</div>
+                                                                <div class="contact-info">
+                                                                        <strong>Randy Curtis</strong>
+                                                                        <div class="role">Product Designer</div>
+                                                                </div>
+                                                                <button class="pill active" type="button" style="box-shadow: none;">Follow</button>
+                                                        </div>
+                                                        <div class="contact-item">
+                                                                <div class="avatar" style="background: linear-gradient(135deg, #f97373, #facc15);">GS</div>
+                                                                <div class="contact-info">
+                                                                        <strong>Gloria Schofield</strong>
+                                                                        <div class="role">UX/UI Designer</div>
+                                                                </div>
+                                                                <button class="pill" type="button" style="box-shadow: none;">Follow</button>
+                                                        </div>
+                                                </div>
+                                        </section>
+                                        <section class="card premium-card">
+                                                <div class="card-header">
+                                                        <div>
+                                                                <h2 style="margin: 0;">Unlock Premium Features</h2>
+                                                                <p class="card-subtitle">Try our limited features in your free month.</p>
+                                                        </div>
+                                                        <i class="fa-solid fa-star" style="color: #f59e0b;"></i>
+                                                </div>
+                                                <div class="progress-track">
+                                                        <div class="progress-bar"></div>
+                                                </div>
+                                                <div class="progress-label">69% Premium Features tried</div>
+                                                <div style="margin-top: 18px;">
+                                                        <button type="button" class="cta">Upgrade now <i class="fa fa-arrow-right"></i></button>
+                                                </div>
+                                        </section>
+                                        <section class="card proposal-card">
+                                                <div class="proposal-header">
+                                                        <div>
+                                                                <h2 style="margin: 0;">Proposal Progress</h2>
+                                                                <p class="card-subtitle">Keep track of your pitches.</p>
+                                                        </div>
+                                                        <div class="pill" style="background: #fff; box-shadow: none; font-weight: 700;">April 12, 2024</div>
+                                                </div>
+                                                <div class="proposal-chart" aria-hidden="true">
+                                                        <div class="proposal-bar small">
+                                                                <div class="bar"></div>
+                                                        </div>
+                                                        <div class="proposal-bar medium">
+                                                                <div class="bar"></div>
+                                                        </div>
+                                                        <div class="proposal-bar tall">
+                                                                <div class="bar"></div>
+                                                        </div>
+                                                </div>
+                                                <div class="proposal-counts">
+                                                        <div>Progress<br><strong>64</strong></div>
+                                                        <div>Interviews<br><strong>12</strong></div>
+                                                        <div>In Review<br><strong>10</strong></div>
+                                                </div>
+                                        </section>
+                                </div>
+                        </div>
+                        <div class="dashboard-footer">
+                                Server is running •
+                                <a href="/health">Health Check</a> •
+                                <a href="/api/events">API</a> •
+                                <a href="/schema">Schema</a>
+                        </div>
+                </div>
+        </div>
 
 	<script>
 		// Load ECharts asynchronously to avoid blocking initial render
@@ -116,9 +270,26 @@
 			};
 			document.head.appendChild(script);
 		})();
-	</script>
-	<script src="/js/user-menu.js"></script>
-	<script src="/js/index.js"></script>
+        </script>
+        <script src="/js/user-menu.js"></script>
+        <script src="/js/index.js"></script>
+        <script>
+                document.addEventListener('DOMContentLoaded', () => {
+                        const pills = document.querySelectorAll('.pill[data-range]');
+                        const select = document.getElementById('timeRangeSelect');
+
+                        pills.forEach((pill) => {
+                                pill.addEventListener('click', () => {
+                                        pills.forEach(btn => btn.classList.remove('active'));
+                                        pill.classList.add('active');
+                                        if (select) {
+                                                select.value = pill.dataset.range;
+                                                select.dispatchEvent(new Event('change', { bubbles: true }));
+                                        }
+                                });
+                        });
+                });
+        </script>
 </body>
 </html>
 
