@@ -9,7 +9,7 @@
 	<link href="/css/output.css" rel="stylesheet">
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+	<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;300;400;500;600;700;800&display=swap" rel="stylesheet">
 	<link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
 	<link rel="stylesheet" href="/vendor/fontawesome/css/v4-shims.min.css">
 	<script>
@@ -41,43 +41,82 @@
 </head>
 <body class="index-page">
 	<div class="container">
-		<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-			<h1 class="log-viewer-title" style="margin: 0;">Dashboard</h1>
-			<div class="icon-buttons-group">
+		<nav class="top-nav">
+			<a href="/" class="top-nav-logo">
+				<div class="top-nav-logo-icon">
+					<img src="/resources/custom30.png" alt="IBM SF CTXT TELEMETRY" class="top-nav-logo-img">
+				</div>
+				<span>TELEMETRY</span>
+			</a>
+			<div class="top-nav-links">
+				<a href="/" class="top-nav-link active">Dashboard</a>
+				<a href="/event-log" class="top-nav-link">Logs</a>
+				<a href="/settings" class="top-nav-link">Settings</a>
+			</div>
+			<div class="top-nav-search">
+				<input type="text" class="top-nav-search-input" placeholder="Search" id="dashboardSearchInput">
+			</div>
+			<div class="top-nav-actions">
 				<button type="button" class="icon-btn" onclick="refreshDashboard(event)"><i class="fa fa-refresh"></i></button>
 				<div class="user-menu-container" style="position: relative;">
 					<button class="icon-btn user-btn" id="userBtn" onclick="showUserMenu(event)"><i class="fa-solid fa-wrench"></i></button>
 					<div class="user-menu" id="userMenu"></div>
 				</div>
+				<button type="button" class="icon-btn"><i class="fa fa-user"></i></button>
 			</div>
-		</div>
-
-		<div class="dashboard-header">
-			<a href="/event-log" class="event-log-link" id="eventLogLink" style="display: none;">Event logs</a>
-		</div>
-
-		<div class="chart-header">
-			<div class="chart-title">Date range</div>
-			<select id="timeRangeSelect" class="time-range-select">
-				<option value="7" selected>Last 7 days</option>
-				<option value="15">Last 15 days</option>
-				<option value="30">Last 30 days</option>
-				<option value="90">Last 3 months</option>
-			</select>
-		</div>
-
-		<div class="chart-container">
-			<canvas id="eventsChart"></canvas>
-		</div>
-		<div class="status-info">
+		</nav>
+		<div class="container-content">
+			<div class="dashboard-layout">
+				<div class="dashboard-chart-column">
+					<div class="dashboard-row-top">
+						<div class="chart-container">
+							<h1 class="log-viewer-title" style="margin: 0 0 16px 0;">Dashboard</h1>
+							<div id="eventsChart"></div>
+						</div>
+					</div>
+					<div class="dashboard-row-bottom">
+						<!-- Content for bottom row of left column -->
+					</div>
+				</div>
+				<div class="dashboard-side-column">
+					<div class="dashboard-row-top">
+						<div class="chart-header">
+							<div class="chart-title">Date range</div>
+							<select id="timeRangeSelect" class="time-range-select">
+								<option value="7" selected>Last 7 days</option>
+								<option value="15">Last 15 days</option>
+								<option value="30">Last 30 days</option>
+								<option value="90">Last 3 months</option>
+							</select>
+						</div>
+					</div>
+					<div class="dashboard-row-bottom">
+						<!-- Content for bottom row of right column -->
+					</div>
+				</div>
+			</div>
+			<div class="dashboard-header">
 				Server is running •
-			<a href="/health">Health Check</a> •
-			<a href="/api/events">API</a> •
-			<a href="/schema">Schema</a>
+				<a href="/health">Health Check</a> •
+				<a href="/api/events">API</a> •
+				<a href="/schema">Schema</a>
+			</div>
 		</div>
 	</div>
 
-	<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+	<script>
+		// Load ECharts asynchronously to avoid blocking initial render
+		(function() {
+			const script = document.createElement('script');
+			script.src = '/vendor/echarts/echarts.min.js';
+			script.async = true;
+			script.onload = function() {
+				// Dispatch event when ECharts is loaded
+				window.dispatchEvent(new CustomEvent('echartsLoaded'));
+			};
+			document.head.appendChild(script);
+		})();
+	</script>
 	<script src="/js/user-menu.js"></script>
 	<script src="/js/index.js"></script>
 </body>

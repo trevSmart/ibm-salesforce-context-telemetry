@@ -109,7 +109,7 @@ The telemetry server includes a web-based user interface built with:
 - **HTML/CSS/JavaScript** for the frontend
 - **Tailwind CSS** for styling
 - **Font Awesome** for icons
-- **Chart.js** for data visualization
+- **ECharts** (version 6.0.0) for data visualization
 
 ### Pages
 

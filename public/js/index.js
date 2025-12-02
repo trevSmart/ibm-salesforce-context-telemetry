@@ -495,6 +495,12 @@ function openSettingsModal() {
 						</span>
 						<span class="font-medium">Events</span>
 					</a>
+					<a href="#settings-teams" class="settings-sidebar-link flex items-center gap-2 rounded-md px-2 py-1.5 text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-secondary)]">
+						<span class="w-4 h-4 flex items-center justify-center rounded-full border border-[color:var(--border-color)] bg-[color:var(--bg-secondary)]">
+							<i class="fa-solid fa-users text-[10px]"></i>
+						</span>
+						<span class="font-medium">Teams</span>
+					</a>
 					<a href="#settings-danger" class="settings-sidebar-link flex items-center gap-2 rounded-md px-2 py-1.5 text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-secondary)]">
 						<span class="w-4 h-4 flex items-center justify-center rounded-full border border-[color:var(--border-color)] bg-[color:var(--bg-secondary)]">
 							<i class="fa-solid fa-triangle-exclamation text-[10px]"></i>
@@ -539,6 +545,73 @@ function openSettingsModal() {
 						<button type="button" class="confirm-modal-btn" id="manageOrgTeamMappingBtn">
 							<i class="fa-solid fa-users user-menu-icon"></i>Manage teams
 						</button>
+					</div>
+				</section>
+				<section id="settings-teams" class="settings-section" style="display: none;">
+					<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+						<div class="settings-modal-placeholder-title" style="margin: 0;">Teams</div>
+						<button type="button" class="confirm-modal-btn" id="addTeamBtn" style="display: flex; align-items: center; gap: 6px;">
+							<i class="fa-solid fa-plus" style="font-size: 12px;"></i>Add Team
+						</button>
+					</div>
+					<div style="display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;">
+						<div style="position: relative; flex: 1; min-width: 200px;">
+							<i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-secondary); font-size: 14px;"></i>
+							<input type="text" id="teamsSearchInput" placeholder="Search..."
+								style="width: 100%; padding: 8px 12px 8px 36px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 14px;">
+						</div>
+						<div style="position: relative;">
+							<button type="button" id="teamsFilterBtn" class="confirm-modal-btn confirm-modal-btn-cancel" style="display: flex; align-items: center; gap: 6px; padding: 8px 12px;">
+								<i class="fa-solid fa-filter" style="font-size: 12px;"></i>
+								<span id="teamsFilterBadge" style="display: none; background: var(--text-primary); color: var(--bg-primary); border-radius: 10px; padding: 2px 6px; font-size: 11px; margin-left: 4px;">1</span>
+							</button>
+						</div>
+						<button type="button" class="confirm-modal-btn confirm-modal-btn-cancel" style="padding: 8px 12px;">
+							<i class="fa-solid fa-gear" style="font-size: 12px;"></i>
+						</button>
+						<div style="position: relative;">
+							<select id="teamsSortSelect" style="padding: 8px 32px 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 14px; cursor: pointer; appearance: none;">
+								<option>Sort by</option>
+								<option value="name-asc">Name (A-Z)</option>
+								<option value="name-desc">Name (Z-A)</option>
+								<option value="members-asc">Members (Low to High)</option>
+								<option value="members-desc">Members (High to Low)</option>
+								<option value="activity-desc">Last Activity (Recent)</option>
+								<option value="activity-asc">Last Activity (Oldest)</option>
+							</select>
+							<i class="fa-solid fa-chevron-down" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--text-secondary); font-size: 10px; pointer-events: none;"></i>
+						</div>
+					</div>
+					<div style="overflow-x: auto; border: 1px solid var(--border-color); border-radius: 8px;">
+						<table id="teamsTable" style="width: 100%; border-collapse: collapse;">
+							<thead>
+								<tr style="background: var(--bg-secondary); border-bottom: 1px solid var(--border-color);">
+									<th style="padding: 12px; text-align: left;">
+										<input type="checkbox" id="teamsSelectAll" style="cursor: pointer;">
+									</th>
+									<th style="padding: 12px; text-align: left; font-weight: 600; color: var(--text-primary); font-size: 14px; cursor: pointer;">
+										Team Name
+										<i class="fa-solid fa-arrows-up-down" style="margin-left: 6px; font-size: 10px; color: var(--text-secondary);"></i>
+									</th>
+									<th style="padding: 12px; text-align: left; font-weight: 600; color: var(--text-primary); font-size: 14px; cursor: pointer;">
+										Members
+										<i class="fa-solid fa-arrows-up-down" style="margin-left: 6px; font-size: 10px; color: var(--text-secondary);"></i>
+									</th>
+									<th style="padding: 12px; text-align: left; font-weight: 600; color: var(--text-primary); font-size: 14px; cursor: pointer;">
+										Last Activity
+										<i class="fa-solid fa-arrows-up-down" style="margin-left: 6px; font-size: 10px; color: var(--text-secondary);"></i>
+									</th>
+									<th style="padding: 12px; text-align: left; font-weight: 600; color: var(--text-primary); font-size: 14px; cursor: pointer;">
+										Status
+										<i class="fa-solid fa-arrows-up-down" style="margin-left: 6px; font-size: 10px; color: var(--text-secondary);"></i>
+									</th>
+									<th style="padding: 12px; text-align: right; width: 40px;"></th>
+								</tr>
+							</thead>
+							<tbody id="teamsTableBody">
+								<!-- Teams will be populated here -->
+							</tbody>
+						</table>
 					</div>
 				</section>
 				<section id="settings-danger" class="settings-danger-section">
@@ -604,6 +677,157 @@ function openSettingsModal() {
 		manageBtn.addEventListener('click', () => {
 			openOrgTeamMappingModal();
 		});
+	}
+
+	// Navigation between settings sections
+	const sidebarLinks = modal.querySelectorAll('.settings-sidebar-link');
+	const sections = modal.querySelectorAll('.settings-section, .settings-danger-section');
+
+	function showSection(sectionId) {
+		sections.forEach(section => {
+			section.style.display = 'none';
+		});
+		const targetSection = modal.querySelector(sectionId);
+		if (targetSection) {
+			targetSection.style.display = 'block';
+		}
+
+		sidebarLinks.forEach(link => {
+			link.classList.remove('active');
+			if (link.getAttribute('href') === sectionId) {
+				link.classList.add('active');
+			}
+		});
+	}
+
+	sidebarLinks.forEach(link => {
+		link.addEventListener('click', (e) => {
+			e.preventDefault();
+			const sectionId = link.getAttribute('href');
+			showSection(sectionId);
+		});
+	});
+
+	// Show first section by default
+	if (sidebarLinks.length > 0) {
+		const firstSectionId = sidebarLinks[0].getAttribute('href');
+		showSection(firstSectionId);
+	}
+
+	// Teams section functionality
+	const teamsSection = modal.querySelector('#settings-teams');
+	if (teamsSection) {
+		// Dummy teams data
+		const dummyTeams = [
+			{ id: 1, name: 'Development Team', members: 8, lastActivity: 'Today, 3:52 PM', status: 'Active' },
+			{ id: 2, name: 'QA Team', members: 5, lastActivity: 'Yesterday, 8:21 AM', status: 'Active' },
+			{ id: 3, name: 'DevOps Team', members: 4, lastActivity: 'Sep 24, 2023 at 2:10 PM', status: 'Active' },
+			{ id: 4, name: 'Sales Team', members: 12, lastActivity: 'Sep 23, 2023 at 1:30 PM', status: 'Active' },
+			{ id: 5, name: 'Support Team', members: 6, lastActivity: 'Sep 22, 2023 at 4:45 PM', status: 'Inactive' },
+			{ id: 6, name: 'Marketing Team', members: 7, lastActivity: 'Sep 21, 2023 at 10:15 AM', status: 'Active' }
+		];
+
+		let filteredTeams = [...dummyTeams];
+		const teamsTableBody = modal.querySelector('#teamsTableBody');
+		const teamsSearchInput = modal.querySelector('#teamsSearchInput');
+		const teamsSortSelect = modal.querySelector('#teamsSortSelect');
+		const teamsSelectAll = modal.querySelector('#teamsSelectAll');
+		const addTeamBtn = modal.querySelector('#addTeamBtn');
+
+		function renderTeams() {
+			if (!teamsTableBody) return;
+
+			teamsTableBody.innerHTML = filteredTeams.map(team => {
+				const statusClass = team.status === 'Active' ? 'active' : 'inactive';
+				const statusColor = team.status === 'Active' ? '#10b981' : '#6b7280';
+				return `
+					<tr style="border-bottom: 1px solid var(--border-color);">
+						<td style="padding: 12px;">
+							<input type="checkbox" class="team-checkbox" data-team-id="${team.id}" style="cursor: pointer;">
+						</td>
+						<td style="padding: 12px; color: var(--text-primary); font-size: 14px;">
+							<div style="display: flex; align-items: center; gap: 8px;">
+								<div style="width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 12px;">
+									${team.name.charAt(0).toUpperCase()}
+								</div>
+								<span style="font-weight: 500;">${escapeHtml(team.name)}</span>
+							</div>
+						</td>
+						<td style="padding: 12px; color: var(--text-primary); font-size: 14px;">
+							${team.members} members
+						</td>
+						<td style="padding: 12px; color: var(--text-secondary); font-size: 14px;">
+							${team.lastActivity}
+						</td>
+						<td style="padding: 12px;">
+							<span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 500; background: ${statusColor}20; color: ${statusColor};">
+								<span style="width: 6px; height: 6px; border-radius: 50%; background: ${statusColor};"></span>
+								${team.status}
+							</span>
+						</td>
+						<td style="padding: 12px; text-align: right;">
+							<button type="button" class="team-actions-btn" data-team-id="${team.id}" style="background: none; border: none; color: var(--text-secondary); cursor: pointer; padding: 4px 8px; border-radius: 4px; hover:background: var(--bg-secondary);">
+								<i class="fa-solid fa-ellipsis-vertical"></i>
+							</button>
+						</td>
+					</tr>
+				`;
+			}).join('');
+		}
+
+		// Search functionality
+		if (teamsSearchInput) {
+			teamsSearchInput.addEventListener('input', (e) => {
+				const searchTerm = e.target.value.toLowerCase();
+				filteredTeams = dummyTeams.filter(team =>
+					team.name.toLowerCase().includes(searchTerm) ||
+					team.status.toLowerCase().includes(searchTerm)
+				);
+				renderTeams();
+			});
+		}
+
+		// Sort functionality
+		if (teamsSortSelect) {
+			teamsSortSelect.addEventListener('change', (e) => {
+				const sortValue = e.target.value;
+				filteredTeams.sort((a, b) => {
+					switch(sortValue) {
+						case 'name-asc':
+							return a.name.localeCompare(b.name);
+						case 'name-desc':
+							return b.name.localeCompare(a.name);
+						case 'members-asc':
+							return a.members - b.members;
+						case 'members-desc':
+							return b.members - a.members;
+						default:
+							return 0;
+					}
+				});
+				renderTeams();
+			});
+		}
+
+		// Select all functionality
+		if (teamsSelectAll) {
+			teamsSelectAll.addEventListener('change', (e) => {
+				const checkboxes = teamsTableBody.querySelectorAll('.team-checkbox');
+				checkboxes.forEach(checkbox => {
+					checkbox.checked = e.target.checked;
+				});
+			});
+		}
+
+		// Add team button
+		if (addTeamBtn) {
+			addTeamBtn.addEventListener('click', () => {
+				alert('Add Team functionality will be implemented here');
+			});
+		}
+
+		// Initial render
+		renderTeams();
 	}
 
 	document.addEventListener(
@@ -982,6 +1206,29 @@ let chart = null;
 let currentDays = 7;
 let isInitialChartLoad = true; // Track if this is the initial chart load
 
+function initChart() {
+	if (chart) {
+		return chart;
+	}
+	const chartEl = document.getElementById('eventsChart');
+	if (!chartEl) {
+		return null;
+	}
+	// Wait for ECharts to load if not available yet
+	if (typeof echarts === 'undefined') {
+		window.addEventListener('echartsLoaded', function onEChartsLoaded() {
+			window.removeEventListener('echartsLoaded', onEChartsLoaded);
+			initChart();
+		}, { once: true });
+		return null;
+	}
+	chart = echarts.init(chartEl);
+	window.addEventListener('resize', () => {
+		chart?.resize();
+	});
+	return chart;
+}
+
 async function loadChartData(days = currentDays) {
 	try {
 		currentDays = days;
@@ -1009,16 +1256,20 @@ async function loadChartData(days = currentDays) {
 				container.style.visibility = 'visible';
 				container.style.opacity = '1';
 			}
-			const chartCanvas = document.getElementById('eventsChart');
-			if (chartCanvas) {
-				chartCanvas.style.visibility = 'visible';
+			const chartEl = document.getElementById('eventsChart');
+			if (chartEl) {
+				chartEl.style.visibility = 'visible';
 			}
 		}
 
-		const labels = data.map(item => {
-			const date = new Date(item.date);
-			return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-		});
+		const chartInstance = initChart();
+		if (!chartInstance) {
+			// If ECharts is not loaded yet, wait for it
+			window.addEventListener('echartsLoaded', () => {
+				loadChartData(days);
+			}, { once: true });
+			return;
+		}
 
 		const hasBreakdown = data.length > 0 &&
 			(data[0].startSessionsWithoutEnd !== undefined || data[0].toolEvents !== undefined);
@@ -1028,200 +1279,288 @@ async function loadChartData(days = currentDays) {
 		const gridColor = isDark ? '#3f3f46' : '#f4f4f5';
 
 		// Colors for start sessions without end (match session badge blue)
-		const startSessionsBorderColor = '#2195cf';
-		const startSessionsBackgroundColor = 'rgba(33, 149, 207, 0.15)';
+		const startSessionsColor = '#2195cf';
+		const startSessionsAreaColor = 'rgba(33, 149, 207, 0.15)';
 
 		// Colors for tool events (match tool badge purple)
-		const toolEventsBorderColor = '#8e81ea';
-		const toolEventsBackgroundColor = 'rgba(142, 129, 234, 0.15)';
+		const toolEventsColor = '#8e81ea';
+		const toolEventsAreaColor = 'rgba(142, 129, 234, 0.15)';
 
 		// Colors for error events (red)
-		const errorEventsBorderColor = '#f97373';
-		const errorEventsBackgroundColor = 'rgba(248, 113, 113, 0.18)';
+		const errorEventsColor = '#f97373';
+		const errorEventsAreaColor = 'rgba(248, 113, 113, 0.18)';
 
-		const totalEventsBorderColor = toolEventsBorderColor;
-		const totalEventsBackgroundColor = toolEventsBackgroundColor;
+		const totalEventsColor = toolEventsColor;
+		const totalEventsAreaColor = toolEventsAreaColor;
 
-		if (chart) {
-			chart.destroy();
-		}
+		// Prepare data for ECharts
+		const dates = data.map(item => item.date);
+		const labels = data.map(item => {
+			const date = new Date(item.date);
+			return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+		});
 
-		let datasets;
+		let series = [];
+		let legendData = [];
 
 		if (hasBreakdown) {
 			const startSessionsData = data.map(item => Number(item.startSessionsWithoutEnd) || 0);
 			const toolEventsData = data.map(item => Number(item.toolEvents) || 0);
 			const errorEventsData = data.map(item => Number(item.errorEvents) || 0);
 
-			datasets = [
+			series = [
 				{
-					label: 'Start Sessions',
+					name: 'Start Sessions',
+					type: 'line',
 					data: startSessionsData,
-					borderColor: startSessionsBorderColor,
-					backgroundColor: startSessionsBackgroundColor,
-					borderWidth: 2,
-					fill: true,
-					tension: 0.25,
-					pointRadius: 2,
-					pointHoverRadius: 4,
-					pointBackgroundColor: startSessionsBorderColor,
-					pointBorderColor: '#ffffff',
-					pointBorderWidth: 1,
-					spanGaps: false
+					smooth: 0.25,
+					symbol: 'circle',
+					symbolSize: 4,
+					lineStyle: {
+						color: startSessionsColor,
+						width: 2
+					},
+					itemStyle: {
+						color: startSessionsColor,
+						borderColor: '#ffffff',
+						borderWidth: 1
+					},
+					areaStyle: {
+						color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+							{ offset: 0, color: startSessionsAreaColor },
+							{ offset: 1, color: 'rgba(33, 149, 207, 0)' }
+						])
+					},
+					emphasis: {
+						focus: 'series',
+						itemStyle: {
+							symbolSize: 6
+						}
+					}
 				},
 				{
-					label: 'Tool Events',
+					name: 'Tool Events',
+					type: 'line',
 					data: toolEventsData,
-					borderColor: toolEventsBorderColor,
-					backgroundColor: toolEventsBackgroundColor,
-					borderWidth: 2,
-					fill: true,
-					tension: 0.25,
-					pointRadius: 2,
-					pointHoverRadius: 4,
-					pointBackgroundColor: toolEventsBorderColor,
-					pointBorderColor: '#ffffff',
-					pointBorderWidth: 1,
-					spanGaps: false
+					smooth: 0.25,
+					symbol: 'circle',
+					symbolSize: 4,
+					lineStyle: {
+						color: toolEventsColor,
+						width: 2
+					},
+					itemStyle: {
+						color: toolEventsColor,
+						borderColor: '#ffffff',
+						borderWidth: 1
+					},
+					areaStyle: {
+						color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+							{ offset: 0, color: toolEventsAreaColor },
+							{ offset: 1, color: 'rgba(142, 129, 234, 0)' }
+						])
+					},
+					emphasis: {
+						focus: 'series',
+						itemStyle: {
+							symbolSize: 6
+						}
+					}
 				},
 				{
-					label: 'Errors',
+					name: 'Errors',
+					type: 'line',
 					data: errorEventsData,
-					borderColor: errorEventsBorderColor,
-					backgroundColor: errorEventsBackgroundColor,
-					borderWidth: 2,
-					fill: true,
-					tension: 0.25,
-					pointRadius: 2,
-					pointHoverRadius: 4,
-					pointBackgroundColor: errorEventsBorderColor,
-					pointBorderColor: '#ffffff',
-					pointBorderWidth: 1,
-					spanGaps: false
+					smooth: 0.25,
+					symbol: 'circle',
+					symbolSize: 4,
+					lineStyle: {
+						color: errorEventsColor,
+						width: 2
+					},
+					itemStyle: {
+						color: errorEventsColor,
+						borderColor: '#ffffff',
+						borderWidth: 1
+					},
+					areaStyle: {
+						color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+							{ offset: 0, color: errorEventsAreaColor },
+							{ offset: 1, color: 'rgba(248, 113, 113, 0)' }
+						])
+					},
+					emphasis: {
+						focus: 'series',
+						itemStyle: {
+							symbolSize: 6
+						}
+					}
 				}
 			];
+			legendData = ['Start Sessions', 'Tool Events', 'Errors'];
 		} else {
 			const totalEventsData = data.map(item => Number(item.count ?? item.total ?? 0));
 
-			datasets = [
+			series = [
 				{
-					label: 'Events',
+					name: 'Events',
+					type: 'line',
 					data: totalEventsData,
-					borderColor: totalEventsBorderColor,
-					backgroundColor: totalEventsBackgroundColor,
-					borderWidth: 2,
-					fill: true,
-					tension: 0,
-					pointRadius: 2,
-					pointHoverRadius: 4,
-					pointBackgroundColor: totalEventsBorderColor,
-					pointBorderColor: '#ffffff',
-					pointBorderWidth: 1,
-					spanGaps: false
+					smooth: false,
+					symbol: 'circle',
+					symbolSize: 4,
+					lineStyle: {
+						color: totalEventsColor,
+						width: 2
+					},
+					itemStyle: {
+						color: totalEventsColor,
+						borderColor: '#ffffff',
+						borderWidth: 1
+					},
+					areaStyle: {
+						color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+							{ offset: 0, color: totalEventsAreaColor },
+							{ offset: 1, color: 'rgba(142, 129, 234, 0)' }
+						])
+					},
+					emphasis: {
+						focus: 'series',
+						itemStyle: {
+							symbolSize: 6
+						}
+					}
 				}
 			];
+			legendData = ['Events'];
 		}
 
-		const ctx = document.getElementById('eventsChart').getContext('2d');
-		chart = new Chart(ctx, {
-			type: 'line',
-			data: {
-				labels: labels,
-				datasets: datasets
+		const option = {
+			animation: true,
+			animationDuration: 350,
+		grid: {
+			left: '3%',
+			right: '0%',
+			bottom: '5%',
+			top: '5%',
+			containLabel: false,
+			width: 'auto',
+			height: 'auto'
+		},
+			tooltip: {
+				trigger: 'axis',
+				backgroundColor: isDark ? '#27272a' : '#ffffff',
+				borderColor: gridColor,
+				borderWidth: 1,
+				textStyle: {
+					color: isDark ? '#a1a1aa' : '#52525b'
+				},
+				axisPointer: {
+					type: 'line',
+					lineStyle: {
+						color: gridColor,
+						type: 'dashed'
+					}
+				},
+				formatter: function(params) {
+					if (!Array.isArray(params)) {
+						params = [params];
+					}
+					let result = '';
+					if (params.length > 0 && params[0].axisValue) {
+						result += `<div style="margin-bottom: 4px; font-weight: 500; color: ${isDark ? '#e4e4e7' : '#18181b'};">${params[0].axisValue}</div>`;
+					}
+					params.forEach(param => {
+						const marker = `<span style="display:inline-block;margin-right:4px;border-radius:50%;width:10px;height:10px;background-color:${param.color};"></span>`;
+						result += `<div style="margin: 2px 0;">${marker}${param.seriesName}: <strong>${param.value}</strong></div>`;
+					});
+					return result;
+				}
 			},
-			options: {
-				responsive: true,
-				maintainAspectRatio: false,
-				animation: {
-					duration: 350,
-					onComplete: () => {
-						// Show the chart once rendering is complete
-						const chartCanvas = document.getElementById('eventsChart');
-						if (chartCanvas) {
-							chartCanvas.style.visibility = 'visible';
-						}
-
-						// Show the container if this is the initial load
-						if (isInitialChartLoad) {
-							isInitialChartLoad = false;
-							const container = document.querySelector('.container');
-							if (container) {
-								container.style.visibility = 'visible';
-								// Use requestAnimationFrame to ensure the visibility change is applied before opacity transition
-								requestAnimationFrame(() => {
-									container.style.opacity = '1';
-								});
-							}
-						}
-					}
+			legend: {
+				data: legendData,
+				top: 10,
+				textStyle: {
+					color: textColor,
+					fontSize: 12
 				},
-				elements: {
-					point: {
-						radius: 1.5,
-						hoverRadius: 3,
-						borderWidth: 1
-					}
+				itemGap: 20,
+				icon: 'circle',
+				itemWidth: 12,
+				itemHeight: 12
+			},
+			xAxis: {
+				type: 'category',
+				data: labels,
+				axisLabel: {
+					color: textColor,
+					fontSize: 11,
+					rotate: 45,
+					interval: 0
 				},
-				plugins: {
-					legend: {
-						display: true,
-						position: 'top',
-						labels: {
-							color: textColor,
-							font: {
-								size: 12
-							},
-							usePointStyle: true,
-							padding: 15,
-							boxWidth: 12,
-							boxPadding: 8
-						}
-					},
-					tooltip: {
-						backgroundColor: isDark ? '#27272a' : '#ffffff',
-						titleColor: isDark ? '#e4e4e7' : '#18181b',
-						bodyColor: isDark ? '#a1a1aa' : '#52525b',
-						borderColor: gridColor,
-						borderWidth: 1,
-						padding: 12,
-						displayColors: true,
-						callbacks: {
-							label: function(context) {
-								return `${context.dataset.label}: ${context.parsed.y}`;
-							}
-						}
-					}
+				axisLine: {
+					show: false
 				},
-				scales: {
-					y: {
-						beginAtZero: true,
-						ticks: {
-							color: textColor,
-							font: {
-								size: 12
-							}
-						},
-						grid: {
-							color: gridColor
-						}
-					},
-					x: {
-						ticks: {
-							color: textColor,
-							font: {
-								size: 11
-							},
-							maxRotation: 45,
-							minRotation: 45
-						},
-						grid: {
-							color: gridColor,
-							display: false
-						}
+				axisTick: {
+					show: false
+				},
+				splitLine: {
+					show: false
+				}
+			},
+		yAxis: {
+			type: 'value',
+			min: 0,
+			axisLabel: {
+				color: textColor,
+				fontSize: 12,
+				inside: false,
+				margin: 8,
+				width: 40
+			},
+			axisLine: {
+				show: false
+			},
+				axisTick: {
+					show: false
+				},
+				splitLine: {
+					lineStyle: {
+						color: gridColor
 					}
 				}
+			},
+			series: series
+		};
+
+		chartInstance.setOption(option);
+		chartInstance.resize();
+
+		// Listen for chart rendering completion
+		const onChartFinished = () => {
+			chartInstance.off('finished', onChartFinished);
+
+			// Show the chart once rendering is complete
+			const chartEl = document.getElementById('eventsChart');
+			if (chartEl) {
+				chartEl.style.visibility = 'visible';
 			}
-		});
+
+			// Show the container if this is the initial load
+			if (isInitialChartLoad) {
+				isInitialChartLoad = false;
+				const container = document.querySelector('.container');
+				if (container) {
+					container.style.visibility = 'visible';
+					requestAnimationFrame(() => {
+						container.style.opacity = '1';
+					});
+				}
+			}
+		};
+
+		chartInstance.on('finished', onChartFinished);
+		chartInstance.resize();
 	} catch (error) {
 		console.error('Error loading chart data:', error);
 		// If this is the initial load and there's an error, show the page anyway

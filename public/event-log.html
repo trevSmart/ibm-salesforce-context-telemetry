@@ -9,7 +9,7 @@
 	<link href="/css/output.css" rel="stylesheet">
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+	<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;300;400;500;600;700;800&display=swap" rel="stylesheet">
 	<link rel="preload" href="/vendor/fontawesome/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
 	<noscript><link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css"></noscript>
 	<link rel="preload" href="/vendor/fontawesome/css/v4-shims.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
@@ -42,6 +42,31 @@
 </head>
 <body class="event-log-page">
 	<div class="main-container">
+		<nav class="top-nav">
+			<a href="/" class="top-nav-logo">
+				<div class="top-nav-logo-icon">
+					<img src="/resources/custom30.png" alt="IBM SF CTXT TELEMETRY" class="top-nav-logo-img">
+				</div>
+				<span>IBM SF CTXT TELEMETRY</span>
+			</a>
+			<div class="top-nav-links">
+				<a href="/" class="top-nav-link">Dashboard</a>
+				<a href="/event-log" class="top-nav-link active">Logs</a>
+				<a href="/settings" class="top-nav-link">Settings</a>
+			</div>
+			<div class="top-nav-search">
+				<input type="text" class="top-nav-search-input" id="searchInput" placeholder="Search">
+			</div>
+			<div class="top-nav-actions">
+				<button type="button" class="icon-btn" onclick="refreshLogs(event)"><i class="fa fa-refresh"></i></button>
+				<button class="icon-btn notification-toggle" onclick="toggleNotificationMode()"><i class="fa-regular fa-bell"></i></button>
+				<div class="user-menu-container" style="position: relative;">
+					<button class="icon-btn user-btn" id="userBtn" onclick="showUserMenu(event)"><i class="fa-solid fa-wrench"></i></button>
+					<div class="user-menu" id="userMenu"></div>
+				</div>
+				<button type="button" class="icon-btn"><i class="fa fa-user"></i></button>
+			</div>
+		</nav>
 		<div class="content-wrapper">
 			<div class="sidebar">
 				<div class="sidebar-header">
@@ -133,17 +158,6 @@
 								<span class="text-sm font-medium">Error</span>
 								<span class="level-count text-xs" id="count-tool_error">0</span>
 							</button>
-						</div>
-					</div>
-					<div class="search-controls">
-						<input type="text" class="search-input" id="searchInput" placeholder="Search">
-						<div class="icon-buttons-group">
-							<button type="button" class="icon-btn" onclick="refreshLogs(event)"><i class="fa fa-refresh"></i></button>
-							<button class="icon-btn notification-toggle" onclick="toggleNotificationMode()"><i class="fa-regular fa-bell"></i></button>
-							<div class="user-menu-container" style="position: relative;">
-								<button class="icon-btn user-btn" id="userBtn" onclick="showUserMenu(event)"><i class="fa-solid fa-wrench"></i></button>
-								<div class="user-menu" id="userMenu"></div>
-							</div>
 						</div>
 					</div>
 				</div>
