@@ -73,6 +73,14 @@
 							</li>
 						</ul>
 					</div>
+					<div class="selection-buttons-container">
+						<button id="toggleSelectionModeBtn" class="toggle-selection-mode-btn" onclick="toggleSelectionMode()">
+							<i class="fa-solid fa-list-check"></i>
+						</button>
+						<button id="deleteSelectedSessionsBtn" class="delete-selected-sessions-btn" onclick="confirmDeleteSelectedSessions()" style="display: none;">
+							<i class="fa-solid fa-trash"></i> Delete
+						</button>
+					</div>
 					<ul class="session-list list-none sessions-scrollable" id="sessionList">
 					</ul>
 					<ul class="session-list list-none sessions-scrollable" id="userList" style="display: none;">

@@ -249,6 +249,8 @@ const detectElectronEnvironment = () => {
 	let activeFilters = new Set(['tool_call', 'session_start', 'custom', 'tool_error']);
 	let selectedUserIds = new Set(); // Will be populated with all users when loaded - all selected by default
 	let allUserIds = new Set(); // Track all available user IDs
+	let selectedSessionsForDeletion = new Set(); // Track sessions selected for deletion
+	let selectionMode = false; // Track if selection mode is active
 	let searchQuery = '';
 	let sortOrder = 'DESC';
 	let startTime = performance.now();
@@ -1770,8 +1772,13 @@ const detectElectronEnvironment = () => {
 					const { html: sessionDisplayHtml, text: sessionLabelText } = formatSessionDisplay(session);
 					sessionDisplayMap.set(session.session_id, sessionLabelText);
 
+					const isSelected = selectedSessionsForDeletion.has(session.session_id);
+					// Always render checkbox to prevent label shift, but control visibility with 'show' class
+					// Don't add 'show' class initially - it will be added via toggleSelectionMode for smooth transition
+					const checkboxHtml = `<input type="checkbox" class="session-checkbox" id="session-checkbox-${session.session_id}" ${isSelected ? 'checked' : ''} onclick="event.stopPropagation(); toggleSessionSelection('${session.session_id}', event)">`;
 					li.innerHTML = `
 						<div class="session-item-left">
+							${checkboxHtml}
 							<span class="session-name text-sm">${sessionDisplayHtml}</span>
 						</div>
 						<div class="session-item-right">
@@ -1794,14 +1801,28 @@ const detectElectronEnvironment = () => {
 					`;
 
 					li.addEventListener('click', (e) => {
-						// Don't activate session if clicking on actions button
-						if (e.target.closest('.session-item-actions')) {
+						// Don't activate session if clicking on actions button or checkbox
+						if (e.target.closest('.session-item-actions') || e.target.closest('.session-checkbox')) {
 							return;
 						}
 						// Cancel hover preview when clicking
 						if (isHoverPreviewActive) {
 							hoverPreviewState = null;
 							isHoverPreviewActive = false;
+						}
+						// If in selection mode, toggle selection for deletion instead of viewing
+						if (selectionMode) {
+							toggleSessionSelection(session.session_id, e);
+							return;
+						}
+						// If Ctrl/Cmd is pressed and not in selection mode, enter selection mode and select this session
+						if ((e.ctrlKey || e.metaKey) && !selectionMode) {
+							toggleSelectionMode();
+							// Small delay to ensure selection mode is active
+							setTimeout(() => {
+								toggleSessionSelection(session.session_id, e);
+							}, 0);
+							return;
 						}
 						// Avoid flickering if clicking on the same session that's already selected
 						if (selectedSession === session.session_id && li.classList.contains('active')) {
@@ -1880,12 +1901,17 @@ const detectElectronEnvironment = () => {
 				if (totalSizeEl) {
 					totalSizeEl.textContent = total;
 				}
+
+				// Update delete selected button
+				updateDeleteSelectedButton();
 			} else {
 				// Update total size to 0 if no sessions
 				const totalSizeEl = document.getElementById('totalSize');
 				if (totalSizeEl) {
 					totalSizeEl.textContent = '0';
 				}
+				// Update delete selected button
+				updateDeleteSelectedButton();
 			}
 		} catch (error) {
 			console.error('Error loading sessions:', error);
@@ -2115,6 +2141,18 @@ const detectElectronEnvironment = () => {
 		const sessionList = document.getElementById('sessionList');
 		const userList = document.getElementById('userList');
 		const teamList = document.getElementById('teamList');
+
+		// Clear session selection and exit selection mode when switching tabs
+		if (tab !== 'sessions') {
+			selectedSessionsForDeletion.clear();
+			selectionMode = false;
+			const toggleBtn = document.getElementById('toggleSelectionModeBtn');
+			if (toggleBtn) {
+				toggleBtn.innerHTML = '<i class="fa-solid fa-list-check"></i>';
+				toggleBtn.classList.remove('active');
+			}
+			updateDeleteSelectedButton();
+		}
 
 		// Update tab buttons
 		if (sessionsTab && usersTab && teamsTab) {
@@ -3414,6 +3452,138 @@ const detectElectronEnvironment = () => {
 		}
 	}
 
+	function toggleSelectionMode() {
+		selectionMode = !selectionMode;
+		const toggleBtn = document.getElementById('toggleSelectionModeBtn');
+		if (toggleBtn) {
+			if (selectionMode) {
+				toggleBtn.innerHTML = '<i class="fa-solid fa-times"></i>';
+				toggleBtn.classList.add('active');
+			} else {
+				toggleBtn.innerHTML = '<i class="fa-solid fa-list-check"></i>';
+				toggleBtn.classList.remove('active');
+				// Clear selection when exiting selection mode
+				selectedSessionsForDeletion.clear();
+			}
+		}
+		// Update delete button visibility
+		updateDeleteSelectedButton();
+
+		// Reload sessions to ensure checkboxes exist in DOM, then animate
+		(async () => {
+			if (!selectionMode) {
+				// If exiting selection mode, animate out first before reloading
+				const checkboxes = document.querySelectorAll('.session-checkbox');
+				checkboxes.forEach((checkbox) => {
+					checkbox.classList.remove('show');
+				});
+				// Wait for animation to complete before reloading (reduced to match faster transition)
+				await new Promise(resolve => setTimeout(resolve, 120));
+			}
+			await loadSessions();
+			// Use requestAnimationFrame to ensure DOM is ready, then trigger transitions
+			requestAnimationFrame(() => {
+				requestAnimationFrame(() => {
+					const checkboxes = document.querySelectorAll('.session-checkbox');
+					if (selectionMode) {
+						// Animate checkboxes in - all at the same time
+						checkboxes.forEach((checkbox) => {
+							// Remove show class first to ensure transition works
+							checkbox.classList.remove('show');
+							void checkbox.offsetWidth; // Force reflow
+							checkbox.classList.add('show');
+						});
+					}
+				});
+			});
+		})();
+	}
+
+	function toggleSessionSelection(sessionId, event) {
+		if (event) {
+			event.stopPropagation();
+		}
+		// Save scroll position to prevent scroll jump during animation
+		// The scrollable container is the parent ul with class 'sessions-scrollable'
+		const sessionList = document.getElementById('sessionList');
+		const scrollTop = sessionList ? sessionList.scrollTop : 0;
+
+		const checkbox = document.getElementById(`session-checkbox-${sessionId}`);
+		if (selectedSessionsForDeletion.has(sessionId)) {
+			selectedSessionsForDeletion.delete(sessionId);
+			if (checkbox) {
+				checkbox.checked = false;
+				// Trigger animation by temporarily removing and re-adding checked state
+				checkbox.classList.remove('just-checked');
+				void checkbox.offsetWidth; // Force reflow
+				checkbox.classList.add('just-unchecked');
+				// Restore scroll position using requestAnimationFrame for smooth restoration
+				if (sessionList) {
+					requestAnimationFrame(() => {
+						sessionList.scrollTop = scrollTop;
+					});
+				}
+				// Use animationend event instead of setTimeout for better precision
+				const handleAnimationEnd = (e) => {
+					if (e.animationName === 'checkboxUncheck') {
+						checkbox.classList.remove('just-unchecked');
+						// Restore scroll position again after animation completes
+						if (sessionList) {
+							requestAnimationFrame(() => {
+								sessionList.scrollTop = scrollTop;
+							});
+						}
+						checkbox.removeEventListener('animationend', handleAnimationEnd);
+					}
+				};
+				checkbox.addEventListener('animationend', handleAnimationEnd);
+			}
+		} else {
+			selectedSessionsForDeletion.add(sessionId);
+			if (checkbox) {
+				checkbox.checked = true;
+				// Trigger animation by temporarily removing and re-adding checked state
+				checkbox.classList.remove('just-unchecked');
+				void checkbox.offsetWidth; // Force reflow
+				checkbox.classList.add('just-checked');
+				// Restore scroll position using requestAnimationFrame for smooth restoration
+				if (sessionList) {
+					requestAnimationFrame(() => {
+						sessionList.scrollTop = scrollTop;
+					});
+				}
+				// Use animationend event instead of setTimeout for better precision
+				const handleAnimationEnd = (e) => {
+					if (e.animationName === 'checkboxCheck') {
+						checkbox.classList.remove('just-checked');
+						// Restore scroll position again after animation completes
+						if (sessionList) {
+							requestAnimationFrame(() => {
+								sessionList.scrollTop = scrollTop;
+							});
+						}
+						checkbox.removeEventListener('animationend', handleAnimationEnd);
+					}
+				};
+				checkbox.addEventListener('animationend', handleAnimationEnd);
+			}
+		}
+		updateDeleteSelectedButton();
+	}
+
+	function updateDeleteSelectedButton() {
+		const deleteSelectedBtn = document.getElementById('deleteSelectedSessionsBtn');
+		if (deleteSelectedBtn) {
+			const count = selectedSessionsForDeletion.size;
+			if (count > 0 && selectionMode) {
+				deleteSelectedBtn.style.display = 'flex';
+				deleteSelectedBtn.innerHTML = `<i class="fa-solid fa-trash"></i> Delete (${count})`;
+			} else {
+				deleteSelectedBtn.style.display = 'none';
+			}
+		}
+	}
+
 	function confirmDeleteSession(sessionId) {
 		openConfirmModal({
 			title: 'Delete session events',
@@ -3425,6 +3595,24 @@ const detectElectronEnvironment = () => {
 				return;
 			}
 			deleteSession(sessionId);
+		});
+	}
+
+	function confirmDeleteSelectedSessions() {
+		const count = selectedSessionsForDeletion.size;
+		if (count === 0) {
+			return;
+		}
+		openConfirmModal({
+			title: 'Delete selected sessions',
+			message: `Are you sure you want to delete all events from ${count} selected session${count > 1 ? 's' : ''}? This action cannot be undone.`,
+			confirmLabel: `Delete ${count} session${count > 1 ? 's' : ''}`,
+			destructive: true
+		}).then((confirmed) => {
+			if (!confirmed) {
+				return;
+			}
+			deleteSelectedSessions();
 		});
 	}
 
@@ -3460,6 +3648,9 @@ const detectElectronEnvironment = () => {
 			}
 			}
 
+			// Remove from selection if it was selected
+			selectedSessionsForDeletion.delete(sessionId);
+
 			// Refresh the view
 			loadEventTypeStats(selectedSession);
 			loadSessions();
@@ -3467,6 +3658,58 @@ const detectElectronEnvironment = () => {
 		} catch (error) {
 			console.error('Error deleting session:', error);
 			alert('Error deleting the session: ' + error.message);
+		}
+	}
+
+	async function deleteSelectedSessions() {
+		const sessionsToDelete = Array.from(selectedSessionsForDeletion);
+		if (sessionsToDelete.length === 0) {
+			return;
+		}
+
+		try {
+			// Delete sessions in parallel
+			const deletePromises = sessionsToDelete.map(async (sessionId) => {
+				const response = await fetch(`/api/events?sessionId=${encodeURIComponent(sessionId)}`, {
+					method: 'DELETE',
+					credentials: 'include'
+				});
+				const validResponse = await handleApiResponse(response);
+				if (!validResponse) {
+					throw new Error(`Failed to delete session ${sessionId}`);
+				}
+				return validResponse.json();
+			});
+
+			await Promise.all(deletePromises);
+
+			// Clear selection
+			selectedSessionsForDeletion.clear();
+
+			// If we were viewing one of the deleted sessions, switch to "all"
+			if (sessionsToDelete.includes(selectedSession)) {
+				selectedSession = 'all';
+				selectedActivityDate = null;
+				document.querySelectorAll('.session-item').forEach(i => i.classList.remove('active'));
+				const allSessionsItem = document.querySelector('[data-session="all"]');
+				if (allSessionsItem) {
+					allSessionsItem.classList.add('active');
+				}
+				sortOrder = 'DESC';
+				const sortIconEl = document.getElementById('sortIcon');
+				if (sortIconEl) {
+					sortIconEl.src = '/resources/sort-desc';
+					sortIconEl.alt = 'Sort descending';
+				}
+			}
+
+			// Refresh the view
+			loadEventTypeStats(selectedSession);
+			loadSessions();
+			loadEvents();
+		} catch (error) {
+			console.error('Error deleting selected sessions:', error);
+			alert('Error deleting sessions: ' + error.message);
 		}
 	}
 
