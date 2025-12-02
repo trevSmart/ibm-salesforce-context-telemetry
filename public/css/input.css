@@ -2990,6 +2990,333 @@
     }
   }
 
+  /* Mobile responsiveness for small screens */
+  @media (max-width: 768px) {
+    /* Dashboard (index.html) mobile styles */
+    body.index-page {
+      padding: 10px;
+    }
+
+    .container {
+      padding: 30px 20px;
+      border-radius: 12px;
+    }
+
+    h1 {
+      font-size: 1.25rem;
+    }
+
+    .chart-container {
+      height: 200px;
+    }
+
+    #eventsChart {
+      height: 200px !important;
+    }
+
+    .dashboard-header {
+      margin-bottom: 24px;
+    }
+
+    .chart-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .chart-title {
+      text-align: left;
+    }
+
+    .time-range-select {
+      width: 100%;
+    }
+
+    .status-info {
+      margin-top: 30px;
+      padding-top: 30px;
+      font-size: 12px;
+    }
+
+    /* Event log page mobile styles */
+    body.event-log-page {
+      padding: 8px;
+    }
+
+    body.event-log-page .main-container {
+      width: calc(100vw - 16px);
+      height: calc(100vh - 16px);
+      border-radius: 12px;
+    }
+
+    .content-wrapper {
+      flex-direction: column;
+      padding: 0 8px;
+    }
+
+    /* Hide sidebar by default on mobile, show with toggle */
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      max-width: 280px;
+      height: 100%;
+      z-index: 1000;
+      transform: translateX(-100%);
+      transition: transform 0.3s ease;
+      background: var(--bg-primary);
+      box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+    }
+
+    html.dark .sidebar {
+      background: var(--bg-primary);
+      box-shadow: 2px 0 8px rgba(0, 0, 0, 0.3);
+    }
+
+    .sidebar.mobile-visible {
+      transform: translateX(0);
+    }
+
+    /* Hide sidebar resizer on mobile */
+    .sidebar-resizer {
+      display: none;
+    }
+
+    /* Add mobile sidebar toggle button */
+    .mobile-sidebar-toggle {
+      display: flex !important;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      border: none;
+      border-radius: 8px;
+      background: var(--bg-table-header);
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: background-color 0.2s ease, color 0.2s ease;
+      margin-right: 8px;
+    }
+
+    .mobile-sidebar-toggle:hover {
+      background: var(--hover-bg);
+      color: var(--text-primary);
+    }
+
+    /* Mobile sidebar overlay */
+    .mobile-sidebar-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 999;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .mobile-sidebar-overlay.visible {
+      display: block;
+      opacity: 1;
+    }
+
+    .main-content {
+      width: 100%;
+    }
+
+    .main-content-header {
+      padding: 12px 8px;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 12px;
+    }
+
+    .filters-group {
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .level-filters {
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .level-filter-btn {
+      flex: 1 1 auto;
+      min-width: calc(50% - 3px);
+      justify-content: center;
+    }
+
+    .search-controls {
+      flex-direction: column;
+      gap: 8px;
+      width: 100%;
+    }
+
+    .search-input {
+      width: 100% !important;
+      margin-right: 0;
+    }
+
+    .search-input:focus {
+      width: 100% !important;
+    }
+
+    .icon-buttons-group {
+      justify-content: flex-end;
+      width: 100%;
+    }
+
+    /* Make table more compact on mobile */
+    .logs-table {
+      font-size: 0.75rem;
+    }
+
+    .logs-table th,
+    .logs-table td {
+      padding: 6px 2px;
+    }
+
+    /* Hide less important columns on mobile */
+    .logs-table th:nth-child(1),
+    .logs-table td:nth-child(1),
+    .logs-table th:nth-child(2),
+    .logs-table td:nth-child(2) {
+      display: none;
+    }
+
+    /* Adjust column widths for mobile */
+    .logs-table th.time-column,
+    .logs-table td.log-time {
+      width: 80px;
+      font-size: 0.65rem;
+    }
+
+    .logs-table th.user-column {
+      width: 120px;
+    }
+
+    /* Hide horizontal resizer on mobile */
+    .horizontal-resizer {
+      display: none;
+    }
+
+    /* Make session activity card more compact */
+    .session-activity-card {
+      min-height: 150px;
+      height: 180px;
+      padding: 12px 16px 8px 16px;
+      margin: 0 2px;
+    }
+
+    .session-activity-header {
+      margin-bottom: 8px;
+    }
+
+    /* Adjust footer info for mobile */
+    .footer-info {
+      position: static;
+      flex-wrap: wrap;
+      gap: 10px;
+      padding: 8px;
+      margin-top: 12px;
+      background: var(--bg-secondary);
+      border-radius: 8px;
+    }
+
+    /* Make user filter dropdown full width */
+    .user-filter-dropdown {
+      min-width: 100%;
+      max-width: 100%;
+    }
+  }
+
+  /* Extra small mobile devices */
+  @media (max-width: 480px) {
+    .container {
+      padding: 20px 16px;
+    }
+
+    h1 {
+      font-size: 1.125rem;
+    }
+
+    .chart-container {
+      height: 180px;
+    }
+
+    #eventsChart {
+      height: 180px !important;
+    }
+
+    /* Stack level filters vertically on very small screens */
+    .level-filter-btn {
+      min-width: 100%;
+    }
+
+    /* Make icon buttons smaller */
+    .icon-btn {
+      width: 36px;
+      height: 36px;
+      font-size: 1rem;
+    }
+
+    .icon-buttons-group .icon-btn {
+      width: 36px;
+      height: 36px;
+      flex: 0 0 36px;
+    }
+
+    /* Adjust table even more */
+    .logs-table {
+      font-size: 0.7rem;
+    }
+
+    /* Hide company column on very small screens */
+    .logs-table th:nth-child(6),
+    .logs-table td:nth-child(6) {
+      display: none;
+    }
+
+    /* Make session items more compact */
+    .session-item {
+      padding: 8px 4px 8px 10px;
+      min-height: auto;
+    }
+
+    .session-name {
+      font-size: 0.75rem;
+      line-height: 1.1rem;
+    }
+
+    .session-size {
+      font-size: 0.55rem;
+      padding: 1px 4px;
+    }
+
+    /* Adjust sidebar for small screens */
+    .sidebar {
+      max-width: 100%;
+    }
+
+    .sidebar-header {
+      padding: 16px 12px;
+    }
+
+    .sidebar-content {
+      padding: 0 12px 16px 12px;
+    }
+  }
+
+  /* Hide mobile-only elements by default (will be shown via JS on mobile) */
+  .mobile-sidebar-toggle {
+    display: none;
+  }
+
   /* Actions dropdown styles */
   .actions-cell {
     position: relative;

@@ -95,6 +95,9 @@
 			<div class="main-content">
 				<div class="main-content-header">
 					<div class="filters-group">
+						<button class="mobile-sidebar-toggle" id="mobileSidebarToggle" onclick="toggleMobileSidebar()">
+							<i class="fa-solid fa-bars"></i>
+						</button>
 						<div class="user-filter-dropdown-container">
 							<button class="user-filter-dropdown-btn" id="userFilterDropdownBtn" onclick="toggleUserFilterDropdown(event)">
 								<i class="fa-solid fa-users"></i>
@@ -223,6 +226,8 @@
 			</div>
 		</div>
 	</div>
+
+	<div class="mobile-sidebar-overlay" id="mobileSidebarOverlay" onclick="toggleMobileSidebar()"></div>
 
 	<script src="/vendor/echarts/echarts.min.js"></script>
 	<script src="/js/event-log.js"></script>
