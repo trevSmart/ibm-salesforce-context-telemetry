@@ -4164,3 +4164,38 @@ const detectElectronEnvironment = () => {
 			});
 		});
 	})();
+
+// Mobile sidebar toggle functionality
+function toggleMobileSidebar() {
+	const sidebar = document.querySelector('.sidebar');
+	const overlay = document.getElementById('mobileSidebarOverlay');
+	
+	if (sidebar && overlay) {
+		const isVisible = sidebar.classList.contains('mobile-visible');
+		
+		if (isVisible) {
+			sidebar.classList.remove('mobile-visible');
+			overlay.classList.remove('visible');
+		} else {
+			sidebar.classList.add('mobile-visible');
+			overlay.classList.add('visible');
+		}
+	}
+}
+
+// Close mobile sidebar when clicking on a session
+document.addEventListener('DOMContentLoaded', () => {
+	const sessionItems = document.querySelectorAll('.session-item');
+	sessionItems.forEach(item => {
+		item.addEventListener('click', () => {
+			if (window.innerWidth <= 768) {
+				const sidebar = document.querySelector('.sidebar');
+				const overlay = document.getElementById('mobileSidebarOverlay');
+				if (sidebar && overlay) {
+					sidebar.classList.remove('mobile-visible');
+					overlay.classList.remove('visible');
+				}
+			}
+		});
+	});
+});
