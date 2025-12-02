@@ -881,7 +881,7 @@ async function getSessions(options = {}) {
 			};
 		});
 	} else {
-		let whereClause = 'WHERE s.session_id IS NOT NULL OR s.parent_session_id IS NOT NULL';
+		let whereClause = 'WHERE s.logical_session_id IS NOT NULL';
 		const params = [];
 		let paramIndex = 1;
 		if (userIds && Array.isArray(userIds) && userIds.length > 0) {
@@ -889,28 +889,47 @@ async function getSessions(options = {}) {
 			whereClause += ` AND s.user_id IN (${placeholders})`;
 			params.push(...userIds);
 		}
+
+		// Use a CTE to compute logical_session_id once, then group on that.
+		// This avoids PostgreSQL errors about ungrouped columns in correlated subqueries.
 		const result = await db.query(`
+			WITH logical_sessions AS (
+				SELECT
+					COALESCE(parent_session_id, session_id) AS logical_session_id,
+					id,
+					event,
+					timestamp,
+					server_id,
+					version,
+					session_id,
+					parent_session_id,
+					user_id,
+					data,
+					received_at,
+					created_at
+				FROM telemetry_events
+			)
 			SELECT
-				COALESCE(s.parent_session_id, s.session_id) AS logical_session_id,
+				s.logical_session_id,
 				COUNT(*) as count,
 				MIN(s.timestamp) as first_event,
 				MAX(s.timestamp) as last_event,
-				(SELECT user_id FROM telemetry_events
-				 WHERE COALESCE(parent_session_id, session_id) = COALESCE(s.parent_session_id, s.session_id)
-				 ORDER BY timestamp ASC LIMIT 1) as user_id,
-				(SELECT data FROM telemetry_events
-				 WHERE COALESCE(parent_session_id, session_id) = COALESCE(s.parent_session_id, s.session_id)
-				   AND event = 'session_start'
-				 ORDER BY timestamp ASC LIMIT 1) as session_start_data,
-				(SELECT COUNT(*) FROM telemetry_events
-				 WHERE COALESCE(parent_session_id, session_id) = COALESCE(s.parent_session_id, s.session_id)
-				   AND event = 'session_start') as has_start,
-				(SELECT COUNT(*) FROM telemetry_events
-				 WHERE COALESCE(parent_session_id, session_id) = COALESCE(s.parent_session_id, s.session_id)
-				   AND event = 'session_end') as has_end
-			FROM telemetry_events s
+				(SELECT user_id FROM logical_sessions ls
+				 WHERE ls.logical_session_id = s.logical_session_id
+				 ORDER BY ls.timestamp ASC LIMIT 1) as user_id,
+				(SELECT data FROM logical_sessions ls
+				 WHERE ls.logical_session_id = s.logical_session_id
+				   AND ls.event = 'session_start'
+				 ORDER BY ls.timestamp ASC LIMIT 1) as session_start_data,
+				(SELECT COUNT(*) FROM logical_sessions ls
+				 WHERE ls.logical_session_id = s.logical_session_id
+				   AND ls.event = 'session_start') as has_start,
+				(SELECT COUNT(*) FROM logical_sessions ls
+				 WHERE ls.logical_session_id = s.logical_session_id
+				   AND ls.event = 'session_end') as has_end
+			FROM logical_sessions s
 			${whereClause}
-			GROUP BY COALESCE(s.parent_session_id, s.session_id)
+			GROUP BY s.logical_session_id
 			ORDER BY last_event DESC
 		`, params);
 		return result.rows.map(row => {

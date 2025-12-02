@@ -649,14 +649,13 @@
   }
 
   html.dark .user-filter-checkbox {
-    background-color: #020617;
-    border-color: #38bdf8;
+    background-color: white;
+    border-color: #9ca3af;
   }
 
   html.dark .user-filter-checkbox:checked {
-    background-color: #0284c7;
-    border-color: #0284c7;
-    box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.5), 0 0 12px rgba(2, 132, 199, 0.8);
+    background-color: white;
+    border-color: #6b7280;
   }
 
   html.dark .user-filter-checkbox:checked::after {

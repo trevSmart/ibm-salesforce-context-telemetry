@@ -799,18 +799,13 @@ const detectElectronEnvironment = () => {
 			return;
 		}
 
-		console.log('Horizontal resizer: setting up', { resizer, activityCard, isHidden: activityCard.classList.contains('hidden') });
-
 		const updateResizerVisibility = () => {
 			const isCardHidden = activityCard.classList.contains('hidden');
-			// TEMPORALMENT: sempre visible per depurar
-			// if (isCardHidden) {
-			// 	resizer.classList.add('hidden');
-			// } else {
-			// 	resizer.classList.remove('hidden');
-			// }
-			resizer.classList.remove('hidden'); // TEMPORAL: sempre visible
-			console.log('Horizontal resizer: visibility updated', { isCardHidden, resizerHidden: resizer.classList.contains('hidden'), resizerStyles: window.getComputedStyle(resizer) });
+			if (isCardHidden) {
+				resizer.classList.add('hidden');
+			} else {
+				resizer.classList.remove('hidden');
+			}
 		};
 
 		// Update visibility when card visibility changes
