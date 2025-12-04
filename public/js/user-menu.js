@@ -3,18 +3,18 @@
 // in the page-specific scripts (`index.js` and `event-log.js`).
 
 (function initUserMenu() {
-	const userMenu = document.getElementById('userMenu');
-	if (!userMenu) {
-		return;
-	}
+  const userMenu = document.getElementById('userMenu');
+  if (!userMenu) {
+    return;
+  }
 
-	// Get current theme to initialize menu with correct label
-	const isDark = document.documentElement.classList.contains('dark');
-	const themeIcon = isDark ? 'fa-regular fa-sun' : 'fa-regular fa-moon';
-	const themeLabel = isDark ? 'Light theme' : 'Dark theme';
+  // Get current theme to initialize menu with correct label
+  const isDark = document.documentElement.classList.contains('dark');
+  const themeIcon = isDark ? 'fa-regular fa-sun' : 'fa-regular fa-moon';
+  const themeLabel = isDark ? 'Light theme' : 'Dark theme';
 
-	// Build the menu structure expected by the page scripts and CSS
-	userMenu.innerHTML = `
+  // Build the menu structure expected by the page scripts and CSS
+  userMenu.innerHTML = `
 		<div class="user-menu-item" id="userMenuUsername">
 			<i class="fa-regular fa-user user-menu-icon"></i>Loading user...
 		</div>

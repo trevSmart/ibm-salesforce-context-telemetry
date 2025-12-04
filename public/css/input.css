@@ -3807,7 +3807,57 @@
   .confirm-modal.settings-modal {
     max-width: 720px;
     max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .settings-modal-header {
+    flex-shrink: 0;
+    padding-bottom: 10px;
+  }
+
+  .settings-modal-close-icon {
+    position: fixed;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1px solid var(--border-color);
+    background: var(--bg-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color 0.15s ease, transform 0.12s ease;
+    z-index: 10000;
+    color: var(--text-secondary);
+    font-size: 14px;
+    padding: 0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  .settings-modal-close-icon:hover {
+    background: var(--hover-bg);
+    color: var(--text-primary);
+    transform: scale(1.05);
+  }
+
+  .settings-modal-close-icon:active {
+    transform: scale(0.95);
+  }
+
+  .settings-modal-content {
+    flex: 1;
     overflow-y: auto;
+    overflow-x: hidden;
+    min-height: 0;
+  }
+
+  .settings-modal-footer {
+    flex-shrink: 0;
+    padding-top: 12px;
+    border-top: 1px solid var(--border-color);
+    margin-top: 8px;
   }
 
   .confirm-modal.settings-modal .confirm-modal-title {

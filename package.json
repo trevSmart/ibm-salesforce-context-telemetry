@@ -2,24 +2,26 @@
   "name": "ibm-salesforce-context-telemetry",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "src/index.js",
   "scripts": {
     "prestart": "lsof -ti :3100 | xargs kill -9 2>/dev/null || true",
-    "start": "npm run build:css && node index.js",
-    "dev": "concurrently \"npm run dev:css\" \"nodemon index.js\"",
+    "start": "npm run build:css && node src/index.js",
+    "dev": "concurrently \"npm run dev:css\" \"nodemon src/index.js\"",
     "dev:css": "tailwindcss -i ./public/css/input.css -o ./public/css/output.css --watch",
     "build": "npm run build:css:prod",
     "build:css": "tailwindcss -i ./public/css/input.css -o ./public/css/output.css",
     "build:css:prod": "tailwindcss -i ./public/css/input.css -o ./public/css/output.css --minify",
     "postinstall": "npm run build:css:prod || true",
-    "start:electron": "npm run build:css:prod && electron electron.js",
+    "start:electron": "npm run build:css:prod && electron src/electron.js",
     "dist:mac": "npm run build:css:prod && electron-builder --mac dmg zip --universal",
     "postdist:mac": "npm rebuild better-sqlite3",
-    "generate-test-data": "node scripts/generate-test-data.js",
-    "generate-password-hash": "node scripts/generate-password-hash.js",
-    "create-user": "node scripts/create-user.js",
-    "export-database": "node scripts/export-database.js",
-    "import-database": "node scripts/import-database.js"
+    "generate-test-data": "node src/scripts/generate-test-data.js",
+    "generate-password-hash": "node src/scripts/generate-password-hash.js",
+    "create-user": "node src/scripts/create-user.js",
+    "export-database": "node src/scripts/export-database.js",
+    "import-database": "node src/scripts/import-database.js",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
   },
   "keywords": [],
   "author": "",
@@ -40,11 +42,13 @@
     "uuid": "^13.0.0"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.1",
     "autoprefixer": "^10.4.20",
     "concurrently": "^9.1.0",
     "connect-livereload": "^0.6.1",
     "electron": "^35.7.5",
     "electron-builder": "^25.1.8",
+    "eslint": "^9.39.1",
     "livereload": "^0.9.3",
     "nodemon": "^3.1.0",
     "postcss": "^8.4.47",
@@ -57,7 +61,7 @@
       "output": "dist"
     },
     "extraMetadata": {
-      "main": "electron.js"
+      "main": "src/electron.js"
     },
     "extraResources": [
       {
@@ -69,7 +73,8 @@
       }
     ],
     "files": [
-      "electron.js",
+      "src/electron.js",
+      "src/**/*",
       "public/**/*",
       "package.json",
       ".env"
