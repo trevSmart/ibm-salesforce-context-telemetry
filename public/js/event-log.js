@@ -627,6 +627,118 @@ if (window.__EVENT_LOG_LOADED__) {
       showSection(firstSectionId);
     }
 
+    function normalizeColorToHex(value) {
+      if (!value) {
+        return null;
+      }
+      const probe = document.createElement('span');
+      probe.style.position = 'absolute';
+      probe.style.opacity = '0';
+      probe.style.pointerEvents = 'none';
+      probe.style.color = value.trim();
+      document.body.appendChild(probe);
+      const computed = window.getComputedStyle(probe).color;
+      probe.remove();
+      const match = computed.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
+      if (!match) {
+        return null;
+      }
+      const [, r, g, b] = match;
+      const toHex = (num) => Number(num).toString(16).padStart(2, '0');
+      return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+    }
+
+    function attachColorPicker(textInput) {
+      const defaultColor = '#2195cf';
+      if (!textInput) {
+        return { setValue: () => {}, getValue: () => '' };
+      }
+      if (textInput._colorPickerApi) {
+        return textInput._colorPickerApi;
+      }
+
+      const wrapper = document.createElement('div');
+      wrapper.className = 'color-picker-field';
+      wrapper.style.display = 'flex';
+      wrapper.style.alignItems = 'center';
+      wrapper.style.gap = '8px';
+      wrapper.style.marginTop = '2px';
+
+      textInput.parentNode.insertBefore(wrapper, textInput);
+      wrapper.appendChild(textInput);
+      textInput.style.flex = '1 1 auto';
+
+      const pickerButton = document.createElement('button');
+      pickerButton.type = 'button';
+      pickerButton.className = 'color-picker-button';
+      pickerButton.style.display = 'inline-flex';
+      pickerButton.style.alignItems = 'center';
+      pickerButton.style.gap = '8px';
+      pickerButton.style.padding = '6px 10px';
+      pickerButton.style.borderRadius = '6px';
+      pickerButton.style.border = '1px solid var(--border-color)';
+      pickerButton.style.background = 'var(--bg-secondary)';
+      pickerButton.style.color = 'var(--text-primary)';
+      pickerButton.style.fontSize = '0.8rem';
+      pickerButton.style.cursor = 'pointer';
+
+      const swatch = document.createElement('span');
+      swatch.style.width = '14px';
+      swatch.style.height = '14px';
+      swatch.style.borderRadius = '999px';
+      swatch.style.border = '1px solid var(--border-color)';
+      swatch.style.background = 'transparent';
+
+      const valueLabel = document.createElement('span');
+      valueLabel.textContent = 'Pick color';
+
+      const hiddenColorInput = document.createElement('input');
+      hiddenColorInput.type = 'color';
+      hiddenColorInput.value = defaultColor;
+      hiddenColorInput.style.position = 'absolute';
+      hiddenColorInput.style.opacity = '0';
+      hiddenColorInput.style.pointerEvents = 'none';
+      hiddenColorInput.style.width = '0';
+      hiddenColorInput.style.height = '0';
+      hiddenColorInput.tabIndex = -1;
+
+      pickerButton.appendChild(swatch);
+      pickerButton.appendChild(valueLabel);
+      wrapper.appendChild(pickerButton);
+      wrapper.appendChild(hiddenColorInput);
+
+      function updateSwatchFromText() {
+        const normalized = normalizeColorToHex(textInput.value.trim());
+        const nextColor = normalized || defaultColor;
+        swatch.style.background = nextColor;
+        valueLabel.textContent = normalized || 'Pick color';
+        hiddenColorInput.value = nextColor;
+      }
+
+      pickerButton.addEventListener('click', () => {
+        hiddenColorInput.click();
+      });
+
+      hiddenColorInput.addEventListener('input', () => {
+        textInput.value = hiddenColorInput.value;
+        updateSwatchFromText();
+      });
+
+      textInput.addEventListener('input', updateSwatchFromText);
+      updateSwatchFromText();
+
+      const api = {
+        setValue: (value) => {
+          textInput.value = value || '';
+          updateSwatchFromText();
+        },
+        getValue: () => textInput.value.trim()
+      };
+
+      textInput._colorPickerApi = api;
+      return api;
+    }
+
     // Teams mapping section (local-only configuration)
     const teamsSection = modal.querySelector('#settings-teams');
     if (teamsSection) {
@@ -637,6 +749,7 @@ if (window.__EVENT_LOG_LOADED__) {
       const clientInput = teamsSection.querySelector('#clientNameInput');
       const teamInput = teamsSection.querySelector('#teamNameInput');
       const colorInput = teamsSection.querySelector('#teamColorInput');
+      const colorPicker = attachColorPicker(colorInput);
       const activeInput = teamsSection.querySelector('#mappingActiveInput');
       const resetFormBtn = teamsSection.querySelector('#resetOrgTeamMappingFormBtn');
 
@@ -690,7 +803,7 @@ if (window.__EVENT_LOG_LOADED__) {
             orgInput.value = mapping.orgIdentifier || '';
             clientInput.value = mapping.clientName || '';
             teamInput.value = mapping.teamName || '';
-            colorInput.value = mapping.color || '';
+            colorPicker.setValue(mapping.color || '');
             activeInput.checked = mapping.active !== false;
           });
         });
@@ -714,7 +827,7 @@ if (window.__EVENT_LOG_LOADED__) {
         orgInput.value = '';
         clientInput.value = '';
         teamInput.value = '';
-        colorInput.value = '';
+        colorPicker.setValue('');
         activeInput.checked = true;
       }
 
@@ -731,7 +844,7 @@ if (window.__EVENT_LOG_LOADED__) {
           const orgIdentifier = orgInput.value.trim();
           const clientName = clientInput.value.trim();
           const teamName = teamInput.value.trim();
-          const color = colorInput.value.trim();
+          const color = colorPicker.getValue();
           const active = !!activeInput.checked;
 
           if (!orgIdentifier || !clientName || !teamName) {
@@ -1391,6 +1504,7 @@ if (window.__EVENT_LOG_LOADED__) {
   let notificationModeEnabled = false;
   let notificationRefreshIntervalId = null;
   let autoRefreshIntervalId = null;
+  let isRefreshInProgress = false;
   let lastKnownEventTimestamp = null;
   let lastFetchTime = null; // Track when events were last fetched
   let isInitialChartLoad = true; // Track if this is the initial chart load
@@ -3485,7 +3599,6 @@ if (window.__EVENT_LOG_LOADED__) {
         const li = document.createElement('li');
         li.className = 'session-item';
         li.dataset.teamKey = team.key;
-        const initial = team.teamName.charAt(0).toUpperCase();
         const color = team.color || 'var(--bg-secondary)';
         const clientsLabel = team.clients.length
           ? `Clients: ${escapeHtml(team.clients.slice(0, 2).join(', '))}${team.clients.length > 2 ? '…' : ''}`
@@ -3498,8 +3611,10 @@ if (window.__EVENT_LOG_LOADED__) {
 
         li.innerHTML = `
 				<div class="session-item-left">
-					<div style="width: 32px; height: 32px; border-radius: 50%; background: ${color}; display: inline-flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: 13px; margin-right: 10px;">
-						${escapeHtml(initial)}
+					<div style="width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; margin-right: 10px; color: ${color}; border-radius: 50%; background: #f3f3f3;">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false" style="width: 24px; height: 24px;">
+              <path d="m21 7.5-9-5.25L3 7.5m18 0-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" />
+            </svg>
 					</div>
 					<div style="display: flex; flex-direction: column; gap: 2px;">
 						<span class="session-name text-sm" style="font-weight: 600;">${escapeHtml(team.teamName)}</span>
@@ -4236,13 +4351,17 @@ if (window.__EVENT_LOG_LOADED__) {
 
 
   async function refreshLogs(event) {
+    if (isRefreshInProgress) {
+      return;
+    }
+    isRefreshInProgress = true;
     if (event?.preventDefault) {
       event.preventDefault();
     }
-    // Rotate refresh icon
-    const button = event?.target?.closest('.icon-btn') || event?.currentTarget;
+    // Rotate refresh icon even when triggered automatically
+    const button = event?.target?.closest('.icon-btn') || event?.currentTarget || document.getElementById('refreshButton');
     const refreshIcon = button?.querySelector('.fa-refresh, .refresh-icon') ||
-      (event?.target?.classList?.contains('fa-refresh') || event?.target?.classList?.contains('refresh-icon') ? event.target : null);
+      document.querySelector('#refreshButton .fa-refresh, #refreshButton .refresh-icon');
     if (refreshIcon) {
       refreshIcon.classList.add('rotating');
     }
@@ -4263,6 +4382,7 @@ if (window.__EVENT_LOG_LOADED__) {
       if (refreshIcon) {
         refreshIcon.classList.remove('rotating');
       }
+      isRefreshInProgress = false;
     }
   }
 
@@ -4433,7 +4553,7 @@ if (window.__EVENT_LOG_LOADED__) {
     if (enabled && intervalMinutes && intervalMinutes !== '') {
       const intervalMs = parseInt(intervalMinutes) * 60 * 1000;
       autoRefreshIntervalId = setInterval(() => {
-        loadEvents();
+        refreshLogs();
       }, intervalMs);
     }
   }

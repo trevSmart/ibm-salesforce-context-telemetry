@@ -1470,14 +1470,21 @@
   .top-users-avatar {
     width: 32px;
     aspect-ratio: 1 / 1;
-    border-radius: 50%;
-    background: #d8ebff;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     color: var(--text-primary);
     font-weight: 700;
     font-size: 12px;
+    border-radius: 50%;
+    background: #d8ebff;
+  }
+
+  .top-users-avatar--team {
+    border-radius: 50%;
+    background: #f3f3f3;
+    padding: 0;
+    color: inherit;
   }
 
   .top-users-info {
