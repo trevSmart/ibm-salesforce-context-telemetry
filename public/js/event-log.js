@@ -4788,7 +4788,7 @@ if (window.__EVENT_LOG_LOADED__) {
       const selectedRow = events[selectedEventIndex];
       const eventId = selectedRow.getAttribute('data-event-id');
       if (eventId) {
-        toggleRowExpand(parseInt(eventId));
+        toggleRowExpand(parseInt(eventId, 10));
       }
     }
   }

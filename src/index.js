@@ -552,8 +552,8 @@ app.get('/api/events', auth.requireAuth, auth.requireRole('advanced'), async (re
     }
 
     const result = await db.getEvents({
-      limit: parseInt(limit),
-      offset: parseInt(offset),
+      limit: parseInt(limit, 10),
+      offset: parseInt(offset, 10),
       eventTypes: eventTypes.length > 0 ? eventTypes : undefined,
       serverId,
       sessionId,
@@ -576,7 +576,7 @@ app.get('/api/events', auth.requireAuth, auth.requireRole('advanced'), async (re
 
 app.get('/api/events/:id', auth.requireAuth, auth.requireRole('advanced'), async (req, res) => {
   try {
-    const eventId = parseInt(req.params.id);
+    const eventId = parseInt(req.params.id, 10);
     if (isNaN(eventId)) {
       return res.status(400).json({
         status: 'error',
@@ -670,7 +670,7 @@ app.get('/api/sessions', auth.requireAuth, auth.requireRole('advanced'), async (
 
 app.get('/api/daily-stats', auth.requireAuth, async (req, res) => {
   try {
-    const days = parseInt(req.query.days) || 30;
+    const days = parseInt(req.query.days, 10) || 30;
     const byEventTypeRaw = String(req.query.byEventType || '').toLowerCase();
     const useEventTypeBreakdown = ['true', '1', 'yes', 'on'].includes(byEventTypeRaw);
 
@@ -840,7 +840,7 @@ app.get('/api/export/logs', auth.requireAuth, auth.requireRole('advanced'), asyn
 // Delete a single event by ID
 app.delete('/api/events/:id', auth.requireAuth, auth.requireRole('advanced'), async (req, res) => {
   try {
-    const eventId = parseInt(req.params.id);
+    const eventId = parseInt(req.params.id, 10);
     if (isNaN(eventId)) {
       return res.status(400).json({
         status: 'error',
