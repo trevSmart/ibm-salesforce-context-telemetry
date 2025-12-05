@@ -601,6 +601,13 @@ async function storeEvent(eventData, receivedAt) {
   try {
     const normalizedSessionId = getNormalizedSessionId(eventData);
     const normalizedUserId = getNormalizedUserId(eventData);
+    const allowMissingUser = eventData?.allowMissingUser === true;
+
+    if (!normalizedUserId && !allowMissingUser) {
+      console.warn('Dropping telemetry event without username/userId');
+      return false;
+    }
+
     const parentSessionId = await computeParentSessionId(
       eventData,
       normalizedSessionId,
@@ -665,6 +672,8 @@ async function storeEvent(eventData, receivedAt) {
         });
       }
     }
+
+    return true;
   } catch (error) {
     // Re-throw to allow caller to handle
     throw new Error(`Failed to store telemetry event: ${error.message}`);
@@ -2378,5 +2387,7 @@ module.exports = {
   getPostgresPool,
   // Settings
   getSetting,
-  saveSetting
+  saveSetting,
+  // Utilities
+  getNormalizedUserId
 };

@@ -178,14 +178,28 @@ app.post('/telemetry', (req, res) => {
 
     // Log the telemetry event with timestamp
     const timestamp = new Date().toISOString();
+
+    // Skip storing events that do not include a username/userId
+    const normalizedUserId = db.getNormalizedUserId(telemetryData);
+    if (!normalizedUserId) {
+      console.warn('Dropping telemetry event without username/userId');
+      return res.status(202).json({
+        status: 'ignored',
+        reason: 'missing_username',
+        receivedAt: timestamp
+      });
+    }
+
     console.log(`[${timestamp}] Telemetry event:`, JSON.stringify(telemetryData, null, 2));
 
     // Store in database (non-blocking - don't await to avoid blocking response)
-    db.storeEvent(telemetryData, timestamp).then(() => {
-      // Clear relevant caches when new data arrives
-      statsCache.clear();
-      sessionsCache.clear();
-      userIdsCache.clear();
+    db.storeEvent(telemetryData, timestamp).then((stored) => {
+      if (stored) {
+        // Clear relevant caches when new data arrives
+        statsCache.clear();
+        sessionsCache.clear();
+        userIdsCache.clear();
+      }
     }).catch(err => {
       console.error('Error storing telemetry event:', err);
       // Don't fail the request if storage fails - telemetry is non-critical
@@ -1117,6 +1131,7 @@ async function startServer() {
       timestamp: new Date().toISOString(),
       serverId: 'local-server',
       version: '1.0.0',
+      allowMissingUser: true,
       data: {
         message: 'Server started',
         environment: process.env.NODE_ENV || 'development'
