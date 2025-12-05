@@ -37,7 +37,7 @@ loadEnv();
 /**
  * Creates the desktop window that displays the existing event log UI.
  */
-const uiUrl = process.env.TELEMETRY_UI_URL || 'http://localhost:3100/event-log';
+const uiUrl = process.env.TELEMETRY_UI_URL || 'http://localhost:3100/logs';
 
 const createWindow = () => {
   const mainWindow = new BrowserWindow({

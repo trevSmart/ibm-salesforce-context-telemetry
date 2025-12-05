@@ -1330,7 +1330,7 @@ app.get('/teams', auth.requireAuth, auth.requireRole('administrator'), (_req, re
   }
 });
 
-app.get('/event-log', auth.requireAuth, auth.requireRole('advanced'), (_req, res) => {
+app.get('/logs', auth.requireAuth, auth.requireRole('advanced'), (_req, res) => {
   const eventLogPath = path.join(__dirname, '..', 'public', 'event-log.html');
   if (fs.existsSync(eventLogPath)) {
     res.sendFile(eventLogPath);

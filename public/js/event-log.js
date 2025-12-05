@@ -6049,7 +6049,7 @@ if (window.__EVENT_LOG_LOADED__) {
 
   // Allow soft navigation to rehydrate the page when arriving from Dashboard
   window.addEventListener('softNav:pageMounted', (event) => {
-    if (event?.detail?.path === '/event-log') {
+    if (event?.detail?.path === '/logs') {
       window.initializeEventLogApp({ resetState: true });
     }
   });
