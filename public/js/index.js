@@ -75,7 +75,7 @@ const USER_MENU_HIDE_DELAY_MS = 300;
 const SESSION_START_SERIES_COLOR = '#2195cf';
 const TOP_USERS_LOOKBACK_DAYS = 3;
 const TOP_USERS_LIMIT = 3;
-const TOP_TEAMS_LOOKBACK_DAYS = 3;
+const TOP_TEAMS_LOOKBACK_DAYS = 30;
 const TOP_TEAMS_LIMIT = 5;
 
 function showUserMenu(e) {
@@ -1958,7 +1958,7 @@ function renderTopTeams(teams) {
   }
 
   if (!teams || teams.length === 0) {
-    renderTopTeamsPlaceholder('No team activity recorded in the last 3 days yet.');
+    renderTopTeamsPlaceholder('No team activity recorded in the last 30 days yet.');
     return;
   }
 
@@ -1966,7 +1966,7 @@ function renderTopTeams(teams) {
     const teamName = team.label || team.id || 'Unknown team';
     const initial = teamName.trim().charAt(0).toUpperCase() || '?';
     const eventCount = Number(team.eventCount) || 0;
-    const countLabel = eventCount === 1 ? '1 event last 3 days' : `${eventCount} events last 3 days`;
+    const countLabel = eventCount === 1 ? '1 event last 30 days' : `${eventCount} events last 30 days`;
     const clientName = team.clientName ? ` · ${team.clientName}` : '';
     const badgeBackground = index === 0 ? '#dc2626' : SESSION_START_SERIES_COLOR;
 
@@ -1976,7 +1976,7 @@ function renderTopTeams(teams) {
         <div class="top-users-info">
           <div class="top-users-name-row">
             <strong class="top-users-name" title="${escapeHtml(teamName)}${clientName}">${escapeHtml(teamName)}${clientName}</strong>
-            <span class="top-users-badge" style="background: ${badgeBackground}; color: #ffffff;">${escapeHtml(String(eventCount))} last 3 days</span>
+            <span class="top-users-badge" style="background: ${badgeBackground}; color: #ffffff;">${escapeHtml(String(eventCount))} last 30 days</span>
           </div>
           <div class="top-users-role">${escapeHtml(countLabel)}</div>
         </div>
