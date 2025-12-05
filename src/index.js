@@ -601,7 +601,9 @@ app.get('/api/events', auth.requireAuth, auth.requireRole('advanced'), async (re
       order
     });
     
-    // Add cache headers for repeated queries
+      res.setHeader('Cache-Control', 'private, max-age=10'); // Cache for 10 seconds
+    } else {
+      res.setHeader('Cache-Control', 'private, max-age=5'); // Shorter cache for filtered queries
     if (!startDate && !endDate && !eventType && !serverId && !sessionId && !userId) {
       res.setHeader('Cache-Control', 'private, max-age=10'); // Cache for 10 seconds
     }
