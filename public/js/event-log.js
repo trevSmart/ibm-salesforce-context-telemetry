@@ -50,6 +50,7 @@ if (window.__EVENT_LOG_LOADED__) {
 
   let userMenuHideTimeout = null;
   const USER_MENU_HIDE_DELAY_MS = 300;
+  const REFRESH_ICON_ANIMATION_DURATION_MS = 700;
 
   function showUserMenu(e) {
     if (e) {
@@ -4372,15 +4373,15 @@ if (window.__EVENT_LOG_LOADED__) {
     currentOffset = 0;
 
     try {
-    // Esperem a que es completin totes les càrregues relacionades amb el refresc.
+      // Wait for all refresh-related loads to complete
       await Promise.all([
         loadEventTypeStats(selectedSession),
         loadSessions(),
         loadEvents()
       ]);
     } catch (error) {
-    // Les funcions internes ja gestionen i mostren errors (inclòs timeout);
-    // mantenim aquest catch per assegurar-nos que la rotació sempre s'atura.
+      // Internal functions already handle and display errors (including timeout);
+      // we keep this catch to ensure rotation always stops
       console.error('Error refreshing logs:', error);
     } finally {
       if (refreshIcon) {
@@ -4391,7 +4392,7 @@ if (window.__EVENT_LOG_LOADED__) {
         // Remove the finish class after animation completes
         setTimeout(() => {
           refreshIcon.classList.remove('rotating-finish');
-        }, 700); // Match the animation duration (0.7s)
+        }, REFRESH_ICON_ANIMATION_DURATION_MS);
       }
       isRefreshInProgress = false;
     }
