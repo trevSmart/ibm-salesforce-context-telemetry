@@ -1894,51 +1894,81 @@ async function getTopTeamsLastDays(orgTeamMappings = [], limit = 50, days = 3) {
   const results = [];
 
   if (dbType === 'sqlite') {
+    // Extract orgId from data JSON field (try data.orgId first, then data.state.org.id)
     const aggregated = db.prepare(`
-			SELECT server_id, COUNT(*) as event_count
+			SELECT
+				COALESCE(
+					json_extract(data, '$.orgId'),
+					json_extract(data, '$.state.org.id')
+				) as org_id,
+				COUNT(*) as event_count
 			FROM telemetry_events
 			WHERE created_at >= datetime('now', 'localtime', ?)
-				AND server_id IS NOT NULL
-				AND TRIM(server_id) != ''
-			GROUP BY server_id
-			ORDER BY event_count DESC, server_id ASC
+				AND data IS NOT NULL
+				AND (
+					json_extract(data, '$.orgId') IS NOT NULL
+					OR json_extract(data, '$.state.org.id') IS NOT NULL
+				)
+			GROUP BY org_id
+			HAVING org_id IS NOT NULL AND TRIM(org_id) != ''
+			ORDER BY event_count DESC, org_id ASC
 			LIMIT ?
 		`).all(lookbackModifier, safeLimit);
 
     aggregated.forEach(row => {
-      const teamInfo = orgToTeamMap.get(row.server_id);
-      results.push({
-        id: row.server_id,
-        label: (teamInfo?.teamName || row.server_id || '').trim() || row.server_id,
-        clientName: (teamInfo?.clientName || '').trim(),
-        color: (teamInfo?.color || '').trim(),
-        eventCount: Number(row.event_count) || 0
-      });
+      const orgId = row.org_id;
+      if (orgId) {
+        const teamInfo = orgToTeamMap.get(orgId);
+        if (teamInfo) {
+          results.push({
+            id: orgId,
+            label: teamInfo.teamName,
+            clientName: teamInfo.clientName,
+            color: teamInfo.color,
+            eventCount: Number(row.event_count) || 0
+          });
+        }
+      }
     });
   } else if (dbType === 'postgresql') {
+    // Extract orgId from data JSON field (try data.orgId first, then data.state.org.id)
     const aggregated = await db.query(
       `
-				SELECT server_id, COUNT(*) AS event_count
+				SELECT
+					COALESCE(
+						data->>'orgId',
+						data->'state'->'org'->>'id'
+					) as org_id,
+					COUNT(*) AS event_count
 				FROM telemetry_events
 				WHERE created_at >= (NOW() - ($2 || ' days')::interval)
-					AND server_id IS NOT NULL
-					AND TRIM(server_id) != ''
-				GROUP BY server_id
-				ORDER BY event_count DESC, server_id ASC
+					AND data IS NOT NULL
+					AND (
+						data->>'orgId' IS NOT NULL
+						OR data->'state'->'org'->>'id' IS NOT NULL
+					)
+				GROUP BY org_id
+				HAVING org_id IS NOT NULL AND TRIM(org_id) != ''
+				ORDER BY event_count DESC, org_id ASC
 				LIMIT $1
 			`,
       [safeLimit, String(safeDays)]
     );
 
     aggregated.rows.forEach(row => {
-      const teamInfo = orgToTeamMap.get(row.server_id);
-      results.push({
-        id: row.server_id,
-        label: (teamInfo?.teamName || row.server_id || '').trim() || row.server_id,
-        clientName: (teamInfo?.clientName || '').trim(),
-        color: (teamInfo?.color || '').trim(),
-        eventCount: Number(row.event_count) || 0
-      });
+      const orgId = row.org_id;
+      if (orgId) {
+        const teamInfo = orgToTeamMap.get(orgId);
+        if (teamInfo) {
+          results.push({
+            id: orgId,
+            label: teamInfo.teamName,
+            clientName: teamInfo.clientName,
+            color: teamInfo.color,
+            eventCount: Number(row.event_count) || 0
+          });
+        }
+      }
     });
   }
 
