@@ -404,27 +404,75 @@ function openConfirmModal({ title, message, confirmLabel = 'Confirm', cancelLabe
 }
 
 // Settings modal & org–client–team mapping
-const ORG_TEAM_MAPPING_STORAGE_KEY = 'orgTeamMappings';
 
-function getOrgTeamMappings() {
+// Cache for org-team mappings to avoid repeated API calls
+let orgTeamMappingsCache = null;
+let mappingsCacheTimestamp = null;
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+async function getOrgTeamMappings() {
+  // Check cache first
+  if (orgTeamMappingsCache && mappingsCacheTimestamp &&
+      (Date.now() - mappingsCacheTimestamp) < CACHE_DURATION) {
+    return orgTeamMappingsCache;
+  }
+
   try {
-    const raw = localStorage.getItem(ORG_TEAM_MAPPING_STORAGE_KEY);
-    if (!raw) {
+    const response = await fetch('/api/settings/org-team-mappings', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      credentials: 'same-origin'
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    if (data.status === 'ok') {
+      orgTeamMappingsCache = data.mappings || [];
+      mappingsCacheTimestamp = Date.now();
+      return orgTeamMappingsCache;
+    } else {
+      console.error('Error fetching org-team mappings:', data.message);
       return [];
     }
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
   } catch (error) {
-    console.error('Error parsing org-team mappings from localStorage:', error);
+    console.error('Error fetching org-team mappings from API:', error);
     return [];
   }
 }
 
-function saveOrgTeamMappings(mappings) {
+async function saveOrgTeamMappings(mappings) {
   try {
-    localStorage.setItem(ORG_TEAM_MAPPING_STORAGE_KEY, JSON.stringify(mappings || []));
+    const response = await fetch('/api/settings/org-team-mappings', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      credentials: 'same-origin',
+      body: JSON.stringify({ mappings: mappings || [] })
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    if (data.status === 'ok') {
+      // Clear cache to force refresh on next read
+      orgTeamMappingsCache = null;
+      mappingsCacheTimestamp = null;
+      return true;
+    } else {
+      console.error('Error saving org-team mappings:', data.message);
+      return false;
+    }
   } catch (error) {
-    console.error('Error saving org-team mappings to localStorage:', error);
+    console.error('Error saving org-team mappings to API:', error);
+    return false;
   }
 }
 
@@ -624,7 +672,7 @@ async function openSettingsModal() {
 					<section id="settings-teams" class="settings-section" style="display: none;">
 						<div class="settings-modal-placeholder-title" style="margin-bottom: 6px;">Org – Client – Team mapping</div>
 						<p class="settings-modal-placeholder-text" style="margin-bottom: 12px;">
-							Manage how Salesforce org identifiers are associated with clients and teams. This configuration is stored only in this browser.
+							Manage how Salesforce org identifiers are associated with clients and teams. This global configuration applies to all users.
 						</p>
 						<div id="orgTeamMappingList" style="max-height: 260px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 10px; margin-bottom: 12px;">
 						</div>
@@ -896,9 +944,9 @@ async function openSettingsModal() {
     const activeInput = teamsSection.querySelector('#mappingActiveInput');
     const resetFormBtn = teamsSection.querySelector('#resetOrgTeamMappingFormBtn');
 
-    function renderMappings() {
+    async function renderMappings() {
       if (!listContainer) return;
-      const mappings = getOrgTeamMappings();
+      const mappings = await getOrgTeamMappings();
       if (!mappings.length) {
         listContainer.innerHTML = `
           <div class="settings-modal-placeholder-text">
@@ -937,9 +985,9 @@ async function openSettingsModal() {
       listContainer.innerHTML = rowsHtml;
 
       listContainer.querySelectorAll('button[data-action="edit"]').forEach((btn) => {
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', async () => {
           const idx = Number(btn.dataset.index);
-          const mappingsData = getOrgTeamMappings();
+          const mappingsData = await getOrgTeamMappings();
           const mapping = mappingsData[idx];
           if (!mapping) return;
           editingIdInput.value = String(idx);
@@ -952,12 +1000,12 @@ async function openSettingsModal() {
       });
 
       listContainer.querySelectorAll('button[data-action="delete"]').forEach((btn) => {
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', async () => {
           const idx = Number(btn.dataset.index);
-          const mappingsData = getOrgTeamMappings();
+          const mappingsData = await getOrgTeamMappings();
           if (idx >= 0 && idx < mappingsData.length) {
             mappingsData.splice(idx, 1);
-            saveOrgTeamMappings(mappingsData);
+            await saveOrgTeamMappings(mappingsData);
             renderMappings();
           }
         });
@@ -982,7 +1030,7 @@ async function openSettingsModal() {
     }
 
     if (form) {
-      form.addEventListener('submit', (e) => {
+      form.addEventListener('submit', async (e) => {
         e.preventDefault();
         const orgIdentifier = orgInput.value.trim();
         const clientName = clientInput.value.trim();
@@ -995,7 +1043,7 @@ async function openSettingsModal() {
           return;
         }
 
-        const mappings = getOrgTeamMappings();
+        const mappings = await getOrgTeamMappings();
         const editingIndex = editingIdInput.value !== '' ? Number(editingIdInput.value) : -1;
         const duplicateIndex = mappings.findIndex((m, idx) => m.orgIdentifier === orgIdentifier && idx !== editingIndex);
         if (duplicateIndex !== -1) {
@@ -1011,13 +1059,13 @@ async function openSettingsModal() {
           mappings.push(mappingData);
         }
 
-        saveOrgTeamMappings(mappings);
+        await saveOrgTeamMappings(mappings);
         resetForm();
         renderMappings();
       });
     }
 
-    renderMappings();
+    renderMappings().catch(error => console.error('Error rendering mappings:', error));
   }
 
   // Users section functionality (only for administrators)
@@ -1982,8 +2030,8 @@ async function loadTopTeamsToday() {
   renderTopTeamsPlaceholder('Loading top teams…');
 
   try {
-    // Get org-team mappings from localStorage
-    const orgTeamMappings = getOrgTeamMappings();
+    // Get org-team mappings from API
+    const orgTeamMappings = await getOrgTeamMappings();
 
     // Build query parameters
     const params = new URLSearchParams({

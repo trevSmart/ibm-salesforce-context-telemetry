@@ -78,6 +78,13 @@ async function init() {
 				created_at TEXT DEFAULT CURRENT_TIMESTAMP
 			);
 
+			CREATE TABLE IF NOT EXISTS settings (
+				key TEXT PRIMARY KEY,
+				value TEXT NOT NULL,
+				updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+				created_at TEXT DEFAULT CURRENT_TIMESTAMP
+			);
+
 			CREATE INDEX IF NOT EXISTS idx_event ON telemetry_events(event);
 			CREATE INDEX IF NOT EXISTS idx_timestamp ON telemetry_events(timestamp);
 			CREATE INDEX IF NOT EXISTS idx_server_id ON telemetry_events(server_id);
@@ -136,6 +143,13 @@ async function init() {
 			CREATE TABLE IF NOT EXISTS orgs (
 				server_id TEXT PRIMARY KEY,
 				company_name TEXT,
+				updated_at TIMESTAMPTZ DEFAULT NOW(),
+				created_at TIMESTAMPTZ DEFAULT NOW()
+			);
+
+			CREATE TABLE IF NOT EXISTS settings (
+				key TEXT PRIMARY KEY,
+				value TEXT NOT NULL,
 				updated_at TIMESTAMPTZ DEFAULT NOW(),
 				created_at TIMESTAMPTZ DEFAULT NOW()
 			);
@@ -1957,6 +1971,61 @@ async function ensureTelemetryParentSessionColumn() {
   }
 }
 
+/**
+ * Get a setting value by key
+ * @param {string} key - The setting key
+ * @returns {string|null} - The setting value or null if not found
+ */
+async function getSetting(key) {
+  if (!db) {
+    return null;
+  }
+
+  try {
+    if (dbType === 'sqlite') {
+      const stmt = db.prepare('SELECT value FROM settings WHERE key = ?');
+      const row = stmt.get(key);
+      return row ? row.value : null;
+    } else if (dbType === 'postgresql') {
+      const result = await db.query('SELECT value FROM settings WHERE key = $1', [key]);
+      return result.rows.length > 0 ? result.rows[0].value : null;
+    }
+  } catch (error) {
+    console.error(`Error getting setting ${key}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Save a setting value by key
+ * @param {string} key - The setting key
+ * @param {string} value - The setting value
+ */
+async function saveSetting(key, value) {
+  if (!db) {
+    return;
+  }
+
+  try {
+    if (dbType === 'sqlite') {
+      const stmt = db.prepare(`
+        INSERT OR REPLACE INTO settings (key, value, updated_at)
+        VALUES (?, ?, datetime('now'))
+      `);
+      stmt.run(key, value);
+    } else if (dbType === 'postgresql') {
+      await db.query(`
+        INSERT INTO settings (key, value, updated_at)
+        VALUES ($1, $2, NOW())
+        ON CONFLICT (key)
+        DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()
+      `, [key, value]);
+    }
+  } catch (error) {
+    console.error(`Error saving setting ${key}:`, error);
+  }
+}
+
 module.exports = {
   init,
   storeEvent,
@@ -1992,5 +2061,8 @@ module.exports = {
   // User filtering
   getUniqueUserIds,
   // Session store
-  getPostgresPool
+  getPostgresPool,
+  // Settings
+  getSetting,
+  saveSetting
 };

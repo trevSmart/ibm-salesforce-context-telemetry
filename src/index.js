@@ -583,6 +583,73 @@ app.put('/api/users/:username/role', auth.requireAuth, auth.requireRole('adminis
   }
 });
 
+// Settings API endpoints
+app.get('/api/settings/org-team-mappings', auth.requireAuth, async (req, res) => {
+  try {
+    const mappingsJson = await db.getSetting('org_team_mappings');
+    let mappings = [];
+
+    if (mappingsJson) {
+      try {
+        mappings = JSON.parse(mappingsJson);
+        if (!Array.isArray(mappings)) {
+          mappings = [];
+        }
+      } catch (error) {
+        console.error('Error parsing org-team mappings from database:', error);
+        mappings = [];
+      }
+    }
+
+    res.json({
+      status: 'ok',
+      mappings: mappings
+    });
+  } catch (error) {
+    console.error('Error fetching org-team mappings:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to fetch org-team mappings'
+    });
+  }
+});
+
+app.post('/api/settings/org-team-mappings', auth.requireAuth, auth.requireRole('administrator'), async (req, res) => {
+  try {
+    const { mappings } = req.body;
+
+    if (!Array.isArray(mappings)) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Mappings must be an array'
+      });
+    }
+
+    // Validate mapping structure
+    for (const mapping of mappings) {
+      if (!mapping.orgIdentifier || !mapping.clientName || !mapping.teamName) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Each mapping must have orgIdentifier, clientName, and teamName'
+        });
+      }
+    }
+
+    await db.saveSetting('org_team_mappings', JSON.stringify(mappings));
+
+    res.json({
+      status: 'ok',
+      message: 'Org-team mappings saved successfully'
+    });
+  } catch (error) {
+    console.error('Error saving org-team mappings:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to save org-team mappings'
+    });
+  }
+});
+
 // API endpoints for viewing telemetry data
 app.get('/api/events', auth.requireAuth, auth.requireRole('advanced'), async (req, res) => {
   try {
