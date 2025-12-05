@@ -666,6 +666,20 @@ app.get('/api/daily-stats', auth.requireAuth, async (req, res) => {
   }
 });
 
+app.get('/api/top-users-today', auth.requireAuth, async (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit, 10) || 3, 50);
+    const users = await db.getTopUsersToday(limit);
+    res.json({ users });
+  } catch (error) {
+    console.error('Error fetching top users for today:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to fetch top users for today'
+    });
+  }
+});
+
 app.get('/api/telemetry-users', auth.requireAuth, auth.requireRole('advanced'), async (req, res) => {
   try {
     const userIds = await db.getUniqueUserIds();

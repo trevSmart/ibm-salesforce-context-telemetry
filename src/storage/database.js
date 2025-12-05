@@ -236,6 +236,30 @@ function getNormalizedUserId(eventData = {}) {
   return userName || null;
 }
 
+function buildUserLabel(userId, rawData) {
+  let parsedData = null;
+  if (rawData) {
+    try {
+      parsedData = typeof rawData === 'string' ? JSON.parse(rawData) : rawData;
+    } catch (_error) {
+      parsedData = null;
+    }
+  }
+
+  const displayName = extractUserDisplayName(parsedData || {});
+  if (displayName) {
+    return displayName;
+  }
+
+  const normalizedFromData = getNormalizedUserId({ data: parsedData });
+  if (normalizedFromData) {
+    return normalizedFromData;
+  }
+
+  const sanitizedUserId = sanitizeUserIdentifier(userId);
+  return sanitizedUserId || 'Unknown user';
+}
+
 /**
  * Extract company name from telemetry event data
  * Supports both new format (data.state.org.companyDetails.Name) and legacy format (data.companyDetails.Name)
@@ -1672,6 +1696,88 @@ async function ensureUserRoleColumn() {
   }
 }
 
+/**
+ * Get top users by event volume for the current local day
+ * @param {number} limit - Maximum number of users to return (default 3)
+ * @returns {Promise<Array<{id: string, label: string, eventCount: number}>>}
+ */
+async function getTopUsersToday(limit = 3) {
+  if (!db) {
+    throw new Error('Database not initialized. Call init() first.');
+  }
+
+  const safeLimit = Math.min(Math.max(1, Number.isFinite(limit) ? Math.floor(limit) : 3), 50);
+  const results = [];
+
+  if (dbType === 'sqlite') {
+    const aggregated = db.prepare(`
+			SELECT user_id, COUNT(*) as event_count
+			FROM telemetry_events
+			WHERE created_at >= datetime('now', 'localtime', 'start of day')
+				AND user_id IS NOT NULL
+				AND TRIM(user_id) != ''
+			GROUP BY user_id
+			ORDER BY event_count DESC, user_id ASC
+			LIMIT ?
+		`).all(safeLimit);
+
+    aggregated.forEach(row => {
+      const latest = db.prepare(`
+				SELECT data
+				FROM telemetry_events
+				WHERE user_id = ?
+					AND created_at >= datetime('now', 'localtime', 'start of day')
+				ORDER BY created_at DESC
+				LIMIT 1
+			`).get(row.user_id);
+
+      results.push({
+        id: row.user_id,
+        label: buildUserLabel(row.user_id, latest?.data),
+        eventCount: Number(row.event_count) || 0
+      });
+    });
+  } else if (dbType === 'postgresql') {
+    const aggregated = await db.query(
+      `
+				WITH aggregated AS (
+					SELECT user_id, COUNT(*) AS event_count
+					FROM telemetry_events
+					WHERE created_at >= date_trunc('day', NOW())
+						AND user_id IS NOT NULL
+						AND TRIM(user_id) != ''
+					GROUP BY user_id
+					ORDER BY event_count DESC, user_id ASC
+					LIMIT $1
+				)
+				SELECT a.user_id,
+				       a.event_count,
+				       (
+				         SELECT data
+				         FROM telemetry_events e
+				         WHERE e.user_id = a.user_id
+				           AND e.created_at >= date_trunc('day', NOW())
+				         ORDER BY e.created_at DESC
+				         LIMIT 1
+				       ) AS data
+				FROM aggregated a
+				ORDER BY a.event_count DESC, a.user_id ASC
+			`,
+      [safeLimit]
+    );
+
+    aggregated.rows.forEach(row => {
+      results.push({
+        id: row.user_id,
+        label: buildUserLabel(row.user_id, row.data),
+        eventCount: Number(row.event_count) || 0
+      });
+    });
+  }
+
+  return results;
+}
+
 async function ensureTelemetryParentSessionColumn() {
   if (!db) {
     return;
@@ -1704,6 +1810,7 @@ module.exports = {
   getSessions,
   getDailyStats,
   getDailyStatsByEventType,
+  getTopUsersToday,
   deleteEvent,
   deleteAllEvents,
   deleteEventsBySession,

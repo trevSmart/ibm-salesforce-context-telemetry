@@ -36,18 +36,9 @@ async function initializeDashboardPage({ resetState = false } = {}) {
       }
     }
 
-    // Hide "Delete all events" option for basic users
-    const deleteAllMenuItem = document.querySelector('.delete-all-menu-item');
-    if (deleteAllMenuItem) {
-      if (data.role === 'advanced' || data.role === 'administrator') {
-        deleteAllMenuItem.style.display = '';
-      } else {
-        deleteAllMenuItem.style.display = 'none';
-      }
-    }
-
     // Only load chart data if authenticated
     await loadChartData();
+    await loadTopUsersToday();
 
     // Set up time range selector (guard against duplicate listeners)
     const timeRangeSelect = document.getElementById('timeRangeSelect');
@@ -108,15 +99,6 @@ function showUserMenu(e) {
           }
         }
 
-        // Hide "Delete all events" option for basic users
-        const deleteAllMenuItem = document.querySelector('.delete-all-menu-item');
-        if (deleteAllMenuItem) {
-          if (data.role === 'advanced' || data.role === 'administrator') {
-            deleteAllMenuItem.style.display = '';
-          } else {
-            deleteAllMenuItem.style.display = 'none';
-          }
-        }
       })
       .catch(() => {
         const usernameElement = document.getElementById('userMenuUsername');
@@ -204,16 +186,6 @@ async function handleLogout() {
   }
 }
 
-
-function handleDeleteAll() {
-  // Close menu
-  const userMenu = document.getElementById('userMenu');
-  if (userMenu) {
-    userMenu.classList.remove('show');
-  }
-  // Call delete all confirmation
-  confirmDeleteAll();
-}
 
 let deleteAllConfirmed = false;
 
@@ -488,16 +460,9 @@ function ensureUserMenuStructure() {
 				</svg>Settings
 			</button>
 		</div>
-		<div class="user-menu-item clear-data-menu-item">
+		<div class="user-menu-item clear-data-menu-item user-menu-item-danger">
 			<button type="button" onclick="clearLocalData()">
-				<i class="fa-solid fa-broom user-menu-icon"></i>Clear local data
-			</button>
-		</div>
-		<div class="user-menu-item delete-all-menu-item">
-			<button type="button" onclick="handleDeleteAll()">
-				<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="user-menu-icon" width="16" height="16" aria-hidden="true">
-					<path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
-				</svg>Delete all events
+				<i class="fa-solid fa-broom user-menu-icon user-menu-icon-danger"></i>Clear local data
 			</button>
 		</div>
 		<div class="user-menu-separator"></div>
@@ -536,6 +501,7 @@ async function openSettingsModal() {
   }
 
   const isAdministrator = userRole === 'administrator';
+  const canDeleteAllEvents = userRole === 'advanced' || userRole === 'administrator';
 
   const backdrop = document.createElement('div');
   backdrop.className = 'confirm-modal-backdrop settings-backdrop';
@@ -668,30 +634,30 @@ async function openSettingsModal() {
 								<i class="fa-solid fa-chevron-down" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--text-secondary); font-size: 10px; pointer-events: none;"></i>
 							</div>
 						</div>
-						<div style="overflow-x: auto; border: 1px solid var(--border-color); border-radius: 8px;">
-							<table id="teamsTable" style="width: 100%; border-collapse: collapse;">
+						<div class="settings-teams-table-wrapper">
+							<table id="teamsTable" class="settings-teams-table">
 								<thead>
-									<tr style="background: var(--bg-secondary); border-bottom: 1px solid var(--border-color);">
-										<th style="padding: 12px; text-align: left;">
+									<tr>
+										<th class="settings-teams-checkbox-column">
 											<input type="checkbox" id="teamsSelectAll" style="cursor: pointer;">
 										</th>
-										<th style="padding: 12px; text-align: left; font-weight: 600; color: var(--text-primary); font-size: 14px; cursor: pointer;">
+										<th>
 											Team Name
 											<i class="fa-solid fa-arrows-up-down" style="margin-left: 6px; font-size: 10px; color: var(--text-secondary);"></i>
 										</th>
-										<th style="padding: 12px; text-align: left; font-weight: 600; color: var(--text-primary); font-size: 14px; cursor: pointer;">
+										<th>
 											Members
 											<i class="fa-solid fa-arrows-up-down" style="margin-left: 6px; font-size: 10px; color: var(--text-secondary);"></i>
 										</th>
-										<th style="padding: 12px; text-align: left; font-weight: 600; color: var(--text-primary); font-size: 14px; cursor: pointer;">
+										<th>
 											Last Activity
 											<i class="fa-solid fa-arrows-up-down" style="margin-left: 6px; font-size: 10px; color: var(--text-secondary);"></i>
 										</th>
-										<th style="padding: 12px; text-align: left; font-weight: 600; color: var(--text-primary); font-size: 14px; cursor: pointer;">
+										<th>
 											Status
 											<i class="fa-solid fa-arrows-up-down" style="margin-left: 6px; font-size: 10px; color: var(--text-secondary);"></i>
 										</th>
-										<th style="padding: 12px; text-align: right; width: 40px;"></th>
+										<th class="settings-teams-actions-column"></th>
 									</tr>
 								</thead>
 								<tbody id="teamsTableBody">
@@ -740,6 +706,11 @@ async function openSettingsModal() {
 										Remove all local preferences and cached data stored in this browser for the telemetry dashboard (theme, filters, mappings, etc.).
 									</div>
 								</div>
+                <div class="settings-toggle-actions">
+                  <button type="button" class="confirm-modal-btn confirm-modal-btn-destructive" id="clearLocalDataBtn">
+                    Clear local data
+                  </button>
+                </div>
 							</div>
 							<div class="settings-toggle-row" style="align-items: flex-start; margin-top: 8px;">
 								<div class="settings-toggle-text">
@@ -748,6 +719,15 @@ async function openSettingsModal() {
 										Permanently delete all telemetry events from the server database. This action cannot be undone.
 									</div>
 								</div>
+                <div class="settings-toggle-actions">
+                  ${canDeleteAllEvents ? `
+                    <button type="button" class="confirm-modal-btn confirm-modal-btn-destructive" id="deleteAllEventsBtn">
+                      Delete all events
+                    </button>
+                  ` : `
+                    <div class="settings-toggle-description">Only advanced or administrator users can delete all events.</div>
+                  `}
+                </div>
 							</div>
 						</div>
 					</section>
@@ -844,6 +824,20 @@ async function openSettingsModal() {
     });
   }
 
+  const clearLocalDataBtn = modal.querySelector('#clearLocalDataBtn');
+  if (clearLocalDataBtn) {
+    clearLocalDataBtn.addEventListener('click', () => {
+      clearLocalData();
+    });
+  }
+
+  const deleteAllEventsBtn = modal.querySelector('#deleteAllEventsBtn');
+  if (deleteAllEventsBtn) {
+    deleteAllEventsBtn.addEventListener('click', () => {
+      confirmDeleteAll();
+    });
+  }
+
   // Navigation between settings sections
   const sidebarLinks = modal.querySelectorAll('.settings-sidebar-link');
   const sections = modal.querySelectorAll('.settings-section, .settings-danger-section');
@@ -903,37 +897,42 @@ async function openSettingsModal() {
       if (!teamsTableBody) return;
 
       teamsTableBody.innerHTML = filteredTeams.map(team => {
-        const _statusClass = team.status === 'Active' ? 'active' : 'inactive';
-        const statusColor = team.status === 'Active' ? '#10b981' : '#6b7280';
+        const statusClass = team.status === 'Active' ? 'active' : 'inactive';
+        const statusLabel = escapeHtml(team.status);
         return `
-					<tr style="border-bottom: 1px solid var(--border-color);">
-						<td style="padding: 12px;">
+					<tr class="settings-teams-row">
+						<td class="settings-teams-cell settings-teams-checkbox-cell">
 							<input type="checkbox" class="team-checkbox" data-team-id="${team.id}" style="cursor: pointer;">
 						</td>
-						<td style="padding: 12px; color: var(--text-primary); font-size: 14px;">
-							<div style="display: flex; align-items: center; gap: 8px;">
-								<div style="width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 12px;">
+						<td class="settings-teams-cell">
+							<div class="settings-team-overview">
+								<div class="settings-teams-avatar">
 									${team.name.charAt(0).toUpperCase()}
 								</div>
-								<span style="font-weight: 500;">${escapeHtml(team.name)}</span>
+								<span class="settings-teams-name">${escapeHtml(team.name)}</span>
 							</div>
 						</td>
-						<td style="padding: 12px; color: var(--text-primary); font-size: 14px;">
+						<td class="settings-teams-cell">
 							${team.members} members
 						</td>
-						<td style="padding: 12px; color: var(--text-secondary); font-size: 14px;">
-							${team.lastActivity}
+						<td class="settings-teams-cell settings-teams-muted">
+							${escapeHtml(team.lastActivity)}
 						</td>
-						<td style="padding: 12px;">
-							<span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 500; background: ${statusColor}20; color: ${statusColor};">
-								<span style="width: 6px; height: 6px; border-radius: 50%; background: ${statusColor};"></span>
-								${team.status}
+						<td class="settings-teams-cell">
+							<span class="settings-teams-status settings-teams-status-${statusClass}">
+								<span class="settings-teams-status-dot"></span>
+								${statusLabel}
 							</span>
 						</td>
-						<td style="padding: 12px; text-align: right;">
-							<button type="button" class="team-actions-btn" data-team-id="${team.id}" style="background: none; border: none; color: var(--text-secondary); cursor: pointer; padding: 4px 8px; border-radius: 4px; hover:background: var(--bg-secondary);">
-								<i class="fa-solid fa-ellipsis-vertical"></i>
-							</button>
+						<td class="settings-teams-actions-cell">
+							<div class="settings-users-actions">
+								<button type="button" class="confirm-modal-btn settings-users-action-btn" data-team-id="${team.id}" title="View team">
+									<i class="fa-solid fa-magnifying-glass"></i>
+								</button>
+								<button type="button" class="confirm-modal-btn settings-users-action-btn" data-team-id="${team.id}" title="More actions">
+									<i class="fa-solid fa-ellipsis-vertical"></i>
+								</button>
+							</div>
 						</td>
 					</tr>
 				`;
@@ -1879,7 +1878,10 @@ async function refreshDashboard(event) {
   }
   // Reload chart data with current days setting
   try {
-    await loadChartData(currentDays);
+    await Promise.all([
+      loadChartData(currentDays),
+      loadTopUsersToday()
+    ]);
   } catch (error) {
     // Any errors are already logged inside loadChartData; this catch
     // simply ensures we always stop the spinner.
@@ -1917,6 +1919,82 @@ function initChart() {
     chart?.resize();
   });
   return chart;
+}
+
+function renderTopUsersPlaceholder(message) {
+  const list = document.getElementById('topUsersList');
+  if (!list) {
+    return;
+  }
+  list.innerHTML = `<li class="top-users-empty">${escapeHtml(message)}</li>`;
+}
+
+function renderTopUsers(users) {
+  const list = document.getElementById('topUsersList');
+  if (!list) {
+    return;
+  }
+
+  if (!users || users.length === 0) {
+    renderTopUsersPlaceholder('No events recorded today yet.');
+    return;
+  }
+
+  const items = users.map((user) => {
+    const name = user.label || user.id || 'Unknown user';
+    const initial = name.trim().charAt(0).toUpperCase() || '?';
+    const eventCount = Number(user.eventCount) || 0;
+    const countLabel = eventCount === 1 ? '1 event today' : `${eventCount} events today`;
+
+    return `
+      <li class="top-users-item">
+        <span class="top-users-avatar">${escapeHtml(initial)}</span>
+        <div class="top-users-info">
+          <div class="top-users-name-row">
+            <strong class="top-users-name" title="${escapeHtml(name)}">${escapeHtml(name)}</strong>
+            <span class="top-users-badge">${escapeHtml(String(eventCount))} today</span>
+          </div>
+          <div class="top-users-role">${escapeHtml(countLabel)}</div>
+        </div>
+        <button type="button" class="top-users-action" aria-label="Open user">
+          <i class="fa-solid fa-chevron-right" aria-hidden="true" style="font-size: 11px;"></i>
+        </button>
+      </li>
+    `;
+  }).join('');
+
+  list.innerHTML = items;
+}
+
+async function loadTopUsersToday() {
+  const list = document.getElementById('topUsersList');
+  if (!list) {
+    return;
+  }
+
+  renderTopUsersPlaceholder('Loading top users…');
+
+  try {
+    const response = await fetch('/api/top-users-today', {
+      credentials: 'include'
+    });
+
+    if (response.status === 401) {
+      window.location.href = '/login';
+      return;
+    }
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const payload = await response.json();
+    const users = Array.isArray(payload?.users) ? payload.users : [];
+    renderTopUsers(users);
+  } catch (error) {
+    console.error('Error loading top users:', error);
+    renderTopUsersPlaceholder('Unable to load top users right now.');
+  }
 }
 
 async function loadChartData(days = currentDays) {
@@ -2323,7 +2401,6 @@ async function loadChartData(days = currentDays) {
 Object.assign(window, {
   showUserMenu,
   handleLogout,
-  handleDeleteAll,
   clearLocalData,
   toggleTheme,
   openSettingsModal,

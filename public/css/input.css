@@ -30,7 +30,7 @@
     --bg-sidebar: #e6ebf1;
     --bg-table-header: #e6ebf1;
     --text-primary: #3a485f;
-    --text-secondary: #d6dce4;
+    --text-secondary: #9fa2a5;
     --text-muted: #d6dce4;
     --text-regular: #687182;
     --border-color: #e1e6f0;
@@ -570,8 +570,8 @@
     position: relative;
     z-index: 10;
     text-align: center;
-    max-width: 1150px;
-    width: min(95vw, 1150px);
+    max-width: 1250px;
+    width: min(95vw, 1250px);
     height: 85vh;
     background: #e8ebec;
     backdrop-filter: blur(10px);
@@ -1410,6 +1410,122 @@
     font-size: 0.875rem;
     flex-shrink: 0;
     margin-right: 6px;
+  }
+
+  .user-menu-icon.user-menu-icon-danger {
+    color: #dc2626;
+  }
+
+  .user-menu-item-danger,
+  .user-menu-item-danger button {
+    color: #dc2626;
+  }
+
+  .user-menu-item.user-menu-item-danger,
+  .user-menu-item.user-menu-item-danger button {
+    color: #dc2626;
+  }
+
+  .top-users-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .top-users-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 4px;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .top-users-item:last-child {
+    border-bottom: none;
+  }
+
+  .top-users-avatar {
+    width: 32px;
+    aspect-ratio: 1 / 1;
+    border-radius: 50%;
+    background: #d8ebff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-primary);
+    font-weight: 700;
+    font-size: 12px;
+  }
+
+  .top-users-info {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    color: var(--text-primary);
+    flex: 1;
+    min-width: 0;
+  }
+
+  .top-users-name-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .top-users-name {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .top-users-badge {
+    background: #dc2626;
+    color: #ffffff;
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 999px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .top-users-role {
+    font-size: 11.5px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .top-users-action {
+    border: 1px solid var(--border-color);
+    background: var(--bg-primary);
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease;
+  }
+
+  .top-users-action:hover {
+    background: var(--hover-bg);
+    color: var(--text-primary);
+  }
+
+  .top-users-empty {
+    padding: 10px 4px;
+    color: var(--text-secondary);
+    font-size: 12px;
   }
 
   .user-menu-item,
@@ -4283,6 +4399,116 @@
 
   .settings-users-action-btn i {
     font-size: 0.65rem;
+  }
+
+  /* Teams table (match users table sizing) */
+  .settings-teams-table-wrapper {
+    overflow-x: auto;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+  }
+
+  .settings-teams-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.75rem;
+  }
+
+  .settings-teams-table thead tr {
+    background: var(--bg-secondary);
+  }
+
+  .settings-teams-table th {
+    text-align: left;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    padding: 8px 10px;
+    font-size: 0.7rem;
+    color: var(--text-primary);
+  }
+
+  .settings-teams-table td {
+    padding: 8px 10px;
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+  }
+
+  .settings-teams-table tbody tr + tr {
+    border-top: 1px solid var(--border-color);
+  }
+
+  .settings-teams-checkbox-column,
+  .settings-teams-checkbox-cell {
+    width: 42px;
+  }
+
+  .settings-teams-actions-column,
+  .settings-teams-actions-cell {
+    width: 130px;
+    text-align: right;
+  }
+
+  .settings-team-overview {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .settings-teams-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    font-weight: 600;
+    font-size: 0.7rem;
+  }
+
+  .settings-teams-name {
+    color: var(--text-primary);
+    font-weight: 600;
+    font-size: 0.75rem;
+  }
+
+  .settings-teams-muted {
+    color: var(--text-secondary);
+  }
+
+  .settings-teams-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 600;
+  }
+
+  .settings-teams-status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+  }
+
+  .settings-teams-status-active {
+    background: rgba(16, 185, 129, 0.15);
+    color: #10b981;
+  }
+
+  .settings-teams-status-active .settings-teams-status-dot {
+    background: #10b981;
+  }
+
+  .settings-teams-status-inactive {
+    background: rgba(107, 114, 128, 0.15);
+    color: #6b7280;
+  }
+
+  .settings-teams-status-inactive .settings-teams-status-dot {
+    background: #6b7280;
   }
 
   .settings-sidebar-link.active {

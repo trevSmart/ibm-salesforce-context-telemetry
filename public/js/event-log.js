@@ -78,15 +78,6 @@ if (window.__EVENT_LOG_LOADED__) {
             }
           }
 
-          // Hide "Delete all events" option for basic users
-          const deleteAllMenuItem = document.querySelector('.delete-all-menu-item');
-          if (deleteAllMenuItem) {
-            if (data.role === 'advanced' || data.role === 'administrator') {
-              deleteAllMenuItem.style.display = '';
-            } else {
-              deleteAllMenuItem.style.display = 'none';
-            }
-          }
         })
         .catch(() => {
           const usernameElement = document.getElementById('userMenuUsername');
@@ -210,16 +201,9 @@ if (window.__EVENT_LOG_LOADED__) {
 					</svg>Settings
 				</button>
 			</div>
-			<div class="user-menu-item clear-data-menu-item">
+			<div class="user-menu-item clear-data-menu-item user-menu-item-danger">
 				<button type="button" onclick="clearLocalData()">
-					<i class="fa-solid fa-broom user-menu-icon"></i>Clear local data
-				</button>
-			</div>
-			<div class="user-menu-item delete-all-menu-item">
-				<button type="button" onclick="handleDeleteAll()">
-					<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="user-menu-icon" width="16" height="16" aria-hidden="true">
-						<path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
-					</svg>Delete all events
+					<i class="fa-solid fa-broom user-menu-icon user-menu-icon-danger"></i>Clear local data
 				</button>
 			</div>
 			<div class="user-menu-separator"></div>
@@ -257,6 +241,7 @@ if (window.__EVENT_LOG_LOADED__) {
     }
 
     const isAdministrator = userRole === 'administrator';
+    const canDeleteAllEvents = userRole === 'advanced' || userRole === 'administrator';
 
     const backdrop = document.createElement('div');
     backdrop.className = 'confirm-modal-backdrop settings-backdrop';
@@ -485,6 +470,11 @@ if (window.__EVENT_LOG_LOADED__) {
 											Remove all local preferences and cached data stored in this browser for the telemetry dashboard (theme, filters, mappings, etc.).
 										</div>
 									</div>
+								<div class="settings-toggle-actions">
+									<button type="button" class="confirm-modal-btn confirm-modal-btn-destructive" id="clearLocalDataBtn">
+										Clear local data
+									</button>
+								</div>
 								</div>
 								<div class="settings-toggle-row" style="align-items: flex-start; margin-top: 8px;">
 									<div class="settings-toggle-text">
@@ -493,6 +483,15 @@ if (window.__EVENT_LOG_LOADED__) {
 											Permanently delete all telemetry events from the server database. This action cannot be undone.
 										</div>
 									</div>
+                <div class="settings-toggle-actions">
+                  ${canDeleteAllEvents ? `
+                    <button type="button" class="confirm-modal-btn confirm-modal-btn-destructive" id="deleteAllEventsBtn">
+                      Delete all events
+                    </button>
+                  ` : `
+                    <div class="settings-toggle-description">Only advanced or administrator users can delete all events.</div>
+                  `}
+                </div>
 								</div>
 							</div>
 						</section>
@@ -894,6 +893,13 @@ if (window.__EVENT_LOG_LOADED__) {
       });
     }
 
+    const clearLocalDataBtn = modal.querySelector('#clearLocalDataBtn');
+    if (clearLocalDataBtn) {
+      clearLocalDataBtn.addEventListener('click', () => {
+        clearLocalData();
+      });
+    }
+
     // Handle auto refresh toggle
     const autoRefreshToggle = modal.querySelector('#autoRefreshToggle');
     const autoRefreshIntervalSelect = modal.querySelector('#autoRefreshInterval');
@@ -909,6 +915,13 @@ if (window.__EVENT_LOG_LOADED__) {
         const interval = e.target.value;
         localStorage.setItem('autoRefreshInterval', interval);
         updateAutoRefreshInterval();
+      });
+    }
+
+    const deleteAllEventsBtn = modal.querySelector('#deleteAllEventsBtn');
+    if (deleteAllEventsBtn) {
+      deleteAllEventsBtn.addEventListener('click', () => {
+        confirmDeleteAll();
       });
     }
 
@@ -1540,17 +1553,6 @@ if (window.__EVENT_LOG_LOADED__) {
   }
 
   // eslint-disable-next-line no-unused-vars
-  function handleDeleteAll() {
-  // Close menu
-    const userMenu = document.getElementById('userMenu');
-    if (userMenu) {
-      userMenu.classList.remove('show');
-    }
-    // Call delete all confirmation
-    confirmDeleteAll();
-  }
-
-  // eslint-disable-next-line no-unused-vars
   async function handleLogout() {
   // Close menu
     const userMenu = document.getElementById('userMenu');
@@ -1794,7 +1796,7 @@ if (window.__EVENT_LOG_LOADED__) {
     refreshSessionActivityTheme();
   }
 
-  // eslint-disable-next-line no-unused-vars
+
   function clearLocalData() {
     openConfirmModal({
       title: 'Clear local data',
