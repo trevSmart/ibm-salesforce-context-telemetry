@@ -48,7 +48,7 @@
     "autoprefixer": "^10.4.20",
     "concurrently": "^9.1.0",
     "connect-livereload": "^0.6.1",
-    "electron": "^35.7.5",
+    "electron": "^39.2.5",
     "electron-builder": "^25.1.8",
     "eslint": "^9.39.1",
     "livereload": "^0.10.3",
