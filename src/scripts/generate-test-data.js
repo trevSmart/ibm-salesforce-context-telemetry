@@ -146,6 +146,7 @@ function generateSessionStart(sessionId, userId, serverId, version, timestamp, p
       projectName: project.name,
       state: {
         org: {
+          id: project.orgId,
           companyDetails: {
             Name: project.companyName
           }
@@ -158,7 +159,7 @@ function generateSessionStart(sessionId, userId, serverId, version, timestamp, p
 /**
  * Generate a tool call event
  */
-function generateToolCall(sessionId, userId, serverId, version, timestamp, toolIndex) {
+function generateToolCall(sessionId, userId, serverId, version, timestamp, toolIndex, project) {
   const toolName = TOOLS[toolIndex % TOOLS.length];
   const operation = OPERATIONS[randomInt(0, OPERATIONS.length - 1)];
   const duration = randomInt(50, 2000);
@@ -176,7 +177,16 @@ function generateToolCall(sessionId, userId, serverId, version, timestamp, toolI
       operation: operation,
       duration: duration,
       success: success,
-      paramsCount: randomInt(1, 5)
+      paramsCount: randomInt(1, 5),
+      orgId: project.orgId,
+      state: {
+        org: {
+          id: project.orgId,
+          companyDetails: {
+            Name: project.companyName
+          }
+        }
+      }
     }
   };
 }
@@ -184,7 +194,7 @@ function generateToolCall(sessionId, userId, serverId, version, timestamp, toolI
 /**
  * Generate a tool error event (occasionally)
  */
-function generateToolError(sessionId, userId, serverId, version, timestamp, toolIndex) {
+function generateToolError(sessionId, userId, serverId, version, timestamp, toolIndex, project) {
   const toolName = TOOLS[toolIndex % TOOLS.length];
   const errorTypes = ['ValidationError', 'PermissionError', 'TimeoutError', 'NetworkError'];
   const errorMessages = [
@@ -207,7 +217,16 @@ function generateToolError(sessionId, userId, serverId, version, timestamp, tool
       toolName: toolName,
       errorType: errorTypes[errorIndex],
       errorMessage: errorMessages[errorIndex],
-      success: false
+      success: false,
+      orgId: project.orgId,
+      state: {
+        org: {
+          id: project.orgId,
+          companyDetails: {
+            Name: project.companyName
+          }
+        }
+      }
     }
   };
 }
@@ -215,7 +234,7 @@ function generateToolError(sessionId, userId, serverId, version, timestamp, tool
 /**
  * Generate a session end event
  */
-function generateSessionEnd(sessionId, userId, serverId, version, timestamp) {
+function generateSessionEnd(sessionId, userId, serverId, version, timestamp, project) {
   return {
     event: 'session_end',
     timestamp: timestamp.toISOString(),
@@ -224,7 +243,16 @@ function generateSessionEnd(sessionId, userId, serverId, version, timestamp) {
     sessionId: sessionId,
     userId: userId,
     data: {
-      toolCallsCount: randomInt(0, 50)
+      toolCallsCount: randomInt(0, 50),
+      orgId: project.orgId,
+      state: {
+        org: {
+          id: project.orgId,
+          companyDetails: {
+            Name: project.companyName
+          }
+        }
+      }
     }
   };
 }
@@ -241,7 +269,7 @@ function generateSession(userId, project, startDate, endDate) {
 
   // Session start
   const sessionStartTime = randomOfficeHourTimestamp(startDate);
-  events.push(generateSessionStart(sessionId, userId, serverId, version, sessionStartTime, project));
+          events.push(generateSessionStart(sessionId, userId, serverId, version, sessionStartTime, project));
 
   // Determine session duration (30 minutes to 4 hours)
   const sessionDurationMinutes = randomInt(30, 240);
@@ -270,9 +298,9 @@ function generateSession(userId, project, startDate, endDate) {
 
         // 5% chance of error
         if (Math.random() < 0.05) {
-          events.push(generateToolError(sessionId, userId, serverId, version, toolCallTime, t));
+          events.push(generateToolError(sessionId, userId, serverId, version, toolCallTime, t, project));
         } else {
-          events.push(generateToolCall(sessionId, userId, serverId, version, toolCallTime, t));
+          events.push(generateToolCall(sessionId, userId, serverId, version, toolCallTime, t, project));
         }
       }
     }
@@ -282,7 +310,7 @@ function generateSession(userId, project, startDate, endDate) {
   const gracefulEnd = Math.random() < 0.8;
 
   if (gracefulEnd && sessionEndTime <= endDate) {
-    events.push(generateSessionEnd(sessionId, userId, serverId, version, sessionEndTime));
+    events.push(generateSessionEnd(sessionId, userId, serverId, version, sessionEndTime, project));
   }
   // Otherwise, session ends abruptly (no session_end event)
 
