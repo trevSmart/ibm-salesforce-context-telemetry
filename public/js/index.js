@@ -1613,11 +1613,11 @@ function openOrgTeamMappingModal() {
   const activeInput = modal.querySelector('#mappingActiveInput');
   const resetFormBtn = modal.querySelector('#resetOrgTeamMappingFormBtn');
 
-  function renderMappings() {
+  async function renderMappings() {
     if (!listContainer) {
       return;
     }
-    const mappings = getOrgTeamMappings();
+    const mappings = await getOrgTeamMappings();
     if (!mappings.length) {
       listContainer.innerHTML = `
 				<div class="settings-modal-placeholder-text">
@@ -1656,9 +1656,9 @@ function openOrgTeamMappingModal() {
     listContainer.innerHTML = rowsHtml;
 
     listContainer.querySelectorAll('button[data-action="edit"]').forEach((btn) => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', async () => {
         const idx = Number(btn.dataset.index);
-        const mappingsData = getOrgTeamMappings();
+        const mappingsData = await getOrgTeamMappings();
         const mapping = mappingsData[idx];
         if (!mapping) {
           return;
@@ -1673,12 +1673,12 @@ function openOrgTeamMappingModal() {
     });
 
     listContainer.querySelectorAll('button[data-action="delete"]').forEach((btn) => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', async () => {
         const idx = Number(btn.dataset.index);
-        const mappingsData = getOrgTeamMappings();
+        const mappingsData = await getOrgTeamMappings();
         if (idx >= 0 && idx < mappingsData.length) {
           mappingsData.splice(idx, 1);
-          saveOrgTeamMappings(mappingsData);
+          await saveOrgTeamMappings(mappingsData);
           renderMappings();
         }
       });
@@ -1705,7 +1705,7 @@ function openOrgTeamMappingModal() {
   }
 
   if (form) {
-    form.addEventListener('submit', (e) => {
+    form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const orgIdentifier = orgInput.value.trim();
       const clientName = clientInput.value.trim();
@@ -1718,7 +1718,7 @@ function openOrgTeamMappingModal() {
         return;
       }
 
-      const mappings = getOrgTeamMappings();
+      const mappings = await getOrgTeamMappings();
       const editingIndex = editingIdInput.value !== '' ? Number(editingIdInput.value) : -1;
 
       // Prevent duplicate org identifiers when creating a new mapping
@@ -1741,13 +1741,13 @@ function openOrgTeamMappingModal() {
       } else {
         mappings.push(mappingData);
       }
-      saveOrgTeamMappings(mappings);
+      await saveOrgTeamMappings(mappings);
       renderMappings();
       resetForm();
     });
   }
 
-  renderMappings();
+  renderMappings().catch(error => console.error('Error rendering mappings:', error));
 
   requestAnimationFrame(() => {
     backdrop.classList.add('visible');

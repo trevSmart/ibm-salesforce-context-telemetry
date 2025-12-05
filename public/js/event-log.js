@@ -149,7 +149,14 @@ if (window.__EVENT_LOG_LOADED__) {
     // Check cache first
     if (orgTeamMappingsCache && mappingsCacheTimestamp &&
         (Date.now() - mappingsCacheTimestamp) < CACHE_DURATION) {
-      return orgTeamMappingsCache;
+      // Ensure cached value is still an array (defensive check)
+      if (Array.isArray(orgTeamMappingsCache)) {
+        return orgTeamMappingsCache;
+      } else {
+        console.warn('Cached orgTeamMappingsCache is not an array, clearing cache');
+        orgTeamMappingsCache = null;
+        mappingsCacheTimestamp = null;
+      }
     }
 
     try {
@@ -3361,7 +3368,7 @@ if (window.__EVENT_LOG_LOADED__) {
     }
   }
 
-  function loadTeamsList() {
+  async function loadTeamsList() {
     try {
       const teamList = document.getElementById('teamList');
       if (!teamList) {
@@ -3369,9 +3376,15 @@ if (window.__EVENT_LOG_LOADED__) {
         return;
       }
 
-      const mappings = getOrgTeamMappings();
+      const mappings = await getOrgTeamMappings();
       const teamsMap = new Map();
       orgToTeamMap = new Map();
+
+      // Ensure mappings is an array before iterating
+      if (!Array.isArray(mappings)) {
+        console.error('Expected mappings to be an array, but got:', typeof mappings, mappings);
+        return;
+      }
 
       mappings.forEach((mapping) => {
         const rawName = (mapping?.teamName || '').trim();
