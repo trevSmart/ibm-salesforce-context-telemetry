@@ -12,6 +12,7 @@ const path = require('path');
 // Database configuration constants
 const DEFAULT_MAX_DB_SIZE = 1024 * 1024 * 1024; // 1 GB in bytes
 const VALID_ROLES = ['basic', 'advanced', 'administrator'];
+const MAX_LIMIT_FOR_TOTAL_COMPUTATION = 100; // Skip expensive COUNT queries for large limits
 
 let db = null;
 let dbType = process.env.DB_TYPE || 'sqlite';
@@ -712,7 +713,7 @@ async function getEvents(options = {}) {
   // Get total count (optimize by skipping if not needed)
   let total = 0;
   // Only compute total if it's a reasonable query (not too expensive)
-  const shouldComputeTotal = limit <= 100 || offset === 0;
+  const shouldComputeTotal = limit <= MAX_LIMIT_FOR_TOTAL_COMPUTATION || offset === 0;
   
   if (shouldComputeTotal) {
     let countQuery = `SELECT COUNT(*) as total FROM telemetry_events ${whereClause}`;

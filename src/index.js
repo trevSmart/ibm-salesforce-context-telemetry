@@ -168,13 +168,17 @@ app.post('/telemetry', (req, res) => {
   }
 });
 
+// Performance constants
+const MAX_API_LIMIT = 1000; // Maximum events per API request
+const MAX_EXPORT_LIMIT = 50000; // Maximum events per export
+const HEALTH_CHECK_CACHE_TTL = parseInt(process.env.HEALTH_CHECK_CACHE_TTL_MS) || 5000; // 5 seconds default
+
 // Track server start time for uptime calculation
 const serverStartTime = Date.now();
 
 // Cache health check data to avoid hammering database
 let healthCheckCache = null;
 let healthCheckLastUpdated = 0;
-const HEALTH_CHECK_CACHE_TTL = 5000; // 5 seconds
 
 app.get('/health', async (req, res) => {
   const format = req.query.format || (req.headers.accept?.includes('application/json') ? 'json' : 'html');
@@ -565,8 +569,7 @@ app.get('/api/events', auth.requireAuth, auth.requireRole('advanced'), async (re
     } = req.query;
     
     // Enforce maximum limit to prevent performance issues
-    const maxLimit = 1000;
-    const effectiveLimit = Math.min(parseInt(limit), maxLimit);
+    const effectiveLimit = Math.min(parseInt(limit), MAX_API_LIMIT);
 
     // Handle multiple eventType values (Express converts them to an array)
     const eventTypes = Array.isArray(eventType) ? eventType : (eventType ? [eventType] : []);
@@ -880,8 +883,7 @@ app.get('/api/export/logs', auth.requireAuth, auth.requireRole('advanced'), asyn
     } = req.query;
     
     // Enforce maximum export limit for performance
-    const maxExportLimit = 50000;
-    const effectiveLimit = Math.min(parseInt(limit), maxExportLimit);
+    const effectiveLimit = Math.min(parseInt(limit), MAX_EXPORT_LIMIT);
 
     // Get events from database
     const result = await db.getEvents({
