@@ -159,7 +159,7 @@ function setupUserMenuHover() {
   });
 }
 
- 
+
 async function handleLogout() {
   // Close menu
   const userMenu = document.getElementById('userMenu');
@@ -184,7 +184,7 @@ async function handleLogout() {
   }
 }
 
- 
+
 function handleDeleteAll() {
   // Close menu
   const userMenu = document.getElementById('userMenu');
@@ -280,7 +280,7 @@ function initTheme() {
   applyTheme(theme);
 }
 
- 
+
 function toggleTheme() {
   const isDark = document.documentElement.classList.contains('dark');
   const newTheme = isDark ? 'light' : 'dark';
@@ -309,7 +309,7 @@ function updateThemeMenuItem(theme) {
   btn.innerHTML = `${isDark ? lightThemeIcon : darkThemeIcon}${label}`;
 }
 
- 
+
 function clearLocalData() {
   openConfirmModal({
     title: 'Clear local data',
@@ -486,7 +486,7 @@ function ensureUserMenuStructure() {
 }
 
 // Shared settings modal used by both dashboard and event log pages
- 
+
 async function openSettingsModal() {
   const existing = document.querySelector('.confirm-modal-backdrop.settings-backdrop');
   if (existing) {
@@ -751,17 +751,26 @@ async function openSettingsModal() {
   backdrop.appendChild(closeIcon);
   document.body.appendChild(backdrop);
 
+  const closeIconOffset = 14;
+
+  const positionCloseIcon = () => {
+    const modalRect = modal.getBoundingClientRect();
+    closeIcon.style.top = `${modalRect.top - closeIconOffset}px`;
+    closeIcon.style.left = `${modalRect.right + closeIconOffset}px`;
+    closeIcon.style.right = 'auto';
+    closeIcon.style.transform = 'none';
+  };
+
   requestAnimationFrame(() => {
     backdrop.classList.add('visible');
-    // Position close icon relative to modal
-    const modalRect = modal.getBoundingClientRect();
-    closeIcon.style.top = `${modalRect.top - 16}px`;
-    closeIcon.style.right = `${window.innerWidth - modalRect.right - 16}px`;
-    closeIcon.style.left = 'auto';
-    closeIcon.style.transform = 'none';
+    positionCloseIcon();
   });
 
+  const handleResize = () => positionCloseIcon();
+  window.addEventListener('resize', handleResize);
+
   function closeSettingsModal() {
+    window.removeEventListener('resize', handleResize);
     backdrop.classList.remove('visible');
     backdrop.classList.add('hiding');
     const handleTransitionEnd = () => {
@@ -1811,7 +1820,7 @@ function setupIconButtonsGroupHover() {
 }
 
 // Refresh dashboard function
- 
+
 async function refreshDashboard(event) {
   if (event) {
     event.stopPropagation();

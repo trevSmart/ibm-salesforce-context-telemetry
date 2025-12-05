@@ -524,17 +524,26 @@ if (window.__EVENT_LOG_LOADED__) {
     backdrop.appendChild(closeIcon);
     document.body.appendChild(backdrop);
 
+    const closeIconOffset = 14;
+
+    const positionCloseIcon = () => {
+      const modalRect = modal.getBoundingClientRect();
+      closeIcon.style.top = `${modalRect.top - closeIconOffset}px`;
+      closeIcon.style.left = `${modalRect.right + closeIconOffset}px`;
+      closeIcon.style.right = 'auto';
+      closeIcon.style.transform = 'none';
+    };
+
     requestAnimationFrame(() => {
       backdrop.classList.add('visible');
-      // Position close icon relative to modal
-      const modalRect = modal.getBoundingClientRect();
-      closeIcon.style.top = `${modalRect.top - 16}px`;
-      closeIcon.style.right = `${window.innerWidth - modalRect.right - 16}px`;
-      closeIcon.style.left = 'auto';
-      closeIcon.style.transform = 'none';
+      positionCloseIcon();
     });
 
+    const handleResize = () => positionCloseIcon();
+    window.addEventListener('resize', handleResize);
+
     function closeSettingsModal() {
+      window.removeEventListener('resize', handleResize);
       backdrop.classList.remove('visible');
       backdrop.classList.add('hiding');
       const handleTransitionEnd = () => {
