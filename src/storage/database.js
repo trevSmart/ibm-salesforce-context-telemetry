@@ -1697,39 +1697,42 @@ async function ensureUserRoleColumn() {
 }
 
 /**
- * Get top users by event volume for the current local day
- * @param {number} limit - Maximum number of users to return (default 3)
+ * Get top users by event volume for the last N days (rolling window)
+ * @param {number} limit - Maximum number of users to return (default 50)
+ * @param {number} days - Number of days to look back (default 3)
  * @returns {Promise<Array<{id: string, label: string, eventCount: number}>>}
  */
-async function getTopUsersToday(limit = 3) {
+async function getTopUsersLastDays(limit = 50, days = 3) {
   if (!db) {
     throw new Error('Database not initialized. Call init() first.');
   }
 
-  const safeLimit = Math.min(Math.max(1, Number.isFinite(limit) ? Math.floor(limit) : 3), 50);
+  const safeLimit = Math.min(Math.max(1, Number.isFinite(limit) ? Math.floor(limit) : 50), 500);
+  const safeDays = Math.min(Math.max(1, Number.isFinite(days) ? Math.floor(days) : 3), 365);
+  const lookbackModifier = `-${safeDays} days`;
   const results = [];
 
   if (dbType === 'sqlite') {
     const aggregated = db.prepare(`
 			SELECT user_id, COUNT(*) as event_count
 			FROM telemetry_events
-			WHERE created_at >= datetime('now', 'localtime', 'start of day')
+			WHERE created_at >= datetime('now', 'localtime', ?)
 				AND user_id IS NOT NULL
 				AND TRIM(user_id) != ''
 			GROUP BY user_id
 			ORDER BY event_count DESC, user_id ASC
 			LIMIT ?
-		`).all(safeLimit);
+		`).all(lookbackModifier, safeLimit);
 
     aggregated.forEach(row => {
       const latest = db.prepare(`
 				SELECT data
 				FROM telemetry_events
 				WHERE user_id = ?
-					AND created_at >= datetime('now', 'localtime', 'start of day')
+					AND created_at >= datetime('now', 'localtime', ?)
 				ORDER BY created_at DESC
 				LIMIT 1
-			`).get(row.user_id);
+			`).get(row.user_id, lookbackModifier);
 
       results.push({
         id: row.user_id,
@@ -1743,7 +1746,7 @@ async function getTopUsersToday(limit = 3) {
 				WITH aggregated AS (
 					SELECT user_id, COUNT(*) AS event_count
 					FROM telemetry_events
-					WHERE created_at >= date_trunc('day', NOW())
+					WHERE created_at >= (NOW() - ($2 || ' days')::interval)
 						AND user_id IS NOT NULL
 						AND TRIM(user_id) != ''
 					GROUP BY user_id
@@ -1756,14 +1759,14 @@ async function getTopUsersToday(limit = 3) {
 				         SELECT data
 				         FROM telemetry_events e
 				         WHERE e.user_id = a.user_id
-				           AND e.created_at >= date_trunc('day', NOW())
+				           AND e.created_at >= (NOW() - ($2 || ' days')::interval)
 				         ORDER BY e.created_at DESC
 				         LIMIT 1
 				       ) AS data
 				FROM aggregated a
 				ORDER BY a.event_count DESC, a.user_id ASC
 			`,
-      [safeLimit]
+      [safeLimit, String(safeDays)]
     );
 
     aggregated.rows.forEach(row => {
@@ -1810,7 +1813,7 @@ module.exports = {
   getSessions,
   getDailyStats,
   getDailyStatsByEventType,
-  getTopUsersToday,
+  getTopUsersLastDays,
   deleteEvent,
   deleteAllEvents,
   deleteEventsBySession,

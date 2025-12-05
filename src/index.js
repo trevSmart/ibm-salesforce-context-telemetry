@@ -668,14 +668,17 @@ app.get('/api/daily-stats', auth.requireAuth, async (req, res) => {
 
 app.get('/api/top-users-today', auth.requireAuth, async (req, res) => {
   try {
-    const limit = Math.min(parseInt(req.query.limit, 10) || 3, 50);
-    const users = await db.getTopUsersToday(limit);
-    res.json({ users });
+    const limitRaw = parseInt(req.query.limit, 10);
+    const daysRaw = parseInt(req.query.days, 10);
+    const limit = Math.min(Math.max(1, Number.isFinite(limitRaw) ? limitRaw : 3), 500);
+    const days = Math.min(Math.max(1, Number.isFinite(daysRaw) ? daysRaw : 3), 365);
+    const users = await db.getTopUsersLastDays(limit, days);
+    res.json({ users, days });
   } catch (error) {
-    console.error('Error fetching top users for today:', error);
+    console.error('Error fetching top users for the selected window:', error);
     res.status(500).json({
       status: 'error',
-      message: 'Failed to fetch top users for today'
+      message: 'Failed to fetch top users for the selected window'
     });
   }
 });

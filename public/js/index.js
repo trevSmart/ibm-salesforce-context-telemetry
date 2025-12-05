@@ -71,6 +71,9 @@ function escapeHtml(str) {
 // User menu functions
 let userMenuHideTimeout = null;
 const USER_MENU_HIDE_DELAY_MS = 300;
+const SESSION_START_SERIES_COLOR = '#2195cf';
+const TOP_USERS_LOOKBACK_DAYS = 3;
+const TOP_USERS_LIMIT = 3;
 
 function showUserMenu(e) {
   if (e) {
@@ -1936,15 +1939,16 @@ function renderTopUsers(users) {
   }
 
   if (!users || users.length === 0) {
-    renderTopUsersPlaceholder('No events recorded today yet.');
+    renderTopUsersPlaceholder('No events recorded in the last 3 days yet.');
     return;
   }
 
-  const items = users.map((user) => {
+  const items = users.map((user, index) => {
     const name = user.label || user.id || 'Unknown user';
     const initial = name.trim().charAt(0).toUpperCase() || '?';
     const eventCount = Number(user.eventCount) || 0;
-    const countLabel = eventCount === 1 ? '1 event today' : `${eventCount} events today`;
+    const countLabel = eventCount === 1 ? '1 event last 3 days' : `${eventCount} events last 3 days`;
+    const badgeBackground = index === 0 ? '#dc2626' : SESSION_START_SERIES_COLOR;
 
     return `
       <li class="top-users-item">
@@ -1952,7 +1956,7 @@ function renderTopUsers(users) {
         <div class="top-users-info">
           <div class="top-users-name-row">
             <strong class="top-users-name" title="${escapeHtml(name)}">${escapeHtml(name)}</strong>
-            <span class="top-users-badge">${escapeHtml(String(eventCount))} today</span>
+            <span class="top-users-badge" style="background: ${badgeBackground}; color: #ffffff;">${escapeHtml(String(eventCount))} last 3 days</span>
           </div>
           <div class="top-users-role">${escapeHtml(countLabel)}</div>
         </div>
@@ -1975,7 +1979,7 @@ async function loadTopUsersToday() {
   renderTopUsersPlaceholder('Loading top users…');
 
   try {
-    const response = await fetch('/api/top-users-today', {
+    const response = await fetch(`/api/top-users-today?days=${TOP_USERS_LOOKBACK_DAYS}&limit=${TOP_USERS_LIMIT}`, {
       credentials: 'include'
     });
 
@@ -2049,7 +2053,7 @@ async function loadChartData(days = currentDays) {
     const axisPointerBg = isDark ? '#27272a' : '#ffffff';
 
     // Colors for start sessions without end (match session badge blue)
-    const startSessionsColor = '#2195cf';
+    const startSessionsColor = SESSION_START_SERIES_COLOR;
 
     // Colors for tool events (match tool badge purple)
     const toolEventsColor = '#8e81ea';
