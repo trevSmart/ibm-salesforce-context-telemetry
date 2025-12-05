@@ -713,7 +713,10 @@ async function getEvents(options = {}) {
   // Get total count (optimize by skipping if not needed)
   let total = 0;
   // Only compute total if it's a reasonable query (not too expensive)
-  const shouldComputeTotal = limit <= MAX_LIMIT_FOR_TOTAL_COMPUTATION || offset === 0;
+  // We compute total when:
+  // 1. offset === 0: First page, total is useful for pagination UI
+  // 2. limit <= MAX_LIMIT_FOR_TOTAL_COMPUTATION: Small result set, COUNT is fast
+  const shouldComputeTotal = offset === 0 || limit <= MAX_LIMIT_FOR_TOTAL_COMPUTATION;
   
   if (shouldComputeTotal) {
     let countQuery = `SELECT COUNT(*) as total FROM telemetry_events ${whereClause}`;

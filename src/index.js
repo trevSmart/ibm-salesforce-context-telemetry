@@ -19,12 +19,14 @@ const isDevelopment = process.env.NODE_ENV !== 'production';
 const statsCache = new Cache(30000); // 30 seconds TTL for stats
 const sessionsCache = new Cache(60000); // 60 seconds TTL for sessions
 const userIdsCache = new Cache(120000); // 2 minutes TTL for user IDs
+const healthCheckCache = new Cache(HEALTH_CHECK_CACHE_TTL); // Health check cache
 
 // Periodic cache cleanup to prevent memory bloat
 setInterval(() => {
   statsCache.cleanup();
   sessionsCache.cleanup();
   userIdsCache.cleanup();
+  healthCheckCache.cleanup();
 }, 60000); // Clean up every minute
 
 // Trust reverse proxy headers so secure cookies work behind Render/Cloudflare
@@ -172,29 +174,28 @@ app.post('/telemetry', (req, res) => {
 const MAX_API_LIMIT = 1000; // Maximum events per API request
 const MAX_EXPORT_LIMIT = 50000; // Maximum events per export
 const HEALTH_CHECK_CACHE_TTL = parseInt(process.env.HEALTH_CHECK_CACHE_TTL_MS) || 5000; // 5 seconds default
+const STATS_CACHE_KEY_EMPTY = 'stats:::'; // Cache key for stats with no filters
 
 // Track server start time for uptime calculation
 const serverStartTime = Date.now();
-
-// Cache health check data to avoid hammering database
-let healthCheckCache = null;
-let healthCheckLastUpdated = 0;
 
 app.get('/health', async (req, res) => {
   const format = req.query.format || (req.headers.accept?.includes('application/json') ? 'json' : 'html');
 
   if (format === 'json') {
     try {
-      // Use cached health data if recent enough
-      const now = Date.now();
-      if (healthCheckCache && (now - healthCheckLastUpdated) < HEALTH_CHECK_CACHE_TTL) {
+      // Use cached health data if available
+      const cachedHealth = healthCheckCache.get('health');
+      if (cachedHealth) {
         // Update uptime but use cached DB stats
-        healthCheckCache.uptime = Math.floor((now - serverStartTime) / 1000);
-        healthCheckCache.timestamp = new Date().toISOString();
-        return res.status(healthCheckCache.status === 'healthy' ? 200 : 503).json(healthCheckCache);
+        const now = Date.now();
+        cachedHealth.uptime = Math.floor((now - serverStartTime) / 1000);
+        cachedHealth.timestamp = new Date().toISOString();
+        return res.status(cachedHealth.status === 'healthy' ? 200 : 503).json(cachedHealth);
       }
 
       // Get uptime
+      const now = Date.now();
       const uptime = Math.floor((now - serverStartTime) / 1000);
 
       // Get memory usage
@@ -212,8 +213,8 @@ app.get('/health', async (req, res) => {
       let totalEvents = 0;
       
       try {
-        // Use cached stats from cache instead of querying DB (use same key format as /api/stats)
-        const cachedStats = statsCache.get('stats:::');
+        // Use cached stats from cache instead of querying DB
+        const cachedStats = statsCache.get(STATS_CACHE_KEY_EMPTY);
         if (cachedStats) {
           dbStatus = 'connected';
           totalEvents = cachedStats.total || 0;
@@ -223,7 +224,7 @@ app.get('/health', async (req, res) => {
           dbStatus = 'connected';
           totalEvents = stats.total || 0;
           // Cache for next health check
-          statsCache.set('stats:::', stats);
+          statsCache.set(STATS_CACHE_KEY_EMPTY, stats);
         }
       } catch (error) {
         dbStatus = 'error';
@@ -250,9 +251,8 @@ app.get('/health', async (req, res) => {
         }
       };
       
-      // Cache the health data
-      healthCheckCache = healthData;
-      healthCheckLastUpdated = now;
+      // Cache the health data using Cache class
+      healthCheckCache.set('health', healthData);
 
       res.status(isHealthy ? 200 : 503).json(healthData);
     } catch (error) {
