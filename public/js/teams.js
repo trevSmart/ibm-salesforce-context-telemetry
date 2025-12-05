@@ -743,7 +743,13 @@ async function showAddOrgModal(teamId) {
     backdrop.classList.remove('visible');
     backdrop.classList.add('hiding');
     // Wait for transition to complete before removing
-    setTimeout(() => backdrop.remove(), 200);
+    const onTransitionEnd = (e) => {
+      if (e.target === backdrop) {
+        backdrop.removeEventListener('transitionend', onTransitionEnd);
+        backdrop.remove();
+      }
+    };
+    backdrop.addEventListener('transitionend', onTransitionEnd);
   };
   document.getElementById('cancelAddOrgBtn')?.addEventListener('click', closeModal);
   backdrop.addEventListener('click', (e) => {
