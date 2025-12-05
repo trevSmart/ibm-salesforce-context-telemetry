@@ -707,8 +707,8 @@ app.get('/api/sessions', auth.requireAuth, auth.requireRole('advanced'), async (
       return res.json([]);
     }
 
-    // Use cache for session queries
-    const cacheKey = `sessions:${userIds.join(',')}`;
+    // Use cache for session queries (sanitize key to avoid cache pollution)
+    const cacheKey = `sessions:${JSON.stringify(userIds.sort())}`;
     const cached = sessionsCache.get(cacheKey);
     if (cached) {
       return res.json(cached);

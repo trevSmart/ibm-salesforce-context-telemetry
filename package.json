@@ -59,7 +59,7 @@
   },
   "build": {
     "appId": "com.ibm.context.telemetry.viewer",
-    "productName": "IBM Saesforce Context Telemetry",
+    "productName": "IBM Salesforce Context Telemetry",
     "directories": {
       "output": "dist"
     },
