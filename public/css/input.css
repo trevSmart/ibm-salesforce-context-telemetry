@@ -622,7 +622,6 @@
     font-weight: 400;
     color: var(--text-primary);
     text-align: center;
-    word-spacing: 0.5em;
   }
 
   .dashboard-footer a {
