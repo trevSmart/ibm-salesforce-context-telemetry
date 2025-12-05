@@ -606,7 +606,17 @@ function showTeamFormModal(team = null) {
   backdrop.appendChild(modal);
   document.body.appendChild(backdrop);
 
-  const closeModal = () => backdrop.remove();
+  // Trigger enter transition on next frame
+  requestAnimationFrame(() => {
+    backdrop.classList.add('visible');
+  });
+
+  const closeModal = () => {
+    backdrop.classList.remove('visible');
+    backdrop.classList.add('hiding');
+    // Wait for transition to complete before removing
+    setTimeout(() => backdrop.remove(), 200);
+  };
   document.getElementById('cancelTeamFormBtn')?.addEventListener('click', closeModal);
   backdrop.addEventListener('click', (e) => {
     if (e.target === backdrop) closeModal();
@@ -714,7 +724,17 @@ async function showAddOrgModal(teamId) {
   backdrop.appendChild(modal);
   document.body.appendChild(backdrop);
 
-  const closeModal = () => backdrop.remove();
+  // Trigger enter transition on next frame
+  requestAnimationFrame(() => {
+    backdrop.classList.add('visible');
+  });
+
+  const closeModal = () => {
+    backdrop.classList.remove('visible');
+    backdrop.classList.add('hiding');
+    // Wait for transition to complete before removing
+    setTimeout(() => backdrop.remove(), 200);
+  };
   document.getElementById('cancelAddOrgBtn')?.addEventListener('click', closeModal);
   backdrop.addEventListener('click', (e) => {
     if (e.target === backdrop) closeModal();
@@ -795,7 +815,17 @@ async function showAddUserModal(teamId) {
   backdrop.appendChild(modal);
   document.body.appendChild(backdrop);
 
-  const closeModal = () => backdrop.remove();
+  // Trigger enter transition on next frame
+  requestAnimationFrame(() => {
+    backdrop.classList.add('visible');
+  });
+
+  const closeModal = () => {
+    backdrop.classList.remove('visible');
+    backdrop.classList.add('hiding');
+    // Wait for transition to complete before removing
+    setTimeout(() => backdrop.remove(), 200);
+  };
   document.getElementById('cancelAddUserBtn')?.addEventListener('click', closeModal);
   backdrop.addEventListener('click', (e) => {
     if (e.target === backdrop) closeModal();
