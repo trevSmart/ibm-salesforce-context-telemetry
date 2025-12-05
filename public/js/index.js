@@ -44,7 +44,7 @@ async function initializeDashboardPage({ resetState = false } = {}) {
     const timeRangeSelect = document.getElementById('timeRangeSelect');
     if (timeRangeSelect && timeRangeSelect.dataset.dashboardInitialized !== 'true') {
       timeRangeSelect.addEventListener('change', (e) => {
-        const days = parseInt(e.target.value);
+        const days = parseInt(e.target.value, 10);
         loadChartData(days);
       });
       timeRangeSelect.dataset.dashboardInitialized = 'true';
