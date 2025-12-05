@@ -1413,7 +1413,14 @@ function getPreparedStatement(key, sql) {
 async function close() {
   if (db) {
     if (dbType === 'sqlite') {
-      // Clear prepared statement cache
+      // Finalize all prepared statements before clearing the cache
+      for (const stmt of Object.values(preparedStatements)) {
+        try {
+          stmt.finalize();
+        } catch (err) {
+          console.error('Error finalizing prepared statement:', err);
+        }
+      }
       preparedStatements = {};
       db.close();
     } else if (dbType === 'postgresql') {
