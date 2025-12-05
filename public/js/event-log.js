@@ -3266,7 +3266,9 @@ if (window.__EVENT_LOG_LOADED__) {
           const isSelected = selectedSessionsForDeletion.has(session.session_id);
           // Always render checkbox to prevent label shift, but control visibility with 'show' class
           // Don't add 'show' class initially - it will be added via toggleSelectionMode for smooth transition
-          const checkboxHtml = `<input type="checkbox" class="session-checkbox" id="session-checkbox-${session.session_id}" ${isSelected ? 'checked' : ''} onclick="event.stopPropagation(); toggleSessionSelection('${session.session_id}', event)">`;
+          // Security: Use escapeHtml for session_id to prevent XSS in HTML attributes and IDs
+          const escapedSessionId = escapeHtml(session.session_id);
+          const checkboxHtml = `<input type="checkbox" class="session-checkbox" id="session-checkbox-${escapedSessionId}" ${isSelected ? 'checked' : ''}>`;
           li.innerHTML = `
 						<div class="session-item-left">
 							${checkboxHtml}
@@ -3275,21 +3277,46 @@ if (window.__EVENT_LOG_LOADED__) {
 						<div class="session-item-right">
 							<span class="session-size text-xs">${session.count || 0}</span>
 							<div class="session-item-actions">
-								<button class="actions-btn" onclick="event.stopPropagation(); toggleSessionActionsDropdown(event, '${session.session_id}')">
+								<button class="actions-btn" data-session-id="${escapedSessionId}">
 									<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
 										<circle cx="8" cy="3" r="1.5"/>
 										<circle cx="8" cy="8" r="1.5"/>
 										<circle cx="8" cy="13" r="1.5"/>
 									</svg>
 								</button>
-								<div class="actions-dropdown" id="session-dropdown-${session.session_id}">
-									<div class="actions-dropdown-item delete" onclick="event.stopPropagation(); confirmDeleteSession('${session.session_id}')">
+								<div class="actions-dropdown" id="session-dropdown-${escapedSessionId}">
+									<div class="actions-dropdown-item delete" data-session-id="${escapedSessionId}">
 										<span>Delete</span>
 									</div>
 								</div>
 							</div>
 						</div>
 					`;
+
+          // Add event listeners for checkbox and actions (safer than inline onclick with XSS protection)
+          const checkbox = li.querySelector('.session-checkbox');
+          if (checkbox) {
+            checkbox.addEventListener('click', (event) => {
+              event.stopPropagation();
+              toggleSessionSelection(session.session_id, event);
+            });
+          }
+
+          const actionsBtn = li.querySelector('.actions-btn');
+          if (actionsBtn) {
+            actionsBtn.addEventListener('click', (event) => {
+              event.stopPropagation();
+              toggleSessionActionsDropdown(event, session.session_id);
+            });
+          }
+
+          const deleteBtn = li.querySelector('.actions-dropdown-item.delete');
+          if (deleteBtn) {
+            deleteBtn.addEventListener('click', (event) => {
+              event.stopPropagation();
+              confirmDeleteSession(session.session_id);
+            });
+          }
 
           li.addEventListener('click', (e) => {
           // Don't activate session if clicking on actions button or checkbox
