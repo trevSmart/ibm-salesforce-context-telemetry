@@ -175,6 +175,7 @@ async function init() {
   await ensureUserRoleColumn();
   await ensureTelemetryParentSessionColumn();
   await ensureDenormalizedColumns();
+  await ensureEventStatsTables();
 }
 
 /**
@@ -673,6 +674,9 @@ async function storeEvent(eventData, receivedAt) {
       }
     }
 
+    // Update aggregated counters so UI lists stay accurate without pagination
+    await updateAggregatedStatsForEvent(normalizedUserId, orgId, eventData.timestamp, userName);
+
     return true;
   } catch (error) {
     // Re-throw to allow caller to handle
@@ -1134,13 +1138,35 @@ async function deleteEvent(id) {
     throw new Error('Database not initialized. Call init() first.');
   }
 
+  let eventInfo = null;
+  if (dbType === 'sqlite') {
+    eventInfo = db.prepare('SELECT user_id, org_id FROM telemetry_events WHERE id = ?').get(id);
+  } else if (dbType === 'postgresql') {
+    const result = await db.query('SELECT user_id, org_id FROM telemetry_events WHERE id = $1', [id]);
+    eventInfo = result.rows[0];
+  }
+
   if (dbType === 'sqlite') {
     const stmt = db.prepare('DELETE FROM telemetry_events WHERE id = ?');
     const result = stmt.run(id);
-    return result.changes > 0;
+    const deleted = result.changes > 0;
+    if (deleted && eventInfo) {
+      await Promise.all([
+        eventInfo?.user_id ? recomputeUserEventStats([eventInfo.user_id]) : Promise.resolve(),
+        eventInfo?.org_id ? recomputeOrgEventStats([eventInfo.org_id]) : Promise.resolve()
+      ]);
+    }
+    return deleted;
   } else if (dbType === 'postgresql') {
     const result = await db.query('DELETE FROM telemetry_events WHERE id = $1', [id]);
-    return result.rowCount > 0;
+    const deleted = result.rowCount > 0;
+    if (deleted && eventInfo) {
+      await Promise.all([
+        eventInfo?.user_id ? recomputeUserEventStats([eventInfo.user_id]) : Promise.resolve(),
+        eventInfo?.org_id ? recomputeOrgEventStats([eventInfo.org_id]) : Promise.resolve()
+      ]);
+    }
+    return deleted;
   }
 }
 
@@ -1156,9 +1182,15 @@ async function deleteAllEvents() {
   if (dbType === 'sqlite') {
     const stmt = db.prepare('DELETE FROM telemetry_events');
     const result = stmt.run();
+    if (result.changes > 0) {
+      await resetEventStatsTables();
+    }
     return result.changes;
   } else if (dbType === 'postgresql') {
     const result = await db.query('DELETE FROM telemetry_events');
+    if (result.rowCount > 0) {
+      await resetEventStatsTables();
+    }
     return result.rowCount;
   }
 }
@@ -1177,12 +1209,36 @@ async function deleteEventsBySession(sessionId) {
     throw new Error('Session ID is required to delete events by session');
   }
 
+  let impactedUsers = [];
+  let impactedOrgs = [];
+  if (dbType === 'sqlite') {
+    const rows = db.prepare('SELECT DISTINCT user_id, org_id FROM telemetry_events WHERE session_id = ?').all(sessionId);
+    impactedUsers = rows.map(row => row.user_id).filter(Boolean);
+    impactedOrgs = rows.map(row => row.org_id).filter(Boolean);
+  } else if (dbType === 'postgresql') {
+    const result = await db.query('SELECT DISTINCT user_id, org_id FROM telemetry_events WHERE session_id = $1', [sessionId]);
+    impactedUsers = result.rows.map(row => row.user_id).filter(Boolean);
+    impactedOrgs = result.rows.map(row => row.org_id).filter(Boolean);
+  }
+
   if (dbType === 'sqlite') {
     const stmt = db.prepare('DELETE FROM telemetry_events WHERE session_id = ?');
     const result = stmt.run(sessionId);
+    if (result.changes > 0) {
+      await Promise.all([
+        impactedUsers.length ? recomputeUserEventStats(impactedUsers) : Promise.resolve(),
+        impactedOrgs.length ? recomputeOrgEventStats(impactedOrgs) : Promise.resolve()
+      ]);
+    }
     return result.changes;
   } else if (dbType === 'postgresql') {
     const result = await db.query('DELETE FROM telemetry_events WHERE session_id = $1', [sessionId]);
+    if (result.rowCount > 0) {
+      await Promise.all([
+        impactedUsers.length ? recomputeUserEventStats(impactedUsers) : Promise.resolve(),
+        impactedOrgs.length ? recomputeOrgEventStats(impactedOrgs) : Promise.resolve()
+      ]);
+    }
     return result.rowCount;
   }
 }
@@ -2297,6 +2353,610 @@ async function populateDenormalizedColumns() {
 }
 
 /**
+ * Ensure event statistics tables exist and are backfilled
+ * - user_event_stats: aggregated counters per user_id
+ * - org_event_stats: aggregated counters per org_id (for team calculations)
+ */
+async function ensureEventStatsTables() {
+  if (!db) {
+    return;
+  }
+
+  try {
+    if (dbType === 'sqlite') {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS user_event_stats (
+          user_id TEXT PRIMARY KEY,
+          event_count INTEGER NOT NULL DEFAULT 0,
+          last_event TEXT,
+          display_name TEXT
+        );
+        CREATE INDEX IF NOT EXISTS idx_user_event_stats_last_event ON user_event_stats(last_event);
+        CREATE TABLE IF NOT EXISTS org_event_stats (
+          org_id TEXT PRIMARY KEY,
+          event_count INTEGER NOT NULL DEFAULT 0,
+          last_event TEXT
+        );
+        CREATE INDEX IF NOT EXISTS idx_org_event_stats_last_event ON org_event_stats(last_event);
+      `);
+    } else if (dbType === 'postgresql') {
+      await db.query(`
+        CREATE TABLE IF NOT EXISTS user_event_stats (
+          user_id TEXT PRIMARY KEY,
+          event_count INTEGER NOT NULL DEFAULT 0,
+          last_event TIMESTAMPTZ,
+          display_name TEXT
+        );
+        CREATE INDEX IF NOT EXISTS idx_user_event_stats_last_event ON user_event_stats(last_event);
+        CREATE TABLE IF NOT EXISTS org_event_stats (
+          org_id TEXT PRIMARY KEY,
+          event_count INTEGER NOT NULL DEFAULT 0,
+          last_event TIMESTAMPTZ
+        );
+        CREATE INDEX IF NOT EXISTS idx_org_event_stats_last_event ON org_event_stats(last_event);
+      `);
+    }
+
+    await backfillEventStatsIfEmpty();
+  } catch (error) {
+    console.error('Error ensuring event stats tables:', error);
+  }
+}
+
+/**
+ * Convert any timestamp-ish input to ISO string for consistent ordering
+ */
+function normalizeStatsTimestamp(value) {
+  if (!value) {
+    return null;
+  }
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+  try {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date.toISOString();
+  } catch (_error) {
+    return null;
+  }
+}
+
+/**
+ * Backfill stats tables once so we start from the real totals
+ */
+async function backfillEventStatsIfEmpty() {
+  if (!db) {
+    return;
+  }
+
+  try {
+    const hasUserStats = dbType === 'sqlite'
+      ? (db.prepare('SELECT COUNT(*) as count FROM user_event_stats').get()?.count || 0) > 0
+      : (await db.query('SELECT COUNT(*) as count FROM user_event_stats')).rows.some(row => parseInt(row.count) > 0);
+    const hasOrgStats = dbType === 'sqlite'
+      ? (db.prepare('SELECT COUNT(*) as count FROM org_event_stats').get()?.count || 0) > 0
+      : (await db.query('SELECT COUNT(*) as count FROM org_event_stats')).rows.some(row => parseInt(row.count) > 0);
+
+    if (hasUserStats && hasOrgStats) {
+      return;
+    }
+
+    if (dbType === 'sqlite') {
+      if (!hasUserStats) {
+        const aggregatedUsers = db.prepare(`
+          SELECT
+            user_id,
+            COUNT(*) AS event_count,
+            MAX(timestamp) AS last_event,
+            (
+              SELECT user_name
+              FROM telemetry_events te2
+              WHERE te2.user_id = te.user_id
+                AND te2.user_name IS NOT NULL
+                AND TRIM(te2.user_name) != ''
+              ORDER BY te2.timestamp DESC
+              LIMIT 1
+            ) AS display_name
+          FROM telemetry_events te
+          WHERE user_id IS NOT NULL
+            AND TRIM(user_id) != ''
+          GROUP BY user_id
+        `).all();
+
+        const insertUserStat = db.prepare(`
+          INSERT INTO user_event_stats (user_id, event_count, last_event, display_name)
+          VALUES (?, ?, ?, ?)
+          ON CONFLICT(user_id) DO UPDATE SET
+            event_count = excluded.event_count,
+            last_event = excluded.last_event,
+            display_name = COALESCE(excluded.display_name, user_event_stats.display_name)
+        `);
+
+        aggregatedUsers.forEach(row => {
+          insertUserStat.run(row.user_id, row.event_count, row.last_event, row.display_name || null);
+        });
+      }
+
+      if (!hasOrgStats) {
+        const aggregatedOrgs = db.prepare(`
+          SELECT
+            org_id,
+            COUNT(*) AS event_count,
+            MAX(timestamp) AS last_event
+          FROM telemetry_events
+          WHERE org_id IS NOT NULL
+            AND TRIM(org_id) != ''
+          GROUP BY org_id
+        `).all();
+
+        const insertOrgStat = db.prepare(`
+          INSERT INTO org_event_stats (org_id, event_count, last_event)
+          VALUES (?, ?, ?)
+          ON CONFLICT(org_id) DO UPDATE SET
+            event_count = excluded.event_count,
+            last_event = excluded.last_event
+        `);
+
+        aggregatedOrgs.forEach(row => {
+          insertOrgStat.run(row.org_id, row.event_count, row.last_event);
+        });
+      }
+    } else if (dbType === 'postgresql') {
+      if (!hasUserStats) {
+        await db.query(`
+          INSERT INTO user_event_stats (user_id, event_count, last_event, display_name)
+          SELECT
+            user_id,
+            COUNT(*) AS event_count,
+            MAX(timestamp) AS last_event,
+            (
+              SELECT user_name
+              FROM telemetry_events te2
+              WHERE te2.user_id = te.user_id
+                AND te2.user_name IS NOT NULL
+                AND TRIM(te2.user_name) != ''
+              ORDER BY te2.timestamp DESC
+              LIMIT 1
+            ) AS display_name
+          FROM telemetry_events te
+          WHERE user_id IS NOT NULL
+            AND TRIM(user_id) != ''
+          GROUP BY user_id
+          ON CONFLICT (user_id) DO UPDATE SET
+            event_count = EXCLUDED.event_count,
+            last_event = EXCLUDED.last_event,
+            display_name = COALESCE(EXCLUDED.display_name, user_event_stats.display_name)
+        `);
+      }
+
+      if (!hasOrgStats) {
+        await db.query(`
+          INSERT INTO org_event_stats (org_id, event_count, last_event)
+          SELECT
+            org_id,
+            COUNT(*) AS event_count,
+            MAX(timestamp) AS last_event
+          FROM telemetry_events
+          WHERE org_id IS NOT NULL
+            AND TRIM(org_id) != ''
+          GROUP BY org_id
+          ON CONFLICT (org_id) DO UPDATE SET
+            event_count = EXCLUDED.event_count,
+            last_event = EXCLUDED.last_event
+        `);
+      }
+    }
+  } catch (error) {
+    console.error('Error backfilling event stats tables:', error);
+  }
+}
+
+async function upsertUserEventStats(userId, eventTimestamp, displayName = null) {
+  if (!db || !userId) {
+    return;
+  }
+  const normalizedTimestamp = normalizeStatsTimestamp(eventTimestamp) || new Date().toISOString();
+
+  if (dbType === 'sqlite') {
+    const stmt = getPreparedStatement('upsertUserEventStats', `
+      INSERT INTO user_event_stats (user_id, event_count, last_event, display_name)
+      VALUES (?, 1, ?, ?)
+      ON CONFLICT(user_id) DO UPDATE SET
+        event_count = user_event_stats.event_count + 1,
+        last_event = CASE
+          WHEN excluded.last_event IS NOT NULL
+               AND (user_event_stats.last_event IS NULL OR excluded.last_event > user_event_stats.last_event)
+          THEN excluded.last_event
+          ELSE user_event_stats.last_event
+        END,
+        display_name = COALESCE(excluded.display_name, user_event_stats.display_name)
+    `);
+    stmt.run(userId, normalizedTimestamp, displayName || null);
+  } else if (dbType === 'postgresql') {
+    await db.query(
+      `
+        INSERT INTO user_event_stats (user_id, event_count, last_event, display_name)
+        VALUES ($1, 1, $2, $3)
+        ON CONFLICT (user_id) DO UPDATE SET
+          event_count = user_event_stats.event_count + 1,
+          last_event = CASE
+            WHEN EXCLUDED.last_event IS NOT NULL
+                 AND (user_event_stats.last_event IS NULL OR EXCLUDED.last_event > user_event_stats.last_event)
+            THEN EXCLUDED.last_event
+            ELSE user_event_stats.last_event
+          END,
+          display_name = COALESCE(EXCLUDED.display_name, user_event_stats.display_name)
+      `,
+      [userId, normalizedTimestamp, displayName || null]
+    );
+  }
+}
+
+async function upsertOrgEventStats(orgId, eventTimestamp) {
+  if (!db || !orgId) {
+    return;
+  }
+  const normalizedTimestamp = normalizeStatsTimestamp(eventTimestamp) || new Date().toISOString();
+
+  if (dbType === 'sqlite') {
+    const stmt = getPreparedStatement('upsertOrgEventStats', `
+      INSERT INTO org_event_stats (org_id, event_count, last_event)
+      VALUES (?, 1, ?)
+      ON CONFLICT(org_id) DO UPDATE SET
+        event_count = org_event_stats.event_count + 1,
+        last_event = CASE
+          WHEN excluded.last_event IS NOT NULL
+               AND (org_event_stats.last_event IS NULL OR excluded.last_event > org_event_stats.last_event)
+          THEN excluded.last_event
+          ELSE org_event_stats.last_event
+        END
+    `);
+    stmt.run(orgId, normalizedTimestamp);
+  } else if (dbType === 'postgresql') {
+    await db.query(
+      `
+        INSERT INTO org_event_stats (org_id, event_count, last_event)
+        VALUES ($1, 1, $2)
+        ON CONFLICT (org_id) DO UPDATE SET
+          event_count = org_event_stats.event_count + 1,
+          last_event = CASE
+            WHEN EXCLUDED.last_event IS NOT NULL
+                 AND (org_event_stats.last_event IS NULL OR EXCLUDED.last_event > org_event_stats.last_event)
+            THEN EXCLUDED.last_event
+            ELSE org_event_stats.last_event
+          END
+      `,
+      [orgId, normalizedTimestamp]
+    );
+  }
+}
+
+async function updateAggregatedStatsForEvent(userId, orgId, eventTimestamp, displayName = null) {
+  const tasks = [];
+  if (userId) {
+    tasks.push(upsertUserEventStats(userId, eventTimestamp, displayName));
+  }
+  if (orgId) {
+    tasks.push(upsertOrgEventStats(orgId, eventTimestamp));
+  }
+  if (tasks.length > 0) {
+    await Promise.all(tasks);
+  }
+}
+
+async function recomputeUserEventStats(userIds = []) {
+  if (!db) {
+    return;
+  }
+  const uniqueIds = Array.from(new Set((userIds || []).filter(id => typeof id === 'string' && id.trim() !== '')));
+  if (uniqueIds.length === 0) {
+    return;
+  }
+
+  if (dbType === 'sqlite') {
+    const statsStmt = db.prepare(`
+      SELECT
+        COUNT(*) AS event_count,
+        MAX(timestamp) AS last_event,
+        (
+          SELECT user_name
+          FROM telemetry_events te2
+          WHERE te2.user_id = ?
+            AND te2.user_name IS NOT NULL
+            AND TRIM(te2.user_name) != ''
+          ORDER BY te2.timestamp DESC
+          LIMIT 1
+        ) AS display_name
+      FROM telemetry_events
+      WHERE user_id = ?
+    `);
+    const upsertStmt = db.prepare(`
+      INSERT INTO user_event_stats (user_id, event_count, last_event, display_name)
+      VALUES (?, ?, ?, ?)
+      ON CONFLICT(user_id) DO UPDATE SET
+        event_count = excluded.event_count,
+        last_event = excluded.last_event,
+        display_name = COALESCE(excluded.display_name, user_event_stats.display_name)
+    `);
+    const deleteStmt = db.prepare('DELETE FROM user_event_stats WHERE user_id = ?');
+
+    uniqueIds.forEach(userId => {
+      const stats = statsStmt.get(userId, userId);
+      const count = parseInt(stats?.event_count) || 0;
+      if (count === 0) {
+        deleteStmt.run(userId);
+        return;
+      }
+      upsertStmt.run(userId, count, stats.last_event || null, stats.display_name || null);
+    });
+  } else if (dbType === 'postgresql') {
+    for (const userId of uniqueIds) {
+      const { rows } = await db.query(
+        `
+          SELECT
+            COUNT(*) AS event_count,
+            MAX(timestamp) AS last_event,
+            (
+              SELECT user_name
+              FROM telemetry_events te2
+              WHERE te2.user_id = $1
+                AND te2.user_name IS NOT NULL
+                AND TRIM(te2.user_name) != ''
+              ORDER BY te2.timestamp DESC
+              LIMIT 1
+            ) AS display_name
+          FROM telemetry_events
+          WHERE user_id = $1
+        `,
+        [userId]
+      );
+      const stats = rows[0] || {};
+      const count = parseInt(stats.event_count) || 0;
+      if (count === 0) {
+        await db.query('DELETE FROM user_event_stats WHERE user_id = $1', [userId]);
+        continue;
+      }
+      await db.query(
+        `
+          INSERT INTO user_event_stats (user_id, event_count, last_event, display_name)
+          VALUES ($1, $2, $3, $4)
+          ON CONFLICT (user_id) DO UPDATE SET
+            event_count = EXCLUDED.event_count,
+            last_event = EXCLUDED.last_event,
+            display_name = COALESCE(EXCLUDED.display_name, user_event_stats.display_name)
+        `,
+        [userId, count, stats.last_event || null, stats.display_name || null]
+      );
+    }
+  }
+}
+
+async function recomputeOrgEventStats(orgIds = []) {
+  if (!db) {
+    return;
+  }
+  const uniqueIds = Array.from(new Set((orgIds || []).filter(id => typeof id === 'string' && id.trim() !== '')));
+  if (uniqueIds.length === 0) {
+    return;
+  }
+
+  if (dbType === 'sqlite') {
+    const statsStmt = db.prepare(`
+      SELECT
+        COUNT(*) AS event_count,
+        MAX(timestamp) AS last_event
+      FROM telemetry_events
+      WHERE org_id = ?
+    `);
+    const upsertStmt = db.prepare(`
+      INSERT INTO org_event_stats (org_id, event_count, last_event)
+      VALUES (?, ?, ?)
+      ON CONFLICT(org_id) DO UPDATE SET
+        event_count = excluded.event_count,
+        last_event = excluded.last_event
+    `);
+    const deleteStmt = db.prepare('DELETE FROM org_event_stats WHERE org_id = ?');
+
+    uniqueIds.forEach(orgId => {
+      const stats = statsStmt.get(orgId);
+      const count = parseInt(stats?.event_count) || 0;
+      if (count === 0) {
+        deleteStmt.run(orgId);
+        return;
+      }
+      upsertStmt.run(orgId, count, stats.last_event || null);
+    });
+  } else if (dbType === 'postgresql') {
+    for (const orgId of uniqueIds) {
+      const { rows } = await db.query(
+        `
+          SELECT
+            COUNT(*) AS event_count,
+            MAX(timestamp) AS last_event
+          FROM telemetry_events
+          WHERE org_id = $1
+        `,
+        [orgId]
+      );
+      const stats = rows[0] || {};
+      const count = parseInt(stats.event_count) || 0;
+      if (count === 0) {
+        await db.query('DELETE FROM org_event_stats WHERE org_id = $1', [orgId]);
+        continue;
+      }
+      await db.query(
+        `
+          INSERT INTO org_event_stats (org_id, event_count, last_event)
+          VALUES ($1, $2, $3)
+          ON CONFLICT (org_id) DO UPDATE SET
+            event_count = EXCLUDED.event_count,
+            last_event = EXCLUDED.last_event
+        `,
+        [orgId, count, stats.last_event || null]
+      );
+    }
+  }
+}
+
+async function resetEventStatsTables() {
+  if (!db) {
+    return;
+  }
+  if (dbType === 'sqlite') {
+    db.exec('DELETE FROM user_event_stats; DELETE FROM org_event_stats;');
+  } else if (dbType === 'postgresql') {
+    await db.query('DELETE FROM user_event_stats;');
+    await db.query('DELETE FROM org_event_stats;');
+  }
+}
+
+async function getUserEventStats() {
+  if (!db) {
+    throw new Error('Database not initialized. Call init() first.');
+  }
+
+  if (dbType === 'sqlite') {
+    const rows = db.prepare(`
+      SELECT user_id, display_name, event_count, last_event
+      FROM user_event_stats
+      ORDER BY
+        CASE WHEN last_event IS NULL THEN 1 ELSE 0 END,
+        last_event DESC,
+        user_id ASC
+    `).all();
+    return rows.map(row => ({
+      id: row.user_id,
+      label: (row.display_name || row.user_id || '').trim() || row.user_id || '',
+      eventCount: Number(row.event_count) || 0,
+      lastEvent: row.last_event || null
+    })).filter(entry => entry.id);
+  }
+
+  const { rows } = await db.query(`
+    SELECT user_id, display_name, event_count, last_event
+    FROM user_event_stats
+    ORDER BY
+      CASE WHEN last_event IS NULL THEN 1 ELSE 0 END,
+      last_event DESC,
+      user_id ASC
+  `);
+  return rows.map(row => ({
+    id: row.user_id,
+    label: (row.display_name || row.user_id || '').trim() || row.user_id || '',
+    eventCount: Number(row.event_count) || 0,
+    lastEvent: row.last_event || null
+  })).filter(entry => entry.id);
+}
+
+async function getOrgStatsMap() {
+  if (!db) {
+    throw new Error('Database not initialized. Call init() first.');
+  }
+
+  const statsMap = new Map();
+  if (dbType === 'sqlite') {
+    const rows = db.prepare('SELECT org_id, event_count, last_event FROM org_event_stats').all();
+    rows.forEach(row => {
+      if (row.org_id) {
+        statsMap.set(row.org_id.trim().toLowerCase(), {
+          orgId: row.org_id,
+          eventCount: Number(row.event_count) || 0,
+          lastEvent: row.last_event || null
+        });
+      }
+    });
+  } else {
+    const { rows } = await db.query('SELECT org_id, event_count, last_event FROM org_event_stats');
+    rows.forEach(row => {
+      if (row.org_id) {
+        statsMap.set(String(row.org_id).trim().toLowerCase(), {
+          orgId: row.org_id,
+          eventCount: Number(row.event_count) || 0,
+          lastEvent: row.last_event || null
+        });
+      }
+    });
+  }
+  return statsMap;
+}
+
+/**
+ * Aggregate team stats using org -> team mappings and org_event_stats totals.
+ * Only active mappings contribute to event counts.
+ */
+async function getTeamStats(orgTeamMappings = []) {
+  const normalizeTeamKey = (value) => String(value || '').trim().toLowerCase();
+  const normalizeOrgId = (value) => String(value || '').trim().toLowerCase();
+
+  const orgStats = await getOrgStatsMap();
+  const teamsMap = new Map();
+
+  if (Array.isArray(orgTeamMappings)) {
+    orgTeamMappings.forEach(mapping => {
+      const rawTeamName = String(mapping?.teamName || '').trim();
+      const rawOrgId = normalizeOrgId(mapping?.orgIdentifier);
+      const clientName = String(mapping?.clientName || '').trim();
+      const color = String(mapping?.color || '').trim();
+      const isActive = mapping?.active !== false;
+
+      if (!rawTeamName || !rawOrgId) {
+        return;
+      }
+
+      const teamKey = normalizeTeamKey(rawTeamName);
+      if (!teamsMap.has(teamKey)) {
+        teamsMap.set(teamKey, {
+          key: teamKey,
+          teamName: rawTeamName,
+          color: color,
+          clients: new Set(),
+          orgs: new Set(),
+          activeCount: 0,
+          inactiveCount: 0,
+          eventCount: 0
+        });
+      }
+
+      const entry = teamsMap.get(teamKey);
+      entry.orgs.add(rawOrgId);
+      if (clientName) {
+        entry.clients.add(clientName);
+      }
+      if (!entry.color && color) {
+        entry.color = color;
+      }
+      if (isActive) {
+        entry.activeCount += 1;
+      } else {
+        entry.inactiveCount += 1;
+      }
+    });
+  }
+
+  // Apply event counts based on org stats and only active mappings
+  orgStats.forEach((stats, orgKey) => {
+    orgTeamMappings
+      .filter(mapping => mapping?.active !== false && normalizeOrgId(mapping?.orgIdentifier) === orgKey)
+      .forEach(mapping => {
+        const teamKey = normalizeTeamKey(mapping.teamName);
+        const entry = teamsMap.get(teamKey);
+        if (entry) {
+          entry.eventCount += stats.eventCount;
+        }
+      });
+  });
+
+  return Array.from(teamsMap.values())
+    .map(entry => ({
+      ...entry,
+      clients: Array.from(entry.clients),
+      orgs: Array.from(entry.orgs),
+      totalMappings: entry.activeCount + entry.inactiveCount
+    }))
+    .sort((a, b) => a.teamName.localeCompare(b.teamName));
+}
+
+/**
  * Get a setting value by key
  * @param {string} key - The setting key
  * @returns {string|null} - The setting value or null if not found
@@ -2363,6 +3023,8 @@ module.exports = {
   getDailyStatsByEventType,
   getTopUsersLastDays,
   getTopTeamsLastDays,
+  getUserEventStats,
+  getTeamStats,
   deleteEvent,
   deleteAllEvents,
   deleteEventsBySession,

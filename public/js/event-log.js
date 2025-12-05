@@ -1376,6 +1376,7 @@ if (window.__EVENT_LOG_LOADED__) {
   let selectedTeamKey = null; // Lowercased team name acting as key
   let orgToTeamMap = new Map(); // org identifier -> team key
   let teamEventCounts = new Map(); // team key -> event count in current view
+  let teamEventCountsSource = 'local'; // 'server' uses aggregated counters, 'local' uses paged events
   let selectedActivityDate = null; // null means use current day by default
   let activeFilters = new Set(['tool_call', 'session_start', 'custom', 'tool_error']);
   let selectedUserIds = new Set(); // Will be populated with all users when loaded - all selected by default
@@ -3235,22 +3236,30 @@ if (window.__EVENT_LOG_LOADED__) {
       // Clear the list
       userList.innerHTML = '';
 
-      // Normalize API response to consistent objects { id, label }
+      // Normalize API response to consistent objects { id, label, count, last_event }
       const normalizedUsers = (Array.isArray(data) ? data : [])
         .map(entry => {
-          if (entry && typeof entry === 'object' && typeof entry.id === 'string') {
-            const trimmedId = entry.id.trim();
+          if (entry && typeof entry === 'object') {
+            const rawId = typeof entry.id === 'string' ? entry.id : (typeof entry.user_id === 'string' ? entry.user_id : '');
+            const trimmedId = rawId.trim();
             if (!trimmedId) {
               return null;
             }
             const label = typeof entry.label === 'string' && entry.label.trim() !== ''
               ? entry.label.trim()
               : trimmedId;
-            return { id: trimmedId, label };
+            const count = Number.isFinite(entry.eventCount)
+              ? Number(entry.eventCount)
+              : (Number.isFinite(entry.count) ? Number(entry.count) : 0);
+            const lastEvent = entry.lastEvent || entry.last_event || null;
+            const userName = entry.user_name || label;
+            return { id: trimmedId, label, count, last_event: lastEvent, user_name: userName };
           }
           if (typeof entry === 'string') {
             const trimmedValue = entry.trim();
-            return trimmedValue ? { id: trimmedValue, label: trimmedValue } : null;
+            return trimmedValue
+              ? { id: trimmedValue, label: trimmedValue, count: 0, last_event: null, user_name: trimmedValue }
+              : null;
           }
           return null;
         })
@@ -3267,49 +3276,14 @@ if (window.__EVENT_LOG_LOADED__) {
         return;
       }
 
-      // Get sessions to calculate user statistics
-      const sessionsResponse = await fetch('/api/sessions', {
-        credentials: 'include'
-      });
-      const sessionsValidResponse = await handleApiResponse(sessionsResponse);
-      const sessions = sessionsValidResponse ? await sessionsValidResponse.json() : [];
-
-      // Create a map of user_id -> sessions for quick lookup
-      const userSessionsMap = new Map();
-      sessions.forEach(session => {
-        if (session && session.user_id) {
-          if (!userSessionsMap.has(session.user_id)) {
-            userSessionsMap.set(session.user_id, []);
-          }
-          userSessionsMap.get(session.user_id).push(session);
-        }
-      });
-
       // Sort users by last activity (most recent first)
       const usersWithStats = normalizedUsers.map(user => {
-        const userSessions = userSessionsMap.get(user.id) || [];
-        let lastEvent = null;
-        let totalCount = 0;
-        let user_name = null;
-
-        if (userSessions.length > 0) {
-        // Sort sessions by last_event DESC
-          userSessions.sort((a, b) => {
-            const dateA = new Date(a.last_event || 0);
-            const dateB = new Date(b.last_event || 0);
-            return dateB - dateA;
-          });
-          lastEvent = userSessions[0].last_event;
-          totalCount = userSessions.reduce((sum, s) => sum + (s.count || 0), 0);
-          user_name = userSessions[0].user_name;
-        }
-
         return {
           user_id: user.id,
           label: user.label,
-          count: totalCount,
-          last_event: lastEvent,
-          user_name: user_name
+          count: user.count || 0,
+          last_event: user.last_event || null,
+          user_name: user.user_name || user.label
         };
       }).sort((a, b) => {
       // Sort by last_event DESC, users without events go to the end
@@ -3376,65 +3350,122 @@ if (window.__EVENT_LOG_LOADED__) {
         return;
       }
 
-      const mappings = await getOrgTeamMappings();
-      const teamsMap = new Map();
-      orgToTeamMap = new Map();
+      let teams = [];
+      let aggregatedTeams = [];
 
-      // Ensure mappings is an array before iterating
-      if (!Array.isArray(mappings)) {
-        console.error('Expected mappings to be an array, but got:', typeof mappings, mappings);
-        return;
-      }
-
-      mappings.forEach((mapping) => {
-        const rawName = (mapping?.teamName || '').trim();
-        if (!rawName) {
-          return;
-        }
-        const key = rawName.toLowerCase();
-        if (!teamsMap.has(key)) {
-          teamsMap.set(key, {
-            teamName: rawName,
-            color: mapping?.color?.trim() || '',
-            clients: new Set(),
-            orgs: new Set(),
-            activeCount: 0,
-            inactiveCount: 0
-          });
-        }
-        const entry = teamsMap.get(key);
-        const client = (mapping?.clientName || '').trim();
-        const org = (mapping?.orgIdentifier || '').trim();
-        if (client) {
-          entry.clients.add(client);
-        }
-        if (org) {
-          const normalizedOrg = normalizeOrgIdentifier(org);
-          if (normalizedOrg) {
-            entry.orgs.add(org);
-            orgToTeamMap.set(normalizedOrg, key);
+      try {
+        const statsResponse = await fetch('/api/team-stats', { credentials: 'include' });
+        const validStatsResponse = await handleApiResponse(statsResponse);
+        if (validStatsResponse) {
+          const statsData = await validStatsResponse.json();
+          if (statsData && Array.isArray(statsData.teams)) {
+            aggregatedTeams = statsData.teams;
           }
         }
-        if (entry.color === '' && mapping?.color) {
-          entry.color = mapping.color.trim();
-        }
-        if (mapping?.active === false) {
-          entry.inactiveCount += 1;
-        } else {
-          entry.activeCount += 1;
-        }
-      });
+      } catch (error) {
+        console.warn('Error fetching aggregated team stats:', error);
+      }
 
-      const teams = Array.from(teamsMap.entries())
-        .map(([key, team]) => ({
-          key,
-          ...team,
-          clients: Array.from(team.clients),
-          orgs: Array.from(team.orgs),
-          totalMappings: team.activeCount + team.inactiveCount,
-          eventCount: teamEventCounts.get(key) || 0
-        }))
-        .sort((a, b) => a.teamName.localeCompare(b.teamName));
+      if (aggregatedTeams.length > 0) {
+        teamEventCountsSource = 'server';
+        teamEventCounts = new Map();
+        orgToTeamMap = new Map();
+
+        teams = aggregatedTeams.map(team => {
+          const key = (team.key || team.teamName || '').trim().toLowerCase();
+          const activeCount = Number(team.activeCount) || 0;
+          const inactiveCount = Number(team.inactiveCount) || 0;
+          const totalMappings = Number.isFinite(team.totalMappings)
+            ? Number(team.totalMappings)
+            : activeCount + inactiveCount;
+
+          if (key) {
+            const safeCount = Number(team.eventCount) || 0;
+            teamEventCounts.set(key, safeCount);
+            if (Array.isArray(team.orgs)) {
+              team.orgs.forEach(org => {
+                const normalizedOrg = normalizeOrgIdentifier(org);
+                if (normalizedOrg) {
+                  orgToTeamMap.set(normalizedOrg, key);
+                }
+              });
+            }
+          }
+
+          return {
+            key,
+            teamName: team.teamName || team.label || key || 'Unnamed team',
+            color: (team.color || '').trim(),
+            clients: Array.isArray(team.clients) ? team.clients : [],
+            orgs: Array.isArray(team.orgs) ? team.orgs : [],
+            activeCount,
+            inactiveCount,
+            totalMappings,
+            eventCount: Number(team.eventCount) || 0
+          };
+        }).filter(team => team.key).sort((a, b) => a.teamName.localeCompare(b.teamName));
+      } else {
+        const mappings = await getOrgTeamMappings();
+        const teamsMap = new Map();
+        orgToTeamMap = new Map();
+        teamEventCountsSource = 'local';
+
+        // Ensure mappings is an array before iterating
+        if (!Array.isArray(mappings)) {
+          console.error('Expected mappings to be an array, but got:', typeof mappings, mappings);
+          return;
+        }
+
+        mappings.forEach((mapping) => {
+          const rawName = (mapping?.teamName || '').trim();
+          if (!rawName) {
+            return;
+          }
+          const key = rawName.toLowerCase();
+          if (!teamsMap.has(key)) {
+            teamsMap.set(key, {
+              teamName: rawName,
+              color: mapping?.color?.trim() || '',
+              clients: new Set(),
+              orgs: new Set(),
+              activeCount: 0,
+              inactiveCount: 0
+            });
+          }
+          const entry = teamsMap.get(key);
+          const client = (mapping?.clientName || '').trim();
+          const org = (mapping?.orgIdentifier || '').trim();
+          if (client) {
+            entry.clients.add(client);
+          }
+          if (org) {
+            const normalizedOrg = normalizeOrgIdentifier(org);
+            if (normalizedOrg) {
+              entry.orgs.add(org);
+              orgToTeamMap.set(normalizedOrg, key);
+            }
+          }
+          if (entry.color === '' && mapping?.color) {
+            entry.color = mapping.color.trim();
+          }
+          if (mapping?.active === false) {
+            entry.inactiveCount += 1;
+          } else {
+            entry.activeCount += 1;
+          }
+        });
+
+        teams = Array.from(teamsMap.entries())
+          .map(([key, team]) => ({
+            key,
+            ...team,
+            clients: Array.from(team.clients),
+            orgs: Array.from(team.orgs),
+            totalMappings: team.activeCount + team.inactiveCount,
+            eventCount: teamEventCounts.get(key) || 0
+          }))
+          .sort((a, b) => a.teamName.localeCompare(b.teamName));
+      }
 
       teamList.innerHTML = '';
 
@@ -3509,6 +3540,21 @@ if (window.__EVENT_LOG_LOADED__) {
   }
 
   function updateTeamEventCounts(events = []) {
+    if (teamEventCountsSource === 'server') {
+      // Use precomputed counters from the backend; just refresh the UI badges
+      const teamItemsServer = document.querySelectorAll('#teamList .session-item[data-team-key]');
+      teamItemsServer.forEach((item) => {
+        const key = item.dataset.teamKey;
+        const count = teamEventCounts.get(key) || 0;
+        const badge = item.querySelector('.team-event-count');
+        if (badge) {
+          badge.textContent = count;
+        }
+        item.classList.toggle('active', selectedTeamKey === key);
+      });
+      return;
+    }
+
     const counts = new Map();
     events.forEach((event) => {
       const teamKey = getTeamKeyForEvent(event);

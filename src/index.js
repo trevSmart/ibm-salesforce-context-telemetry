@@ -910,26 +910,51 @@ app.get('/api/top-teams-today', auth.requireAuth, async (req, res) => {
   }
 });
 
+app.get('/api/team-stats', auth.requireAuth, auth.requireRole('advanced'), async (_req, res) => {
+  try {
+    const mappingsJson = await db.getSetting('org_team_mappings');
+    let mappings = [];
+    if (mappingsJson) {
+      try {
+        const parsed = JSON.parse(mappingsJson);
+        mappings = Array.isArray(parsed) ? parsed : [];
+      } catch (error) {
+        console.warn('Error parsing org-team mappings, using empty array:', error);
+        mappings = [];
+      }
+    }
+
+    const teams = await db.getTeamStats(mappings);
+    res.json({ teams });
+  } catch (error) {
+    console.error('Error fetching team stats:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to fetch team stats'
+    });
+  }
+});
+
 app.get('/api/telemetry-users', auth.requireAuth, auth.requireRole('advanced'), async (req, res) => {
   try {
-    // Use cache for user IDs since they don't change frequently
-    const cacheKey = 'userIds:all';
+    // Use cache because counts are maintained eagerly during writes
+    const cacheKey = 'userStats:all';
     const cached = userIdsCache.get(cacheKey);
     if (cached) {
       return res.json(cached);
     }
 
-    const userIds = await db.getUniqueUserIds();
+    const userStats = await db.getUserEventStats();
 
     // Cache the result
-    userIdsCache.set(cacheKey, userIds);
+    userIdsCache.set(cacheKey, userStats);
 
-    res.json(userIds);
+    res.json(userStats);
   } catch (error) {
-    console.error('Error fetching unique user IDs:', error);
+    console.error('Error fetching user event stats:', error);
     res.status(500).json({
       status: 'error',
-      message: 'Failed to fetch unique user IDs'
+      message: 'Failed to fetch user event stats'
     });
   }
 });
@@ -1070,6 +1095,9 @@ app.delete('/api/events/:id', auth.requireAuth, auth.requireRole('advanced'), as
 
     const deleted = await db.deleteEvent(eventId);
     if (deleted) {
+      statsCache.clear();
+      sessionsCache.clear();
+      userIdsCache.clear();
       res.json({
         status: 'ok',
         message: 'Event deleted successfully'
@@ -1096,6 +1124,9 @@ app.delete('/api/events', auth.requireAuth, auth.requireRole('advanced'), async 
 
     if (sessionId) {
       const deletedCount = await db.deleteEventsBySession(sessionId);
+      statsCache.clear();
+      sessionsCache.clear();
+      userIdsCache.clear();
       return res.json({
         status: 'ok',
         message: `Successfully deleted ${deletedCount} events from session ${sessionId}`,
@@ -1105,6 +1136,9 @@ app.delete('/api/events', auth.requireAuth, auth.requireRole('advanced'), async 
     }
 
     const deletedCount = await db.deleteAllEvents();
+    statsCache.clear();
+    sessionsCache.clear();
+    userIdsCache.clear();
     res.json({
       status: 'ok',
       message: `Successfully deleted ${deletedCount} events`,
