@@ -54,7 +54,7 @@
     "livereload": "^0.10.3",
     "nodemon": "^3.1.0",
     "postcss": "^8.4.47",
-    "tailwindcss": "^3.4.13"
+    "tailwindcss": "^4.1.17"
   },
   "build": {
     "appId": "com.ibm.context.telemetry.viewer",
