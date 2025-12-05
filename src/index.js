@@ -212,7 +212,7 @@ app.get('/health', async (req, res) => {
       let totalEvents = 0;
       
       try {
-        // Use cached stats from cache instead of querying DB
+        // Use cached stats from cache instead of querying DB (use same key format as /api/stats)
         const cachedStats = statsCache.get('stats:::');
         if (cachedStats) {
           dbStatus = 'connected';
@@ -222,6 +222,8 @@ app.get('/health', async (req, res) => {
           const stats = await db.getStats();
           dbStatus = 'connected';
           totalEvents = stats.total || 0;
+          // Cache for next health check
+          statsCache.set('stats:::', stats);
         }
       } catch (error) {
         dbStatus = 'error';
