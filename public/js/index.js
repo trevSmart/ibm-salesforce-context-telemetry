@@ -516,6 +516,8 @@ async function openSettingsModal() {
   const savedTheme = localStorage.getItem('theme') || getSystemTheme();
   const isDarkTheme = savedTheme === 'dark';
   const showServerStats = localStorage.getItem('showServerStats') !== 'false';
+  const autoRefreshEnabled = localStorage.getItem('autoRefreshEnabled') === 'true';
+  const autoRefreshInterval = localStorage.getItem('autoRefreshInterval') || '';
 
   // Build sidebar navigation
   const sidebarNav = `
@@ -600,6 +602,31 @@ async function openSettingsModal() {
 							<button type="button" class="confirm-modal-btn" id="manageOrgTeamMappingBtn">
 								<i class="fa-solid fa-users user-menu-icon"></i>Manage teams
 							</button>
+						</div>
+						<div class="settings-toggle-row" style="margin-top: 16px;">
+							<div class="settings-toggle-text" style="flex: 1;">
+								<div class="settings-toggle-title">Refresh every X minutes</div>
+								<div class="settings-toggle-description">
+									Automatically refresh the events list at the specified interval.
+								</div>
+							</div>
+							<div style="display: flex; align-items: center; gap: 8px;">
+								<label class="relative inline-flex items-center cursor-pointer" style="margin: 0;">
+									<input type="checkbox" class="sr-only peer" id="autoRefreshToggle" ${autoRefreshEnabled ? 'checked' : ''} aria-label="Toggle auto refresh">
+									<div class="w-11 h-6 bg-gray-200 dark:bg-gray-700 rounded-full peer peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600 transition-colors duration-200 ease-in-out">
+										<div class="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform duration-200 ease-in-out transform peer-checked:translate-x-5"></div>
+									</div>
+								</label>
+								<div style="position: relative;">
+									<select id="autoRefreshInterval" style="padding: 6px 24px 6px 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 14px; cursor: pointer; appearance: none; min-width: 80px;" ${autoRefreshEnabled ? '' : 'disabled'}>
+										<option value="" ${autoRefreshInterval === '' ? 'selected' : ''}>Off</option>
+										<option value="3" ${autoRefreshInterval === '3' ? 'selected' : ''}>3</option>
+										<option value="5" ${autoRefreshInterval === '5' ? 'selected' : ''}>5</option>
+										<option value="10" ${autoRefreshInterval === '10' ? 'selected' : ''}>10</option>
+									</select>
+									<i class="fa-solid fa-chevron-down" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); color: var(--text-secondary); font-size: 10px; pointer-events: none;"></i>
+								</div>
+							</div>
 						</div>
 					</section>
 					<section id="settings-teams" class="settings-section" style="display: none;">
@@ -824,6 +851,22 @@ async function openSettingsModal() {
       const enabled = e.target.checked;
       localStorage.setItem('showServerStats', enabled ? 'true' : 'false');
       updateServerStatsVisibility();
+    });
+  }
+
+  const autoRefreshToggle = modal.querySelector('#autoRefreshToggle');
+  const autoRefreshIntervalSelect = modal.querySelector('#autoRefreshInterval');
+
+  if (autoRefreshToggle && autoRefreshIntervalSelect) {
+    autoRefreshToggle.addEventListener('change', (e) => {
+      const enabled = e.target.checked;
+      localStorage.setItem('autoRefreshEnabled', enabled ? 'true' : 'false');
+      autoRefreshIntervalSelect.disabled = !enabled;
+    });
+
+    autoRefreshIntervalSelect.addEventListener('change', (e) => {
+      const interval = e.target.value;
+      localStorage.setItem('autoRefreshInterval', interval);
     });
   }
 
