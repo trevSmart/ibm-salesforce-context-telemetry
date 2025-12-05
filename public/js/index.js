@@ -1941,6 +1941,7 @@ async function loadChartData(days = currentDays) {
     const isDark = document.documentElement.classList.contains('dark');
     const textColor = isDark ? '#a1a1aa' : '#52525b';
     const gridColor = isDark ? '#50515c' : '#eaecf2';
+    const faintGridColor = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)';
     const axisPointerBg = isDark ? '#27272a' : '#ffffff';
 
     // Colors for start sessions without end (match session badge blue)
@@ -2001,13 +2002,13 @@ async function loadChartData(days = currentDays) {
               const value = Number(params.value);
               return Number.isFinite(value) ? value : 0;
             },
-            fontSize: 9,
+            fontSize: 9.8,
             color: '#ffffff',
             backgroundColor: startSessionsColor,
             padding: [2, 5],
             borderRadius: 999,
             distance: 1,
-            offset: [-8, -2]
+            offset: [-9, -2]
           },
           emphasis: {
             focus: 'series',
@@ -2036,7 +2037,7 @@ async function loadChartData(days = currentDays) {
               const value = Number(params.value);
               return Number.isFinite(value) ? value : 0;
             },
-            fontSize: 9,
+            fontSize: 9.8,
             color: '#ffffff',
             backgroundColor: toolEventsColor,
             padding: [2, 5],
@@ -2071,13 +2072,13 @@ async function loadChartData(days = currentDays) {
               const value = Number(params.value);
               return Number.isFinite(value) ? value : 0;
             },
-            fontSize: 9,
+            fontSize: 9.8,
             color: '#ffffff',
             backgroundColor: errorEventsColor,
             padding: [2, 5],
             borderRadius: 999,
             distance: 1,
-            offset: [8, -2]
+            offset: [9, -2]
           },
           emphasis: {
             focus: 'series',
@@ -2120,7 +2121,7 @@ async function loadChartData(days = currentDays) {
               const value = Number(params.value);
               return Number.isFinite(value) ? value : 0;
             },
-            fontSize: 9,
+            fontSize: 9.8,
             color: '#ffffff',
             backgroundColor: totalEventsColor,
             padding: [2, 5],
@@ -2240,7 +2241,11 @@ async function loadChartData(days = currentDays) {
           }
         },
         splitLine: {
-          show: false
+          show: true,
+          lineStyle: {
+            color: faintGridColor,
+            width: 1
+          }
         }
       },
       series: series

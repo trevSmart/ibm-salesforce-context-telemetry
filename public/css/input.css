@@ -584,14 +584,14 @@
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: 15px;
   }
 
   .container-content {
     padding: 0;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 20px;
     min-height: 0;
     height: 100%;
     flex: 1 1 auto;
@@ -604,9 +604,9 @@
 
 
   .dashboard-footer {
-    /* margin-top: 32px; */
-    padding-top: 3px;
-    /* border-top: 1px solid #e4e4e7; */
+    margin-top: 34px;
+    padding: 18px 0 0px 0;
+    border-top: 1px solid var(--border-color);
     font-size: 14px;
     font-weight: 400;
     color: var(--text-primary);
@@ -1814,15 +1814,9 @@
   }
 
   .sidebar-header {
-    padding: 20px 12px;
+    padding: 10px 20px;
     border-bottom: none;
     flex-shrink: 0;
-  }
-
-  @media (min-width: 768px) {
-    .sidebar-header {
-      padding: 20px;
-    }
   }
 
   .sidebar-content {
@@ -1832,7 +1826,7 @@
     overflow: hidden;
     min-height: 0;
     padding: 0 12px 20px 12px;
-    padding-top: 20px;
+    text-align: start;
   }
 
   @media (min-width: 768px) {
@@ -2427,7 +2421,7 @@
 
   .session-activity-header {
     display: flex;
-    gap: 16px;
+    gap: 0;
     margin-bottom: 10px;
   }
 
@@ -2645,6 +2639,7 @@
     min-height: 0;
     display: flex;
     flex-direction: column;
+    text-align: start;
   }
 
   .logs-table-container > div:last-child {
@@ -2670,6 +2665,7 @@
     position: sticky;
     top: 0;
     z-index: 10;
+    background: slategray;
   }
 
   html.dark .logs-table thead {
