@@ -581,6 +581,7 @@
     max-width: 1250px;
     width: min(95vw, 1250px);
     height: 85vh;
+    min-height: 89vh;
     background: #e8ebec;
     backdrop-filter: blur(10px);
     padding: 25px 32px 20px;
