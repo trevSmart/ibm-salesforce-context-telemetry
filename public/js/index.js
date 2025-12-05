@@ -592,20 +592,9 @@ async function openSettingsModal() {
 					</section>
 					<section id="settings-events" class="settings-section">
 						<div class="settings-modal-placeholder-title">Events</div>
-						<div class="settings-toggle-row">
-							<div class="settings-toggle-text">
-								<div class="settings-toggle-title">Org – Client – Team mapping</div>
-								<div class="settings-toggle-description">
-									Define how Salesforce org identifiers map to clients and teams. This mapping is used to group telemetry in the Teams view.
-								</div>
-							</div>
-							<button type="button" class="confirm-modal-btn" id="manageOrgTeamMappingBtn">
-								<i class="fa-solid fa-users user-menu-icon"></i>Manage teams
-							</button>
-						</div>
 						<div class="settings-toggle-row" style="margin-top: 16px;">
 							<div class="settings-toggle-text" style="flex: 1;">
-								<div class="settings-toggle-title">Refresh every X minutes</div>
+								<div class="settings-toggle-title">Automatic refresh</div>
 								<div class="settings-toggle-description">
 									Automatically refresh the events list at the specified interval.
 								</div>
@@ -630,71 +619,49 @@ async function openSettingsModal() {
 						</div>
 					</section>
 					<section id="settings-teams" class="settings-section" style="display: none;">
-						<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-							<div class="settings-modal-placeholder-title" style="margin: 0;">Teams</div>
-							<button type="button" class="confirm-modal-btn" id="addTeamBtn" style="display: flex; align-items: center; gap: 6px;">
-								<i class="fa-solid fa-plus" style="font-size: 12px;"></i>Add Team
-							</button>
+						<div class="settings-modal-placeholder-title" style="margin-bottom: 6px;">Org – Client – Team mapping</div>
+						<p class="settings-modal-placeholder-text" style="margin-bottom: 12px;">
+							Manage how Salesforce org identifiers are associated with clients and teams. This configuration is stored only in this browser.
+						</p>
+						<div id="orgTeamMappingList" style="max-height: 260px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 10px; margin-bottom: 12px;">
 						</div>
-						<div style="display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;">
-							<div style="position: relative; flex: 1; min-width: 200px;">
-								<i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-secondary); font-size: 14px;"></i>
-								<input type="text" id="teamsSearchInput" placeholder="Search..."
-									style="width: 100%; padding: 8px 12px 8px 36px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 14px;">
+						<form id="orgTeamMappingForm" class="settings-toggle-row" style="flex-direction: column; align-items: stretch; gap: 10px; padding-top: 4px; padding-bottom: 0;">
+							<input type="hidden" id="orgTeamMappingEditingId" value="">
+							<div style="display: flex; flex-direction: column; gap: 6px;">
+								<label class="settings-modal-placeholder-text">
+									Salesforce org identifier
+									<input id="orgIdentifierInput" type="text" placeholder="Org ID or unique org key"
+										style="margin-top: 2px; width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 0.8rem;">
+								</label>
+								<label class="settings-modal-placeholder-text">
+									Client name
+									<input id="clientNameInput" type="text" placeholder="Client"
+										style="margin-top: 2px; width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 0.8rem;">
+								</label>
+								<label class="settings-modal-placeholder-text">
+									Team name
+									<input id="teamNameInput" type="text" placeholder="Team"
+										style="margin-top: 2px; width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 0.8rem;">
+								</label>
+								<label class="settings-modal-placeholder-text">
+									Color (optional)
+									<input id="teamColorInput" type="text" placeholder="#2195cf or CSS color name"
+										style="margin-top: 2px; width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 0.8rem;">
+								</label>
+								<label class="settings-modal-placeholder-text" style="display: flex; align-items: center; gap: 6px; margin-top: 4px;">
+									<input id="mappingActiveInput" type="checkbox" checked style="width: 14px; height: 14px;">
+									<span>Active mapping</span>
+								</label>
 							</div>
-							<div style="position: relative;">
-								<button type="button" id="teamsFilterBtn" class="confirm-modal-btn confirm-modal-btn-cancel" style="display: flex; align-items: center; gap: 6px; padding: 8px 12px;">
-									<i class="fa-solid fa-filter" style="font-size: 12px;"></i>
-									<span id="teamsFilterBadge" style="display: none; background: var(--text-primary); color: var(--bg-primary); border-radius: 10px; padding: 2px 6px; font-size: 11px; margin-left: 4px;">1</span>
+							<div class="confirm-modal-actions" style="width: 100%; justify-content: space-between; margin-top: 4px;">
+								<button type="button" class="confirm-modal-btn confirm-modal-btn-cancel" id="resetOrgTeamMappingFormBtn">
+									Clear form
 								</button>
-							</div>
-							<button type="button" class="confirm-modal-btn confirm-modal-btn-cancel" style="padding: 8px 12px;">
-								<i class="fa-solid fa-gear" style="font-size: 12px;"></i>
+								<button type="submit" class="confirm-modal-btn confirm-modal-btn-confirm">
+									Save mapping
 							</button>
-							<div style="position: relative;">
-								<select id="teamsSortSelect" style="padding: 8px 32px 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 14px; cursor: pointer; appearance: none;">
-									<option>Sort by</option>
-									<option value="name-asc">Name (A-Z)</option>
-									<option value="name-desc">Name (Z-A)</option>
-									<option value="members-asc">Members (Low to High)</option>
-									<option value="members-desc">Members (High to Low)</option>
-									<option value="activity-desc">Last Activity (Recent)</option>
-									<option value="activity-asc">Last Activity (Oldest)</option>
-								</select>
-								<i class="fa-solid fa-chevron-down" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--text-secondary); font-size: 10px; pointer-events: none;"></i>
 							</div>
-						</div>
-						<div class="settings-teams-table-wrapper">
-							<table id="teamsTable" class="settings-teams-table">
-								<thead>
-									<tr>
-										<th class="settings-teams-checkbox-column">
-											<input type="checkbox" id="teamsSelectAll" style="cursor: pointer;">
-										</th>
-										<th>
-											Team Name
-											<i class="fa-solid fa-arrows-up-down" style="margin-left: 6px; font-size: 10px; color: var(--text-secondary);"></i>
-										</th>
-										<th>
-											Members
-											<i class="fa-solid fa-arrows-up-down" style="margin-left: 6px; font-size: 10px; color: var(--text-secondary);"></i>
-										</th>
-										<th>
-											Last Activity
-											<i class="fa-solid fa-arrows-up-down" style="margin-left: 6px; font-size: 10px; color: var(--text-secondary);"></i>
-										</th>
-										<th>
-											Status
-											<i class="fa-solid fa-arrows-up-down" style="margin-left: 6px; font-size: 10px; color: var(--text-secondary);"></i>
-										</th>
-										<th class="settings-teams-actions-column"></th>
-									</tr>
-								</thead>
-								<tbody id="teamsTableBody">
-									<!-- Teams will be populated here -->
-								</tbody>
-							</table>
-						</div>
+						</form>
 					</section>
 					${isAdministrator ? `
 					<section id="settings-users" class="settings-section settings-users-section" style="display: none;">
@@ -724,6 +691,7 @@ async function openSettingsModal() {
 								</tbody>
 							</table>
 						</div>
+						<div id="userFormContainer" class="settings-users-inline-form" style="display: none;"></div>
 					</section>
 					` : ''}
 					<section id="settings-danger" class="settings-danger-section">
@@ -829,13 +797,6 @@ async function openSettingsModal() {
     closeIconBtn.addEventListener('click', closeSettingsModal);
   }
 
-  const manageBtn = modal.querySelector('#manageOrgTeamMappingBtn');
-  if (manageBtn) {
-    manageBtn.addEventListener('click', () => {
-      openOrgTeamMappingModal();
-    });
-  }
-
   const darkThemeToggle = modal.querySelector('#darkThemeToggle');
   if (darkThemeToggle) {
     darkThemeToggle.addEventListener('change', (e) => {
@@ -919,125 +880,141 @@ async function openSettingsModal() {
     showSection(firstSectionId);
   }
 
-  // Teams section functionality
+  // Teams mapping section (local-only configuration)
   const teamsSection = modal.querySelector('#settings-teams');
   if (teamsSection) {
-    // Dummy teams data
-    const dummyTeams = [
-      { id: 1, name: 'Development Team', members: 8, lastActivity: 'Today, 3:52 PM', status: 'Active' },
-      { id: 2, name: 'QA Team', members: 5, lastActivity: 'Yesterday, 8:21 AM', status: 'Active' },
-      { id: 3, name: 'DevOps Team', members: 4, lastActivity: 'Sep 24, 2023 at 2:10 PM', status: 'Active' },
-      { id: 4, name: 'Sales Team', members: 12, lastActivity: 'Sep 23, 2023 at 1:30 PM', status: 'Active' },
-      { id: 5, name: 'Support Team', members: 6, lastActivity: 'Sep 22, 2023 at 4:45 PM', status: 'Inactive' },
-      { id: 6, name: 'Marketing Team', members: 7, lastActivity: 'Sep 21, 2023 at 10:15 AM', status: 'Active' }
-    ];
+    const listContainer = teamsSection.querySelector('#orgTeamMappingList');
+    const form = teamsSection.querySelector('#orgTeamMappingForm');
+    const editingIdInput = teamsSection.querySelector('#orgTeamMappingEditingId');
+    const orgInput = teamsSection.querySelector('#orgIdentifierInput');
+    const clientInput = teamsSection.querySelector('#clientNameInput');
+    const teamInput = teamsSection.querySelector('#teamNameInput');
+    const colorInput = teamsSection.querySelector('#teamColorInput');
+    const activeInput = teamsSection.querySelector('#mappingActiveInput');
+    const resetFormBtn = teamsSection.querySelector('#resetOrgTeamMappingFormBtn');
 
-    let filteredTeams = [...dummyTeams];
-    const teamsTableBody = modal.querySelector('#teamsTableBody');
-    const teamsSearchInput = modal.querySelector('#teamsSearchInput');
-    const teamsSortSelect = modal.querySelector('#teamsSortSelect');
-    const teamsSelectAll = modal.querySelector('#teamsSelectAll');
-    const addTeamBtn = modal.querySelector('#addTeamBtn');
+    function renderMappings() {
+      if (!listContainer) return;
+      const mappings = getOrgTeamMappings();
+      if (!mappings.length) {
+        listContainer.innerHTML = `
+          <div class="settings-modal-placeholder-text">
+            No mappings defined yet. Add a mapping using the form below.
+          </div>
+        `;
+        return;
+      }
 
-    function renderTeams() {
-      if (!teamsTableBody) return;
-
-      teamsTableBody.innerHTML = filteredTeams.map(team => {
-        const statusClass = team.status === 'Active' ? 'active' : 'inactive';
-        const statusLabel = escapeHtml(team.status);
-        return `
-					<tr class="settings-teams-row">
-						<td class="settings-teams-cell settings-teams-checkbox-cell">
-							<input type="checkbox" class="team-checkbox" data-team-id="${team.id}" style="cursor: pointer;">
-						</td>
-						<td class="settings-teams-cell">
-							<div class="settings-team-overview">
-								<div class="settings-teams-avatar">
-									${team.name.charAt(0).toUpperCase()}
+      const rowsHtml = mappings
+        .map((mapping, index) => {
+          const safeOrg = escapeHtml(mapping.orgIdentifier || '');
+          const safeClient = escapeHtml(mapping.clientName || '');
+          const safeTeam = escapeHtml(mapping.teamName || '');
+          const safeColor = escapeHtml(mapping.color || '');
+          const status = mapping.active === false ? 'Inactive' : 'Active';
+          return `
+            <div class="settings-toggle-row" data-mapping-index="${index}" style="padding-top: 6px; padding-bottom: 6px; border-bottom: 1px solid var(--border-color);">
+              <div class="settings-toggle-text">
+                <div class="settings-toggle-title">${safeTeam || '(Unnamed team)'} ${safeClient ? '· ' + safeClient : ''}</div>
+                <div class="settings-toggle-description">
+                  Org: <code>${safeOrg || '-'}</code>
+                  ${safeColor ? ` · Color: <span style="display:inline-flex;align-items:center;gap:4px;"><span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:${safeColor};border:1px solid var(--border-color);"></span>${safeColor}</span>` : ''}
+                   · Status: ${status}
 								</div>
-								<span class="settings-teams-name">${escapeHtml(team.name)}</span>
 							</div>
-						</td>
-						<td class="settings-teams-cell">
-							${team.members} members
-						</td>
-						<td class="settings-teams-cell settings-teams-muted">
-							${escapeHtml(team.lastActivity)}
-						</td>
-						<td class="settings-teams-cell">
-							<span class="settings-teams-status settings-teams-status-${statusClass}">
-								<span class="settings-teams-status-dot"></span>
-								${statusLabel}
-							</span>
-						</td>
-						<td class="settings-teams-actions-cell">
-							<div class="settings-users-actions">
-								<button type="button" class="confirm-modal-btn settings-users-action-btn" data-team-id="${team.id}" title="View team">
-									<i class="fa-solid fa-magnifying-glass"></i>
-								</button>
-								<button type="button" class="confirm-modal-btn settings-users-action-btn" data-team-id="${team.id}" title="More actions">
-									<i class="fa-solid fa-ellipsis-vertical"></i>
-								</button>
+              <div class="confirm-modal-actions" style="gap: 6px;">
+                <button type="button" class="confirm-modal-btn" data-action="edit" data-index="${index}">Edit</button>
+                <button type="button" class="confirm-modal-btn confirm-modal-btn-destructive" data-action="delete" data-index="${index}">Delete</button>
 							</div>
-						</td>
-					</tr>
+            </div>
 				`;
-      }).join('');
-    }
+        })
+        .join('');
 
-    // Search functionality
-    if (teamsSearchInput) {
-      teamsSearchInput.addEventListener('input', (e) => {
-        const searchTerm = e.target.value.toLowerCase();
-        filteredTeams = dummyTeams.filter(team =>
-          team.name.toLowerCase().includes(searchTerm) ||
-					team.status.toLowerCase().includes(searchTerm)
-        );
-        renderTeams();
+      listContainer.innerHTML = rowsHtml;
+
+      listContainer.querySelectorAll('button[data-action="edit"]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const idx = Number(btn.dataset.index);
+          const mappingsData = getOrgTeamMappings();
+          const mapping = mappingsData[idx];
+          if (!mapping) return;
+          editingIdInput.value = String(idx);
+          orgInput.value = mapping.orgIdentifier || '';
+          clientInput.value = mapping.clientName || '';
+          teamInput.value = mapping.teamName || '';
+          colorInput.value = mapping.color || '';
+          activeInput.checked = mapping.active !== false;
+        });
       });
-    }
 
-    // Sort functionality
-    if (teamsSortSelect) {
-      teamsSortSelect.addEventListener('change', (e) => {
-        const sortValue = e.target.value;
-        filteredTeams.sort((a, b) => {
-          switch(sortValue) {
-          case 'name-asc':
-            return a.name.localeCompare(b.name);
-          case 'name-desc':
-            return b.name.localeCompare(a.name);
-          case 'members-asc':
-            return a.members - b.members;
-          case 'members-desc':
-            return b.members - a.members;
-          default:
-            return 0;
+      listContainer.querySelectorAll('button[data-action="delete"]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const idx = Number(btn.dataset.index);
+          const mappingsData = getOrgTeamMappings();
+          if (idx >= 0 && idx < mappingsData.length) {
+            mappingsData.splice(idx, 1);
+            saveOrgTeamMappings(mappingsData);
+            renderMappings();
           }
         });
-        renderTeams();
       });
     }
 
-    // Select all functionality
-    if (teamsSelectAll) {
-      teamsSelectAll.addEventListener('change', (e) => {
-        const checkboxes = teamsTableBody.querySelectorAll('.team-checkbox');
-        checkboxes.forEach(checkbox => {
-          checkbox.checked = e.target.checked;
-        });
+    function resetForm() {
+      if (!editingIdInput || !orgInput || !clientInput || !teamInput || !colorInput || !activeInput) return;
+      editingIdInput.value = '';
+      orgInput.value = '';
+      clientInput.value = '';
+      teamInput.value = '';
+      colorInput.value = '';
+      activeInput.checked = true;
+    }
+
+    if (resetFormBtn) {
+      resetFormBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        resetForm();
       });
     }
 
-    // Add team button
-    if (addTeamBtn) {
-      addTeamBtn.addEventListener('click', () => {
-        alert('Add Team functionality will be implemented here');
+    if (form) {
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const orgIdentifier = orgInput.value.trim();
+        const clientName = clientInput.value.trim();
+        const teamName = teamInput.value.trim();
+        const color = colorInput.value.trim();
+        const active = !!activeInput.checked;
+
+        if (!orgIdentifier || !clientName || !teamName) {
+          alert('Org identifier, client name and team name are required.');
+          return;
+        }
+
+        const mappings = getOrgTeamMappings();
+        const editingIndex = editingIdInput.value !== '' ? Number(editingIdInput.value) : -1;
+        const duplicateIndex = mappings.findIndex((m, idx) => m.orgIdentifier === orgIdentifier && idx !== editingIndex);
+        if (duplicateIndex !== -1) {
+          alert('There is already a mapping for this org identifier. Edit the existing mapping instead.');
+          return;
+        }
+
+        const mappingData = { orgIdentifier, clientName, teamName, color, active };
+
+        if (editingIndex >= 0 && editingIndex < mappings.length) {
+          mappings[editingIndex] = mappingData;
+        } else {
+          mappings.push(mappingData);
+        }
+
+        saveOrgTeamMappings(mappings);
+        resetForm();
+        renderMappings();
       });
     }
 
-    // Initial render
-    renderTeams();
+    renderMappings();
   }
 
   // Users section functionality (only for administrators)
@@ -1046,6 +1023,76 @@ async function openSettingsModal() {
     if (usersSection) {
       const usersTableBody = modal.querySelector('#usersTableBody');
       const addUserBtn = modal.querySelector('#addUserBtn');
+      const userFormContainer = modal.querySelector('#userFormContainer');
+
+      function closeUserForm() {
+        if (!userFormContainer) return;
+        userFormContainer.innerHTML = '';
+        userFormContainer.style.display = 'none';
+      }
+
+      function renderUserForm({ title, description, fieldsHtml, submitLabel, onSubmit }) {
+        if (!userFormContainer) return;
+
+        userFormContainer.innerHTML = `
+          <div class="settings-users-form-header" style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+            <div class="settings-modal-placeholder-title" style="margin: 0;">${title}</div>
+            <button type="button" class="confirm-modal-btn confirm-modal-btn-cancel" data-action="cancel-user-form" style="padding: 6px 10px;">
+              Close
+            </button>
+          </div>
+          ${description ? `<p class="settings-modal-placeholder-text" style="margin-top: 6px; margin-bottom: 4px;">${description}</p>` : ''}
+          <form class="settings-users-form" style="display: flex; flex-direction: column; gap: 12px; margin-top: 10px;">
+            ${fieldsHtml}
+            <div class="settings-users-form-error" style="color: #dc2626; font-size: 13px; display: none;"></div>
+            <div class="confirm-modal-actions">
+              <button type="button" class="confirm-modal-btn confirm-modal-btn-cancel" data-action="cancel-user-form">
+                Cancel
+              </button>
+              <button type="submit" class="confirm-modal-btn confirm-modal-btn-confirm">
+                ${submitLabel}
+              </button>
+            </div>
+          </form>
+        `;
+        userFormContainer.style.display = 'block';
+
+        const form = userFormContainer.querySelector('form');
+        const errorDiv = userFormContainer.querySelector('.settings-users-form-error');
+        const cancelButtons = userFormContainer.querySelectorAll('[data-action="cancel-user-form"]');
+
+        const setError = (message) => {
+          if (!errorDiv) return;
+          if (message) {
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+          } else {
+            errorDiv.textContent = '';
+            errorDiv.style.display = 'none';
+          }
+        };
+
+        cancelButtons.forEach((button) => {
+          button.addEventListener('click', () => {
+            closeUserForm();
+          });
+        });
+
+        if (form) {
+          form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            setError('');
+            try {
+              const formData = new window.FormData(form);
+              await onSubmit(formData, setError);
+            } catch (error) {
+              setError(error.message || 'Operation failed');
+            }
+          });
+        }
+
+        userFormContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
 
       async function loadUsers() {
         try {
@@ -1100,6 +1147,186 @@ async function openSettingsModal() {
         }
       }
 
+      function openCreateUserForm() {
+        renderUserForm({
+          title: 'Create New User',
+          description: 'Add a user to access the telemetry UI.',
+          submitLabel: 'Create User',
+          fieldsHtml: `
+        <div>
+          <label class="settings-modal-placeholder-text" style="display: block; margin-bottom: 6px;">
+            Username
+                <input type="text" name="username" required
+              style="margin-top: 4px; width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 14px;"
+              placeholder="Enter username">
+          </label>
+        </div>
+        <div>
+          <label class="settings-modal-placeholder-text" style="display: block; margin-bottom: 6px;">
+            Password
+                <input type="password" name="password" required
+              style="margin-top: 4px; width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 14px;"
+              placeholder="Enter password">
+          </label>
+        </div>
+        <div>
+          <label class="settings-modal-placeholder-text" style="display: block; margin-bottom: 6px;">
+            Role
+                <select name="role"
+              style="margin-top: 4px; width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 14px; cursor: pointer;">
+              <option value="basic">Basic</option>
+              <option value="advanced">Advanced</option>
+              <option value="administrator">Administrator</option>
+            </select>
+          </label>
+        </div>
+          `,
+          onSubmit: async (formData, setError) => {
+            const username = (formData.get('username') || '').trim();
+            const password = formData.get('password') || '';
+            const role = formData.get('role') || 'basic';
+
+            if (!username || !password) {
+              setError('Username and password are required');
+              return;
+            }
+
+            const response = await fetch('/api/users', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              credentials: 'include',
+              body: JSON.stringify({ username, password, role })
+            });
+
+            const data = await response.json();
+            if (!response.ok) {
+              throw new Error(data.message || 'Failed to create user');
+            }
+
+            closeUserForm();
+            await loadUsers();
+          }
+        });
+      }
+
+      function openEditPasswordForm(username) {
+        renderUserForm({
+          title: 'Change Password',
+          description: `Change password for user: <strong>${escapeHtml(username)}</strong>`,
+          submitLabel: 'Update Password',
+          fieldsHtml: `
+        <div>
+          <label class="settings-modal-placeholder-text" style="display: block; margin-bottom: 6px;">
+            New Password
+                <input type="password" name="password" required
+              style="margin-top: 4px; width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 14px;"
+              placeholder="Enter new password">
+          </label>
+        </div>
+          `,
+          onSubmit: async (formData, setError) => {
+            const password = formData.get('password') || '';
+            if (!password) {
+              setError('Password is required');
+              return;
+            }
+
+            const response = await fetch(`/api/users/${encodeURIComponent(username)}/password`, {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              credentials: 'include',
+              body: JSON.stringify({ password })
+            });
+
+            const data = await response.json();
+            if (!response.ok) {
+              throw new Error(data.message || 'Failed to update password');
+            }
+
+            closeUserForm();
+            await loadUsers();
+          }
+        });
+      }
+
+      function openEditRoleForm(username, currentRole) {
+        renderUserForm({
+          title: 'Change Role',
+          description: `Change role for user: <strong>${escapeHtml(username)}</strong>`,
+          submitLabel: 'Update Role',
+          fieldsHtml: `
+        <div>
+          <label class="settings-modal-placeholder-text" style="display: block; margin-bottom: 6px;">
+            Role
+                <select name="role"
+              style="margin-top: 4px; width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 14px; cursor: pointer;">
+              <option value="basic" ${currentRole === 'basic' ? 'selected' : ''}>Basic</option>
+              <option value="advanced" ${currentRole === 'advanced' ? 'selected' : ''}>Advanced</option>
+              <option value="administrator" ${currentRole === 'administrator' ? 'selected' : ''}>Administrator</option>
+            </select>
+          </label>
+        </div>
+          `,
+          onSubmit: async (formData, setError) => {
+            const role = formData.get('role') || '';
+            if (!role) {
+              setError('Role is required');
+              return;
+            }
+
+            const response = await fetch(`/api/users/${encodeURIComponent(username)}/role`, {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              credentials: 'include',
+              body: JSON.stringify({ role })
+            });
+
+            const data = await response.json();
+            if (!response.ok) {
+              throw new Error(data.message || 'Failed to update role');
+            }
+
+            closeUserForm();
+            await loadUsers();
+          }
+        });
+      }
+
+      async function handleDeleteUser(username) {
+        const confirmed = await openConfirmModal({
+          title: 'Delete User',
+          message: `Are you sure you want to delete user "${escapeHtml(username)}"? This action cannot be undone.`,
+          confirmLabel: 'Delete User',
+          destructive: true
+        });
+
+        if (!confirmed) {
+          return;
+        }
+
+        try {
+          const response = await fetch(`/api/users/${encodeURIComponent(username)}`, {
+            method: 'DELETE',
+            credentials: 'include'
+          });
+          const data = await response.json();
+          if (data.status === 'ok') {
+            await loadUsers();
+          } else {
+            throw new Error(data.message || 'Failed to delete user');
+          }
+        } catch (error) {
+          console.error('Error deleting user:', error);
+          alert('Error deleting user: ' + error.message);
+        }
+      }
+
       async function renderUsers(users) {
         if (!usersTableBody) return;
 
@@ -1114,7 +1341,6 @@ async function openSettingsModal() {
           return;
         }
 
-        // Get current username from auth status
         let currentUsername = '';
         try {
           const authResponse = await fetch('/api/auth/status', {
@@ -1158,14 +1384,14 @@ async function openSettingsModal() {
               </td>
               <td class="settings-users-actions-cell">
                 <div class="settings-users-actions">
-                  <button type="button" class="confirm-modal-btn settings-users-action-btn" onclick="openEditPasswordModal('${escapeHtml(user.username)}')" title="Change password">
+                  <button type="button" class="confirm-modal-btn settings-users-action-btn" data-action="edit-password" data-username="${escapeHtml(user.username)}" title="Change password">
                     <i class="fa-solid fa-key"></i>
                   </button>
-                  <button type="button" class="confirm-modal-btn settings-users-action-btn" onclick="openEditRoleModal('${escapeHtml(user.username)}', '${escapeHtml(user.role || 'basic')}')" title="Change role">
+                  <button type="button" class="confirm-modal-btn settings-users-action-btn" data-action="edit-role" data-username="${escapeHtml(user.username)}" data-role="${escapeHtml(user.role || 'basic')}" title="Change role">
                     <i class="fa-solid fa-user-tag"></i>
                   </button>
                   ${!isCurrentUser ? `
-                  <button type="button" class="confirm-modal-btn confirm-modal-btn-destructive settings-users-action-btn" onclick="openDeleteUserModal('${escapeHtml(user.username)}')" title="Delete user">
+                  <button type="button" class="confirm-modal-btn confirm-modal-btn-destructive settings-users-action-btn" data-action="delete-user" data-username="${escapeHtml(user.username)}" title="Delete user">
                     <i class="fa-solid fa-trash"></i>
                   </button>
                   ` : ''}
@@ -1174,9 +1400,23 @@ async function openSettingsModal() {
             </tr>
           `;
         }).join('');
+
+        const actionButtons = usersTableBody.querySelectorAll('.settings-users-action-btn');
+        actionButtons.forEach((button) => {
+          const action = button.dataset.action;
+          const username = button.dataset.username || '';
+          const role = button.dataset.role || 'basic';
+
+          if (action === 'edit-password') {
+            button.addEventListener('click', () => openEditPasswordForm(username));
+          } else if (action === 'edit-role') {
+            button.addEventListener('click', () => openEditRoleForm(username, role));
+          } else if (action === 'delete-user') {
+            button.addEventListener('click', () => handleDeleteUser(username));
+          }
+        });
       }
 
-      // Load users when section is shown
       const usersSectionObserver = new MutationObserver((mutations) => {
         mutations.forEach((mutation) => {
           if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
@@ -1189,377 +1429,17 @@ async function openSettingsModal() {
       });
       usersSectionObserver.observe(usersSection, { attributes: true, attributeFilter: ['style'] });
 
-      // Add user button
       if (addUserBtn) {
         addUserBtn.addEventListener('click', () => {
-          window.openCreateUserModal();
+          openCreateUserForm();
         });
       }
 
-      // Initial load if section is visible
       if (usersSection.style.display !== 'none') {
         loadUsers();
       }
     }
   }
-
-  // Global functions for user management (needed for onclick handlers)
-  window.openCreateUserModal = function() {
-    const existing = document.querySelector('.confirm-modal-backdrop.user-management-backdrop');
-    if (existing) {
-      return;
-    }
-
-    const backdrop = document.createElement('div');
-    backdrop.className = 'confirm-modal-backdrop user-management-backdrop';
-
-    const modal = document.createElement('div');
-    modal.className = 'confirm-modal settings-modal';
-    modal.style.maxWidth = '500px';
-
-    modal.innerHTML = `
-      <div class="confirm-modal-title">Create New User</div>
-      <form id="createUserForm" style="display: flex; flex-direction: column; gap: 16px; margin-top: 16px;">
-        <div>
-          <label class="settings-modal-placeholder-text" style="display: block; margin-bottom: 6px;">
-            Username
-            <input type="text" id="createUsernameInput" required
-              style="margin-top: 4px; width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 14px;"
-              placeholder="Enter username">
-          </label>
-        </div>
-        <div>
-          <label class="settings-modal-placeholder-text" style="display: block; margin-bottom: 6px;">
-            Password
-            <input type="password" id="createPasswordInput" required
-              style="margin-top: 4px; width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 14px;"
-              placeholder="Enter password">
-          </label>
-        </div>
-        <div>
-          <label class="settings-modal-placeholder-text" style="display: block; margin-bottom: 6px;">
-            Role
-            <select id="createRoleSelect"
-              style="margin-top: 4px; width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 14px; cursor: pointer;">
-              <option value="basic">Basic</option>
-              <option value="advanced">Advanced</option>
-              <option value="administrator">Administrator</option>
-            </select>
-          </label>
-        </div>
-        <div id="createUserError" style="color: #dc2626; font-size: 13px; display: none;"></div>
-        <div class="confirm-modal-actions">
-          <button type="button" class="confirm-modal-btn confirm-modal-btn-cancel" onclick="window.closeUserManagementModal()">
-            Cancel
-          </button>
-          <button type="submit" class="confirm-modal-btn confirm-modal-btn-confirm">
-            Create User
-          </button>
-        </div>
-      </form>
-    `;
-
-    backdrop.appendChild(modal);
-    document.body.appendChild(backdrop);
-
-    requestAnimationFrame(() => {
-      backdrop.classList.add('visible');
-    });
-
-    const form = modal.querySelector('#createUserForm');
-    const errorDiv = modal.querySelector('#createUserError');
-
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      errorDiv.style.display = 'none';
-      errorDiv.textContent = '';
-
-      const username = modal.querySelector('#createUsernameInput').value.trim();
-      const password = modal.querySelector('#createPasswordInput').value;
-      const role = modal.querySelector('#createRoleSelect').value;
-
-      if (!username || !password) {
-        errorDiv.textContent = 'Username and password are required';
-        errorDiv.style.display = 'block';
-        return;
-      }
-
-      try {
-        const response = await fetch('/api/users', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          credentials: 'include',
-          body: JSON.stringify({ username, password, role })
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.message || 'Failed to create user');
-        }
-
-        // Close modal and reload users
-        window.closeUserManagementModal();
-        const usersSection = document.querySelector('#settings-users');
-        if (usersSection && usersSection.style.display !== 'none') {
-          // Trigger reload by dispatching a custom event or calling loadUsers
-          const event = new CustomEvent('reloadUsers');
-          usersSection.dispatchEvent(event);
-        }
-        // Reload the page to refresh the users list
-        window.location.reload();
-      } catch (error) {
-        errorDiv.textContent = error.message || 'Failed to create user';
-        errorDiv.style.display = 'block';
-      }
-    });
-
-    window.closeUserManagementModal = function() {
-      backdrop.classList.remove('visible');
-      backdrop.classList.add('hiding');
-      setTimeout(() => {
-        if (document.body.contains(backdrop)) {
-          backdrop.remove();
-        }
-      }, 220);
-    };
-  };
-
-  window.openEditPasswordModal = function(username) {
-    const existing = document.querySelector('.confirm-modal-backdrop.user-management-backdrop');
-    if (existing) {
-      return;
-    }
-
-    const backdrop = document.createElement('div');
-    backdrop.className = 'confirm-modal-backdrop user-management-backdrop';
-
-    const modal = document.createElement('div');
-    modal.className = 'confirm-modal settings-modal';
-    modal.style.maxWidth = '500px';
-
-    modal.innerHTML = `
-      <div class="confirm-modal-title">Change Password</div>
-      <div class="confirm-modal-message" style="margin-top: 8px; margin-bottom: 16px;">
-        <p class="settings-modal-placeholder-text">
-          Change password for user: <strong>${escapeHtml(username)}</strong>
-        </p>
-      </div>
-      <form id="editPasswordForm" style="display: flex; flex-direction: column; gap: 16px;">
-        <div>
-          <label class="settings-modal-placeholder-text" style="display: block; margin-bottom: 6px;">
-            New Password
-            <input type="password" id="editPasswordInput" required
-              style="margin-top: 4px; width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 14px;"
-              placeholder="Enter new password">
-          </label>
-        </div>
-        <div id="editPasswordError" style="color: #dc2626; font-size: 13px; display: none;"></div>
-        <div class="confirm-modal-actions">
-          <button type="button" class="confirm-modal-btn confirm-modal-btn-cancel" onclick="window.closeUserManagementModal()">
-            Cancel
-          </button>
-          <button type="submit" class="confirm-modal-btn confirm-modal-btn-confirm">
-            Update Password
-          </button>
-        </div>
-      </form>
-    `;
-
-    backdrop.appendChild(modal);
-    document.body.appendChild(backdrop);
-
-    requestAnimationFrame(() => {
-      backdrop.classList.add('visible');
-    });
-
-    const form = modal.querySelector('#editPasswordForm');
-    const errorDiv = modal.querySelector('#editPasswordError');
-
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      errorDiv.style.display = 'none';
-      errorDiv.textContent = '';
-
-      const password = modal.querySelector('#editPasswordInput').value;
-
-      if (!password) {
-        errorDiv.textContent = 'Password is required';
-        errorDiv.style.display = 'block';
-        return;
-      }
-
-      try {
-        const response = await fetch(`/api/users/${encodeURIComponent(username)}/password`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          credentials: 'include',
-          body: JSON.stringify({ password })
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.message || 'Failed to update password');
-        }
-
-        window.closeUserManagementModal();
-        alert('Password updated successfully');
-        window.location.reload();
-      } catch (error) {
-        errorDiv.textContent = error.message || 'Failed to update password';
-        errorDiv.style.display = 'block';
-      }
-    });
-
-    window.closeUserManagementModal = function() {
-      backdrop.classList.remove('visible');
-      backdrop.classList.add('hiding');
-      setTimeout(() => {
-        if (document.body.contains(backdrop)) {
-          backdrop.remove();
-        }
-      }, 220);
-    };
-  };
-
-  window.openEditRoleModal = function(username, currentRole) {
-    const existing = document.querySelector('.confirm-modal-backdrop.user-management-backdrop');
-    if (existing) {
-      return;
-    }
-
-    const backdrop = document.createElement('div');
-    backdrop.className = 'confirm-modal-backdrop user-management-backdrop';
-
-    const modal = document.createElement('div');
-    modal.className = 'confirm-modal settings-modal';
-    modal.style.maxWidth = '500px';
-
-    modal.innerHTML = `
-      <div class="confirm-modal-title">Change Role</div>
-      <div class="confirm-modal-message" style="margin-top: 8px; margin-bottom: 16px;">
-        <p class="settings-modal-placeholder-text">
-          Change role for user: <strong>${escapeHtml(username)}</strong>
-        </p>
-      </div>
-      <form id="editRoleForm" style="display: flex; flex-direction: column; gap: 16px;">
-        <div>
-          <label class="settings-modal-placeholder-text" style="display: block; margin-bottom: 6px;">
-            Role
-            <select id="editRoleSelect"
-              style="margin-top: 4px; width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 14px; cursor: pointer;">
-              <option value="basic" ${currentRole === 'basic' ? 'selected' : ''}>Basic</option>
-              <option value="advanced" ${currentRole === 'advanced' ? 'selected' : ''}>Advanced</option>
-              <option value="administrator" ${currentRole === 'administrator' ? 'selected' : ''}>Administrator</option>
-            </select>
-          </label>
-        </div>
-        <div id="editRoleError" style="color: #dc2626; font-size: 13px; display: none;"></div>
-        <div class="confirm-modal-actions">
-          <button type="button" class="confirm-modal-btn confirm-modal-btn-cancel" onclick="window.closeUserManagementModal()">
-            Cancel
-          </button>
-          <button type="submit" class="confirm-modal-btn confirm-modal-btn-confirm">
-            Update Role
-          </button>
-        </div>
-      </form>
-    `;
-
-    backdrop.appendChild(modal);
-    document.body.appendChild(backdrop);
-
-    requestAnimationFrame(() => {
-      backdrop.classList.add('visible');
-    });
-
-    const form = modal.querySelector('#editRoleForm');
-    const errorDiv = modal.querySelector('#editRoleError');
-
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      errorDiv.style.display = 'none';
-      errorDiv.textContent = '';
-
-      const role = modal.querySelector('#editRoleSelect').value;
-
-      if (!role) {
-        errorDiv.textContent = 'Role is required';
-        errorDiv.style.display = 'block';
-        return;
-      }
-
-      try {
-        const response = await fetch(`/api/users/${encodeURIComponent(username)}/role`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          credentials: 'include',
-          body: JSON.stringify({ role })
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.message || 'Failed to update role');
-        }
-
-        window.closeUserManagementModal();
-        alert('Role updated successfully');
-        window.location.reload();
-      } catch (error) {
-        errorDiv.textContent = error.message || 'Failed to update role';
-        errorDiv.style.display = 'block';
-      }
-    });
-
-    window.closeUserManagementModal = function() {
-      backdrop.classList.remove('visible');
-      backdrop.classList.add('hiding');
-      setTimeout(() => {
-        if (document.body.contains(backdrop)) {
-          backdrop.remove();
-        }
-      }, 220);
-    };
-  };
-
-  window.openDeleteUserModal = function(username) {
-    openConfirmModal({
-      title: 'Delete User',
-      message: `Are you sure you want to delete user "${escapeHtml(username)}"? This action cannot be undone.`,
-      confirmLabel: 'Delete User',
-      destructive: true
-    }).then((confirmed) => {
-      if (!confirmed) {
-        return;
-      }
-
-      fetch(`/api/users/${encodeURIComponent(username)}`, {
-        method: 'DELETE',
-        credentials: 'include'
-      })
-        .then(response => response.json())
-        .then(data => {
-          if (data.status === 'ok') {
-            alert('User deleted successfully');
-            window.location.reload();
-          } else {
-            alert('Error: ' + (data.message || 'Failed to delete user'));
-          }
-        })
-        .catch(error => {
-          console.error('Error deleting user:', error);
-          alert('Error deleting user: ' + error.message);
-        });
-    });
-  };
 
   document.addEventListener(
     'keydown',
@@ -1574,12 +1454,8 @@ async function openSettingsModal() {
   );
 }
 
+/* exported openOrgTeamMappingModal */
 function openOrgTeamMappingModal() {
-  const existing = document.querySelector('.confirm-modal-backdrop.org-team-mapping-backdrop');
-  if (existing) {
-    return;
-  }
-
   const backdrop = document.createElement('div');
   backdrop.className = 'confirm-modal-backdrop org-team-mapping-backdrop';
 
@@ -1826,6 +1702,8 @@ function openOrgTeamMappingModal() {
     backdrop.classList.add('visible');
   });
 }
+
+window.openOrgTeamMappingModal = openOrgTeamMappingModal;
 
 // Initialize theme
 if (document.readyState === 'loading') {

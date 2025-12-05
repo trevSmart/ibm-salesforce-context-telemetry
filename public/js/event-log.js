@@ -242,6 +242,16 @@ if (window.__EVENT_LOG_LOADED__) {
 
     const isAdministrator = userRole === 'administrator';
     const canDeleteAllEvents = userRole === 'advanced' || userRole === 'administrator';
+    const usersLoadingRow = `
+      <tr>
+        <td colspan="4" class="settings-users-empty">
+          <div class="settings-users-loading" role="status" aria-live="polite">
+            <span class="settings-users-spinner" aria-hidden="true"></span>
+            <span class="settings-users-loading-text">Loading users...</span>
+          </div>
+        </td>
+      </tr>
+    `;
 
     const backdrop = document.createElement('div');
     backdrop.className = 'confirm-modal-backdrop settings-backdrop';
@@ -312,7 +322,7 @@ if (window.__EVENT_LOG_LOADED__) {
 								</div>
 								<input type="checkbox" class="sr-only peer" id="showServerStatsToggle" ${showServerStats ? 'checked' : ''}>
 								<div class="relative w-11 h-6 bg-gray-200 dark:bg-gray-700 rounded-full peer peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600 transition-colors duration-200 ease-in-out">
-									<div class="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform duration-200 ease-in-out transform peer-checked:translate-x-5"></div>
+									<div class="absolute left-1 top-1 w-4 h-4 bg-white rounded-full toggle-knob"></div>
 								</div>
 							</label>
 							<label class="flex items-center justify-between cursor-pointer py-2">
@@ -322,35 +332,26 @@ if (window.__EVENT_LOG_LOADED__) {
 								</div>
 								<input type="checkbox" class="sr-only peer" id="darkThemeToggle" ${isDarkTheme ? 'checked' : ''}>
 								<div class="relative w-11 h-6 bg-gray-200 dark:bg-gray-700 rounded-full peer peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600 transition-colors duration-200 ease-in-out">
-									<div class="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform duration-200 ease-in-out transform peer-checked:translate-x-5"></div>
+									<div class="absolute left-1 top-1 w-4 h-4 bg-white rounded-full toggle-knob"></div>
 								</div>
 							</label>
 						</section>
 						<section id="settings-events" class="settings-section">
 							<div class="settings-modal-placeholder-title">Events</div>
 							<div class="settings-toggle-row">
-								<div class="settings-toggle-text">
-									<div class="settings-toggle-title">Org – Client – Team mapping</div>
-									<div class="settings-toggle-description">
-										Define how Salesforce org identifiers map to clients and teams. This mapping is used to group telemetry in the Teams view.
-									</div>
-								</div>
-								<button type="button" class="confirm-modal-btn" id="manageOrgTeamMappingBtn">
-									<i class="fa-solid fa-users user-menu-icon"></i>Manage teams
-								</button>
-							</div>
-							<div class="settings-toggle-row" style="margin-top: 16px;">
 								<div class="settings-toggle-text" style="flex: 1;">
-									<div class="settings-toggle-title">Refresh every X minutes</div>
+									<div class="settings-toggle-title">Automatic refresh</div>
 									<div class="settings-toggle-description">
 										Automatically refresh the events list at the specified interval.
 									</div>
 								</div>
-								<div style="display: flex; align-items: center; gap: 8px;">
-									<input type="checkbox" class="sr-only peer" id="autoRefreshToggle" ${autoRefreshEnabled ? 'checked' : ''}>
-									<div class="relative w-11 h-6 bg-gray-200 dark:bg-gray-700 rounded-full peer peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600 transition-colors duration-200 ease-in-out">
-										<div class="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform duration-200 ease-in-out transform peer-checked:translate-x-5"></div>
-									</div>
+								<div id="autoRefreshToggleWrapper" style="display: flex; align-items: center; gap: 8px;">
+									<label for="autoRefreshToggle" class="flex items-center cursor-pointer" style="margin: 0;">
+										<input type="checkbox" class="sr-only peer" id="autoRefreshToggle" ${autoRefreshEnabled ? 'checked' : ''}>
+										<div class="relative w-11 h-6 bg-gray-200 dark:bg-gray-700 rounded-full peer peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600 transition-colors duration-200 ease-in-out">
+											<div id="autoRefreshToggleKnob" class="absolute left-1 top-1 w-4 h-4 bg-white rounded-full toggle-knob"></div>
+										</div>
+									</label>
 									<div style="position: relative;">
 										<select id="autoRefreshInterval" style="padding: 6px 24px 6px 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 14px; cursor: pointer; appearance: none; min-width: 80px;" ${autoRefreshEnabled ? '' : 'disabled'}>
 											<option value="" ${autoRefreshInterval === '' ? 'selected' : ''}>Off</option>
@@ -363,72 +364,50 @@ if (window.__EVENT_LOG_LOADED__) {
 								</div>
 							</div>
 						</section>
-						<section id="settings-teams" class="settings-section" style="display: none;">
-							<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-								<div class="settings-modal-placeholder-title" style="margin: 0;">Teams</div>
-								<button type="button" class="confirm-modal-btn" id="addTeamBtn" style="display: flex; align-items: center; gap: 6px;">
-									<i class="fa-solid fa-plus" style="font-size: 12px;"></i>Add Team
+					<section id="settings-teams" class="settings-section" style="display: none;">
+						<div class="settings-modal-placeholder-title" style="margin-bottom: 6px;">Org – Client – Team mapping</div>
+						<p class="settings-modal-placeholder-text" style="margin-bottom: 12px;">
+							Manage how Salesforce org identifiers are associated with clients and teams. This configuration is stored only in this browser.
+						</p>
+						<div id="orgTeamMappingList" style="max-height: 260px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 10px; margin-bottom: 12px;">
+						</div>
+						<form id="orgTeamMappingForm" class="settings-toggle-row" style="flex-direction: column; align-items: stretch; gap: 10px; padding-top: 4px; padding-bottom: 0;">
+							<input type="hidden" id="orgTeamMappingEditingId" value="">
+							<div style="display: flex; flex-direction: column; gap: 6px;">
+								<label class="settings-modal-placeholder-text">
+									Salesforce org identifier
+									<input id="orgIdentifierInput" type="text" placeholder="Org ID or unique org key"
+										style="margin-top: 2px; width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 0.8rem;">
+								</label>
+								<label class="settings-modal-placeholder-text">
+									Client name
+									<input id="clientNameInput" type="text" placeholder="Client"
+										style="margin-top: 2px; width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 0.8rem;">
+								</label>
+								<label class="settings-modal-placeholder-text">
+									Team name
+									<input id="teamNameInput" type="text" placeholder="Team"
+										style="margin-top: 2px; width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 0.8rem;">
+								</label>
+								<label class="settings-modal-placeholder-text">
+									Color (optional)
+									<input id="teamColorInput" type="text" placeholder="#2195cf or CSS color name"
+										style="margin-top: 2px; width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 0.8rem;">
+								</label>
+								<label class="settings-modal-placeholder-text" style="display: flex; align-items: center; gap: 6px; margin-top: 4px;">
+									<input id="mappingActiveInput" type="checkbox" checked style="width: 14px; height: 14px;">
+									<span>Active mapping</span>
+								</label>
+							</div>
+							<div class="confirm-modal-actions" style="width: 100%; justify-content: space-between; margin-top: 4px;">
+								<button type="button" class="confirm-modal-btn confirm-modal-btn-cancel" id="resetOrgTeamMappingFormBtn">
+									Clear form
+								</button>
+								<button type="submit" class="confirm-modal-btn confirm-modal-btn-confirm">
+									Save mapping
 								</button>
 							</div>
-							<div style="display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;">
-								<div style="position: relative; flex: 1; min-width: 200px;">
-									<i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-secondary); font-size: 14px;"></i>
-									<input type="text" id="teamsSearchInput" placeholder="Search..."
-										style="width: 100%; padding: 8px 12px 8px 36px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 14px;">
-								</div>
-								<div style="position: relative;">
-									<button type="button" id="teamsFilterBtn" class="confirm-modal-btn confirm-modal-btn-cancel" style="display: flex; align-items: center; gap: 6px; padding: 8px 12px;">
-										<i class="fa-solid fa-filter" style="font-size: 12px;"></i>
-										<span id="teamsFilterBadge" style="display: none; background: var(--text-primary); color: var(--bg-primary); border-radius: 10px; padding: 2px 6px; font-size: 11px; margin-left: 4px;">1</span>
-									</button>
-								</div>
-								<button type="button" class="confirm-modal-btn confirm-modal-btn-cancel" style="padding: 8px 12px;">
-									<i class="fa-solid fa-gear" style="font-size: 12px;"></i>
-								</button>
-								<div style="position: relative;">
-									<select id="teamsSortSelect" style="padding: 8px 32px 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 14px; cursor: pointer; appearance: none;">
-										<option>Sort by</option>
-										<option value="name-asc">Name (A-Z)</option>
-										<option value="name-desc">Name (Z-A)</option>
-										<option value="members-asc">Members (Low to High)</option>
-										<option value="members-desc">Members (High to Low)</option>
-										<option value="activity-desc">Last Activity (Recent)</option>
-										<option value="activity-asc">Last Activity (Oldest)</option>
-									</select>
-									<i class="fa-solid fa-chevron-down" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--text-secondary); font-size: 10px; pointer-events: none;"></i>
-								</div>
-							</div>
-							<div style="overflow-x: auto; border: 1px solid var(--border-color); border-radius: 8px;">
-								<table id="teamsTable" style="width: 100%; border-collapse: collapse;">
-									<thead>
-										<tr style="background: var(--bg-secondary); border-bottom: 1px solid var(--border-color);">
-											<th style="padding: 12px; text-align: left;">
-												<input type="checkbox" id="teamsSelectAll" style="cursor: pointer;">
-											</th>
-											<th style="padding: 12px; text-align: left; font-weight: 600; color: var(--text-primary); font-size: 14px; cursor: pointer;">
-												Team Name
-												<i class="fa-solid fa-arrows-up-down" style="margin-left: 6px; font-size: 10px; color: var(--text-secondary);"></i>
-											</th>
-											<th style="padding: 12px; text-align: left; font-weight: 600; color: var(--text-primary); font-size: 14px; cursor: pointer;">
-												Members
-												<i class="fa-solid fa-arrows-up-down" style="margin-left: 6px; font-size: 10px; color: var(--text-secondary);"></i>
-											</th>
-											<th style="padding: 12px; text-align: left; font-weight: 600; color: var(--text-primary); font-size: 14px; cursor: pointer;">
-												Last Activity
-												<i class="fa-solid fa-arrows-up-down" style="margin-left: 6px; font-size: 10px; color: var(--text-secondary);"></i>
-											</th>
-											<th style="padding: 12px; text-align: left; font-weight: 600; color: var(--text-primary); font-size: 14px; cursor: pointer;">
-												Status
-												<i class="fa-solid fa-arrows-up-down" style="margin-left: 6px; font-size: 10px; color: var(--text-secondary);"></i>
-											</th>
-											<th style="padding: 12px; text-align: right; width: 40px;"></th>
-										</tr>
-									</thead>
-									<tbody id="teamsTableBody">
-										<!-- Teams will be populated here -->
-									</tbody>
-								</table>
-							</div>
+						</form>
 						</section>
 						${isAdministrator ? `
 						<section id="settings-users" class="settings-section settings-users-section" style="display: none;">
@@ -450,14 +429,11 @@ if (window.__EVENT_LOG_LOADED__) {
 										</tr>
 									</thead>
 									<tbody id="usersTableBody">
-										<tr>
-											<td colspan="4" class="settings-users-empty">
-												Loading users...
-											</td>
-										</tr>
+										${usersLoadingRow}
 									</tbody>
 								</table>
 							</div>
+							<div id="userFormContainer" class="settings-users-inline-form" style="display: none;"></div>
 						</section>
 						` : ''}
 						<section id="settings-danger" class="settings-danger-section">
@@ -563,13 +539,6 @@ if (window.__EVENT_LOG_LOADED__) {
       closeIconBtn.addEventListener('click', closeSettingsModal);
     }
 
-    const manageBtn = modal.querySelector('#manageOrgTeamMappingBtn');
-    if (manageBtn) {
-      manageBtn.addEventListener('click', () => {
-        openOrgTeamMappingModal();
-      });
-    }
-
     // Navigation between settings sections
     const sidebarLinks = modal.querySelectorAll('.settings-sidebar-link');
     const sections = modal.querySelectorAll('.settings-section, .settings-danger-section');
@@ -604,114 +573,143 @@ if (window.__EVENT_LOG_LOADED__) {
       showSection(firstSectionId);
     }
 
-    // Teams section demo content
+    // Teams mapping section (local-only configuration)
     const teamsSection = modal.querySelector('#settings-teams');
     if (teamsSection) {
-      const dummyTeams = [
-        { id: 1, name: 'Development Team', members: 8, lastActivity: 'Today, 3:52 PM', status: 'Active' },
-        { id: 2, name: 'QA Team', members: 5, lastActivity: 'Yesterday, 8:21 AM', status: 'Active' },
-        { id: 3, name: 'DevOps Team', members: 4, lastActivity: 'Sep 24, 2023 at 2:10 PM', status: 'Active' },
-        { id: 4, name: 'Sales Team', members: 12, lastActivity: 'Sep 23, 2023 at 1:30 PM', status: 'Active' },
-        { id: 5, name: 'Support Team', members: 6, lastActivity: 'Sep 22, 2023 at 4:45 PM', status: 'Inactive' },
-        { id: 6, name: 'Marketing Team', members: 7, lastActivity: 'Sep 21, 2023 at 10:15 AM', status: 'Active' }
-      ];
+      const listContainer = teamsSection.querySelector('#orgTeamMappingList');
+      const form = teamsSection.querySelector('#orgTeamMappingForm');
+      const editingIdInput = teamsSection.querySelector('#orgTeamMappingEditingId');
+      const orgInput = teamsSection.querySelector('#orgIdentifierInput');
+      const clientInput = teamsSection.querySelector('#clientNameInput');
+      const teamInput = teamsSection.querySelector('#teamNameInput');
+      const colorInput = teamsSection.querySelector('#teamColorInput');
+      const activeInput = teamsSection.querySelector('#mappingActiveInput');
+      const resetFormBtn = teamsSection.querySelector('#resetOrgTeamMappingFormBtn');
 
-      let filteredTeams = [...dummyTeams];
-      const teamsTableBody = modal.querySelector('#teamsTableBody');
-      const teamsSearchInput = modal.querySelector('#teamsSearchInput');
-      const teamsSortSelect = modal.querySelector('#teamsSortSelect');
-      const teamsSelectAll = modal.querySelector('#teamsSelectAll');
-      const addTeamBtn = modal.querySelector('#addTeamBtn');
+      function renderMappings() {
+        if (!listContainer) return;
+        const mappings = getOrgTeamMappings();
+        if (!mappings.length) {
+          listContainer.innerHTML = `
+            <div class="settings-modal-placeholder-text">
+              No mappings defined yet. Add a mapping using the form below.
+            </div>
+          `;
+          return;
+        }
 
-      function renderTeams() {
-        if (!teamsTableBody) return;
+        const rowsHtml = mappings
+          .map((mapping, index) => {
+            const safeOrg = escapeHtml(mapping.orgIdentifier || '');
+            const safeClient = escapeHtml(mapping.clientName || '');
+            const safeTeam = escapeHtml(mapping.teamName || '');
+            const safeColor = escapeHtml(mapping.color || '');
+            const status = mapping.active === false ? 'Inactive' : 'Active';
+            return `
+              <div class="settings-toggle-row" data-mapping-index="${index}" style="padding-top: 6px; padding-bottom: 6px; border-bottom: 1px solid var(--border-color);">
+                <div class="settings-toggle-text">
+                  <div class="settings-toggle-title">${safeTeam || '(Unnamed team)'} ${safeClient ? '· ' + safeClient : ''}</div>
+                  <div class="settings-toggle-description">
+                    Org: <code>${safeOrg || '-'}</code>
+                    ${safeColor ? ` · Color: <span style="display:inline-flex;align-items:center;gap:4px;"><span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:${safeColor};border:1px solid var(--border-color);"></span>${safeColor}</span>` : ''}
+                     · Status: ${status}
+                  </div>
+                </div>
+                <div class="confirm-modal-actions" style="gap: 6px;">
+                  <button type="button" class="confirm-modal-btn" data-action="edit" data-index="${index}">Edit</button>
+                  <button type="button" class="confirm-modal-btn confirm-modal-btn-destructive" data-action="delete" data-index="${index}">Delete</button>
+                </div>
+              </div>
+            `;
+          })
+          .join('');
 
-        teamsTableBody.innerHTML = filteredTeams.map(team => {
-          const statusColor = team.status === 'Active' ? '#10b981' : '#6b7280';
-          return `
-					<tr style="border-bottom: 1px solid var(--border-color);">
-						<td style="padding: 12px;">
-							<input type="checkbox" class="team-checkbox" data-team-id="${team.id}" style="cursor: pointer;">
-						</td>
-						<td style="padding: 12px; color: var(--text-primary); font-size: 14px;">
-							<div style="display: flex; align-items: center; gap: 8px;">
-								<div style="width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 12px;">
-									${team.name.charAt(0).toUpperCase()}
-								</div>
-								<span style="font-weight: 500;">${escapeHtml(team.name)}</span>
-							</div>
-						</td>
-						<td style="padding: 12px; color: var(--text-primary); font-size: 14px;">
-							${team.members} members
-						</td>
-						<td style="padding: 12px; color: var(--text-secondary); font-size: 14px;">
-							${team.lastActivity}
-						</td>
-						<td style="padding: 12px;">
-							<span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 500; background: ${statusColor}20; color: ${statusColor};">
-								<span style="width: 6px; height: 6px; border-radius: 50%; background: ${statusColor};"></span>
-								${team.status}
-							</span>
-						</td>
-						<td style="padding: 12px; text-align: right;">
-							<button type="button" class="team-actions-btn" data-team-id="${team.id}" style="background: none; border: none; color: var(--text-secondary); cursor: pointer; padding: 4px 8px; border-radius: 4px;">
-								<i class="fa-solid fa-ellipsis-vertical"></i>
-							</button>
-						</td>
-					</tr>
-				`;
-        }).join('');
-      }
+        listContainer.innerHTML = rowsHtml;
 
-      if (teamsSearchInput) {
-        teamsSearchInput.addEventListener('input', (e) => {
-          const searchTerm = e.target.value.toLowerCase();
-          filteredTeams = dummyTeams.filter(team =>
-            team.name.toLowerCase().includes(searchTerm) ||
-					team.status.toLowerCase().includes(searchTerm)
-          );
-          renderTeams();
+        listContainer.querySelectorAll('button[data-action="edit"]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const idx = Number(btn.dataset.index);
+            const mappingsData = getOrgTeamMappings();
+            const mapping = mappingsData[idx];
+            if (!mapping) return;
+            editingIdInput.value = String(idx);
+            orgInput.value = mapping.orgIdentifier || '';
+            clientInput.value = mapping.clientName || '';
+            teamInput.value = mapping.teamName || '';
+            colorInput.value = mapping.color || '';
+            activeInput.checked = mapping.active !== false;
+          });
         });
-      }
 
-      if (teamsSortSelect) {
-        teamsSortSelect.addEventListener('change', (e) => {
-          const sortValue = e.target.value;
-          filteredTeams.sort((a, b) => {
-            switch(sortValue) {
-            case 'name-asc':
-              return a.name.localeCompare(b.name);
-            case 'name-desc':
-              return b.name.localeCompare(a.name);
-            case 'members-asc':
-              return a.members - b.members;
-            case 'members-desc':
-              return b.members - a.members;
-            default:
-              return 0;
+        listContainer.querySelectorAll('button[data-action="delete"]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const idx = Number(btn.dataset.index);
+            const mappingsData = getOrgTeamMappings();
+            if (idx >= 0 && idx < mappingsData.length) {
+              mappingsData.splice(idx, 1);
+              saveOrgTeamMappings(mappingsData);
+              renderMappings();
             }
           });
-          renderTeams();
         });
       }
 
-      if (teamsSelectAll) {
-        teamsSelectAll.addEventListener('change', (e) => {
-          const checkboxes = teamsTableBody.querySelectorAll('.team-checkbox');
-          checkboxes.forEach(checkbox => {
-            checkbox.checked = e.target.checked;
-          });
+      function resetForm() {
+        if (!editingIdInput || !orgInput || !clientInput || !teamInput || !colorInput || !activeInput) return;
+        editingIdInput.value = '';
+        orgInput.value = '';
+        clientInput.value = '';
+        teamInput.value = '';
+        colorInput.value = '';
+        activeInput.checked = true;
+      }
+
+      if (resetFormBtn) {
+        resetFormBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          resetForm();
         });
       }
 
-      if (addTeamBtn) {
-        addTeamBtn.addEventListener('click', () => {
-          alert('Add Team functionality will be implemented here');
+      if (form) {
+        form.addEventListener('submit', (e) => {
+          e.preventDefault();
+          const orgIdentifier = orgInput.value.trim();
+          const clientName = clientInput.value.trim();
+          const teamName = teamInput.value.trim();
+          const color = colorInput.value.trim();
+          const active = !!activeInput.checked;
+
+          if (!orgIdentifier || !clientName || !teamName) {
+            alert('Org identifier, client name and team name are required.');
+            return;
+          }
+
+          const mappings = getOrgTeamMappings();
+          const editingIndex = editingIdInput.value !== '' ? Number(editingIdInput.value) : -1;
+          const duplicateIndex = mappings.findIndex((m, idx) => m.orgIdentifier === orgIdentifier && idx !== editingIndex);
+          if (duplicateIndex !== -1) {
+            alert('There is already a mapping for this org identifier. Edit the existing mapping instead.');
+            return;
+          }
+
+          const mappingData = { orgIdentifier, clientName, teamName, color, active };
+
+          if (editingIndex >= 0 && editingIndex < mappings.length) {
+            mappings[editingIndex] = mappingData;
+          } else {
+            mappings.push(mappingData);
+          }
+
+          saveOrgTeamMappings(mappings);
+          resetForm();
+          renderMappings();
         });
       }
 
-      renderTeams();
+      renderMappings();
     }
+
 
     // Users section functionality
     if (isAdministrator) {
@@ -719,8 +717,81 @@ if (window.__EVENT_LOG_LOADED__) {
       if (usersSection) {
         const usersTableBody = modal.querySelector('#usersTableBody');
         const addUserBtn = modal.querySelector('#addUserBtn');
+        const userFormContainer = modal.querySelector('#userFormContainer');
+
+        function closeUserForm() {
+          if (!userFormContainer) return;
+          userFormContainer.innerHTML = '';
+          userFormContainer.style.display = 'none';
+        }
+
+        function renderUserForm({ title, description, fieldsHtml, submitLabel, onSubmit }) {
+          if (!userFormContainer) return;
+
+          userFormContainer.innerHTML = `
+            <div class="settings-users-form-header" style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+              <div class="settings-modal-placeholder-title" style="margin: 0;">${title}</div>
+              <button type="button" class="confirm-modal-btn confirm-modal-btn-cancel" data-action="cancel-user-form" style="padding: 6px 10px;">
+                Close
+              </button>
+            </div>
+            ${description ? `<p class="settings-modal-placeholder-text" style="margin-top: 6px; margin-bottom: 4px;">${description}</p>` : ''}
+            <form class="settings-users-form" style="display: flex; flex-direction: column; gap: 12px; margin-top: 10px;">
+              ${fieldsHtml}
+              <div class="settings-users-form-error" style="color: #dc2626; font-size: 13px; display: none;"></div>
+              <div class="confirm-modal-actions">
+                <button type="button" class="confirm-modal-btn confirm-modal-btn-cancel" data-action="cancel-user-form">
+                  Cancel
+                </button>
+                <button type="submit" class="confirm-modal-btn confirm-modal-btn-confirm">
+                  ${submitLabel}
+                </button>
+              </div>
+            </form>
+          `;
+          userFormContainer.style.display = 'block';
+
+          const form = userFormContainer.querySelector('form');
+          const errorDiv = userFormContainer.querySelector('.settings-users-form-error');
+          const cancelButtons = userFormContainer.querySelectorAll('[data-action="cancel-user-form"]');
+
+          const setError = (message) => {
+            if (!errorDiv) return;
+            if (message) {
+              errorDiv.textContent = message;
+              errorDiv.style.display = 'block';
+            } else {
+              errorDiv.textContent = '';
+              errorDiv.style.display = 'none';
+            }
+          };
+
+          cancelButtons.forEach((button) => {
+            button.addEventListener('click', () => {
+              closeUserForm();
+            });
+          });
+
+          if (form) {
+            form.addEventListener('submit', async (e) => {
+              e.preventDefault();
+              setError('');
+              try {
+                const formData = new window.FormData(form);
+                await onSubmit(formData, setError);
+              } catch (error) {
+                setError(error.message || 'Operation failed');
+              }
+            });
+          }
+
+          userFormContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
 
         async function loadUsers() {
+          if (usersTableBody) {
+            usersTableBody.innerHTML = usersLoadingRow;
+          }
           try {
             const response = await fetch('/api/users', {
               credentials: 'include'
@@ -770,6 +841,186 @@ if (window.__EVENT_LOG_LOADED__) {
             return '#16a34a';
           default:
             return '#6b7280';
+          }
+        }
+
+        function openCreateUserForm() {
+          renderUserForm({
+            title: 'Create New User',
+            description: 'Add a user to access the telemetry UI.',
+            submitLabel: 'Create User',
+            fieldsHtml: `
+              <div>
+                <label class="settings-modal-placeholder-text" style="display: block; margin-bottom: 6px;">
+                  Username
+                  <input type="text" name="username" required
+                    style="margin-top: 4px; width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 14px;"
+                    placeholder="Enter username">
+                </label>
+              </div>
+              <div>
+                <label class="settings-modal-placeholder-text" style="display: block; margin-bottom: 6px;">
+                  Password
+                  <input type="password" name="password" required
+                    style="margin-top: 4px; width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 14px;"
+                    placeholder="Enter password">
+                </label>
+              </div>
+              <div>
+                <label class="settings-modal-placeholder-text" style="display: block; margin-bottom: 6px;">
+                  Role
+                  <select name="role"
+                    style="margin-top: 4px; width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 14px; cursor: pointer;">
+                    <option value="basic">Basic</option>
+                    <option value="advanced">Advanced</option>
+                    <option value="administrator">Administrator</option>
+                  </select>
+                </label>
+              </div>
+            `,
+            onSubmit: async (formData, setError) => {
+              const username = (formData.get('username') || '').trim();
+              const password = formData.get('password') || '';
+              const role = formData.get('role') || 'basic';
+
+              if (!username || !password) {
+                setError('Username and password are required');
+                return;
+              }
+
+              const response = await fetch('/api/users', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json'
+                },
+                credentials: 'include',
+                body: JSON.stringify({ username, password, role })
+              });
+
+              const data = await response.json();
+              if (!response.ok) {
+                throw new Error(data.message || 'Failed to create user');
+              }
+
+              closeUserForm();
+              await loadUsers();
+            }
+          });
+        }
+
+        function openEditPasswordForm(username) {
+          renderUserForm({
+            title: 'Change Password',
+            description: `Change password for user: <strong>${escapeHtml(username)}</strong>`,
+            submitLabel: 'Update Password',
+            fieldsHtml: `
+              <div>
+                <label class="settings-modal-placeholder-text" style="display: block; margin-bottom: 6px;">
+                  New Password
+                  <input type="password" name="password" required
+                    style="margin-top: 4px; width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 14px;"
+                    placeholder="Enter new password">
+                </label>
+              </div>
+            `,
+            onSubmit: async (formData, setError) => {
+              const password = formData.get('password') || '';
+              if (!password) {
+                setError('Password is required');
+                return;
+              }
+
+              const response = await fetch(`/api/users/${encodeURIComponent(username)}/password`, {
+                method: 'PUT',
+                headers: {
+                  'Content-Type': 'application/json'
+                },
+                credentials: 'include',
+                body: JSON.stringify({ password })
+              });
+
+              const data = await response.json();
+              if (!response.ok) {
+                throw new Error(data.message || 'Failed to update password');
+              }
+
+              closeUserForm();
+              await loadUsers();
+            }
+          });
+        }
+
+        function openEditRoleForm(username, currentRole) {
+          renderUserForm({
+            title: 'Change Role',
+            description: `Change role for user: <strong>${escapeHtml(username)}</strong>`,
+            submitLabel: 'Update Role',
+            fieldsHtml: `
+              <div>
+                <label class="settings-modal-placeholder-text" style="display: block; margin-bottom: 6px;">
+                  Role
+                  <select name="role"
+                    style="margin-top: 4px; width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 14px; cursor: pointer;">
+                    <option value="basic" ${currentRole === 'basic' ? 'selected' : ''}>Basic</option>
+                    <option value="advanced" ${currentRole === 'advanced' ? 'selected' : ''}>Advanced</option>
+                    <option value="administrator" ${currentRole === 'administrator' ? 'selected' : ''}>Administrator</option>
+                  </select>
+                </label>
+              </div>
+            `,
+            onSubmit: async (formData, setError) => {
+              const role = formData.get('role') || '';
+              if (!role) {
+                setError('Role is required');
+                return;
+              }
+
+              const response = await fetch(`/api/users/${encodeURIComponent(username)}/role`, {
+                method: 'PUT',
+                headers: {
+                  'Content-Type': 'application/json'
+                },
+                credentials: 'include',
+                body: JSON.stringify({ role })
+              });
+
+              const data = await response.json();
+              if (!response.ok) {
+                throw new Error(data.message || 'Failed to update role');
+              }
+
+              closeUserForm();
+              await loadUsers();
+            }
+          });
+        }
+
+        async function handleDeleteUser(username) {
+          const confirmed = await openConfirmModal({
+            title: 'Delete User',
+            message: `Are you sure you want to delete user "${escapeHtml(username)}"? This action cannot be undone.`,
+            confirmLabel: 'Delete User',
+            destructive: true
+          });
+
+          if (!confirmed) {
+            return;
+          }
+
+          try {
+            const response = await fetch(`/api/users/${encodeURIComponent(username)}`, {
+              method: 'DELETE',
+              credentials: 'include'
+            });
+            const data = await response.json();
+            if (data.status === 'ok') {
+              await loadUsers();
+            } else {
+              throw new Error(data.message || 'Failed to delete user');
+            }
+          } catch (error) {
+            console.error('Error deleting user:', error);
+            alert('Error deleting user: ' + error.message);
           }
         }
 
@@ -830,14 +1081,14 @@ if (window.__EVENT_LOG_LOADED__) {
               </td>
               <td class="settings-users-actions-cell">
                 <div class="settings-users-actions">
-                  <button type="button" class="confirm-modal-btn settings-users-action-btn" onclick="openEditPasswordModal('${escapeHtml(user.username)}')" title="Change password">
+                  <button type="button" class="confirm-modal-btn settings-users-action-btn" data-action="edit-password" data-username="${escapeHtml(user.username)}" title="Change password">
                     <i class="fa-solid fa-key"></i>
                   </button>
-                  <button type="button" class="confirm-modal-btn settings-users-action-btn" onclick="openEditRoleModal('${escapeHtml(user.username)}', '${escapeHtml(user.role || 'basic')}')" title="Change role">
+                  <button type="button" class="confirm-modal-btn settings-users-action-btn" data-action="edit-role" data-username="${escapeHtml(user.username)}" data-role="${escapeHtml(user.role || 'basic')}" title="Change role">
                     <i class="fa-solid fa-user-tag"></i>
                   </button>
                   ${!isCurrentUser ? `
-                  <button type="button" class="confirm-modal-btn confirm-modal-btn-destructive settings-users-action-btn" onclick="openDeleteUserModal('${escapeHtml(user.username)}')" title="Delete user">
+                  <button type="button" class="confirm-modal-btn confirm-modal-btn-destructive settings-users-action-btn" data-action="delete-user" data-username="${escapeHtml(user.username)}" title="Delete user">
                     <i class="fa-solid fa-trash"></i>
                   </button>
                   ` : ''}
@@ -846,6 +1097,21 @@ if (window.__EVENT_LOG_LOADED__) {
             </tr>
           `;
           }).join('');
+
+          const actionButtons = usersTableBody.querySelectorAll('.settings-users-action-btn');
+          actionButtons.forEach((button) => {
+            const action = button.dataset.action;
+            const username = button.dataset.username || '';
+            const role = button.dataset.role || 'basic';
+
+            if (action === 'edit-password') {
+              button.addEventListener('click', () => openEditPasswordForm(username));
+            } else if (action === 'edit-role') {
+              button.addEventListener('click', () => openEditRoleForm(username, role));
+            } else if (action === 'delete-user') {
+              button.addEventListener('click', () => handleDeleteUser(username));
+            }
+          });
         }
 
         const usersSectionObserver = new MutationObserver((mutations) => {
@@ -862,7 +1128,7 @@ if (window.__EVENT_LOG_LOADED__) {
 
         if (addUserBtn) {
           addUserBtn.addEventListener('click', () => {
-            window.openCreateUserModal();
+            openCreateUserForm();
           });
         }
 
@@ -902,6 +1168,7 @@ if (window.__EVENT_LOG_LOADED__) {
 
     // Handle auto refresh toggle
     const autoRefreshToggle = modal.querySelector('#autoRefreshToggle');
+    const autoRefreshToggleWrapper = modal.querySelector('#autoRefreshToggleWrapper');
     const autoRefreshIntervalSelect = modal.querySelector('#autoRefreshInterval');
     if (autoRefreshToggle && autoRefreshIntervalSelect) {
       autoRefreshToggle.addEventListener('change', (e) => {
@@ -916,6 +1183,19 @@ if (window.__EVENT_LOG_LOADED__) {
         localStorage.setItem('autoRefreshInterval', interval);
         updateAutoRefreshInterval();
       });
+
+      if (autoRefreshToggleWrapper) {
+        autoRefreshToggleWrapper.addEventListener('click', (event) => {
+          const clickedSelect = event.target.closest('#autoRefreshInterval');
+          const clickedInput = event.target === autoRefreshToggle;
+          if (clickedSelect || clickedInput) {
+            return;
+          }
+          event.preventDefault();
+          autoRefreshToggle.checked = !autoRefreshToggle.checked;
+          autoRefreshToggle.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+      }
     }
 
     const deleteAllEventsBtn = modal.querySelector('#deleteAllEventsBtn');
@@ -936,620 +1216,6 @@ if (window.__EVENT_LOG_LOADED__) {
         }
       }
     );
-  }
-
-  if (!window.openCreateUserModal) {
-    window.openCreateUserModal = function() {
-      const existing = document.querySelector('.confirm-modal-backdrop.user-management-backdrop');
-      if (existing) {
-        return;
-      }
-
-      const backdrop = document.createElement('div');
-      backdrop.className = 'confirm-modal-backdrop user-management-backdrop';
-
-      const modal = document.createElement('div');
-      modal.className = 'confirm-modal settings-modal';
-      modal.style.maxWidth = '500px';
-
-      modal.innerHTML = `
-      <div class="confirm-modal-title">Create New User</div>
-      <form id="createUserForm" style="display: flex; flex-direction: column; gap: 16px; margin-top: 16px;">
-        <div>
-          <label class="settings-modal-placeholder-text" style="display: block; margin-bottom: 6px;">
-            Username
-            <input type="text" id="createUsernameInput" required
-              style="margin-top: 4px; width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 14px;"
-              placeholder="Enter username">
-          </label>
-        </div>
-        <div>
-          <label class="settings-modal-placeholder-text" style="display: block; margin-bottom: 6px;">
-            Password
-            <input type="password" id="createPasswordInput" required
-              style="margin-top: 4px; width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 14px;"
-              placeholder="Enter password">
-          </label>
-        </div>
-        <div>
-          <label class="settings-modal-placeholder-text" style="display: block; margin-bottom: 6px;">
-            Role
-            <select id="createRoleSelect"
-              style="margin-top: 4px; width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 14px; cursor: pointer;">
-              <option value="basic">Basic</option>
-              <option value="advanced">Advanced</option>
-              <option value="administrator">Administrator</option>
-            </select>
-          </label>
-        </div>
-        <div id="createUserError" style="color: #dc2626; font-size: 13px; display: none;"></div>
-        <div class="confirm-modal-actions">
-          <button type="button" class="confirm-modal-btn confirm-modal-btn-cancel" onclick="window.closeUserManagementModal()">
-            Cancel
-          </button>
-          <button type="submit" class="confirm-modal-btn confirm-modal-btn-confirm">
-            Create User
-          </button>
-        </div>
-      </form>
-    `;
-
-      backdrop.appendChild(modal);
-      document.body.appendChild(backdrop);
-
-      requestAnimationFrame(() => {
-        backdrop.classList.add('visible');
-      });
-
-      const form = modal.querySelector('#createUserForm');
-      const errorDiv = modal.querySelector('#createUserError');
-
-      form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        errorDiv.style.display = 'none';
-        errorDiv.textContent = '';
-
-        const username = modal.querySelector('#createUsernameInput').value.trim();
-        const password = modal.querySelector('#createPasswordInput').value;
-        const role = modal.querySelector('#createRoleSelect').value;
-
-        if (!username || !password) {
-          errorDiv.textContent = 'Username and password are required';
-          errorDiv.style.display = 'block';
-          return;
-        }
-
-        try {
-          const response = await fetch('/api/users', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            credentials: 'include',
-            body: JSON.stringify({ username, password, role })
-          });
-
-          const data = await response.json();
-
-          if (!response.ok) {
-            throw new Error(data.message || 'Failed to create user');
-          }
-
-          window.closeUserManagementModal();
-          const usersSection = document.querySelector('#settings-users');
-          if (usersSection && usersSection.style.display !== 'none') {
-            const event = new CustomEvent('reloadUsers');
-            usersSection.dispatchEvent(event);
-          }
-          window.location.reload();
-        } catch (error) {
-          errorDiv.textContent = error.message || 'Failed to create user';
-          errorDiv.style.display = 'block';
-        }
-      });
-
-      window.closeUserManagementModal = function() {
-        backdrop.classList.remove('visible');
-        backdrop.classList.add('hiding');
-        setTimeout(() => {
-          if (document.body.contains(backdrop)) {
-            backdrop.remove();
-          }
-        }, 220);
-      };
-    };
-  }
-
-  if (!window.openEditPasswordModal) {
-    window.openEditPasswordModal = function(username) {
-      const existing = document.querySelector('.confirm-modal-backdrop.user-management-backdrop');
-      if (existing) {
-        return;
-      }
-
-      const backdrop = document.createElement('div');
-      backdrop.className = 'confirm-modal-backdrop user-management-backdrop';
-
-      const modal = document.createElement('div');
-      modal.className = 'confirm-modal settings-modal';
-      modal.style.maxWidth = '500px';
-
-      modal.innerHTML = `
-      <div class="confirm-modal-title">Change Password</div>
-      <div class="confirm-modal-message" style="margin-top: 8px; margin-bottom: 16px;">
-        <p class="settings-modal-placeholder-text">
-          Change password for user: <strong>${escapeHtml(username)}</strong>
-        </p>
-      </div>
-      <form id="editPasswordForm" style="display: flex; flex-direction: column; gap: 16px;">
-        <div>
-          <label class="settings-modal-placeholder-text" style="display: block; margin-bottom: 6px;">
-            New Password
-            <input type="password" id="editPasswordInput" required
-              style="margin-top: 4px; width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 14px;"
-              placeholder="Enter new password">
-          </label>
-        </div>
-        <div id="editPasswordError" style="color: #dc2626; font-size: 13px; display: none;"></div>
-        <div class="confirm-modal-actions">
-          <button type="button" class="confirm-modal-btn confirm-modal-btn-cancel" onclick="window.closeUserManagementModal()">
-            Cancel
-          </button>
-          <button type="submit" class="confirm-modal-btn confirm-modal-btn-confirm">
-            Update Password
-          </button>
-        </div>
-      </form>
-    `;
-
-      backdrop.appendChild(modal);
-      document.body.appendChild(backdrop);
-
-      requestAnimationFrame(() => {
-        backdrop.classList.add('visible');
-      });
-
-      const form = modal.querySelector('#editPasswordForm');
-      const errorDiv = modal.querySelector('#editPasswordError');
-
-      form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        errorDiv.style.display = 'none';
-        errorDiv.textContent = '';
-
-        const password = modal.querySelector('#editPasswordInput').value;
-
-        if (!password) {
-          errorDiv.textContent = 'Password is required';
-          errorDiv.style.display = 'block';
-          return;
-        }
-
-        try {
-          const response = await fetch(`/api/users/${encodeURIComponent(username)}/password`, {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            credentials: 'include',
-            body: JSON.stringify({ password })
-          });
-
-          const data = await response.json();
-
-          if (!response.ok) {
-            throw new Error(data.message || 'Failed to update password');
-          }
-
-          window.closeUserManagementModal();
-          alert('Password updated successfully');
-          window.location.reload();
-        } catch (error) {
-          errorDiv.textContent = error.message || 'Failed to update password';
-          errorDiv.style.display = 'block';
-        }
-      });
-
-      window.closeUserManagementModal = function() {
-        backdrop.classList.remove('visible');
-        backdrop.classList.add('hiding');
-        setTimeout(() => {
-          if (document.body.contains(backdrop)) {
-            backdrop.remove();
-          }
-        }, 220);
-      };
-    };
-  }
-
-  if (!window.openEditRoleModal) {
-    window.openEditRoleModal = function(username, currentRole) {
-      const existing = document.querySelector('.confirm-modal-backdrop.user-management-backdrop');
-      if (existing) {
-        return;
-      }
-
-      const backdrop = document.createElement('div');
-      backdrop.className = 'confirm-modal-backdrop user-management-backdrop';
-
-      const modal = document.createElement('div');
-      modal.className = 'confirm-modal settings-modal';
-      modal.style.maxWidth = '500px';
-
-      modal.innerHTML = `
-      <div class="confirm-modal-title">Change Role</div>
-      <div class="confirm-modal-message" style="margin-top: 8px; margin-bottom: 16px;">
-        <p class="settings-modal-placeholder-text">
-          Change role for user: <strong>${escapeHtml(username)}</strong>
-        </p>
-      </div>
-      <form id="editRoleForm" style="display: flex; flex-direction: column; gap: 16px;">
-        <div>
-          <label class="settings-modal-placeholder-text" style="display: block; margin-bottom: 6px;">
-            Role
-            <select id="editRoleSelect"
-              style="margin-top: 4px; width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 14px; cursor: pointer;">
-              <option value="basic" ${currentRole === 'basic' ? 'selected' : ''}>Basic</option>
-              <option value="advanced" ${currentRole === 'advanced' ? 'selected' : ''}>Advanced</option>
-              <option value="administrator" ${currentRole === 'administrator' ? 'selected' : ''}>Administrator</option>
-            </select>
-          </label>
-        </div>
-        <div id="editRoleError" style="color: #dc2626; font-size: 13px; display: none;"></div>
-        <div class="confirm-modal-actions">
-          <button type="button" class="confirm-modal-btn confirm-modal-btn-cancel" onclick="window.closeUserManagementModal()">
-            Cancel
-          </button>
-          <button type="submit" class="confirm-modal-btn confirm-modal-btn-confirm">
-            Update Role
-          </button>
-        </div>
-      </form>
-    `;
-
-      backdrop.appendChild(modal);
-      document.body.appendChild(backdrop);
-
-      requestAnimationFrame(() => {
-        backdrop.classList.add('visible');
-      });
-
-      const form = modal.querySelector('#editRoleForm');
-      const errorDiv = modal.querySelector('#editRoleError');
-
-      form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        errorDiv.style.display = 'none';
-        errorDiv.textContent = '';
-
-        const role = modal.querySelector('#editRoleSelect').value;
-
-        if (!role) {
-          errorDiv.textContent = 'Role is required';
-          errorDiv.style.display = 'block';
-          return;
-        }
-
-        try {
-          const response = await fetch(`/api/users/${encodeURIComponent(username)}/role`, {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            credentials: 'include',
-            body: JSON.stringify({ role })
-          });
-
-          const data = await response.json();
-
-          if (!response.ok) {
-            throw new Error(data.message || 'Failed to update role');
-          }
-
-          window.closeUserManagementModal();
-          alert('Role updated successfully');
-          window.location.reload();
-        } catch (error) {
-          errorDiv.textContent = error.message || 'Failed to update role';
-          errorDiv.style.display = 'block';
-        }
-      });
-
-      window.closeUserManagementModal = function() {
-        backdrop.classList.remove('visible');
-        backdrop.classList.add('hiding');
-        setTimeout(() => {
-          if (document.body.contains(backdrop)) {
-            backdrop.remove();
-          }
-        }, 220);
-      };
-    };
-  }
-
-  if (!window.openDeleteUserModal) {
-    window.openDeleteUserModal = function(username) {
-      openConfirmModal({
-        title: 'Delete User',
-        message: `Are you sure you want to delete user "${escapeHtml(username)}"? This action cannot be undone.`,
-        confirmLabel: 'Delete User',
-        destructive: true
-      }).then((confirmed) => {
-        if (!confirmed) {
-          return;
-        }
-
-        fetch(`/api/users/${encodeURIComponent(username)}`, {
-          method: 'DELETE',
-          credentials: 'include'
-        })
-          .then(response => response.json())
-          .then(data => {
-            if (data.status === 'ok') {
-              alert('User deleted successfully');
-              window.location.reload();
-            } else {
-              alert('Error: ' + (data.message || 'Failed to delete user'));
-            }
-          })
-          .catch(error => {
-            console.error('Error deleting user:', error);
-            alert('Error deleting user: ' + error.message);
-          });
-      });
-    };
-  }
-
-  function openOrgTeamMappingModal() {
-    const existing = document.querySelector('.confirm-modal-backdrop.org-team-mapping-backdrop');
-    if (existing) {
-      return;
-    }
-
-    const backdrop = document.createElement('div');
-    backdrop.className = 'confirm-modal-backdrop org-team-mapping-backdrop';
-
-    const modal = document.createElement('div');
-    modal.className = 'confirm-modal settings-modal';
-    modal.innerHTML = `
-		<div class="confirm-modal-title">Org – Client – Team mapping</div>
-		<div class="confirm-modal-message">
-			<p class="settings-modal-placeholder-text">
-				Manage how Salesforce org identifiers are associated with clients and teams. This configuration is stored only in this browser.
-			</p>
-		</div>
-		<div style="display: flex; flex-direction: column; gap: 12px;">
-			<div id="orgTeamMappingList" style="max-height: 260px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 10px;">
-			</div>
-			<form id="orgTeamMappingForm" class="settings-toggle-row" style="flex-direction: column; align-items: stretch; gap: 10px; padding-top: 4px; padding-bottom: 0;">
-				<input type="hidden" id="orgTeamMappingEditingId" value="">
-				<div style="display: flex; flex-direction: column; gap: 6px;">
-					<label class="settings-modal-placeholder-text">
-						Salesforce org identifier
-						<input id="orgIdentifierInput" type="text" placeholder="Org ID or unique org key"
-							style="margin-top: 2px; width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 0.8rem;">
-					</label>
-					<label class="settings-modal-placeholder-text">
-						Client name
-						<input id="clientNameInput" type="text" placeholder="Client"
-							style="margin-top: 2px; width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 0.8rem;">
-					</label>
-					<label class="settings-modal-placeholder-text">
-						Team name
-						<input id="teamNameInput" type="text" placeholder="Team"
-							style="margin-top: 2px; width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 0.8rem;">
-					</label>
-					<label class="settings-modal-placeholder-text">
-						Color (optional)
-						<input id="teamColorInput" type="text" placeholder="#2195cf or CSS color name"
-							style="margin-top: 2px; width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 0.8rem;">
-					</label>
-					<label class="settings-modal-placeholder-text" style="display: flex; align-items: center; gap: 6px; margin-top: 4px;">
-						<input id="mappingActiveInput" type="checkbox" checked style="width: 14px; height: 14px;">
-						<span>Active mapping</span>
-					</label>
-				</div>
-				<div class="confirm-modal-actions" style="width: 100%; justify-content: space-between; margin-top: 4px;">
-					<button type="button" class="confirm-modal-btn confirm-modal-btn-cancel" id="resetOrgTeamMappingFormBtn">
-						Clear form
-					</button>
-					<button type="submit" class="confirm-modal-btn confirm-modal-btn-confirm">
-						Save mapping
-					</button>
-				</div>
-			</form>
-		</div>
-		<div class="confirm-modal-actions" style="margin-top: 16px;">
-			<button type="button" class="confirm-modal-btn confirm-modal-btn-cancel" id="orgTeamMappingCloseBtn">
-				Close
-			</button>
-		</div>
-	`;
-
-    backdrop.appendChild(modal);
-    document.body.appendChild(backdrop);
-
-    function closeMappingModal() {
-      backdrop.classList.remove('visible');
-      backdrop.classList.add('hiding');
-      const handleTransitionEnd = () => {
-        backdrop.removeEventListener('transitionend', handleTransitionEnd);
-        backdrop.remove();
-      };
-      backdrop.addEventListener('transitionend', handleTransitionEnd);
-      setTimeout(() => {
-        if (document.body.contains(backdrop)) {
-          backdrop.removeEventListener('transitionend', handleTransitionEnd);
-          backdrop.remove();
-        }
-      }, 220);
-    }
-
-    const closeBtn = modal.querySelector('#orgTeamMappingCloseBtn');
-    if (closeBtn) {
-      closeBtn.addEventListener('click', closeMappingModal);
-    }
-
-    document.addEventListener(
-      'keydown',
-      function handleKeydown(e) {
-        if (e.key === 'Escape') {
-          document.removeEventListener('keydown', handleKeydown);
-          if (document.body.contains(backdrop)) {
-            closeMappingModal();
-          }
-        }
-      }
-    );
-
-    const listContainer = modal.querySelector('#orgTeamMappingList');
-    const form = modal.querySelector('#orgTeamMappingForm');
-    const editingIdInput = modal.querySelector('#orgTeamMappingEditingId');
-    const orgInput = modal.querySelector('#orgIdentifierInput');
-    const clientInput = modal.querySelector('#clientNameInput');
-    const teamInput = modal.querySelector('#teamNameInput');
-    const colorInput = modal.querySelector('#teamColorInput');
-    const activeInput = modal.querySelector('#mappingActiveInput');
-    const resetFormBtn = modal.querySelector('#resetOrgTeamMappingFormBtn');
-
-    function renderMappings() {
-      if (!listContainer) {
-        return;
-      }
-      const mappings = getOrgTeamMappings();
-      if (!mappings.length) {
-        listContainer.innerHTML = `
-				<div class="settings-modal-placeholder-text">
-					No mappings defined yet. Add a mapping using the form below.
-				</div>
-			`;
-        return;
-      }
-
-      const rowsHtml = mappings
-        .map((mapping, index) => {
-          const safeOrg = escapeHtml(mapping.orgIdentifier || '');
-          const safeClient = escapeHtml(mapping.clientName || '');
-          const safeTeam = escapeHtml(mapping.teamName || '');
-          const safeColor = escapeHtml(mapping.color || '');
-          const status = mapping.active === false ? 'Inactive' : 'Active';
-          return `
-					<div class="settings-toggle-row" data-mapping-index="${index}" style="padding-top: 6px; padding-bottom: 6px; border-bottom: 1px solid var(--border-color);">
-						<div class="settings-toggle-text">
-							<div class="settings-toggle-title">${safeTeam || '(Unnamed team)'} ${safeClient ? '· ' + safeClient : ''}</div>
-							<div class="settings-toggle-description">
-								Org: <code>${safeOrg || '-'}</code>
-								${safeColor ? ` · Color: <span style="display:inline-flex;align-items:center;gap:4px;"><span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:${safeColor};border:1px solid var(--border-color);"></span>${safeColor}</span>` : ''}
-								 · Status: ${status}
-							</div>
-						</div>
-						<div class="confirm-modal-actions" style="gap: 6px;">
-							<button type="button" class="confirm-modal-btn" data-action="edit" data-index="${index}">Edit</button>
-							<button type="button" class="confirm-modal-btn confirm-modal-btn-destructive" data-action="delete" data-index="${index}">Delete</button>
-						</div>
-					</div>
-				`;
-        })
-        .join('');
-
-      listContainer.innerHTML = rowsHtml;
-
-      listContainer.querySelectorAll('button[data-action="edit"]').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          const idx = Number(btn.dataset.index);
-          const mappingsData = getOrgTeamMappings();
-          const mapping = mappingsData[idx];
-          if (!mapping) {
-            return;
-          }
-          editingIdInput.value = String(idx);
-          orgInput.value = mapping.orgIdentifier || '';
-          clientInput.value = mapping.clientName || '';
-          teamInput.value = mapping.teamName || '';
-          colorInput.value = mapping.color || '';
-          activeInput.checked = mapping.active !== false;
-        });
-      });
-
-      listContainer.querySelectorAll('button[data-action="delete"]').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          const idx = Number(btn.dataset.index);
-          const mappingsData = getOrgTeamMappings();
-          if (idx >= 0 && idx < mappingsData.length) {
-            mappingsData.splice(idx, 1);
-            saveOrgTeamMappings(mappingsData);
-            renderMappings();
-          }
-        });
-      });
-    }
-
-    function resetForm() {
-      if (!editingIdInput || !orgInput || !clientInput || !teamInput || !colorInput || !activeInput) {
-        return;
-      }
-      editingIdInput.value = '';
-      orgInput.value = '';
-      clientInput.value = '';
-      teamInput.value = '';
-      colorInput.value = '';
-      activeInput.checked = true;
-    }
-
-    if (resetFormBtn) {
-      resetFormBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        resetForm();
-      });
-    }
-
-    if (form) {
-      form.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const orgIdentifier = orgInput.value.trim();
-        const clientName = clientInput.value.trim();
-        const teamName = teamInput.value.trim();
-        const color = colorInput.value.trim();
-        const active = !!activeInput.checked;
-
-        if (!orgIdentifier || !clientName || !teamName) {
-          alert('Org identifier, client name and team name are required.');
-          return;
-        }
-
-        const mappings = getOrgTeamMappings();
-        const editingIndex = editingIdInput.value !== '' ? Number(editingIdInput.value) : -1;
-
-        const duplicateIndex = mappings.findIndex((m, idx) => m.orgIdentifier === orgIdentifier && idx !== editingIndex);
-        if (duplicateIndex !== -1) {
-          alert('There is already a mapping for this org identifier. Edit the existing mapping instead.');
-          return;
-        }
-
-        const mappingData = {
-          orgIdentifier,
-          clientName,
-          teamName,
-          color,
-          active
-        };
-
-        if (editingIndex >= 0 && editingIndex < mappings.length) {
-          mappings[editingIndex] = mappingData;
-        } else {
-          mappings.push(mappingData);
-        }
-        saveOrgTeamMappings(mappings);
-        renderMappings();
-        resetForm();
-      });
-    }
-
-    renderMappings();
-
-    requestAnimationFrame(() => {
-      backdrop.classList.add('visible');
-    });
   }
 
   // eslint-disable-next-line no-unused-vars
@@ -1653,6 +1319,9 @@ if (window.__EVENT_LOG_LOADED__) {
   let isLoadingMore = false;
   let allLoadedEvents = []; // Accumulative array of all loaded events
   let selectedSession = 'all';
+  let selectedTeamKey = null; // Lowercased team name acting as key
+  let orgToTeamMap = new Map(); // org identifier -> team key
+  let teamEventCounts = new Map(); // team key -> event count in current view
   let selectedActivityDate = null; // null means use current day by default
   let activeFilters = new Set(['tool_call', 'session_start', 'custom', 'tool_error']);
   let selectedUserIds = new Set(); // Will be populated with all users when loaded - all selected by default
@@ -3645,6 +3314,162 @@ if (window.__EVENT_LOG_LOADED__) {
     }
   }
 
+  function loadTeamsList() {
+    try {
+      const teamList = document.getElementById('teamList');
+      if (!teamList) {
+        console.error('teamList element not found');
+        return;
+      }
+
+      const mappings = getOrgTeamMappings();
+      const teamsMap = new Map();
+      orgToTeamMap = new Map();
+
+      mappings.forEach((mapping) => {
+        const rawName = (mapping?.teamName || '').trim();
+        if (!rawName) {
+          return;
+        }
+        const key = rawName.toLowerCase();
+        if (!teamsMap.has(key)) {
+          teamsMap.set(key, {
+            teamName: rawName,
+            color: mapping?.color?.trim() || '',
+            clients: new Set(),
+            orgs: new Set(),
+            activeCount: 0,
+            inactiveCount: 0
+          });
+        }
+        const entry = teamsMap.get(key);
+        const client = (mapping?.clientName || '').trim();
+        const org = (mapping?.orgIdentifier || '').trim();
+        if (client) {
+          entry.clients.add(client);
+        }
+        if (org) {
+          const normalizedOrg = normalizeOrgIdentifier(org);
+          if (normalizedOrg) {
+            entry.orgs.add(org);
+            orgToTeamMap.set(normalizedOrg, key);
+          }
+        }
+        if (entry.color === '' && mapping?.color) {
+          entry.color = mapping.color.trim();
+        }
+        if (mapping?.active === false) {
+          entry.inactiveCount += 1;
+        } else {
+          entry.activeCount += 1;
+        }
+      });
+
+      const teams = Array.from(teamsMap.entries())
+        .map(([key, team]) => ({
+          key,
+          ...team,
+          clients: Array.from(team.clients),
+          orgs: Array.from(team.orgs),
+          totalMappings: team.activeCount + team.inactiveCount,
+          eventCount: teamEventCounts.get(key) || 0
+        }))
+        .sort((a, b) => a.teamName.localeCompare(b.teamName));
+
+      teamList.innerHTML = '';
+
+      if (teams.length === 0) {
+        selectedTeamKey = null;
+        teamList.innerHTML = `
+				<li class="session-item">
+					<div class="session-item-left">
+						<span class="session-name text-sm">No teams configured</span>
+						<span class="session-date text-xs">Add mappings in Settings → Events → Manage teams</span>
+					</div>
+					<div class="session-item-right">
+						<button type="button" class="confirm-modal-btn" style="padding: 4px 8px;" onclick="openOrgTeamMappingModal()">
+							Manage teams
+						</button>
+					</div>
+				</li>
+			`;
+        return;
+      }
+
+      teams.forEach((team) => {
+        const li = document.createElement('li');
+        li.className = 'session-item';
+        li.dataset.teamKey = team.key;
+        const initial = team.teamName.charAt(0).toUpperCase();
+        const color = team.color || 'var(--bg-secondary)';
+        const clientsLabel = team.clients.length
+          ? `Clients: ${escapeHtml(team.clients.slice(0, 2).join(', '))}${team.clients.length > 2 ? '…' : ''}`
+          : 'No clients defined';
+        const mappingLabel = `${team.totalMappings} mapping${team.totalMappings === 1 ? '' : 's'}`;
+        const statusLabel = team.inactiveCount > 0
+          ? `${team.activeCount} active · ${team.inactiveCount} inactive`
+          : `${team.activeCount} active`;
+        const eventCount = team.eventCount || 0;
+
+        li.innerHTML = `
+				<div class="session-item-left">
+					<div style="width: 32px; height: 32px; border-radius: 50%; background: ${color}; display: inline-flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: 13px; margin-right: 10px;">
+						${escapeHtml(initial)}
+					</div>
+					<div style="display: flex; flex-direction: column; gap: 2px;">
+						<span class="session-name text-sm" style="font-weight: 600;">${escapeHtml(team.teamName)}</span>
+						<span class="session-date text-xs">${clientsLabel}</span>
+					</div>
+				</div>
+				<div class="session-item-right" style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
+					<span class="session-size text-xs"><span class="team-event-count">${eventCount}</span> events</span>
+					<span class="session-size text-xs">${mappingLabel}</span>
+					<span class="session-date text-[11px]">${escapeHtml(statusLabel)}</span>
+				</div>
+			`;
+
+        li.addEventListener('click', () => {
+          const isSelectingSame = selectedTeamKey === team.key;
+          selectedTeamKey = isSelectingSame ? null : team.key;
+          document.querySelectorAll('#teamList .session-item').forEach((item) => {
+            item.classList.toggle('active', item.dataset.teamKey === selectedTeamKey);
+          });
+          switchTab('teams');
+          currentOffset = 0;
+          loadEvents();
+        });
+
+        teamList.appendChild(li);
+      });
+      // Refresh counts in case events already loaded
+      updateTeamEventCounts(allLoadedEvents);
+    } catch (error) {
+      console.error('Error loading teams list:', error);
+    }
+  }
+
+  function updateTeamEventCounts(events = []) {
+    const counts = new Map();
+    events.forEach((event) => {
+      const teamKey = getTeamKeyForEvent(event);
+      if (!teamKey) return;
+      const current = counts.get(teamKey) || 0;
+      counts.set(teamKey, current + 1);
+    });
+    teamEventCounts = counts;
+
+    const teamItems = document.querySelectorAll('#teamList .session-item[data-team-key]');
+    teamItems.forEach((item) => {
+      const key = item.dataset.teamKey;
+      const count = teamEventCounts.get(key) || 0;
+      const badge = item.querySelector('.team-event-count');
+      if (badge) {
+        badge.textContent = count;
+      }
+      item.classList.toggle('active', selectedTeamKey === key);
+    });
+  }
+
   function updateTabIndicator() {
     const indicator = document.getElementById('tabIndicator');
     if (!indicator) return;
@@ -3685,6 +3510,15 @@ if (window.__EVENT_LOG_LOADED__) {
         toggleBtn.classList.remove('active');
       }
       updateDeleteSelectedButton();
+    }
+
+    // Clear team selection when leaving Teams tab to avoid stale filters
+    if (tab !== 'teams' && selectedTeamKey) {
+      selectedTeamKey = null;
+      const teamItems = document.querySelectorAll('#teamList .session-item');
+      teamItems.forEach((item) => item.classList.remove('active'));
+      // Reload events without team filter if we're moving to a tab that shows events
+      loadEvents();
     }
 
     // Update tab buttons
@@ -3803,22 +3637,40 @@ if (window.__EVENT_LOG_LOADED__) {
       const duration = Math.round(performance.now() - startTime);
       document.getElementById('durationInfo').textContent = `${duration}ms`;
 
-      if (data.events && data.events.length > 0) {
-        displayEvents(data.events, append);
+      let fetchedEvents = Array.isArray(data.events) ? data.events : [];
+
+      if (selectedTeamKey) {
+        fetchedEvents = fetchedEvents.filter(eventMatchesSelectedTeam);
+      }
+
+      const hasEventsToShow = fetchedEvents.length > 0;
+
+      if (hasEventsToShow) {
+        displayEvents(fetchedEvents, append);
         hasMoreEvents = data.hasMore || false;
-        currentOffset += data.events.length;
+        currentOffset += fetchedEvents.length;
         document.getElementById('logsTable').style.display = 'table';
-        handleNotificationState(data.events, triggeredByNotification);
+        handleNotificationState(fetchedEvents, triggeredByNotification);
         if (!append) {
           updateSessionActivityChart({ sessionId: selectedSession });
         }
       } else {
         hasMoreEvents = false;
         if (!append) {
-          document.getElementById('emptyState').style.display = 'block';
+          const emptyStateEl = document.getElementById('emptyState');
+          if (emptyStateEl) {
+            emptyStateEl.style.display = 'block';
+          }
           hideSessionActivityCard();
+          const tbody = document.getElementById('logsBody');
+          if (tbody) {
+            tbody.innerHTML = '';
+          }
+          allLoadedEvents = [];
+          updateTeamEventCounts(allLoadedEvents);
         }
       }
+      updateTeamEventCounts(allLoadedEvents);
     } catch (error) {
       console.error('Error loading events:', error);
       document.getElementById('errorMessage').textContent = 'Error loading events: ' + error.message;
@@ -3875,6 +3727,64 @@ if (window.__EVENT_LOG_LOADED__) {
     return '';
   }
 
+  function normalizeOrgIdentifier(value) {
+    return typeof value === 'string' ? value.trim().toLowerCase() : '';
+  }
+
+  function extractOrgIdentifierFromEvent(event) {
+    try {
+      const eventData = normalizeEventData(event?.data);
+      const candidates = [
+        event?.org_id,
+        event?.orgId,
+        event?.orgIdentifier,
+        event?.org_identifier,
+        eventData?.org_id,
+        eventData?.orgId,
+        eventData?.orgIdentifier,
+        eventData?.org_identifier,
+        eventData?.org?.id,
+        eventData?.org?.orgId,
+        eventData?.org?.org_id,
+        eventData?.org?.identifier,
+        eventData?.org?.salesforceOrgId,
+        eventData?.state?.org?.id,
+        eventData?.state?.org?.orgId,
+        eventData?.state?.org?.org_id,
+        eventData?.state?.org?.identifier,
+        eventData?.state?.org?.salesforceOrgId,
+        eventData?.companyDetails?.Id,
+        eventData?.state?.org?.companyDetails?.Id,
+        eventData?.org?.companyDetails?.Id
+      ];
+      const found = candidates.find(
+        (value) => typeof value === 'string' && value.trim() !== ''
+      );
+      return found ? found.trim() : '';
+    } catch (_error) {
+      return '';
+    }
+  }
+
+  function getTeamKeyForEvent(event) {
+    if (!event) return '';
+    const orgIdentifier = extractOrgIdentifierFromEvent(event);
+    if (!orgIdentifier) return '';
+    const mappedKey = orgToTeamMap.get(normalizeOrgIdentifier(orgIdentifier));
+    return mappedKey || '';
+  }
+
+  function eventMatchesSelectedTeam(event) {
+    if (!selectedTeamKey) {
+      return true;
+    }
+    const teamKey = getTeamKeyForEvent(event);
+    if (!teamKey) {
+      return false;
+    }
+    return teamKey === selectedTeamKey;
+  }
+
   function extractUserLabelFromEvent(event, eventData) {
     if (!event) {
       return '';
@@ -3907,6 +3817,8 @@ if (window.__EVENT_LOG_LOADED__) {
   }
 
   function displayEvents(events, append = false) {
+    // Enforce team filter just before rendering to avoid any leakage
+    const renderableEvents = selectedTeamKey ? events.filter(eventMatchesSelectedTeam) : events;
     const tbody = document.getElementById('logsBody');
 
     // Save selected event state before clearing (only if not appending)
@@ -3944,7 +3856,7 @@ if (window.__EVENT_LOG_LOADED__) {
       userHeader.style.display = showUserColumn ? '' : 'none';
     }
 
-    events.forEach(event => {
+    renderableEvents.forEach(event => {
       const levelClass = getLevelClass(event.event);
       const description = formatDescription(event);
       const descriptionPretty = formatDescriptionPretty(event);
@@ -4061,9 +3973,9 @@ if (window.__EVENT_LOG_LOADED__) {
 
     // Add events to accumulative array
     if (append) {
-      allLoadedEvents.push(...events);
+      allLoadedEvents.push(...renderableEvents);
     } else {
-      allLoadedEvents = [...events];
+      allLoadedEvents = [...renderableEvents];
 
       // Restore selected event and expanded state after rendering
       if (selectedEventId) {
@@ -4229,7 +4141,8 @@ if (window.__EVENT_LOG_LOADED__) {
     }
     // Rotate refresh icon
     const button = event?.target?.closest('.icon-btn') || event?.currentTarget;
-    const refreshIcon = button?.querySelector('.fa-refresh') || (event?.target?.classList?.contains('fa-refresh') ? event.target : null);
+    const refreshIcon = button?.querySelector('.fa-refresh, .refresh-icon') ||
+      (event?.target?.classList?.contains('fa-refresh') || event?.target?.classList?.contains('refresh-icon') ? event.target : null);
     if (refreshIcon) {
       refreshIcon.classList.add('rotating');
     }
@@ -4364,11 +4277,15 @@ if (window.__EVENT_LOG_LOADED__) {
     button.classList.toggle('active', notificationModeEnabled);
     button.setAttribute('title', notificationModeEnabled ? 'Disable notifications' : 'Enable notifications');
 
-    // Update the icon
-    const bellIconClass = notificationModeEnabled ? 'fa-solid fa-bell' : 'fa-regular fa-bell';
-    button.innerHTML = `<i class="${bellIconClass}"></i>`;
+    // Update the icon to the provided bell SVG
+    const bellIconSvg = `
+      <svg class="notification-bell-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="18" height="18" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
+      </svg>
+    `;
+    button.innerHTML = bellIconSvg;
 
-    const bellIcon = button.querySelector('.fa-bell');
+    const bellIcon = button.querySelector('.notification-bell-icon');
     if (bellIcon) {
     // Remove tilted class when disabling
       if (!notificationModeEnabled) {
@@ -4411,11 +4328,42 @@ if (window.__EVENT_LOG_LOADED__) {
     const enabled = localStorage.getItem('autoRefreshEnabled') === 'true';
     const intervalMinutes = localStorage.getItem('autoRefreshInterval');
 
+    setRefreshButtonAutoState(enabled, intervalMinutes);
+
     if (enabled && intervalMinutes && intervalMinutes !== '') {
       const intervalMs = parseInt(intervalMinutes) * 60 * 1000;
       autoRefreshIntervalId = setInterval(() => {
         loadEvents();
       }, intervalMs);
+    }
+  }
+
+  function setRefreshButtonAutoState(enabled, intervalMinutes) {
+    const refreshButton = document.getElementById('refreshButton');
+    const badge = document.getElementById('autoRefreshBadge');
+    if (!refreshButton) {
+      return;
+    }
+
+    const hasInterval = intervalMinutes && intervalMinutes !== '';
+    const shouldHighlight = enabled && hasInterval;
+    refreshButton.classList.toggle('auto-refresh-active', shouldHighlight);
+
+    if (shouldHighlight) {
+      refreshButton.setAttribute('title', `Auto-refresh every ${intervalMinutes} min`);
+      refreshButton.setAttribute('aria-label', `Auto-refresh every ${intervalMinutes} minutes. Click to refresh now.`);
+      if (badge) {
+        badge.textContent = intervalMinutes;
+        badge.style.display = 'inline-flex';
+      }
+      return;
+    }
+
+    refreshButton.setAttribute('title', 'Refresh now');
+    refreshButton.setAttribute('aria-label', 'Refresh now');
+    if (badge) {
+      badge.textContent = '';
+      badge.style.display = 'none';
     }
   }
 
@@ -4915,7 +4863,7 @@ if (window.__EVENT_LOG_LOADED__) {
     }
   }
 
-  // eslint-disable-next-line no-unused-vars
+
   function toggleSessionActionsDropdown(e, sessionId) {
     e.stopPropagation();
     const dropdown = document.getElementById(`session-dropdown-${escapeHtml(sessionId)}`);
@@ -5294,7 +5242,7 @@ if (window.__EVENT_LOG_LOADED__) {
     }
   }
 
-  // eslint-disable-next-line no-unused-vars
+
   function confirmDeleteSession(sessionId) {
     openConfirmModal({
       title: 'Delete session events',
@@ -5790,6 +5738,7 @@ if (window.__EVENT_LOG_LOADED__) {
     runSafeAsyncInitStep('events table', () => loadEvents());
     runSafeAsyncInitStep('database size', () => loadDatabaseSize());
     runSafeAsyncInitStep('users list', () => loadUsersList());
+    runSafeAsyncInitStep('teams list', () => loadTeamsList());
     runSafeAsyncInitStep('auto refresh', () => updateAutoRefreshInterval());
 
     // Listen for chart rendering completion

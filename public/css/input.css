@@ -1,3 +1,11 @@
+/* Toggle knobs (manual peer-checked replacement) */
+.sr-only.peer + div .toggle-knob {
+  transition: transform 200ms ease-in-out;
+  transform: translateX(0);
+}
+.sr-only.peer:checked + div .toggle-knob {
+  transform: translateX(20px);
+}
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -1691,6 +1699,81 @@
     transition: background-color 0.2s ease, color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
     color: #3a485f;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02), 0 0 1px rgba(0, 0, 0, 0.01), 0 2px 3px rgba(0, 0, 0, 0.03);
+    position: relative;
+  }
+
+  .icon-btn.auto-refresh-active {
+    background: var(--brand-600);
+    color: white;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+  }
+
+  html.dark .icon-btn.auto-refresh-active {
+    background: var(--brand-700);
+    color: white;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.22);
+  }
+
+  .icon-btn.auto-refresh-active:hover {
+    background: var(--brand-600);
+    color: white;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.18);
+    transform: translateY(-1px);
+  }
+
+  html.dark .icon-btn.auto-refresh-active:hover {
+    background: var(--brand-700);
+    color: white;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.28);
+    transform: translateY(-1px);
+  }
+
+  .icon-btn.auto-refresh-active svg,
+  .icon-btn.notification-toggle.active svg {
+    color: #ffffff;
+    stroke: #ffffff;
+    stroke-width: 1.6;
+    fill: none;
+    opacity: 1;
+  }
+
+  .icon-btn.notification-toggle.active svg path {
+    stroke: #ffffff;
+  }
+
+  .icon-btn.notification-toggle.active .fa-bell,
+  .icon-btn.notification-toggle.active .fa-bell-slash {
+    color: #ffffff !important;
+  }
+
+  .refresh-badge {
+    display: none;
+    position: absolute;
+    top: -7px;
+    right: -5px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 9999px;
+    background: #ffffff;
+    color: var(--brand-600);
+    border: 1px solid var(--brand-600);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1;
+    text-align: center;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.9;
+  }
+
+  html.dark .refresh-badge {
+    background: #ffffff;
+    color: var(--brand-500);
+    border: 1px solid var(--brand-600);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   }
 
   .icon-btn.sort-btn {
@@ -1748,20 +1831,36 @@
     color: white;
   }
 
+  .icon-btn.notification-toggle.active:hover {
+    background: var(--brand-600);
+    color: white;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.18);
+    transform: translateY(-1px);
+  }
+
+  html.dark .icon-btn.notification-toggle.active:hover {
+    background: var(--brand-700);
+    color: white;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.28);
+    transform: translateY(-1px);
+  }
+
   html.dark .icon-btn {
     background: var(--bg-table-header);
     color: var(--text-muted);
   }
 
-  .icon-btn:hover:not(.delete-all-btn):not(.notification-toggle.active) {
+  .icon-btn:hover:not(.delete-all-btn):not(.notification-toggle.active):not(.auto-refresh-active) {
     background: white;
     color: #3d4152;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04), 0 0 2px rgba(0, 0, 0, 0.02), 0 4px 6px rgba(0, 0, 0, 0.05);
+    transform: translateY(-0.5px);
   }
 
-  html.dark .icon-btn:hover:not(.delete-all-btn):not(.notification-toggle.active) {
+  html.dark .icon-btn:hover:not(.delete-all-btn):not(.notification-toggle.active):not(.auto-refresh-active) {
     background: var(--hover-bg);
     color: var(--text-primary);
+    transform: translateY(-0.5px);
   }
 
   .delete-all-btn {
@@ -1797,6 +1896,10 @@
     animation: rotate360 0.7s linear infinite;
   }
 
+  .icon-btn .refresh-icon.rotating {
+    animation: rotate360 0.7s linear infinite;
+  }
+
   /* Bell icon shake animation */
   @keyframes bellShake {
     0% {
@@ -1824,21 +1927,29 @@
     }
   }
 
-  .icon-btn.notification-toggle .fa-bell.animating,
-  .icon-btn.notification-toggle .fa-bell-slash.animating {
+  .icon-btn.notification-toggle .notification-bell-icon.animating {
     animation: bellShake 0.8s cubic-bezier(0.4, 0, 0.2, 1);
     animation-iteration-count: 1;
     transform-origin: top center;
   }
 
-  .icon-btn.notification-toggle .fa-bell.tilted {
+  .icon-btn.notification-toggle .notification-bell-icon {
+    width: 18px;
+    height: 18px;
+  }
+
+  .icon-btn.notification-toggle .notification-bell-icon.tilted {
     transform: scale(1.1);
     transform-origin: top center;
     color: #0284c7;
   }
 
-  html.dark .icon-btn.notification-toggle .fa-bell.tilted {
+  html.dark .icon-btn.notification-toggle .notification-bell-icon.tilted {
     color: #0ea5e9;
+  }
+
+  .icon-btn.notification-toggle.active .notification-bell-icon.tilted {
+    color: #ffffff !important;
   }
 
   .global-error-banner {
@@ -2781,7 +2892,7 @@
     position: sticky;
     top: 0;
     z-index: 10;
-    background: slategray;
+    background: #DADDDE;
   }
 
   html.dark .logs-table thead {
@@ -3978,10 +4089,11 @@
   .confirm-modal.settings-modal {
     max-width: 840px;
     max-height: 85vh;
+    min-height: 460px;
     display: flex;
     flex-direction: column;
     overflow: hidden;
-  position: relative;
+    position: relative;
   }
 
   .settings-modal-header {
@@ -4103,7 +4215,7 @@
 
   .confirm-modal-btn-cancel {
     background: transparent;
-    border-color: transparent;
+    border-color: var(--border-color);
     color: var(--text-secondary);
   }
 
@@ -4135,9 +4247,14 @@
   }
 
   .settings-modal-placeholder-title {
-    font-size: 0.875rem;
+    font-size: 0.95rem;
     font-weight: 600;
-    margin-bottom: 4px;
+    line-height: 1.25;
+    color: var(--text-primary);
+    margin-top: 2px;
+    padding-bottom: 10px;
+    margin-bottom: 12px;
+    border-bottom: 1px solid var(--border-color);
   }
 
   .settings-modal-placeholder-text {
@@ -4219,21 +4336,15 @@
   }
 
   .settings-section {
-    padding-top: 14px;
-    margin-top: 6px;
-    border-top: 1px solid var(--border-color);
-  }
-
-  .settings-section:first-of-type {
     padding-top: 0;
     margin-top: 0;
     border-top: none;
   }
 
   .settings-danger-section {
-    padding-top: 14px;
-    margin-top: 6px;
-    border-top: 1px solid var(--border-color);
+    padding-top: 0;
+    margin-top: 0;
+    border-top: none;
   }
 
   .settings-users-section {
@@ -4316,6 +4427,38 @@
     padding: 16px;
     text-align: center;
     font-size: 0.72rem;
+  }
+
+  .settings-users-loading {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 120px;
+    color: var(--text-secondary);
+  }
+
+  .settings-users-spinner {
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--border-color);
+    border-top-color: var(--text-primary);
+    border-radius: 9999px;
+    animation: settingsUsersSpin 0.75s linear infinite;
+  }
+
+  .settings-users-loading-text {
+    font-size: 0.75rem;
+  }
+
+  @keyframes settingsUsersSpin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
   }
 
   .settings-user-overview {
@@ -4519,6 +4662,12 @@
     background: var(--bg-secondary);
     border-left: 3px solid var(--brand-600);
     padding-left: calc(0.5rem - 3px);
+  }
+
+  .settings-sidebar-link span:first-child {
+    width: 20px;
+    height: 20px;
+    font-size: 13px;
   }
 
   .settings-sidebar-link.active span:first-child {
