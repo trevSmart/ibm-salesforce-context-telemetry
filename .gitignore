@@ -49,3 +49,5 @@ create-user-render.sh
 
 # Test files
 test-*.js
+src/data/telemetry.db-shm
+src/data/telemetry.db-wal
