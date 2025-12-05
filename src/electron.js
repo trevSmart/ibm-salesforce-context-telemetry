@@ -58,7 +58,7 @@ const createWindow = () => {
   // local file so at least the shell opens (it will still show fetch errors).
   mainWindow.loadURL(uiUrl).catch(error => {
     console.error(`Failed to load ${uiUrl}, falling back to static file:`, error);
-    mainWindow.loadFile(path.join(__dirname, 'public', 'event-log.html'));
+    mainWindow.loadFile(path.join(__dirname, '..', 'public', 'event-log.html'));
   });
 };
 

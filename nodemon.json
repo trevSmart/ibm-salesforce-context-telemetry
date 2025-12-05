@@ -1,9 +1,9 @@
 {
   "watch": [
-    "index.js",
-    "storage",
-    "auth",
-    "api"
+    "src/index.js",
+    "src/storage",
+    "src/auth",
+    "src/api"
   ],
   "ext": "js,json",
   "ignore": [
@@ -14,7 +14,7 @@
     "*.sqlite",
     "*.sqlite3"
   ],
-  "exec": "node index.js",
+  "exec": "node src/index.js",
   "delay": 500
 }
 

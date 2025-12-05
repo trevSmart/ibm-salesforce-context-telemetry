@@ -456,10 +456,10 @@ For production deployments with multiple users, create users in the database:
 
 **Via Script:**
 ```bash
-npm run create-user admin secure-password
+npm run create-user admin secure-password administrator
 npm run create-user user1 password1
-# Optional third argument sets the role (advanced|basic). Default is advanced.
-npm run create-user analyst password123 basic
+# Optional third argument sets the role (basic|advanced|administrator). Default is basic.
+npm run create-user analyst password123 advanced
 ```
 
 **Via API (after initial login):**
@@ -472,20 +472,25 @@ curl -X POST http://localhost:3100/api/users \
 
 ### Permission Levels
 
-User accounts can operate with two permission levels:
+User accounts can operate with three permission levels:
 
-| Role      | Access                                                                     |
-|-----------|----------------------------------------------------------------------------|
-| advanced  | Full access to the event log, export/delete operations, and user management |
-| basic     | Limited to the main dashboard (no event log or destructive actions)        |
+| Role          | Access                                                                     |
+|---------------|----------------------------------------------------------------------------|
+| basic         | Limited to the main dashboard (no event log or destructive actions)        |
+| advanced      | Full access to the event log, export/delete operations                    |
+| administrator | Full access to the event log, export/delete operations, and user management |
 
-When creating a user (via script or API), pass `"role": "basic"` to limit access. You can also change existing users with:
+**Default role:** When creating a user without specifying a role, the default is `basic`.
+
+When creating a user (via script or API), pass `"role": "advanced"` or `"role": "administrator"` to grant additional permissions. You can also change existing users with:
 
 ```bash
 curl -X PUT http://localhost:3100/api/users/alice/role \
   -H "Content-Type: application/json" \
-  -d '{"role": "advanced"}'
+  -d '{"role": "administrator"}'
 ```
+
+**Note:** The admin user (from environment variables) automatically has the `administrator` role.
 
 **Authentication Priority:**
 1. Database users are checked first

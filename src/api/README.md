@@ -26,7 +26,7 @@ This directory contains the formal API specifications for the Telemetry Server.
 
 ```javascript
 const Ajv = require('ajv');
-const schema = require('./api/telemetry-schema.json');
+const schema = require('./telemetry-schema.json');
 
 const ajv = new Ajv();
 const validate = ajv.compile(schema);
