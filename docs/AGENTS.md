@@ -126,7 +126,7 @@ The application consists of three main pages:
    - Accessible to all authenticated users
    - Includes the preferences menu (accessible via wrench icon)
 
-3. **Event Logs** (`/event-log`)
+3. **Event Logs** (`/logs`)
    - Main interface for viewing detailed telemetry events
    - Two-column layout:
      - **Left column**: Sidebar with tabs to switch between:

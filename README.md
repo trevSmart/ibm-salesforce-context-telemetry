@@ -82,10 +82,10 @@ If you prefer a desktop experience to monitor telemetry events, you can now open
 npm run start:electron
 ```
 
-This command rebuilds the Tailwind CSS bundle (ensuring `public/css/output.css` is up to date) and then spins up an Electron window that simply hosts the current HTML interface, so you get the exact same experience without needing to open the browser manually. By default it points to `http://localhost:3100/event-log`, but you can override it (for example, to target a remote deployment) via:
+This command rebuilds the Tailwind CSS bundle (ensuring `public/css/output.css` is up to date) and then spins up an Electron window that simply hosts the current HTML interface, so you get the exact same experience without needing to open the browser manually. By default it points to `http://localhost:3100/logs`, but you can override it (for example, to target a remote deployment) via:
 
 ```bash
-TELEMETRY_UI_URL="https://your-server.example.com/event-log" npm run start:electron
+TELEMETRY_UI_URL="https://your-server.example.com/logs" npm run start:electron
 ```
 
 To avoid passing the variable manually each time, create a `.env` file (copy `.env.example`) and set `TELEMETRY_UI_URL` there. The Electron bootstrap automatically loads the value both in development and inside the packaged app (the `.env` file is bundled), so the desktop viewer will always target the URL you define.

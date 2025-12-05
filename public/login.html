@@ -56,9 +56,9 @@
 		}
 
 		.login-card {
-			background: white;
+			background: #e8ebec;
 			border-radius: 11px;
-			box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+			box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
 			width: 100%;
 			max-width: 900px;
 			display: flex;
@@ -68,7 +68,7 @@
 
 		html.dark .login-card {
 			background: #27272a;
-			box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+			box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
 		}
 
 		.login-visual-panel {
@@ -134,15 +134,15 @@
 		}
 
 		.login-header h1 {
-			font-size: 25px;
-			font-weight: 600;
-			color: #3f3f46;
+			font-size: 1.875rem;
+			line-height: 2.4rem;
+			font-weight: 400;
+			color: #3d4152;
 			margin-bottom: 8px;
-			line-height: 1.2;
 		}
 
 		html.dark .login-header h1 {
-			color: #e4e4e7;
+			color: #10b981;
 		}
 
 		.login-header h1 .brand {
@@ -199,63 +199,65 @@
 			color: #e4e4e7;
 		}
 
-		.form-group label i {
+		.form-group label svg {
 			color: #a1a1aa;
-			font-size: 16px;
-			font-weight: 600;
 			width: 18px;
+			height: 18px;
 		}
 
-		html.dark .form-group label i {
+		html.dark .form-group label svg {
 			color: #71717a;
 		}
 
 		.form-group input {
 			width: 100%;
-			padding: 10px 12px;
-			font-size: 15px;
-			border-radius: 4px;
-			border: 1px solid #e4e4e7;
-			background: #f4f4ff;
-			transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+			padding: 8px 16px;
+			font-size: 14px;
+			border-radius: 22px;
+			border: 1px solid transparent;
+			background: #f3f5f7;
+			color: #3d4152;
+			box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02), 0 0 1px rgba(0, 0, 0, 0.01), 0 2px 3px rgba(0, 0, 0, 0.03);
+			transition: box-shadow 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
 			outline: none;
-			color: #18181b;
 		}
 
 		html.dark .form-group input {
 			color: #e4e4e7;
 			border-color: #3f3f46;
-			background: #18181b;
+			background: #27272a;
+			box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02), 0 0 1px rgba(0, 0, 0, 0.01), 0 2px 3px rgba(0, 0, 0, 0.03);
 		}
 
 		.form-group input:focus {
-			border-color: #8c5fd6;
-			box-shadow: 0 0 0 1px rgba(140, 95, 214, 0.3);
+			border-color: #0ea5e9;
+			box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04), 0 0 2px rgba(0, 0, 0, 0.02), 0 4px 6px rgba(0, 0, 0, 0.05);
 			background: #ffffff;
 		}
 
 		html.dark .form-group input:focus {
 			background: #27272a;
+			box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.3);
 		}
 
 		/* Override browser autofill styles so dark mode colors are respected */
 		.form-group input:-webkit-autofill,
 		.form-group input:-webkit-autofill:hover,
 		.form-group input:-webkit-autofill:focus {
-			-webkit-box-shadow: 0 0 0px 1000px #f4f4ff inset;
-			-webkit-text-fill-color: #18181b;
+			-webkit-box-shadow: 0 0 0px 1000px #f3f5f7 inset;
+			-webkit-text-fill-color: #3d4152;
 			transition: background-color 9999s ease-out, color 9999s ease-out;
 		}
 
 		html.dark .form-group input:-webkit-autofill,
 		html.dark .form-group input:-webkit-autofill:hover,
 		html.dark .form-group input:-webkit-autofill:focus {
-			-webkit-box-shadow: 0 0 0px 1000px #18181b inset;
+			-webkit-box-shadow: 0 0 0px 1000px #27272a inset;
 			-webkit-text-fill-color: #e4e4e7;
 		}
 
 		.form-group input::placeholder {
-			color: #a1a1aa;
+			color: #9ca3af;
 		}
 
 		html.dark .form-group input::placeholder {
@@ -339,7 +341,8 @@
 			}
 
 			.login-header h1 {
-				font-size: 28px;
+				font-size: 1.625rem;
+				line-height: 2.1rem;
 			}
 		}
 	</style>
@@ -358,15 +361,19 @@
 			<form id="loginForm">
 				<div class="form-group">
 					<label for="username">
-						<i class="far fa-envelope"></i>
-						<span>Email</span>
+						<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+						</svg>
+						<span>Username</span>
 					</label>
 					<input type="text" id="username" name="username" placeholder="Enter your username" required autofocus>
 				</div>
 
 				<div class="form-group">
 					<label for="password">
-						<i class="far fa-lock"></i>
+						<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+						</svg>
 						<span>Password</span>
 					</label>
 					<input type="password" id="password" name="password" placeholder="Enter your password" required>

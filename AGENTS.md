@@ -50,7 +50,7 @@ The project uses a dual-database setup driven by environment variables:
 
 Key `.env` variables:
 
-- `TELEMETRY_UI_URL`: Full URL to the event log UI (set to Render URL in production, `http://localhost:3100/event-log` locally).
+- `TELEMETRY_UI_URL`: Full URL to the event log UI (set to Render URL in production, `http://localhost:3100/logs` locally).
 - `DB_TYPE`: Switch between `sqlite` and `postgresql`.
 - `DB_PATH`: Only used when `DB_TYPE=sqlite`; keep the relative path unless you need a custom location.
 - `DATABASE_URL` / `DATABASE_SSL`: Only used when `DB_TYPE=postgresql`.
