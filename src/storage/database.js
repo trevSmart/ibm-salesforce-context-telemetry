@@ -2012,8 +2012,7 @@ async function getTopTeamsLastDays(orgTeamMappings = [], limit = 50, days = 3) {
 				AND TRIM(org_id) != ''
 			GROUP BY org_id
 			ORDER BY event_count DESC, org_id ASC
-			LIMIT ?
-		`).all(lookbackModifier, safeLimit);
+		`).all(lookbackModifier);
 
     aggregated.forEach(row => {
       const orgId = row.org_id;
@@ -2027,14 +2026,13 @@ async function getTopTeamsLastDays(orgTeamMappings = [], limit = 50, days = 3) {
       `
 				SELECT org_id, COUNT(*) AS event_count
 				FROM telemetry_events
-				WHERE created_at >= (NOW() - ($2 || ' days')::interval)
+				WHERE created_at >= (NOW() - ($1 || ' days')::interval)
 					AND org_id IS NOT NULL
 					AND TRIM(org_id) != ''
 				GROUP BY org_id
 				ORDER BY event_count DESC, org_id ASC
-				LIMIT $1
 			`,
-      [safeLimit, String(safeDays)]
+      [String(safeDays)]
     );
 
     aggregated.rows.forEach(row => {
@@ -2045,7 +2043,7 @@ async function getTopTeamsLastDays(orgTeamMappings = [], limit = 50, days = 3) {
     });
   }
 
-  // Convert to array, sort by count, and apply limit
+  // Convert to array and sort by count
   const sortedOrgs = Array.from(orgIdCounts.entries())
     .map(([orgId, count]) => ({ orgId, count }))
     .sort((a, b) => {
@@ -2053,8 +2051,7 @@ async function getTopTeamsLastDays(orgTeamMappings = [], limit = 50, days = 3) {
         return b.count - a.count;
       }
       return a.orgId.localeCompare(b.orgId);
-    })
-    .slice(0, safeLimit);
+    });
 
   // Map to team info and add to results
   sortedOrgs.forEach(({ orgId, count }) => {
