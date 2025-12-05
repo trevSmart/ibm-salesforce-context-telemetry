@@ -70,13 +70,14 @@ function debounce(func, wait) {
  * Throttle function calls
  */
 function throttle(func, limit) {
-  let inThrottle;
+  let inThrottle = false;
   return function executedFunction(...args) {
     const context = this;
     if (!inThrottle) {
-      func.apply(context, args);
+      const result = func.apply(context, args);
       inThrottle = true;
       setTimeout(() => inThrottle = false, limit);
+      return result;
     }
   };
 }
