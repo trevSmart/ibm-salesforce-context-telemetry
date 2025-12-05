@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Check authentication status on page load
 (async () => {
   try {
@@ -158,7 +159,7 @@ function setupUserMenuHover() {
   });
 }
 
-// eslint-disable-next-line no-unused-vars
+ 
 async function handleLogout() {
   // Close menu
   const userMenu = document.getElementById('userMenu');
@@ -183,7 +184,7 @@ async function handleLogout() {
   }
 }
 
-// eslint-disable-next-line no-unused-vars
+ 
 function handleDeleteAll() {
   // Close menu
   const userMenu = document.getElementById('userMenu');
@@ -279,7 +280,7 @@ function initTheme() {
   applyTheme(theme);
 }
 
-// eslint-disable-next-line no-unused-vars
+ 
 function toggleTheme() {
   const isDark = document.documentElement.classList.contains('dark');
   const newTheme = isDark ? 'light' : 'dark';
@@ -294,12 +295,21 @@ function updateThemeMenuItem(theme) {
   }
 
   const isDark = theme === 'dark';
-  const iconClass = isDark ? 'fa-regular fa-sun' : 'fa-regular fa-moon';
+  const lightThemeIcon = `
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="user-menu-icon" width="16" height="16" aria-hidden="true">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z" />
+    </svg>
+  `;
+  const darkThemeIcon = `
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="user-menu-icon" width="16" height="16" aria-hidden="true">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z" />
+    </svg>
+  `;
   const label = isDark ? 'Light theme' : 'Dark theme';
-  btn.innerHTML = `<i class="${iconClass} user-menu-icon"></i>${label}`;
+  btn.innerHTML = `${isDark ? lightThemeIcon : darkThemeIcon}${label}`;
 }
 
-// eslint-disable-next-line no-unused-vars
+ 
 function clearLocalData() {
   openConfirmModal({
     title: 'Clear local data',
@@ -420,7 +430,17 @@ function ensureUserMenuStructure() {
 
   // Get current theme to initialize menu with correct label
   const isDark = document.documentElement.classList.contains('dark');
-  const themeIcon = isDark ? 'fa-regular fa-sun' : 'fa-regular fa-moon';
+  const lightThemeIcon = `
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="user-menu-icon" width="16" height="16" aria-hidden="true">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z" />
+    </svg>
+  `;
+  const darkThemeIcon = `
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="user-menu-icon" width="16" height="16" aria-hidden="true">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z" />
+    </svg>
+  `;
+  const themeIcon = isDark ? lightThemeIcon : darkThemeIcon;
   const themeLabel = isDark ? 'Light theme' : 'Dark theme';
 
   // Basic preferences menu used on dashboard and event log
@@ -430,12 +450,14 @@ function ensureUserMenuStructure() {
 		</div>
 		<div class="user-menu-item">
 			<button type="button" id="themeToggleMenuItem" onclick="toggleTheme()">
-				<i class="${themeIcon} user-menu-icon"></i>${themeLabel}
+				${themeIcon}${themeLabel}
 			</button>
 		</div>
 		<div class="user-menu-item">
 			<button type="button" id="openSettingsMenuItem" onclick="openSettingsModal()">
-				<i class="fa-solid fa-sliders user-menu-icon"></i>Settings
+				<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="user-menu-icon" width="16" height="16" aria-hidden="true">
+					<path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75" />
+				</svg>Settings
 			</button>
 		</div>
 		<div class="user-menu-item clear-data-menu-item">
@@ -445,13 +467,17 @@ function ensureUserMenuStructure() {
 		</div>
 		<div class="user-menu-item delete-all-menu-item">
 			<button type="button" onclick="handleDeleteAll()">
-				<i class="fa-regular fa-trash-can user-menu-icon"></i>Delete all events
+				<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="user-menu-icon" width="16" height="16" aria-hidden="true">
+					<path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+				</svg>Delete all events
 			</button>
 		</div>
 		<div class="user-menu-separator"></div>
 		<div class="user-menu-item">
 			<button type="button" onclick="handleLogout()">
-				<i class="fa-solid fa-right-from-bracket user-menu-icon"></i>Logout
+				<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="user-menu-icon" width="16" height="16" aria-hidden="true">
+					<path stroke-linecap="round" stroke-linejoin="round" d="M8.25 9V5.25A2.25 2.25 0 0 1 10.5 3h6a2.25 2.25 0 0 1 2.25 2.25v13.5A2.25 2.25 0 0 1 16.5 21h-6a2.25 2.25 0 0 1-2.25-2.25V15m-3 0-3-3m0 0 3-3m-3 3H15" />
+				</svg>Logout
 			</button>
 		</div>
 	`;
@@ -460,7 +486,7 @@ function ensureUserMenuStructure() {
 }
 
 // Shared settings modal used by both dashboard and event log pages
-// eslint-disable-next-line no-unused-vars
+ 
 async function openSettingsModal() {
   const existing = document.querySelector('.confirm-modal-backdrop.settings-backdrop');
   if (existing) {
@@ -1785,7 +1811,7 @@ function setupIconButtonsGroupHover() {
 }
 
 // Refresh dashboard function
-// eslint-disable-next-line no-unused-vars
+ 
 async function refreshDashboard(event) {
   if (event) {
     event.stopPropagation();
@@ -1890,18 +1916,14 @@ async function loadChartData(days = currentDays) {
 
     // Colors for start sessions without end (match session badge blue)
     const startSessionsColor = '#2195cf';
-    const startSessionsAreaColor = 'rgba(33, 149, 207, 0.15)';
 
     // Colors for tool events (match tool badge purple)
     const toolEventsColor = '#8e81ea';
-    const toolEventsAreaColor = 'rgba(142, 129, 234, 0.15)';
 
     // Colors for error events (match header icon red)
     const errorEventsColor = '#ef4444';
-    const errorEventsAreaColor = 'rgba(239, 68, 68, 0.18)';
 
     const totalEventsColor = toolEventsColor;
-    const totalEventsAreaColor = toolEventsAreaColor;
 
     // Prepare data for ECharts
     const _dates = data.map(item => item.date);
@@ -2236,5 +2258,16 @@ async function loadChartData(days = currentDays) {
     }
   }
 }
+
+// Expose functions used by inline handlers / shared markup
+Object.assign(window, {
+  showUserMenu,
+  handleLogout,
+  handleDeleteAll,
+  clearLocalData,
+  toggleTheme,
+  openSettingsModal,
+  refreshDashboard
+});
 
 // Chart will be loaded after authentication check

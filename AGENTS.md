@@ -46,7 +46,7 @@ The project uses a dual-database setup driven by environment variables:
 | Environment | `DB_TYPE` | Location / Connection | Notes |
 |-------------|-----------|-----------------------|-------|
 | Local development | `sqlite` | `DB_PATH=./src/data/telemetry.db` | SQLite file lives inside the repo, ideal for quick iteration. |
-| Production on Render.com | `postgresql` | `DATABASE_URL=postgresql://telemetry_db_qyln_user:ykHPylEvPOgZAG5Q7u9Ou6EiI7xpj9FW@dpg-d4j93qmr433s7397j4ag-a.frankfurt-postgres.render.com/telemetry_db_qyln?sslmode=require` | Requires `DATABASE_SSL=true`. Credentials are provisioned by Render and should be stored securely. |
+| Production on Render.com | `postgresql` | `DATABASE_URL=postgresql://<user>:<password>@<host>/<db>?sslmode=require` | Requires `DATABASE_SSL=true`. Credentials are provisioned by Render and must remain in environment secrets, not in docs. |
 
 Key `.env` variables:
 
