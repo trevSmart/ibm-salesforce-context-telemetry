@@ -21,6 +21,8 @@ yarn-error.log*
 storage/*.db
 storage/*.sqlite
 storage/*.sqlite3
+*.db-wal
+*.db-shm
 
 # OS files
 .DS_Store
