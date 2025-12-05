@@ -2656,8 +2656,8 @@
     font-size: 0.875rem;
     line-height: 1.25rem;
     border: none;
-    border-radius: 0;
-    overflow: visible;
+    border-radius: 12px;
+    overflow: hidden;
   }
 
   .logs-table thead {
