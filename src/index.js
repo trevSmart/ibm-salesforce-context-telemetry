@@ -81,8 +81,29 @@ if (isDevelopment) {
   }
 }
 
-// Initialize session middleware early (will use MemoryStore initially, then upgrade to PostgreSQL if available)
-app.use(auth.initSessionMiddleware());
+// Temporary placeholder for session middleware - will be replaced after database init
+// This allows us to register routes early while deferring session store configuration
+// Use the same SESSION_SECRET from auth module to ensure session continuity
+const tempSession = session({
+  secret: auth.SESSION_SECRET,
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    sameSite: 'lax',
+    maxAge: 24 * 60 * 60 * 1000
+  }
+});
+
+let sessionMiddleware = null;
+app.use((req, res, next) => {
+  if (sessionMiddleware) {
+    return sessionMiddleware(req, res, next);
+  }
+  // Before database init, use a basic session with MemoryStore
+  tempSession(req, res, next);
+});
 
 // Serve static files from public directory with caching
 app.use(express.static(path.join(__dirname, '..', 'public'), {
@@ -589,8 +610,8 @@ app.get('/api/events', auth.requireAuth, auth.requireRole('advanced'), async (re
     }
 
     const result = await db.getEvents({
-      limit: effectiveLimit,
-      offset: parseInt(offset),
+      limit: parseInt(limit, 10),
+      offset: parseInt(offset, 10),
       eventTypes: eventTypes.length > 0 ? eventTypes : undefined,
       serverId,
       sessionId,
@@ -620,7 +641,7 @@ app.get('/api/events', auth.requireAuth, auth.requireRole('advanced'), async (re
 
 app.get('/api/events/:id', auth.requireAuth, auth.requireRole('advanced'), async (req, res) => {
   try {
-    const eventId = parseInt(req.params.id);
+    const eventId = parseInt(req.params.id, 10);
     if (isNaN(eventId)) {
       return res.status(400).json({
         status: 'error',
@@ -737,7 +758,7 @@ app.get('/api/sessions', auth.requireAuth, auth.requireRole('advanced'), async (
 
 app.get('/api/daily-stats', auth.requireAuth, async (req, res) => {
   try {
-    const days = parseInt(req.query.days) || 30;
+    const days = parseInt(req.query.days, 10) || 30;
     const byEventTypeRaw = String(req.query.byEventType || '').toLowerCase();
     const useEventTypeBreakdown = ['true', '1', 'yes', 'on'].includes(byEventTypeRaw);
 
@@ -922,7 +943,7 @@ app.get('/api/export/logs', auth.requireAuth, auth.requireRole('advanced'), asyn
 // Delete a single event by ID
 app.delete('/api/events/:id', auth.requireAuth, auth.requireRole('advanced'), async (req, res) => {
   try {
-    const eventId = parseInt(req.params.id);
+    const eventId = parseInt(req.params.id, 10);
     if (isNaN(eventId)) {
       return res.status(400).json({
         status: 'error',
@@ -1005,10 +1026,9 @@ async function startServer() {
     auth.init(db);
     console.log('Authentication initialized with database support');
 
-    // Note: Session middleware was initialized earlier (before routes)
-    // It will use MemoryStore initially, which is fine for SQLite or development
-    // For PostgreSQL in production, the warning about MemoryStore will appear
-    // but sessions will still work correctly
+    // Now that database is initialized, upgrade session middleware to use PostgreSQL store if available
+    sessionMiddleware = auth.initSessionMiddleware();
+    console.log('Session middleware initialized with database support');
 
     app.listen(port, () => {
       console.log('\n' + '='.repeat(60));

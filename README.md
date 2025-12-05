@@ -100,7 +100,7 @@ When you need a distributable `.app` (and `.dmg` installer) run:
 npm run dist:mac
 ```
 
-Electron Builder will place the signed artifacts under `dist/`. The command already regenerates the Tailwind bundle before packaging, so the embedded offline fallback remains in sync. We pass `--universal`, which merges x64 i arm64 en un sol binari per garantir compatibilitat amb qualsevol Mac. Abans de construir, assegura’t que el teu `.env` (no es versiona) conté el `TELEMETRY_UI_URL` desitjat: l’arxiu es copia com a recurs extra i es llegeix en temps d’execució, per tant qualsevol canvi requereix regenerar els artefactes.
+Electron Builder will place the signed artifacts under `dist/`. The command already regenerates the Tailwind bundle before packaging, so the embedded offline fallback remains in sync. We pass `--universal`, which merges x64 and arm64 into a single binary to ensure compatibility with any Mac. Before building, make sure your `.env` file (not versioned) contains the desired `TELEMETRY_UI_URL`: the file is copied as an extra resource and read at runtime, so any changes require regenerating the artifacts.
 
 ## API Endpoints
 
