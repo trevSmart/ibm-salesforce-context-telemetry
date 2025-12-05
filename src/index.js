@@ -232,7 +232,7 @@ app.get('/health', async (req, res) => {
       let dbStatus = 'unknown';
       let dbType = process.env.DB_TYPE || 'sqlite';
       let totalEvents = 0;
-      
+
       try {
         // Use cached stats from cache instead of querying DB
         const cachedStats = statsCache.get(STATS_CACHE_KEY_EMPTY);
@@ -271,7 +271,7 @@ app.get('/health', async (req, res) => {
           totalEvents: totalEvents
         }
       };
-      
+
       // Cache the health data using Cache class
       healthCheckCache.set('health', healthData);
 
@@ -590,7 +590,7 @@ app.get('/api/events', auth.requireAuth, auth.requireRole('advanced'), async (re
       orderBy = 'created_at',
       order = 'DESC'
     } = req.query;
-    
+
     // Enforce maximum limit to prevent performance issues
     const effectiveLimit = Math.min(parseInt(limit), MAX_API_LIMIT);
 
@@ -610,7 +610,7 @@ app.get('/api/events', auth.requireAuth, auth.requireRole('advanced'), async (re
     }
 
     const result = await db.getEvents({
-      limit: parseInt(limit, 10),
+      limit: effectiveLimit,
       offset: parseInt(offset, 10),
       eventTypes: eventTypes.length > 0 ? eventTypes : undefined,
       serverId,
@@ -621,13 +621,13 @@ app.get('/api/events', auth.requireAuth, auth.requireRole('advanced'), async (re
       orderBy,
       order
     });
-    
-      res.setHeader('Cache-Control', 'private, max-age=10'); // Cache for 10 seconds
-    } else {
-      res.setHeader('Cache-Control', 'private, max-age=5'); // Shorter cache for filtered queries
-    if (!startDate && !endDate && !eventType && !serverId && !sessionId && !userId) {
-      res.setHeader('Cache-Control', 'private, max-age=10'); // Cache for 10 seconds
-    }
+
+    const isUnfiltered =
+      !startDate && !endDate && !eventType && !serverId && !sessionId && !userId;
+    res.setHeader(
+      'Cache-Control',
+      isUnfiltered ? 'private, max-age=10' : 'private, max-age=5'
+    ); // Longer cache for unfiltered, shorter for filtered
 
     res.json(result);
   } catch (error) {
@@ -673,19 +673,19 @@ app.get('/api/events/:id', auth.requireAuth, auth.requireRole('advanced'), async
 app.get('/api/stats', auth.requireAuth, async (req, res) => {
   try {
     const { startDate, endDate, eventType } = req.query;
-    
+
     // Use cache for basic stats queries without filters
     const cacheKey = `stats:${startDate || ''}:${endDate || ''}:${eventType || ''}`;
     const cached = statsCache.get(cacheKey);
     if (cached) {
       return res.json(cached);
     }
-    
+
     const stats = await db.getStats({ startDate, endDate, eventType });
-    
+
     // Cache the result
     statsCache.set(cacheKey, stats);
-    
+
     res.json(stats);
   } catch (error) {
     console.error('Error fetching stats:', error);
@@ -742,10 +742,10 @@ app.get('/api/sessions', auth.requireAuth, auth.requireRole('advanced'), async (
     const sessions = await db.getSessions({
       userIds: userIds.length > 0 ? userIds : undefined
     });
-    
+
     // Cache the result
     sessionsCache.set(cacheKey, sessions);
-    
+
     res.json(sessions);
   } catch (error) {
     console.error('Error fetching sessions:', error);
@@ -801,12 +801,12 @@ app.get('/api/telemetry-users', auth.requireAuth, auth.requireRole('advanced'), 
     if (cached) {
       return res.json(cached);
     }
-    
+
     const userIds = await db.getUniqueUserIds();
-    
+
     // Cache the result
     userIdsCache.set(cacheKey, userIds);
-    
+
     res.json(userIds);
   } catch (error) {
     console.error('Error fetching unique user IDs:', error);
@@ -906,7 +906,7 @@ app.get('/api/export/logs', auth.requireAuth, auth.requireRole('advanced'), asyn
       serverId,
       limit = 10000
     } = req.query;
-    
+
     // Enforce maximum export limit for performance
     const effectiveLimit = Math.min(parseInt(limit), MAX_EXPORT_LIMIT);
 
