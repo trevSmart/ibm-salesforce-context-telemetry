@@ -39,6 +39,7 @@ async function initializeDashboardPage({ resetState = false } = {}) {
     // Only load chart data if authenticated
     await loadChartData();
     await loadTopUsersToday();
+    await loadTopTeamsToday();
 
     // Set up time range selector (guard against duplicate listeners)
     const timeRangeSelect = document.getElementById('timeRangeSelect');
@@ -74,6 +75,8 @@ const USER_MENU_HIDE_DELAY_MS = 300;
 const SESSION_START_SERIES_COLOR = '#2195cf';
 const TOP_USERS_LOOKBACK_DAYS = 3;
 const TOP_USERS_LIMIT = 3;
+const TOP_TEAMS_LOOKBACK_DAYS = 3;
+const TOP_TEAMS_LIMIT = 5;
 
 function showUserMenu(e) {
   if (e) {
@@ -1804,7 +1807,8 @@ async function refreshDashboard(event) {
   try {
     await Promise.all([
       loadChartData(currentDays),
-      loadTopUsersToday()
+      loadTopUsersToday(),
+      loadTopTeamsToday()
     ]);
   } catch (error) {
     // Any errors are already logged inside loadChartData; this catch
@@ -1891,6 +1895,53 @@ function renderTopUsers(users) {
   list.innerHTML = items;
 }
 
+function renderTopTeamsPlaceholder(message) {
+  const list = document.getElementById('topTeamsList');
+  if (!list) {
+    return;
+  }
+  list.innerHTML = `<li class="top-users-empty">${escapeHtml(message)}</li>`;
+}
+
+function renderTopTeams(teams) {
+  const list = document.getElementById('topTeamsList');
+  if (!list) {
+    return;
+  }
+
+  if (!teams || teams.length === 0) {
+    renderTopTeamsPlaceholder('No team activity recorded in the last 3 days yet.');
+    return;
+  }
+
+  const items = teams.map((team, index) => {
+    const teamName = team.label || team.id || 'Unknown team';
+    const initial = teamName.trim().charAt(0).toUpperCase() || '?';
+    const eventCount = Number(team.eventCount) || 0;
+    const countLabel = eventCount === 1 ? '1 event last 3 days' : `${eventCount} events last 3 days`;
+    const clientName = team.clientName ? ` · ${team.clientName}` : '';
+    const badgeBackground = index === 0 ? '#dc2626' : SESSION_START_SERIES_COLOR;
+
+    return `
+      <li class="top-users-item">
+        <span class="top-users-avatar" style="background: ${team.color || badgeBackground}; color: #ffffff;">${escapeHtml(initial)}</span>
+        <div class="top-users-info">
+          <div class="top-users-name-row">
+            <strong class="top-users-name" title="${escapeHtml(teamName)}${clientName}">${escapeHtml(teamName)}${clientName}</strong>
+            <span class="top-users-badge" style="background: ${badgeBackground}; color: #ffffff;">${escapeHtml(String(eventCount))} last 3 days</span>
+          </div>
+          <div class="top-users-role">${escapeHtml(countLabel)}</div>
+        </div>
+        <button type="button" class="top-users-action" aria-label="Open team">
+          <i class="fa-solid fa-chevron-right" aria-hidden="true" style="font-size: 11px;"></i>
+        </button>
+      </li>
+    `;
+  }).join('');
+
+  list.innerHTML = items;
+}
+
 async function loadTopUsersToday() {
   const list = document.getElementById('topUsersList');
   if (!list) {
@@ -1919,6 +1970,47 @@ async function loadTopUsersToday() {
   } catch (error) {
     console.error('Error loading top users:', error);
     renderTopUsersPlaceholder('Unable to load top users right now.');
+  }
+}
+
+async function loadTopTeamsToday() {
+  const list = document.getElementById('topTeamsList');
+  if (!list) {
+    return;
+  }
+
+  renderTopTeamsPlaceholder('Loading top teams…');
+
+  try {
+    // Get org-team mappings from localStorage
+    const orgTeamMappings = getOrgTeamMappings();
+
+    // Build query parameters
+    const params = new URLSearchParams({
+      days: TOP_TEAMS_LOOKBACK_DAYS.toString(),
+      limit: TOP_TEAMS_LIMIT.toString(),
+      mappings: JSON.stringify(orgTeamMappings)
+    });
+
+    const response = await fetch(`/api/top-teams-today?${params}`, {
+      credentials: 'include'
+    });
+
+    if (response.status === 401) {
+      window.location.href = '/login';
+      return;
+    }
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const payload = await response.json();
+    const teams = Array.isArray(payload?.teams) ? payload.teams : [];
+    renderTopTeams(teams);
+  } catch (error) {
+    console.error('Error loading top teams:', error);
+    renderTopTeamsPlaceholder('Unable to load top teams right now.');
   }
 }
 

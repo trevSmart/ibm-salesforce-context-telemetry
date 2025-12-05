@@ -99,24 +99,10 @@
 						<div id="eventsChart"></div>
 					</section>
 					<section class="dashboard-card" style="background: transparent; box-shadow: none; text-align: left;">
-						<div class="chart-header" style="flex-direction: row; justify-content: space-between; align-items: center;">
-							<div>
-								<h2 style="margin: 0 0 4px 0;">Your Recent Projects</h2>
-							</div>
-						</div>
-						<ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 12px;">
-							<li>
-								<strong>Web Development Project</strong><br>
-								Remote · $50/hour · Germany · 32 Tasks
-							</li>
-							<li>
-								<strong>Copyright Project</strong><br>
-								Remote · $20/hour · Switzerland · 8 Tasks
-							</li>
-							<li>
-								<strong>Web Design Project</strong><br>
-								Remote · $25/hour · USA · 12 Tasks
-							</li>
+						<h2 style="margin: 0 0 8px 0;">Top teams (last 3 days)</h2>
+						<p style="margin: 0 0 12px 0;">Sorted by event volume across the last 3 days.</p>
+						<ul id="topTeamsList" class="top-users-list">
+							<li class="top-users-empty">Loading top teams…</li>
 						</ul>
 					</section>
 				</div>

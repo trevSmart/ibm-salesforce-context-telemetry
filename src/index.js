@@ -801,6 +801,34 @@ app.get('/api/top-users-today', auth.requireAuth, async (req, res) => {
   }
 });
 
+app.get('/api/top-teams-today', auth.requireAuth, async (req, res) => {
+  try {
+    const limitRaw = parseInt(req.query.limit, 10);
+    const daysRaw = parseInt(req.query.days, 10);
+    const limit = Math.min(Math.max(1, Number.isFinite(limitRaw) ? limitRaw : 5), 500);
+    const days = Math.min(Math.max(1, Number.isFinite(daysRaw) ? daysRaw : 3), 365);
+
+    // Parse org-team mappings from query parameter
+    let orgTeamMappings = [];
+    try {
+      if (req.query.mappings) {
+        orgTeamMappings = JSON.parse(req.query.mappings);
+      }
+    } catch (error) {
+      console.warn('Invalid org-team mappings provided, using empty array:', error);
+    }
+
+    const teams = await db.getTopTeamsLastDays(orgTeamMappings, limit, days);
+    res.json({ teams, days });
+  } catch (error) {
+    console.error('Error fetching top teams for the selected window:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to fetch top teams for the selected window'
+    });
+  }
+});
+
 app.get('/api/telemetry-users', auth.requireAuth, auth.requireRole('advanced'), async (req, res) => {
   try {
     // Use cache for user IDs since they don't change frequently

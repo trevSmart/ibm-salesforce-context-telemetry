@@ -38,7 +38,7 @@ async function init() {
     }
 
     db = new Database(dbPath);
-    
+
     // Performance optimizations for SQLite
     db.pragma('journal_mode = WAL'); // Write-Ahead Logging for better concurrency
     db.pragma('synchronous = NORMAL'); // Faster writes with good safety
@@ -600,7 +600,7 @@ async function getStats(options = {}) {
       const stmt = getPreparedStatement('getStatsTotal', 'SELECT COUNT(*) as total FROM telemetry_events');
       return { total: stmt.get().total };
     }
-    
+
     let query = 'SELECT COUNT(*) as total FROM telemetry_events WHERE 1=1';
     const params = [];
 
@@ -717,7 +717,7 @@ async function getEvents(options = {}) {
   // 1. offset === 0: First page, total is useful for pagination UI
   // 2. limit <= MAX_LIMIT_FOR_TOTAL_COMPUTATION: Small result set, COUNT is fast
   const shouldComputeTotal = offset === 0 || limit <= MAX_LIMIT_FOR_TOTAL_COMPUTATION;
-  
+
   if (shouldComputeTotal) {
     let countQuery = `SELECT COUNT(*) as total FROM telemetry_events ${whereClause}`;
     if (dbType === 'sqlite') {
@@ -1399,11 +1399,11 @@ function getPreparedStatement(key, sql) {
   if (dbType !== 'sqlite') {
     return null;
   }
-  
+
   if (!preparedStatements[key]) {
     preparedStatements[key] = db.prepare(sql);
   }
-  
+
   return preparedStatements[key];
 }
 
@@ -1847,6 +1847,94 @@ async function getTopUsersLastDays(limit = 50, days = 3) {
   return results;
 }
 
+/**
+ * Get top teams by event count in the last N days based on org-team mapping
+ * @param {Array} orgTeamMappings - Array of {orgIdentifier, clientName, teamName, color, active}
+ * @param {number} limit - Maximum number of teams to return (default: 50)
+ * @param {number} days - Number of days to look back (default: 3)
+ * @returns {Promise<Array>} Array of {id, label, eventCount, clientName, color} objects
+ */
+async function getTopTeamsLastDays(orgTeamMappings = [], limit = 50, days = 3) {
+  if (!db) {
+    throw new Error('Database not initialized. Call init() first.');
+  }
+
+  const safeLimit = Math.min(Math.max(1, Number.isFinite(limit) ? Math.floor(limit) : 50), 500);
+  const safeDays = Math.min(Math.max(1, Number.isFinite(days) ? Math.floor(days) : 3), 365);
+  const lookbackModifier = `-${safeDays} days`;
+
+  // Create a map from orgIdentifier to team info for quick lookup
+  const orgToTeamMap = new Map();
+  if (Array.isArray(orgTeamMappings)) {
+    orgTeamMappings.forEach(mapping => {
+      if (mapping.active !== false && mapping.orgIdentifier && mapping.teamName) {
+        orgToTeamMap.set(mapping.orgIdentifier, {
+          teamName: mapping.teamName,
+          clientName: mapping.clientName || '',
+          color: mapping.color || ''
+        });
+      }
+    });
+  }
+
+  const results = [];
+
+  if (dbType === 'sqlite') {
+    const aggregated = db.prepare(`
+			SELECT server_id, COUNT(*) as event_count
+			FROM telemetry_events
+			WHERE created_at >= datetime('now', 'localtime', ?)
+				AND server_id IS NOT NULL
+				AND TRIM(server_id) != ''
+			GROUP BY server_id
+			ORDER BY event_count DESC, server_id ASC
+			LIMIT ?
+		`).all(lookbackModifier, safeLimit);
+
+    aggregated.forEach(row => {
+      const teamInfo = orgToTeamMap.get(row.server_id);
+      if (teamInfo) {
+        results.push({
+          id: row.server_id,
+          label: teamInfo.teamName,
+          clientName: teamInfo.clientName,
+          color: teamInfo.color,
+          eventCount: Number(row.event_count) || 0
+        });
+      }
+    });
+  } else if (dbType === 'postgresql') {
+    const aggregated = await db.query(
+      `
+				SELECT server_id, COUNT(*) AS event_count
+				FROM telemetry_events
+				WHERE created_at >= (NOW() - ($2 || ' days')::interval)
+					AND server_id IS NOT NULL
+					AND TRIM(server_id) != ''
+				GROUP BY server_id
+				ORDER BY event_count DESC, server_id ASC
+				LIMIT $1
+			`,
+      [safeLimit, String(safeDays)]
+    );
+
+    aggregated.rows.forEach(row => {
+      const teamInfo = orgToTeamMap.get(row.server_id);
+      if (teamInfo) {
+        results.push({
+          id: row.server_id,
+          label: teamInfo.teamName,
+          clientName: teamInfo.clientName,
+          color: teamInfo.color,
+          eventCount: Number(row.event_count) || 0
+        });
+      }
+    });
+  }
+
+  return results;
+}
+
 async function ensureTelemetryParentSessionColumn() {
   if (!db) {
     return;
@@ -1880,6 +1968,7 @@ module.exports = {
   getDailyStats,
   getDailyStatsByEventType,
   getTopUsersLastDays,
+  getTopTeamsLastDays,
   deleteEvent,
   deleteAllEvents,
   deleteEventsBySession,
