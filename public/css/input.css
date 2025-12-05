@@ -618,14 +618,15 @@
     margin-top: 34px;
     padding: 18px 0 0px 0;
     border-top: 1px solid var(--border-color);
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 400;
     color: var(--text-primary);
     text-align: center;
+    word-spacing: 0.5em;
   }
 
   .dashboard-footer a {
-    margin: 0 10px;
+    margin: 0 4px;
   }
 
   .dashboard-footer .dashboard-status-ok {
