@@ -176,6 +176,7 @@ async function init() {
   await ensureTelemetryParentSessionColumn();
   await ensureDenormalizedColumns();
   await ensureEventStatsTables();
+  await ensureTeamsAndOrgsTables();
 }
 
 /**
@@ -3011,6 +3012,710 @@ async function saveSetting(key, value) {
   }
 }
 
+/**
+ * Ensure teams table exists and orgs/users tables have team_id foreign key
+ * Creates teams table with id, name (unique), color, logo_url, timestamps
+ * Adds team_id column to orgs and users tables
+ */
+async function ensureTeamsAndOrgsTables() {
+  if (!db) {
+    return;
+  }
+
+  try {
+    if (dbType === 'sqlite') {
+      // Create teams table
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS teams (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL UNIQUE,
+          color TEXT,
+          logo_url TEXT,
+          created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+          updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE INDEX IF NOT EXISTS idx_teams_name ON teams(name);
+      `);
+
+      // Add team_id to orgs table if it doesn't exist
+      const orgsColumns = db.prepare('PRAGMA table_info(orgs)').all();
+      const hasTeamIdInOrgs = orgsColumns.some(column => column.name === 'team_id');
+      if (!hasTeamIdInOrgs) {
+        db.exec('ALTER TABLE orgs ADD COLUMN team_id INTEGER REFERENCES teams(id)');
+        db.exec('CREATE INDEX IF NOT EXISTS idx_orgs_team_id ON orgs(team_id)');
+      }
+
+      // Add alias and color to orgs table if they don't exist
+      const hasAliasInOrgs = orgsColumns.some(column => column.name === 'alias');
+      if (!hasAliasInOrgs) {
+        db.exec('ALTER TABLE orgs ADD COLUMN alias TEXT');
+        db.exec('CREATE INDEX IF NOT EXISTS idx_orgs_alias ON orgs(alias)');
+      }
+      const hasColorInOrgs = orgsColumns.some(column => column.name === 'color');
+      if (!hasColorInOrgs) {
+        db.exec('ALTER TABLE orgs ADD COLUMN color TEXT');
+      }
+
+      // Add team_id to users table if it doesn't exist
+      const usersColumns = db.prepare('PRAGMA table_info(users)').all();
+      const hasTeamIdInUsers = usersColumns.some(column => column.name === 'team_id');
+      if (!hasTeamIdInUsers) {
+        db.exec('ALTER TABLE users ADD COLUMN team_id INTEGER REFERENCES teams(id)');
+        db.exec('CREATE INDEX IF NOT EXISTS idx_users_team_id ON users(team_id)');
+      }
+    } else if (dbType === 'postgresql') {
+      // Create teams table
+      await db.query(`
+        CREATE TABLE IF NOT EXISTS teams (
+          id SERIAL PRIMARY KEY,
+          name TEXT NOT NULL UNIQUE,
+          color TEXT,
+          logo_url TEXT,
+          created_at TIMESTAMPTZ DEFAULT NOW(),
+          updated_at TIMESTAMPTZ DEFAULT NOW()
+        );
+        CREATE INDEX IF NOT EXISTS idx_teams_name ON teams(name);
+      `);
+
+      // Add team_id to orgs table if it doesn't exist
+      await db.query(`
+        ALTER TABLE IF EXISTS orgs
+        ADD COLUMN IF NOT EXISTS team_id INTEGER REFERENCES teams(id);
+        CREATE INDEX IF NOT EXISTS idx_orgs_team_id ON orgs(team_id);
+      `);
+
+      // Add alias and color to orgs table if they don't exist
+      await db.query(`
+        ALTER TABLE IF EXISTS orgs
+        ADD COLUMN IF NOT EXISTS alias TEXT;
+        CREATE INDEX IF NOT EXISTS idx_orgs_alias ON orgs(alias);
+        ALTER TABLE IF EXISTS orgs
+        ADD COLUMN IF NOT EXISTS color TEXT;
+      `);
+
+      // Add team_id to users table if it doesn't exist
+      await db.query(`
+        ALTER TABLE IF EXISTS users
+        ADD COLUMN IF NOT EXISTS team_id INTEGER REFERENCES teams(id);
+        CREATE INDEX IF NOT EXISTS idx_users_team_id ON users(team_id);
+      `);
+    }
+  } catch (error) {
+    console.error('Error ensuring teams and orgs tables:', error);
+  }
+}
+
+/**
+ * Team management functions
+ */
+
+/**
+ * Get all teams with their orgs and users count
+ * @returns {Promise<Array>} Array of team objects with orgs and users count
+ */
+async function getAllTeams() {
+  if (!db) {
+    throw new Error('Database not initialized. Call init() first.');
+  }
+
+  try {
+    if (dbType === 'sqlite') {
+      const teams = db.prepare(`
+        SELECT
+          t.id,
+          t.name,
+          t.color,
+          t.logo_url,
+          t.created_at,
+          t.updated_at,
+          COUNT(DISTINCT o.server_id) as org_count,
+          COUNT(DISTINCT u.id) as user_count
+        FROM teams t
+        LEFT JOIN orgs o ON o.team_id = t.id
+        LEFT JOIN users u ON u.team_id = t.id
+        GROUP BY t.id
+        ORDER BY t.name ASC
+      `).all();
+
+      return teams.map(team => ({
+        id: team.id,
+        name: team.name,
+        color: team.color || null,
+        logo_url: team.logo_url || null,
+        created_at: team.created_at,
+        updated_at: team.updated_at,
+        org_count: parseInt(team.org_count) || 0,
+        user_count: parseInt(team.user_count) || 0
+      }));
+    } else if (dbType === 'postgresql') {
+      const result = await db.query(`
+        SELECT
+          t.id,
+          t.name,
+          t.color,
+          t.logo_url,
+          t.created_at,
+          t.updated_at,
+          COUNT(DISTINCT o.server_id) as org_count,
+          COUNT(DISTINCT u.id) as user_count
+        FROM teams t
+        LEFT JOIN orgs o ON o.team_id = t.id
+        LEFT JOIN users u ON u.team_id = t.id
+        GROUP BY t.id
+        ORDER BY t.name ASC
+      `);
+
+      return result.rows.map(team => ({
+        id: team.id,
+        name: team.name,
+        color: team.color || null,
+        logo_url: team.logo_url || null,
+        created_at: team.created_at,
+        updated_at: team.updated_at,
+        org_count: parseInt(team.org_count) || 0,
+        user_count: parseInt(team.user_count) || 0
+      }));
+    }
+  } catch (error) {
+    console.error('Error getting all teams:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get a team by ID with its orgs and users
+ * @param {number} teamId - Team ID
+ * @returns {Promise<object|null>} Team object with orgs and users, or null if not found
+ */
+async function getTeamById(teamId) {
+  if (!db) {
+    throw new Error('Database not initialized. Call init() first.');
+  }
+
+  try {
+    if (dbType === 'sqlite') {
+      const team = db.prepare(`
+        SELECT
+          id,
+          name,
+          color,
+          logo_url,
+          created_at,
+          updated_at
+        FROM teams
+        WHERE id = ?
+      `).get(teamId);
+
+      if (!team) {
+        return null;
+      }
+
+      const orgs = db.prepare(`
+        SELECT
+          server_id,
+          company_name,
+          alias,
+          color,
+          team_id,
+          created_at,
+          updated_at
+        FROM orgs
+        WHERE team_id = ?
+        ORDER BY alias ASC, server_id ASC
+      `).all(teamId);
+
+      const users = db.prepare(`
+        SELECT
+          id,
+          username,
+          role,
+          team_id,
+          created_at,
+          last_login
+        FROM users
+        WHERE team_id = ?
+        ORDER BY username ASC
+      `).all(teamId);
+
+      return {
+        id: team.id,
+        name: team.name,
+        color: team.color || null,
+        logo_url: team.logo_url || null,
+        created_at: team.created_at,
+        updated_at: team.updated_at,
+        orgs: orgs.map(org => ({
+          id: org.server_id,
+          alias: org.alias || null,
+          color: org.color || null,
+          company_name: org.company_name || null,
+          team_id: org.team_id || null,
+          created_at: org.created_at,
+          updated_at: org.updated_at
+        })),
+        users: users.map(user => ({
+          id: user.id,
+          username: user.username,
+          role: user.role,
+          team_id: user.team_id || null,
+          created_at: user.created_at,
+          last_login: user.last_login || null
+        }))
+      };
+    } else if (dbType === 'postgresql') {
+      const teamResult = await db.query(`
+        SELECT
+          id,
+          name,
+          color,
+          logo_url,
+          created_at,
+          updated_at
+        FROM teams
+        WHERE id = $1
+      `, [teamId]);
+
+      if (teamResult.rows.length === 0) {
+        return null;
+      }
+
+      const team = teamResult.rows[0];
+
+      const orgsResult = await db.query(`
+        SELECT
+          server_id,
+          company_name,
+          alias,
+          color,
+          team_id,
+          created_at,
+          updated_at
+        FROM orgs
+        WHERE team_id = $1
+        ORDER BY alias ASC, server_id ASC
+      `, [teamId]);
+
+      const usersResult = await db.query(`
+        SELECT
+          id,
+          username,
+          role,
+          team_id,
+          created_at,
+          last_login
+        FROM users
+        WHERE team_id = $1
+        ORDER BY username ASC
+      `, [teamId]);
+
+      return {
+        id: team.id,
+        name: team.name,
+        color: team.color || null,
+        logo_url: team.logo_url || null,
+        created_at: team.created_at,
+        updated_at: team.updated_at,
+        orgs: orgsResult.rows.map(org => ({
+          id: org.server_id,
+          alias: org.alias || null,
+          color: org.color || null,
+          company_name: org.company_name || null,
+          team_id: org.team_id || null,
+          created_at: org.created_at,
+          updated_at: org.updated_at
+        })),
+        users: usersResult.rows.map(user => ({
+          id: user.id,
+          username: user.username,
+          role: user.role,
+          team_id: user.team_id || null,
+          created_at: user.created_at,
+          last_login: user.last_login || null
+        }))
+      };
+    }
+  } catch (error) {
+    console.error('Error getting team by ID:', error);
+    throw error;
+  }
+}
+
+/**
+ * Create a new team
+ * @param {string} name - Team name (must be unique)
+ * @param {string} color - Team color (hex or CSS color)
+ * @param {string} logoUrl - Optional logo URL
+ * @returns {Promise<object>} Created team object
+ */
+async function createTeam(name, color = null, logoUrl = null) {
+  if (!db) {
+    throw new Error('Database not initialized. Call init() first.');
+  }
+
+  if (!name || typeof name !== 'string' || name.trim() === '') {
+    throw new Error('Team name is required');
+  }
+
+  const now = new Date().toISOString();
+
+  try {
+    if (dbType === 'sqlite') {
+      const stmt = db.prepare(`
+        INSERT INTO teams (name, color, logo_url, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?)
+      `);
+      const result = stmt.run(name.trim(), color || null, logoUrl || null, now, now);
+      return {
+        id: result.lastInsertRowid,
+        name: name.trim(),
+        color: color || null,
+        logo_url: logoUrl || null,
+        created_at: now,
+        updated_at: now
+      };
+    } else if (dbType === 'postgresql') {
+      const result = await db.query(`
+        INSERT INTO teams (name, color, logo_url, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5)
+        RETURNING id, name, color, logo_url, created_at, updated_at
+      `, [name.trim(), color || null, logoUrl || null, now, now]);
+      return result.rows[0];
+    }
+  } catch (error) {
+    if (error.message.includes('UNIQUE constraint') || error.message.includes('duplicate key')) {
+      throw new Error('Team name already exists');
+    }
+    console.error('Error creating team:', error);
+    throw error;
+  }
+}
+
+/**
+ * Update a team
+ * @param {number} teamId - Team ID
+ * @param {object} updates - Object with name, color, logo_url to update
+ * @returns {Promise<boolean>} True if updated, false if not found
+ */
+async function updateTeam(teamId, updates) {
+  if (!db) {
+    throw new Error('Database not initialized. Call init() first.');
+  }
+
+  const { name, color, logo_url } = updates || {};
+  const now = new Date().toISOString();
+  const updatesList = [];
+  const params = [];
+
+  if (name !== undefined) {
+    if (typeof name !== 'string' || name.trim() === '') {
+      throw new Error('Team name cannot be empty');
+    }
+    updatesList.push(dbType === 'sqlite' ? 'name = ?' : 'name = $' + (params.length + 1));
+    params.push(name.trim());
+  }
+
+  if (color !== undefined) {
+    updatesList.push(dbType === 'sqlite' ? 'color = ?' : 'color = $' + (params.length + 1));
+    params.push(color || null);
+  }
+
+  if (logo_url !== undefined) {
+    updatesList.push(dbType === 'sqlite' ? 'logo_url = ?' : 'logo_url = $' + (params.length + 1));
+    params.push(logo_url || null);
+  }
+
+  if (updatesList.length === 0) {
+    return false;
+  }
+
+  updatesList.push(dbType === 'sqlite' ? 'updated_at = ?' : 'updated_at = $' + (params.length + 1));
+  params.push(now);
+
+  params.push(teamId);
+
+  try {
+    if (dbType === 'sqlite') {
+      const stmt = db.prepare(`
+        UPDATE teams
+        SET ${updatesList.join(', ')}
+        WHERE id = ?
+      `);
+      const result = stmt.run(...params);
+      return result.changes > 0;
+    } else if (dbType === 'postgresql') {
+      const result = await db.query(`
+        UPDATE teams
+        SET ${updatesList.join(', ')}
+        WHERE id = $${params.length}
+      `, params);
+      return result.rowCount > 0;
+    }
+  } catch (error) {
+    if (error.message.includes('UNIQUE constraint') || error.message.includes('duplicate key')) {
+      throw new Error('Team name already exists');
+    }
+    console.error('Error updating team:', error);
+    throw error;
+  }
+}
+
+/**
+ * Delete a team
+ * @param {number} teamId - Team ID
+ * @returns {Promise<boolean>} True if deleted, false if not found
+ */
+async function deleteTeam(teamId) {
+  if (!db) {
+    throw new Error('Database not initialized. Call init() first.');
+  }
+
+  try {
+    if (dbType === 'sqlite') {
+      // First, unassign orgs and users from this team
+      db.prepare('UPDATE orgs SET team_id = NULL WHERE team_id = ?').run(teamId);
+      db.prepare('UPDATE users SET team_id = NULL WHERE team_id = ?').run(teamId);
+
+      const stmt = db.prepare('DELETE FROM teams WHERE id = ?');
+      const result = stmt.run(teamId);
+      return result.changes > 0;
+    } else if (dbType === 'postgresql') {
+      // First, unassign orgs and users from this team
+      await db.query('UPDATE orgs SET team_id = NULL WHERE team_id = $1', [teamId]);
+      await db.query('UPDATE users SET team_id = NULL WHERE team_id = $1', [teamId]);
+
+      const result = await db.query('DELETE FROM teams WHERE id = $1', [teamId]);
+      return result.rowCount > 0;
+    }
+  } catch (error) {
+    console.error('Error deleting team:', error);
+    throw error;
+  }
+}
+
+/**
+ * Org management functions (extended)
+ */
+
+/**
+ * Get all orgs with their team information
+ * @returns {Promise<Array>} Array of org objects with team info
+ */
+async function getAllOrgsWithTeams() {
+  if (!db) {
+    throw new Error('Database not initialized. Call init() first.');
+  }
+
+  try {
+    if (dbType === 'sqlite') {
+      const orgs = db.prepare(`
+        SELECT
+          o.server_id,
+          o.company_name,
+          o.alias,
+          o.color,
+          o.team_id,
+          o.created_at,
+          o.updated_at,
+          t.name as team_name,
+          t.color as team_color
+        FROM orgs o
+        LEFT JOIN teams t ON t.id = o.team_id
+        ORDER BY o.alias ASC, o.server_id ASC
+      `).all();
+
+      return orgs.map(org => ({
+        id: org.server_id,
+        alias: org.alias || null,
+        color: org.color || null,
+        company_name: org.company_name || null,
+        team_id: org.team_id || null,
+        team_name: org.team_name || null,
+        team_color: org.team_color || null,
+        created_at: org.created_at,
+        updated_at: org.updated_at
+      }));
+    } else if (dbType === 'postgresql') {
+      const result = await db.query(`
+        SELECT
+          o.server_id,
+          o.company_name,
+          o.alias,
+          o.color,
+          o.team_id,
+          o.created_at,
+          o.updated_at,
+          t.name as team_name,
+          t.color as team_color
+        FROM orgs o
+        LEFT JOIN teams t ON t.id = o.team_id
+        ORDER BY o.alias ASC, o.server_id ASC
+      `);
+
+      return result.rows.map(org => ({
+        id: org.server_id,
+        alias: org.alias || null,
+        color: org.color || null,
+        company_name: org.company_name || null,
+        team_id: org.team_id || null,
+        team_name: org.team_name || null,
+        team_color: org.team_color || null,
+        created_at: org.created_at,
+        updated_at: org.updated_at
+      }));
+    }
+  } catch (error) {
+    console.error('Error getting all orgs with teams:', error);
+    throw error;
+  }
+}
+
+/**
+ * Create or update an org
+ * @param {string} orgId - Org identifier (server_id)
+ * @param {object} orgData - Object with alias, color, team_id, company_name
+ * @returns {Promise<object>} Created or updated org object
+ */
+async function upsertOrg(orgId, orgData = {}) {
+  if (!db) {
+    throw new Error('Database not initialized. Call init() first.');
+  }
+
+  if (!orgId || typeof orgId !== 'string' || orgId.trim() === '') {
+    throw new Error('Org ID is required');
+  }
+
+  const { alias, color, team_id, company_name } = orgData;
+  const now = new Date().toISOString();
+
+  try {
+    if (dbType === 'sqlite') {
+      // Check if org exists
+      const existing = db.prepare('SELECT server_id FROM orgs WHERE server_id = ?').get(orgId);
+
+      if (existing) {
+        // Update existing org
+        const updates = [];
+        const params = [];
+
+        if (alias !== undefined) {
+          updates.push('alias = ?');
+          params.push(alias || null);
+        }
+        if (color !== undefined) {
+          updates.push('color = ?');
+          params.push(color || null);
+        }
+        if (team_id !== undefined) {
+          updates.push('team_id = ?');
+          params.push(team_id || null);
+        }
+        if (company_name !== undefined) {
+          updates.push('company_name = ?');
+          params.push(company_name || null);
+        }
+
+        if (updates.length > 0) {
+          updates.push('updated_at = ?');
+          params.push(now);
+          params.push(orgId);
+
+          db.prepare(`
+            UPDATE orgs
+            SET ${updates.join(', ')}
+            WHERE server_id = ?
+          `).run(...params);
+        }
+      } else {
+        // Create new org
+        db.prepare(`
+          INSERT INTO orgs (server_id, alias, color, team_id, company_name, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?)
+        `).run(orgId, alias || null, color || null, team_id || null, company_name || null, now, now);
+      }
+
+      // Return the org
+      return db.prepare(`
+        SELECT server_id, alias, color, team_id, company_name, created_at, updated_at
+        FROM orgs
+        WHERE server_id = ?
+      `).get(orgId);
+    } else if (dbType === 'postgresql') {
+      const result = await db.query(`
+        INSERT INTO orgs (server_id, alias, color, team_id, company_name, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        ON CONFLICT (server_id) DO UPDATE SET
+          alias = COALESCE(EXCLUDED.alias, orgs.alias),
+          color = COALESCE(EXCLUDED.color, orgs.color),
+          team_id = COALESCE(EXCLUDED.team_id, orgs.team_id),
+          company_name = COALESCE(EXCLUDED.company_name, orgs.company_name),
+          updated_at = EXCLUDED.updated_at
+        RETURNING server_id, alias, color, team_id, company_name, created_at, updated_at
+      `, [orgId, alias || null, color || null, team_id || null, company_name || null, now, now]);
+
+      return result.rows[0];
+    }
+  } catch (error) {
+    console.error('Error upserting org:', error);
+    throw error;
+  }
+}
+
+/**
+ * Move an org to a different team
+ * @param {string} orgId - Org identifier
+ * @param {number|null} teamId - New team ID (null to unassign)
+ * @returns {Promise<boolean>} True if moved, false if org not found
+ */
+async function moveOrgToTeam(orgId, teamId) {
+  if (!db) {
+    throw new Error('Database not initialized. Call init() first.');
+  }
+
+  try {
+    if (dbType === 'sqlite') {
+      const stmt = db.prepare('UPDATE orgs SET team_id = ?, updated_at = ? WHERE server_id = ?');
+      const now = new Date().toISOString();
+      const result = stmt.run(teamId || null, now, orgId);
+      return result.changes > 0;
+    } else if (dbType === 'postgresql') {
+      const result = await db.query(
+        'UPDATE orgs SET team_id = $1, updated_at = NOW() WHERE server_id = $2',
+        [teamId || null, orgId]
+      );
+      return result.rowCount > 0;
+    }
+  } catch (error) {
+    console.error('Error moving org to team:', error);
+    throw error;
+  }
+}
+
+/**
+ * Assign a user to a team
+ * @param {number} userId - User ID
+ * @param {number|null} teamId - Team ID (null to unassign)
+ * @returns {Promise<boolean>} True if assigned, false if user not found
+ */
+async function assignUserToTeam(userId, teamId) {
+  if (!db) {
+    throw new Error('Database not initialized. Call init() first.');
+  }
+
+  try {
+    if (dbType === 'sqlite') {
+      const stmt = db.prepare('UPDATE users SET team_id = ? WHERE id = ?');
+      const result = stmt.run(teamId || null, userId);
+      return result.changes > 0;
+    } else if (dbType === 'postgresql') {
+      const result = await db.query('UPDATE users SET team_id = $1 WHERE id = $2', [teamId || null, userId]);
+      return result.rowCount > 0;
+    }
+  } catch (error) {
+    console.error('Error assigning user to team:', error);
+    throw error;
+  }
+}
+
 module.exports = {
   init,
   storeEvent,
@@ -3043,6 +3748,16 @@ module.exports = {
   getOrgCompanyName,
   getAllOrgs,
   upsertOrgCompanyName,
+  getAllOrgsWithTeams,
+  upsertOrg,
+  moveOrgToTeam,
+  // Team management
+  getAllTeams,
+  getTeamById,
+  createTeam,
+  updateTeam,
+  deleteTeam,
+  assignUserToTeam,
   // Event updates
   updateEventData,
   // User filtering

@@ -13,6 +13,7 @@
 	<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;300;400;500;600;700;800&display=swap" rel="stylesheet">
 	<link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
 	<link rel="stylesheet" href="/vendor/fontawesome/css/v4-shims.min.css">
+	<script src="/js/polyfills.js"></script>
 	<script>
 		// Apply theme immediately before page render to prevent flash
 		(function () {
@@ -53,7 +54,7 @@
 			<div class="top-nav-links">
 				<a href="/" class="top-nav-link active">Dashboard</a>
 				<a href="/event-log" class="top-nav-link">Logs</a>
-				<a href="#" class="top-nav-link" onclick="openSettingsModal(); return false;">Settings</a>
+				<a href="/teams" class="top-nav-link">Teams</a>
 			</div>
 			<div class="top-nav-search">
 				<input type="text" class="top-nav-search-input" placeholder="Search" id="searchInput">
@@ -90,16 +91,16 @@
 							</div>
 							<label class="sr-only" for="timeRangeSelect">Select date range</label>
 							<select id="timeRangeSelect" class="time-range-select">
-								<option value="7" selected>Week</option>
-								<option value="15">2 weeks</option>
-								<option value="30">Month</option>
-								<option value="90">6 months</option>
+								<option value="7" selected>Last 7 days</option>
+								<option value="15">Last 15 days</option>
+								<option value="30">Last 30 days</option>
+								<option value="90">Last 90 days</option>
 							</select>
 						</div>
 						<div id="eventsChart"></div>
 					</section>
 					<section class="dashboard-card" style="background: transparent; box-shadow: none; text-align: left;">
-						<h2 style="margin: 0 0 8px 0;">Top teams <span style="font-size: calc(1em - 1.5px);">(last 30 days)</span></h2>
+						<h2 style="margin: 0 0 8px 0;">Top teams <span style="font-size: calc(1em - 2.6px);">(last 30 days)</span></h2>
 						<p style="margin: 0 0 12px 0;">Sorted by event volume across the last 30 days.</p>
 						<ul id="topTeamsList" class="top-users-list">
 							<li class="top-users-empty">Loading top teams…</li>
@@ -110,7 +111,7 @@
 			<div class="dashboard-row-bottom">
 				<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 24px; flex: 1;">
 					<section class="dashboard-card" style="background: transparent; box-shadow: none; text-align: left;">
-						<h2 style="margin: 0 0 8px 0;">Top users <span style="font-size: calc(1em - 1.5px);">(last 3 days)</span></h2>
+						<h2 style="margin: 0 0 8px 0;">Top users <span style="font-size: calc(1em - 2.6px);">(last 3 days)</span></h2>
 						<p style="margin: 0 0 12px 0;">Sorted by event volume across the last 3 days.</p>
 						<ul id="topUsersList" class="top-users-list">
 							<li class="top-users-empty">Loading top users…</li>

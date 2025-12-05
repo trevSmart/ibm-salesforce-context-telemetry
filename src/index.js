@@ -935,6 +935,314 @@ app.get('/api/team-stats', auth.requireAuth, auth.requireRole('advanced'), async
   }
 });
 
+// Teams API endpoints
+app.get('/api/teams', auth.requireAuth, auth.requireRole('advanced'), async (req, res) => {
+  try {
+    const teams = await db.getAllTeams();
+    res.json({
+      status: 'ok',
+      teams
+    });
+  } catch (error) {
+    console.error('Error fetching teams:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to fetch teams'
+    });
+  }
+});
+
+app.get('/api/teams/:id', auth.requireAuth, auth.requireRole('advanced'), async (req, res) => {
+  try {
+    const teamId = parseInt(req.params.id);
+    if (isNaN(teamId)) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Invalid team ID'
+      });
+    }
+
+    const team = await db.getTeamById(teamId);
+    if (!team) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Team not found'
+      });
+    }
+
+    res.json({
+      status: 'ok',
+      team
+    });
+  } catch (error) {
+    console.error('Error fetching team:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to fetch team'
+    });
+  }
+});
+
+app.post('/api/teams', auth.requireAuth, auth.requireRole('administrator'), async (req, res) => {
+  try {
+    const { name, color, logo_url } = req.body;
+
+    if (!name || typeof name !== 'string' || name.trim() === '') {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Team name is required'
+      });
+    }
+
+    const team = await db.createTeam(name.trim(), color || null, logo_url || null);
+    res.status(201).json({
+      status: 'ok',
+      team
+    });
+  } catch (error) {
+    console.error('Error creating team:', error);
+    if (error.message.includes('already exists')) {
+      return res.status(409).json({
+        status: 'error',
+        message: error.message
+      });
+    }
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to create team'
+    });
+  }
+});
+
+app.put('/api/teams/:id', auth.requireAuth, auth.requireRole('administrator'), async (req, res) => {
+  try {
+    const teamId = parseInt(req.params.id);
+    if (isNaN(teamId)) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Invalid team ID'
+      });
+    }
+
+    const { name, color, logo_url } = req.body;
+    const updates = {};
+    if (name !== undefined) updates.name = name;
+    if (color !== undefined) updates.color = color;
+    if (logo_url !== undefined) updates.logo_url = logo_url;
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'No updates provided'
+      });
+    }
+
+    const updated = await db.updateTeam(teamId, updates);
+    if (!updated) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Team not found'
+      });
+    }
+
+    const team = await db.getTeamById(teamId);
+    res.json({
+      status: 'ok',
+      team
+    });
+  } catch (error) {
+    console.error('Error updating team:', error);
+    if (error.message.includes('already exists')) {
+      return res.status(409).json({
+        status: 'error',
+        message: error.message
+      });
+    }
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to update team'
+    });
+  }
+});
+
+app.delete('/api/teams/:id', auth.requireAuth, auth.requireRole('administrator'), async (req, res) => {
+  try {
+    const teamId = parseInt(req.params.id);
+    if (isNaN(teamId)) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Invalid team ID'
+      });
+    }
+
+    const deleted = await db.deleteTeam(teamId);
+    if (!deleted) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Team not found'
+      });
+    }
+
+    res.json({
+      status: 'ok',
+      message: 'Team deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting team:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to delete team'
+    });
+  }
+});
+
+// Orgs API endpoints
+app.get('/api/orgs', auth.requireAuth, auth.requireRole('advanced'), async (req, res) => {
+  try {
+    const orgs = await db.getAllOrgsWithTeams();
+    res.json({
+      status: 'ok',
+      orgs
+    });
+  } catch (error) {
+    console.error('Error fetching orgs:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to fetch orgs'
+    });
+  }
+});
+
+app.post('/api/orgs', auth.requireAuth, auth.requireRole('administrator'), async (req, res) => {
+  try {
+    const { id, alias, color, team_id, company_name } = req.body;
+
+    if (!id || typeof id !== 'string' || id.trim() === '') {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Org ID is required'
+      });
+    }
+
+    const org = await db.upsertOrg(id.trim(), {
+      alias: alias || null,
+      color: color || null,
+      team_id: team_id || null,
+      company_name: company_name || null
+    });
+
+    res.status(201).json({
+      status: 'ok',
+      org
+    });
+  } catch (error) {
+    console.error('Error creating/updating org:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to create/update org'
+    });
+  }
+});
+
+app.put('/api/orgs/:id', auth.requireAuth, auth.requireRole('administrator'), async (req, res) => {
+  try {
+    const orgId = req.params.id;
+    const { alias, color, team_id, company_name } = req.body;
+
+    const org = await db.upsertOrg(orgId, {
+      alias: alias !== undefined ? alias : undefined,
+      color: color !== undefined ? color : undefined,
+      team_id: team_id !== undefined ? team_id : undefined,
+      company_name: company_name !== undefined ? company_name : undefined
+    });
+
+    res.json({
+      status: 'ok',
+      org
+    });
+  } catch (error) {
+    console.error('Error updating org:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to update org'
+    });
+  }
+});
+
+app.post('/api/orgs/:id/move', auth.requireAuth, auth.requireRole('administrator'), async (req, res) => {
+  try {
+    const orgId = req.params.id;
+    const { team_id } = req.body;
+
+    if (team_id !== null && team_id !== undefined && (isNaN(team_id) || parseInt(team_id) < 1)) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Invalid team_id'
+      });
+    }
+
+    const moved = await db.moveOrgToTeam(orgId, team_id ? parseInt(team_id) : null);
+    if (!moved) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Org not found'
+      });
+    }
+
+    res.json({
+      status: 'ok',
+      message: 'Org moved successfully'
+    });
+  } catch (error) {
+    console.error('Error moving org:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to move org'
+    });
+  }
+});
+
+// User-team assignment endpoint
+app.post('/api/users/:id/assign-team', auth.requireAuth, auth.requireRole('administrator'), async (req, res) => {
+  try {
+    const userId = parseInt(req.params.id);
+    const { team_id } = req.body;
+
+    if (isNaN(userId)) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Invalid user ID'
+      });
+    }
+
+    if (team_id !== null && team_id !== undefined && (isNaN(team_id) || parseInt(team_id) < 1)) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Invalid team_id'
+      });
+    }
+
+    const assigned = await db.assignUserToTeam(userId, team_id ? parseInt(team_id) : null);
+    if (!assigned) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'User not found'
+      });
+    }
+
+    res.json({
+      status: 'ok',
+      message: 'User assigned to team successfully'
+    });
+  } catch (error) {
+    console.error('Error assigning user to team:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to assign user to team'
+    });
+  }
+});
+
 app.get('/api/telemetry-users', auth.requireAuth, auth.requireRole('advanced'), async (req, res) => {
   try {
     // Use cache because counts are maintained eagerly during writes
@@ -1013,6 +1321,15 @@ app.get('/', auth.requireAuth, (_req, res) => {
 });
 
 // Serve event log page
+app.get('/teams', auth.requireAuth, auth.requireRole('administrator'), (_req, res) => {
+  const teamsPath = path.join(__dirname, '..', 'public', 'teams.html');
+  if (fs.existsSync(teamsPath)) {
+    res.sendFile(teamsPath);
+  } else {
+    res.status(404).send('Teams page not found');
+  }
+});
+
 app.get('/event-log', auth.requireAuth, auth.requireRole('advanced'), (_req, res) => {
   const eventLogPath = path.join(__dirname, '..', 'public', 'event-log.html');
   if (fs.existsSync(eventLogPath)) {

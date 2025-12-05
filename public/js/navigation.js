@@ -2,10 +2,11 @@
 /* global DOMParser */
 // Lightweight client-side navigation to avoid repainting shared chrome
 (() => {
-  const SUPPORTED_PATHS = ['/', '/event-log'];
+  const SUPPORTED_PATHS = ['/', '/event-log', '/teams'];
   const PAGE_SCRIPTS = {
     '/': [{ src: '/js/index.js', type: 'module' }],
-    '/event-log': [{ src: '/js/event-log.js' }]
+    '/event-log': [{ src: '/js/event-log.js' }],
+    '/teams': [{ src: '/js/teams.js', type: 'module' }]
   };
 
   const loadedScripts = new Set(

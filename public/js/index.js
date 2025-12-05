@@ -1972,7 +1972,7 @@ function openOrgTeamMappingModal() {
       const orgIdentifier = orgInput.value.trim();
       const clientName = clientInput.value.trim();
       const teamName = teamInput.value.trim();
-    const color = colorPicker.getValue();
+      const color = colorPicker.getValue();
       const active = !!activeInput.checked;
 
       if (!orgIdentifier || !clientName || !teamName) {
@@ -2137,6 +2137,169 @@ let chart = null;
 let currentDays = 7;
 let isInitialChartLoad = true; // Track if this is the initial chart load
 
+// Function to calculate polynomial regression (degree 2 for curved trend)
+function calculatePolynomialRegression(dataPoints, degree = 2) {
+  const n = dataPoints.length;
+  if (n < degree + 1) return { coefficients: [0] };
+
+  // Prepare matrices for polynomial regression
+  const X = [];
+  const Y = dataPoints;
+
+  for (let i = 0; i < n; i++) {
+    const row = [];
+    for (let j = 0; j <= degree; j++) {
+      row.push(Math.pow(i, j));
+    }
+    X.push(row);
+  }
+
+  // Solve normal equations using Gaussian elimination
+  const coefficients = solveNormalEquations(X, Y);
+  return { coefficients };
+}
+
+// Gaussian elimination for normal equations
+function solveNormalEquations(X, Y) {
+  const n = X[0].length;
+  const m = X.length;
+
+  // Create augmented matrix [X^T * X | X^T * Y]
+  const A = Array.from({ length: n }, () => Array(n + 1).fill(0));
+
+  // Calculate X^T * X and X^T * Y
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < n; j++) {
+      let sum = 0;
+      for (let k = 0; k < m; k++) {
+        sum += X[k][i] * X[k][j];
+      }
+      A[i][j] = sum;
+    }
+    let sum = 0;
+    for (let k = 0; k < m; k++) {
+      sum += X[k][i] * Y[k];
+    }
+    A[i][n] = sum;
+  }
+
+  // Gaussian elimination
+  for (let i = 0; i < n; i++) {
+    // Find pivot
+    let maxRow = i;
+    for (let k = i + 1; k < n; k++) {
+      if (Math.abs(A[k][i]) > Math.abs(A[maxRow][i])) {
+        maxRow = k;
+      }
+    }
+
+    // Swap rows
+    [A[i], A[maxRow]] = [A[maxRow], A[i]];
+
+    // Make pivot 1
+    const pivot = A[i][i];
+    if (Math.abs(pivot) < 1e-10) continue; // Skip if pivot is too small
+
+    for (let j = i; j <= n; j++) {
+      A[i][j] /= pivot;
+    }
+
+    // Eliminate
+    for (let k = 0; k < n; k++) {
+      if (k !== i) {
+        const factor = A[k][i];
+        for (let j = i; j <= n; j++) {
+          A[k][j] -= factor * A[i][j];
+        }
+      }
+    }
+  }
+
+  // Extract coefficients
+  const coefficients = [];
+  for (let i = 0; i < n; i++) {
+    coefficients.push(A[i][n]);
+  }
+
+  return coefficients;
+}
+
+// Function to calculate exponential smoothing
+function calculateExponentialSmoothing(dataPoints, alpha = 0.3) {
+  if (dataPoints.length === 0) return [];
+
+  const smoothed = [dataPoints[0]]; // First value remains the same
+
+  for (let i = 1; i < dataPoints.length; i++) {
+    const smoothedValue = alpha * dataPoints[i] + (1 - alpha) * smoothed[i - 1];
+    smoothed.push(smoothedValue);
+  }
+
+  return smoothed;
+}
+
+// Remove trailing zeros so future empty days don't distort the trend fit
+function trimTrailingZeros(dataPoints) {
+  let lastNonZeroIndex = -1;
+  for (let i = dataPoints.length - 1; i >= 0; i--) {
+    const value = Number(dataPoints[i]);
+    if (Number.isFinite(value) && value !== 0) {
+      lastNonZeroIndex = i;
+      break;
+    }
+  }
+
+  if (lastNonZeroIndex === -1 || lastNonZeroIndex === dataPoints.length - 1) {
+    return dataPoints;
+  }
+
+  return dataPoints.slice(0, lastNonZeroIndex + 1);
+}
+
+// Function to generate trend line data using polynomial regression for curved trends
+function generateTrendLine(dataPoints, futurePoints = 3, method = 'polynomial') {
+  let trendData = [];
+  let extrapolatedData = [];
+
+  if (method === 'polynomial') {
+    // Use polynomial regression (degree 2) for curved trends
+    const { coefficients } = calculatePolynomialRegression(dataPoints, 2);
+
+    // Generate trend line for existing data points
+    trendData = dataPoints.map((_, index) => {
+      let value = 0;
+      for (let i = 0; i < coefficients.length; i++) {
+        value += coefficients[i] * Math.pow(index, i);
+      }
+      return Math.max(0, value); // Ensure non-negative values
+    });
+
+    // Extrapolate future points
+    for (let i = 0; i < futurePoints; i++) {
+      const futureIndex = dataPoints.length + i;
+      let value = 0;
+      for (let j = 0; j < coefficients.length; j++) {
+        value += coefficients[j] * Math.pow(futureIndex, j);
+      }
+      extrapolatedData.push(Math.max(0, value));
+    }
+  } else if (method === 'exponential') {
+    // Use exponential smoothing for trend following recent patterns
+    const smoothed = calculateExponentialSmoothing(dataPoints);
+
+    // Extend smoothing for future points (use last smoothed value)
+    const lastSmoothed = smoothed[smoothed.length - 1];
+    trendData = smoothed;
+    extrapolatedData = Array(futurePoints).fill(lastSmoothed);
+  }
+
+  return {
+    trendData,
+    extrapolatedData,
+    method
+  };
+}
+
 function initChart() {
   if (chart) {
     return chart;
@@ -2214,7 +2377,7 @@ function renderTopUsers(users) {
         <div class="top-users-info">
           <div class="top-users-name-row">
             <strong class="top-users-name" title="${escapeHtml(name)}">${escapeHtml(name)}</strong>
-            <span class="top-users-badge" style="background: ${badgeBackground}; color: #ffffff;">${escapeHtml(String(eventCount))} last 3 days</span>
+            <span class="top-users-badge" style="background: ${badgeBackground}; color: #ffffff;">${escapeHtml(String(eventCount))} events</span>
           </div>
           <div class="top-users-role">${escapeHtml(countLabel)}</div>
         </div>
@@ -2264,7 +2427,7 @@ function renderTopTeams(teams) {
         <div class="top-users-info">
           <div class="top-users-name-row">
             <strong class="top-users-name" title="${escapeHtml(teamName)}${clientName}">${escapeHtml(teamName)}${clientName}</strong>
-            <span class="top-users-badge" style="background: ${badgeBackground}; color: #ffffff;">${escapeHtml(String(eventCount))} last 30 days</span>
+            <span class="top-users-badge" style="background: ${badgeBackground}; color: #ffffff;">${escapeHtml(String(eventCount))} events</span>
           </div>
           <div class="top-users-role">${escapeHtml(countLabel)}</div>
         </div>
@@ -2416,13 +2579,26 @@ async function loadChartData(days = currentDays) {
     const totalEventsColor = toolEventsColor;
 
     // Prepare data for ECharts
+    const FUTURE_POINTS = 0; // Do not show future days; use only observed days
     const _dates = data.map(item => item.date);
     const weekdayLabels = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
     const labels = data.map(item => {
       const date = new Date(item.date);
       const dayIndex = date.getDay();
-      return weekdayLabels[dayIndex] || '';
+      const dayNumber = date.getDate();
+      return `${weekdayLabels[dayIndex] || ''} ${dayNumber}`;
     });
+
+    // Add future labels for trend extrapolation (disabled when FUTURE_POINTS = 0)
+    const futureLabels = [];
+    for (let i = 1; i <= FUTURE_POINTS; i++) {
+      const futureDate = new Date(_dates[_dates.length - 1]);
+      futureDate.setDate(futureDate.getDate() + i);
+      const dayIndex = futureDate.getDay();
+      const dayNumber = futureDate.getDate();
+      futureLabels.push(`${weekdayLabels[dayIndex] || ''} ${dayNumber}`);
+    }
+    const extendedLabels = [...labels, ...futureLabels];
 
     let series = [];
     let legendData = [];
@@ -2460,13 +2636,26 @@ async function loadChartData(days = currentDays) {
             position: 'top',
             formatter: function(params) {
               const value = Number(params.value);
-              return Number.isFinite(value) ? value : 0;
+              if (!Number.isFinite(value)) return '';
+              if (value === 0) return '{zero| }';
+              return `{val|${value}}`;
             },
-            fontSize: 9.8,
-            color: '#ffffff',
-            backgroundColor: startSessionsColor,
-            padding: [2, 5],
-            borderRadius: 999,
+            rich: {
+              val: {
+                fontSize: 9.8,
+                color: '#ffffff',
+                backgroundColor: startSessionsColor,
+                padding: [2, 5],
+                borderRadius: 999
+              },
+              zero: {
+                fontSize: 1,
+                color: 'transparent',
+                backgroundColor: startSessionsColor,
+                padding: [1, 3],
+                borderRadius: 999
+              }
+            },
             distance: 1,
             offset: [-9, -2]
           },
@@ -2495,13 +2684,26 @@ async function loadChartData(days = currentDays) {
             position: 'top',
             formatter: function(params) {
               const value = Number(params.value);
-              return Number.isFinite(value) ? value : 0;
+              if (!Number.isFinite(value)) return '';
+              if (value === 0) return '{zero| }';
+              return `{val|${value}}`;
             },
-            fontSize: 9.8,
-            color: '#ffffff',
-            backgroundColor: toolEventsColor,
-            padding: [2, 5],
-            borderRadius: 999,
+            rich: {
+              val: {
+                fontSize: 9.8,
+                color: '#ffffff',
+                backgroundColor: toolEventsColor,
+                padding: [2, 5],
+                borderRadius: 999
+              },
+              zero: {
+                fontSize: 1,
+                color: 'transparent',
+                backgroundColor: toolEventsColor,
+                padding: [1, 3],
+                borderRadius: 999
+              }
+            },
             distance: 1,
             offset: [0, -2]
           },
@@ -2530,13 +2732,26 @@ async function loadChartData(days = currentDays) {
             position: 'top',
             formatter: function(params) {
               const value = Number(params.value);
-              return Number.isFinite(value) ? value : 0;
+              if (!Number.isFinite(value)) return '';
+              if (value === 0) return '{zero| }';
+              return `{val|${value}}`;
             },
-            fontSize: 9.8,
-            color: '#ffffff',
-            backgroundColor: errorEventsColor,
-            padding: [2, 5],
-            borderRadius: 999,
+            rich: {
+              val: {
+                fontSize: 9.8,
+                color: '#ffffff',
+                backgroundColor: errorEventsColor,
+                padding: [2, 5],
+                borderRadius: 999
+              },
+              zero: {
+                fontSize: 1,
+                color: 'transparent',
+                backgroundColor: errorEventsColor,
+                padding: [1, 3],
+                borderRadius: 999
+              }
+            },
             distance: 1,
             offset: [9, -2]
           },
@@ -2548,10 +2763,52 @@ async function loadChartData(days = currentDays) {
           }
         }
       ];
+
+      // Calculate trend line for tool events (most representative metric)
+      const trimmedToolEvents = trimTrailingZeros(toolEventsData);
+      const trendLineSource = trimmedToolEvents.length >= 2 ? trimmedToolEvents : toolEventsData;
+      const trendLine = generateTrendLine(trendLineSource, FUTURE_POINTS);
+      const trendColor = '#fbbf24'; // Amber color for trend line
+      const trendLineGradient = new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+        { offset: 0, color: 'rgba(250, 204, 21, 1)' }, // yellow (past)
+        { offset: 1, color: 'rgba(251, 146, 60, 1)' }  // softer orange (future)
+      ]);
+
+      // Add trend line series with gradient from orange (past) to red (future)
+      const totalDataPoints = trendLine.trendData.length + trendLine.extrapolatedData.length;
+      series.push({
+        name: 'Trend',
+        type: 'line',
+        data: [...trendLine.trendData, ...trendLine.extrapolatedData],
+        smooth: 0.3,
+        symbol: 'none',
+        zlevel: 0,
+        z: -1,
+        lineStyle: {
+          width: 1,
+          type: 'solid',
+          color: trendLineGradient,
+          opacity: 0.3,
+          shadowColor: 'rgba(249, 115, 22, 0.35)',
+          shadowBlur: 8,
+          shadowOffsetY: 4
+        },
+        itemStyle: {
+          color: trendColor
+        },
+        emphasis: {
+          focus: 'series',
+          lineStyle: {
+            width: 3
+          }
+        }
+      });
+
       legendData = [
         { name: 'Start Sessions', icon: 'circle', itemStyle: { color: startSessionsColor } },
         { name: 'Tool Events', icon: 'circle', itemStyle: { color: toolEventsColor } },
-        { name: 'Errors', icon: 'circle', itemStyle: { color: errorEventsColor } }
+        { name: 'Errors', icon: 'circle', itemStyle: { color: errorEventsColor } },
+        { name: 'Trend', icon: 'line', itemStyle: { color: trendColor } }
       ];
     } else {
       const totalEventsData = data.map(item => Number(item.count ?? item.total ?? 0));
@@ -2559,6 +2816,7 @@ async function loadChartData(days = currentDays) {
         const num = Number(value);
         return Number.isFinite(num) ? num : 0;
       });
+      const trimmedTotalEvents = trimTrailingZeros(totalEventsDataWithZeroes);
 
       series = [
         {
@@ -2579,13 +2837,26 @@ async function loadChartData(days = currentDays) {
             position: 'top',
             formatter: function(params) {
               const value = Number(params.value);
-              return Number.isFinite(value) ? value : 0;
+              if (!Number.isFinite(value)) return '';
+              if (value === 0) return '{zero| }';
+              return `{val|${value}}`;
             },
-            fontSize: 9.8,
-            color: '#ffffff',
-            backgroundColor: totalEventsColor,
-            padding: [2, 5],
-            borderRadius: 999,
+            rich: {
+              val: {
+                fontSize: 9.8,
+                color: '#ffffff',
+                backgroundColor: totalEventsColor,
+                padding: [2, 5],
+                borderRadius: 999
+              },
+              zero: {
+                fontSize: 1,
+                color: 'transparent',
+                backgroundColor: totalEventsColor,
+                padding: [1, 3],
+                borderRadius: 999
+              }
+            },
             distance: 1
           },
           emphasis: {
@@ -2596,8 +2867,49 @@ async function loadChartData(days = currentDays) {
           }
         }
       ];
+
+      // Calculate trend line for total events
+      const trendLineSource = trimmedTotalEvents.length >= 2 ? trimmedTotalEvents : totalEventsDataWithZeroes;
+      const trendLine = generateTrendLine(trendLineSource, FUTURE_POINTS);
+      const trendColor = '#fbbf24'; // Amber color for trend line
+      const trendLineGradient = new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+        { offset: 0, color: 'rgba(250, 204, 21, 1)' }, // yellow (past)
+        { offset: 1, color: 'rgba(251, 146, 60, 1)' }  // softer orange (future)
+      ]);
+
+      // Add trend line series with gradient from orange (past) to red (future)
+      const totalDataPoints = trendLine.trendData.length + trendLine.extrapolatedData.length;
+      series.push({
+        name: 'Trend',
+        type: 'line',
+        data: [...trendLine.trendData, ...trendLine.extrapolatedData],
+        smooth: 0.3,
+        symbol: 'none',
+        zlevel: 0,
+        z: -1,
+        lineStyle: {
+          width: 1,
+          type: 'solid',
+          color: trendLineGradient,
+          opacity: 0.3,
+          shadowColor: 'rgba(249, 115, 22, 0.35)',
+          shadowBlur: 8,
+          shadowOffsetY: 4
+        },
+        itemStyle: {
+          color: trendColor
+        },
+        emphasis: {
+          focus: 'series',
+          lineStyle: {
+            width: 3
+          }
+        }
+      });
+
       legendData = [
-        { name: 'Events', icon: 'circle', itemStyle: { color: totalEventsColor } }
+        { name: 'Events', icon: 'circle', itemStyle: { color: totalEventsColor } },
+        { name: 'Trend', icon: 'line', itemStyle: { color: trendColor } }
       ];
     }
 
@@ -2661,7 +2973,9 @@ async function loadChartData(days = currentDays) {
       },
       xAxis: {
         type: 'category',
-        data: labels,
+        data: extendedLabels,
+        // Add a small gap so the trend line can extend slightly past today
+        boundaryGap: ['5%', '10%'],
         axisLabel: {
           color: textColor,
           fontSize: 11,
