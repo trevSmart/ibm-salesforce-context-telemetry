@@ -4602,6 +4602,48 @@ if (window.__EVENT_LOG_LOADED__) {
     handleInitializationError('scroll container binding', new Error('Scroll container not found'));
   }
 
+  // Function to clear all filters
+  function clearAllFilters() {
+    // Clear search query
+    searchQuery = '';
+    const searchInputEl = document.getElementById('searchInput');
+    if (searchInputEl) {
+      searchInputEl.value = '';
+    }
+
+    // Reset all event type filters to active
+    activeFilters = new Set(['tool_call', 'session_start', 'custom', 'tool_error']);
+    document.querySelectorAll('.level-filter-btn').forEach(btn => {
+      const level = btn.dataset.level;
+      if (activeFilters.has(level)) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+    });
+
+    // Select all users
+    if (allUserIds.size > 0) {
+      selectedUserIds = new Set(allUserIds);
+      // Update checkboxes in user filter dropdown
+      const dropdownContent = document.getElementById('userFilterDropdownContent');
+      if (dropdownContent) {
+        dropdownContent.querySelectorAll('.user-filter-checkbox').forEach(checkbox => {
+          const checkboxUserId = checkbox.getAttribute('data-user-id');
+          if (checkboxUserId) {
+            checkbox.checked = selectedUserIds.has(checkboxUserId);
+          }
+        });
+      }
+    }
+
+    // Clear team selection
+    selectedTeamKey = null;
+    document.querySelectorAll('#teamList .session-item').forEach(item => {
+      item.classList.remove('active');
+    });
+  }
+
   // Session selection (for "All Sessions" item)
   document.querySelectorAll('[data-session="all"]').forEach(item => {
     item.addEventListener('click', () => {
@@ -4625,6 +4667,8 @@ if (window.__EVENT_LOG_LOADED__) {
         sortIconEl.src = '/resources/sort-desc';
         sortIconEl.alt = 'Sort descending';
       }
+      // Clear all filters when clicking "All Sessions"
+      clearAllFilters();
       currentOffset = 0;
       loadEvents();
       loadEventTypeStats(selectedSession);

@@ -1907,15 +1907,13 @@ async function getTopTeamsLastDays(orgTeamMappings = [], limit = 50, days = 3) {
 
     aggregated.forEach(row => {
       const teamInfo = orgToTeamMap.get(row.server_id);
-      if (teamInfo) {
-        results.push({
-          id: row.server_id,
-          label: teamInfo.teamName,
-          clientName: teamInfo.clientName,
-          color: teamInfo.color,
-          eventCount: Number(row.event_count) || 0
-        });
-      }
+      results.push({
+        id: row.server_id,
+        label: (teamInfo?.teamName || row.server_id || '').trim() || row.server_id,
+        clientName: (teamInfo?.clientName || '').trim(),
+        color: (teamInfo?.color || '').trim(),
+        eventCount: Number(row.event_count) || 0
+      });
     });
   } else if (dbType === 'postgresql') {
     const aggregated = await db.query(
@@ -1934,15 +1932,13 @@ async function getTopTeamsLastDays(orgTeamMappings = [], limit = 50, days = 3) {
 
     aggregated.rows.forEach(row => {
       const teamInfo = orgToTeamMap.get(row.server_id);
-      if (teamInfo) {
-        results.push({
-          id: row.server_id,
-          label: teamInfo.teamName,
-          clientName: teamInfo.clientName,
-          color: teamInfo.color,
-          eventCount: Number(row.event_count) || 0
-        });
-      }
+      results.push({
+        id: row.server_id,
+        label: (teamInfo?.teamName || row.server_id || '').trim() || row.server_id,
+        clientName: (teamInfo?.clientName || '').trim(),
+        color: (teamInfo?.color || '').trim(),
+        eventCount: Number(row.event_count) || 0
+      });
     });
   }
 
