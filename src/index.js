@@ -10,10 +10,30 @@ const path = require('path');
 const db = require('./storage/database');
 const logFormatter = require('./storage/log-formatter');
 const auth = require('./auth/auth');
-const session = require('express-session');
+const { Cache } = require('./utils/performance');
 const app = express();
 const port = process.env.PORT || 3100;
 const isDevelopment = process.env.NODE_ENV !== 'production';
+
+// Performance constants
+const MAX_API_LIMIT = 1000; // Maximum events per API request
+const MAX_EXPORT_LIMIT = 50000; // Maximum events per export
+const HEALTH_CHECK_CACHE_TTL = parseInt(process.env.HEALTH_CHECK_CACHE_TTL_MS) || 5000; // 5 seconds default
+const STATS_CACHE_KEY_EMPTY = 'stats:::'; // Cache key for stats with no filters
+
+// Initialize caches for frequently accessed data
+const statsCache = new Cache(30000); // 30 seconds TTL for stats
+const sessionsCache = new Cache(60000); // 60 seconds TTL for sessions
+const userIdsCache = new Cache(120000); // 2 minutes TTL for user IDs
+const healthCheckCache = new Cache(HEALTH_CHECK_CACHE_TTL); // Health check cache
+
+// Periodic cache cleanup to prevent memory bloat
+setInterval(() => {
+  statsCache.cleanup();
+  sessionsCache.cleanup();
+  userIdsCache.cleanup();
+  healthCheckCache.cleanup();
+}, 60000); // Clean up every minute
 
 // Trust reverse proxy headers so secure cookies work behind Render/Cloudflare
 app.set('trust proxy', 1);
@@ -27,8 +47,12 @@ const validate = ajv.compile(schema);
 
 // Middleware
 app.use(cors()); // Allow requests from any origin
-app.use(express.json()); // Parse JSON request bodies
-app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies (for login form)
+app.use(express.json({ limit: '10mb' })); // Parse JSON request bodies with size limit
+app.use(express.urlencoded({ extended: true, limit: '10mb' })); // Parse URL-encoded bodies (for login form)
+
+// Add compression middleware for responses
+const compression = require('compression');
+app.use(compression());
 
 // Live reload middleware (development only)
 if (isDevelopment) {
@@ -81,16 +105,25 @@ app.use((req, res, next) => {
   tempSession(req, res, next);
 });
 
-// Serve static files from public directory
+// Serve static files from public directory with caching
 app.use(express.static(path.join(__dirname, '..', 'public'), {
   // Prevent automatic index.html serving so auth guard can handle "/"
   index: false,
   // Ensure CSS files are served with correct MIME type
+  maxAge: isDevelopment ? 0 : '1y', // Cache static assets for 1 year in production
+  etag: true,
+  lastModified: true,
   setHeaders: (res, filePath) => {
     if (filePath.endsWith('.css')) {
       res.type('text/css');
     } else if (filePath.endsWith('sort-desc') || filePath.endsWith('sort-asc')) {
       res.type('image/svg+xml');
+    }
+    // Add cache control for static assets
+    if (!isDevelopment) {
+      if (filePath.match(/\.(js|css|woff|woff2|ttf|svg|jpg|jpeg|png|gif|ico)$/)) {
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      }
     }
   }
 }));
@@ -140,7 +173,12 @@ app.post('/telemetry', (req, res) => {
     console.log(`[${timestamp}] Telemetry event:`, JSON.stringify(telemetryData, null, 2));
 
     // Store in database (non-blocking - don't await to avoid blocking response)
-    db.storeEvent(telemetryData, timestamp).catch(err => {
+    db.storeEvent(telemetryData, timestamp).then(() => {
+      // Clear relevant caches when new data arrives
+      statsCache.clear();
+      sessionsCache.clear();
+      userIdsCache.clear();
+    }).catch(err => {
       console.error('Error storing telemetry event:', err);
       // Don't fail the request if storage fails - telemetry is non-critical
     });
@@ -167,8 +205,19 @@ app.get('/health', async (req, res) => {
 
   if (format === 'json') {
     try {
+      // Use cached health data if available
+      const cachedHealth = healthCheckCache.get('health');
+      if (cachedHealth) {
+        // Update uptime but use cached DB stats
+        const now = Date.now();
+        cachedHealth.uptime = Math.floor((now - serverStartTime) / 1000);
+        cachedHealth.timestamp = new Date().toISOString();
+        return res.status(cachedHealth.status === 'healthy' ? 200 : 503).json(cachedHealth);
+      }
+
       // Get uptime
-      const uptime = Math.floor((Date.now() - serverStartTime) / 1000);
+      const now = Date.now();
+      const uptime = Math.floor((now - serverStartTime) / 1000);
 
       // Get memory usage
       const memoryUsage = process.memoryUsage();
@@ -179,25 +228,28 @@ app.get('/health', async (req, res) => {
         rss: memoryUsage.rss
       };
 
-      // Check database status
+      // Check database status (lightweight check)
       let dbStatus = 'unknown';
       let dbType = process.env.DB_TYPE || 'sqlite';
+      let totalEvents = 0;
+      
       try {
-        // Try a simple query to check database connectivity
-        await db.getStats();
-        dbStatus = 'connected';
+        // Use cached stats from cache instead of querying DB
+        const cachedStats = statsCache.get(STATS_CACHE_KEY_EMPTY);
+        if (cachedStats) {
+          dbStatus = 'connected';
+          totalEvents = cachedStats.total || 0;
+        } else {
+          // Only query if not in cache
+          const stats = await db.getStats();
+          dbStatus = 'connected';
+          totalEvents = stats.total || 0;
+          // Cache for next health check
+          statsCache.set(STATS_CACHE_KEY_EMPTY, stats);
+        }
       } catch (error) {
         dbStatus = 'error';
         console.error('Database health check failed:', error);
-      }
-
-      // Get total events count
-      let totalEvents = 0;
-      try {
-        const stats = await db.getStats();
-        totalEvents = stats.total || 0;
-      } catch (error) {
-        console.error('Failed to get event stats:', error);
       }
 
       // Determine overall health status
@@ -219,6 +271,9 @@ app.get('/health', async (req, res) => {
           totalEvents: totalEvents
         }
       };
+      
+      // Cache the health data using Cache class
+      healthCheckCache.set('health', healthData);
 
       res.status(isHealthy ? 200 : 503).json(healthData);
     } catch (error) {
@@ -535,6 +590,9 @@ app.get('/api/events', auth.requireAuth, auth.requireRole('advanced'), async (re
       orderBy = 'created_at',
       order = 'DESC'
     } = req.query;
+    
+    // Enforce maximum limit to prevent performance issues
+    const effectiveLimit = Math.min(parseInt(limit), MAX_API_LIMIT);
 
     // Handle multiple eventType values (Express converts them to an array)
     const eventTypes = Array.isArray(eventType) ? eventType : (eventType ? [eventType] : []);
@@ -563,6 +621,13 @@ app.get('/api/events', auth.requireAuth, auth.requireRole('advanced'), async (re
       orderBy,
       order
     });
+    
+      res.setHeader('Cache-Control', 'private, max-age=10'); // Cache for 10 seconds
+    } else {
+      res.setHeader('Cache-Control', 'private, max-age=5'); // Shorter cache for filtered queries
+    if (!startDate && !endDate && !eventType && !serverId && !sessionId && !userId) {
+      res.setHeader('Cache-Control', 'private, max-age=10'); // Cache for 10 seconds
+    }
 
     res.json(result);
   } catch (error) {
@@ -608,7 +673,19 @@ app.get('/api/events/:id', auth.requireAuth, auth.requireRole('advanced'), async
 app.get('/api/stats', auth.requireAuth, async (req, res) => {
   try {
     const { startDate, endDate, eventType } = req.query;
+    
+    // Use cache for basic stats queries without filters
+    const cacheKey = `stats:${startDate || ''}:${endDate || ''}:${eventType || ''}`;
+    const cached = statsCache.get(cacheKey);
+    if (cached) {
+      return res.json(cached);
+    }
+    
     const stats = await db.getStats({ startDate, endDate, eventType });
+    
+    // Cache the result
+    statsCache.set(cacheKey, stats);
+    
     res.json(stats);
   } catch (error) {
     console.error('Error fetching stats:', error);
@@ -655,9 +732,20 @@ app.get('/api/sessions', auth.requireAuth, auth.requireRole('advanced'), async (
       return res.json([]);
     }
 
+    // Use cache for session queries (sanitize key to avoid cache pollution)
+    const cacheKey = `sessions:${JSON.stringify(userIds.sort())}`;
+    const cached = sessionsCache.get(cacheKey);
+    if (cached) {
+      return res.json(cached);
+    }
+
     const sessions = await db.getSessions({
       userIds: userIds.length > 0 ? userIds : undefined
     });
+    
+    // Cache the result
+    sessionsCache.set(cacheKey, sessions);
+    
     res.json(sessions);
   } catch (error) {
     console.error('Error fetching sessions:', error);
@@ -707,7 +795,18 @@ app.get('/api/top-users-today', auth.requireAuth, async (req, res) => {
 
 app.get('/api/telemetry-users', auth.requireAuth, auth.requireRole('advanced'), async (req, res) => {
   try {
+    // Use cache for user IDs since they don't change frequently
+    const cacheKey = 'userIds:all';
+    const cached = userIdsCache.get(cacheKey);
+    if (cached) {
+      return res.json(cached);
+    }
+    
     const userIds = await db.getUniqueUserIds();
+    
+    // Cache the result
+    userIdsCache.set(cacheKey, userIds);
+    
     res.json(userIds);
   } catch (error) {
     console.error('Error fetching unique user IDs:', error);
@@ -807,10 +906,13 @@ app.get('/api/export/logs', auth.requireAuth, auth.requireRole('advanced'), asyn
       serverId,
       limit = 10000
     } = req.query;
+    
+    // Enforce maximum export limit for performance
+    const effectiveLimit = Math.min(parseInt(limit), MAX_EXPORT_LIMIT);
 
     // Get events from database
     const result = await db.getEvents({
-      limit: parseInt(limit),
+      limit: effectiveLimit,
       offset: 0,
       eventType,
       serverId,
@@ -827,6 +929,7 @@ app.get('/api/export/logs', auth.requireAuth, auth.requireRole('advanced'), asyn
 
     res.setHeader('Content-Type', 'application/x-ndjson');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Cache-Control', 'no-cache'); // Don't cache exports
     res.send(formattedLogs);
   } catch (error) {
     console.error('Error exporting logs:', error);

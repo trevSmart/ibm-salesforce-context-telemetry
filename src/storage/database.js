@@ -12,9 +12,11 @@ const path = require('path');
 // Database configuration constants
 const DEFAULT_MAX_DB_SIZE = 1024 * 1024 * 1024; // 1 GB in bytes
 const VALID_ROLES = ['basic', 'advanced', 'administrator'];
+const MAX_LIMIT_FOR_TOTAL_COMPUTATION = 100; // Skip expensive COUNT queries for large limits
 
 let db = null;
 let dbType = process.env.DB_TYPE || 'sqlite';
+let preparedStatements = {}; // Cache for prepared statements
 
 function normalizeRole(role) {
   const value = typeof role === 'string' ? role.toLowerCase() : '';
@@ -36,6 +38,13 @@ async function init() {
     }
 
     db = new Database(dbPath);
+    
+    // Performance optimizations for SQLite
+    db.pragma('journal_mode = WAL'); // Write-Ahead Logging for better concurrency
+    db.pragma('synchronous = NORMAL'); // Faster writes with good safety
+    db.pragma('cache_size = -64000'); // 64MB cache
+    db.pragma('temp_store = MEMORY'); // Use memory for temporary tables
+    db.pragma('mmap_size = 30000000000'); // Use memory-mapped I/O
 
     // Create tables if they don't exist
     db.exec(`
@@ -73,7 +82,12 @@ async function init() {
 			CREATE INDEX IF NOT EXISTS idx_timestamp ON telemetry_events(timestamp);
 			CREATE INDEX IF NOT EXISTS idx_server_id ON telemetry_events(server_id);
 			CREATE INDEX IF NOT EXISTS idx_created_at ON telemetry_events(created_at);
+			CREATE INDEX IF NOT EXISTS idx_session_id ON telemetry_events(session_id);
+			CREATE INDEX IF NOT EXISTS idx_user_id ON telemetry_events(user_id);
+			CREATE INDEX IF NOT EXISTS idx_parent_session_id ON telemetry_events(parent_session_id);
 			CREATE INDEX IF NOT EXISTS idx_username ON users(username);
+			CREATE INDEX IF NOT EXISTS idx_event_created_at ON telemetry_events(event, created_at);
+			CREATE INDEX IF NOT EXISTS idx_user_created_at ON telemetry_events(user_id, created_at);
 		`);
 
     console.log(`SQLite database initialized at: ${dbPath}`);
@@ -82,7 +96,13 @@ async function init() {
 
     const pool = new Pool({
       connectionString: process.env.DATABASE_URL,
-      ssl: process.env.DATABASE_SSL === 'true' ? { rejectUnauthorized: false } : false
+      ssl: process.env.DATABASE_SSL === 'true' ? { rejectUnauthorized: false } : false,
+      // Connection pool optimization
+      max: 20, // Maximum pool size
+      min: 2, // Minimum pool size
+      idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
+      connectionTimeoutMillis: 10000, // Timeout connection attempts after 10 seconds
+      maxUses: 7500 // Close connections after 7500 uses
     });
 
     // Test connection
@@ -124,8 +144,12 @@ async function init() {
 			CREATE INDEX IF NOT EXISTS idx_timestamp ON telemetry_events(timestamp);
 			CREATE INDEX IF NOT EXISTS idx_server_id ON telemetry_events(server_id);
 			CREATE INDEX IF NOT EXISTS idx_created_at ON telemetry_events(created_at);
+			CREATE INDEX IF NOT EXISTS idx_session_id ON telemetry_events(session_id);
+			CREATE INDEX IF NOT EXISTS idx_user_id ON telemetry_events(user_id);
 			CREATE INDEX IF NOT EXISTS idx_parent_session_id ON telemetry_events(parent_session_id);
 			CREATE INDEX IF NOT EXISTS idx_username ON users(username);
+			CREATE INDEX IF NOT EXISTS idx_event_created_at ON telemetry_events(event, created_at);
+			CREATE INDEX IF NOT EXISTS idx_user_created_at ON telemetry_events(user_id, created_at);
 		`);
 
     db = pool;
@@ -506,7 +530,7 @@ async function storeEvent(eventData, receivedAt) {
     );
 
     if (dbType === 'sqlite') {
-      const stmt = db.prepare(`
+      const stmt = getPreparedStatement('insertEvent', `
 				INSERT INTO telemetry_events
 				(event, timestamp, server_id, version, session_id, parent_session_id, user_id, data, received_at)
 				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -571,6 +595,12 @@ async function getStats(options = {}) {
   const { startDate, endDate, eventType } = options;
 
   if (dbType === 'sqlite') {
+    // Use prepared statement for common case (no filters)
+    if (!startDate && !endDate && !eventType) {
+      const stmt = getPreparedStatement('getStatsTotal', 'SELECT COUNT(*) as total FROM telemetry_events');
+      return { total: stmt.get().total };
+    }
+    
     let query = 'SELECT COUNT(*) as total FROM telemetry_events WHERE 1=1';
     const params = [];
 
@@ -680,14 +710,22 @@ async function getEvents(options = {}) {
     params.push(...options.userIds);
   }
 
-  // Get total count
-  let countQuery = `SELECT COUNT(*) as total FROM telemetry_events ${whereClause}`;
-  let total;
-  if (dbType === 'sqlite') {
-    total = db.prepare(countQuery).get(...params).total;
-  } else {
-    const countResult = await db.query(countQuery, params);
-    total = parseInt(countResult.rows[0].total);
+  // Get total count (optimize by skipping if not needed)
+  let total = 0;
+  // Only compute total if it's a reasonable query (not too expensive)
+  // We compute total when:
+  // 1. offset === 0: First page, total is useful for pagination UI
+  // 2. limit <= MAX_LIMIT_FOR_TOTAL_COMPUTATION: Small result set, COUNT is fast
+  const shouldComputeTotal = offset === 0 || limit <= MAX_LIMIT_FOR_TOTAL_COMPUTATION;
+  
+  if (shouldComputeTotal) {
+    let countQuery = `SELECT COUNT(*) as total FROM telemetry_events ${whereClause}`;
+    if (dbType === 'sqlite') {
+      total = db.prepare(countQuery).get(...params).total;
+    } else {
+      const countResult = await db.query(countQuery, params);
+      total = parseInt(countResult.rows[0].total);
+    }
   }
 
   // Get events
@@ -1074,7 +1112,7 @@ async function getDailyStats(days = 30) {
 
   if (dbType === 'sqlite') {
     // SQLite: use DATE() function to group by date using the event timestamp (UTC)
-    const result = db.prepare(`
+    const stmt = getPreparedStatement('getDailyStats', `
 			SELECT
 				date(timestamp, 'utc') as date,
 				COUNT(*) as count
@@ -1082,7 +1120,8 @@ async function getDailyStats(days = 30) {
 			WHERE timestamp >= ?
 			GROUP BY date(timestamp, 'utc')
 			ORDER BY date ASC
-		`).all(startDateISO);
+		`);
+    const result = stmt.all(startDateISO);
 
     // Fill in missing days with 0 counts
     const dateMap = new Map();
@@ -1351,11 +1390,38 @@ async function getDatabaseSize() {
 }
 
 /**
+ * Get or create a prepared statement (for SQLite performance)
+ * @param {string} key - Cache key for the statement
+ * @param {string} sql - SQL query
+ * @returns {object} Prepared statement
+ */
+function getPreparedStatement(key, sql) {
+  if (dbType !== 'sqlite') {
+    return null;
+  }
+  
+  if (!preparedStatements[key]) {
+    preparedStatements[key] = db.prepare(sql);
+  }
+  
+  return preparedStatements[key];
+}
+
+/**
  * Close database connection
  */
 async function close() {
   if (db) {
     if (dbType === 'sqlite') {
+      // Finalize all prepared statements before clearing the cache
+      for (const stmt of Object.values(preparedStatements)) {
+        try {
+          stmt.finalize();
+        } catch (err) {
+          console.error('Error finalizing prepared statement:', err);
+        }
+      }
+      preparedStatements = {};
       db.close();
     } else if (dbType === 'postgresql') {
       await db.end();
@@ -1379,7 +1445,7 @@ async function getUserByUsername(username) {
   }
 
   if (dbType === 'sqlite') {
-    const stmt = db.prepare('SELECT id, username, password_hash, role, created_at, last_login FROM users WHERE username = ?');
+    const stmt = getPreparedStatement('getUserByUsername', 'SELECT id, username, password_hash, role, created_at, last_login FROM users WHERE username = ?');
     const user = stmt.get(username);
     return user || null;
   } else if (dbType === 'postgresql') {
