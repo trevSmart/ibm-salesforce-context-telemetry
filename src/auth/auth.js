@@ -15,7 +15,14 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || null; // Plain password (wi
 const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex');
 const ROLE_HIERARCHY = {
   basic: 1,
-  advanced: 2
+  advanced: 2,
+  administrator: 3
+};
+const ROLE_ALIASES = {
+  admin: 'administrator',
+  superadmin: 'administrator',
+  super_admin: 'administrator',
+  superadministrator: 'administrator'
 };
 const VALID_ROLES = Object.keys(ROLE_HIERARCHY);
 
@@ -34,8 +41,12 @@ function init(databaseModule) {
 }
 
 function normalizeRole(role) {
-  const value = typeof role === 'string' ? role.toLowerCase() : '';
-  return VALID_ROLES.includes(value) ? value : 'advanced';
+  if (typeof role !== 'string') {
+    return 'basic';
+  }
+  const trimmed = role.trim().toLowerCase();
+  const resolved = ROLE_ALIASES[trimmed] || trimmed;
+  return VALID_ROLES.includes(resolved) ? resolved : 'basic';
 }
 
 /**
@@ -154,7 +165,7 @@ async function authenticate(username, password) {
       success: true,
       user: {
         username: ADMIN_USERNAME,
-        role: 'advanced'
+        role: 'administrator'
       }
     }
     : { success: false };
@@ -195,16 +206,16 @@ function getSessionRole(req) {
   if (req && req.session && req.session.role) {
     return normalizeRole(req.session.role);
   }
-  return 'advanced';
+  return 'basic';
 }
 
 /**
  * Middleware factory to require a minimum role
- * @param {'basic'|'advanced'} requiredRole
+ * @param {'basic'|'advanced'|'administrator'} requiredRole
  */
 function requireRole(requiredRole) {
   const normalizedRequired = normalizeRole(requiredRole);
-  const requiredLevel = ROLE_HIERARCHY[normalizedRequired] || ROLE_HIERARCHY.advanced;
+  const requiredLevel = ROLE_HIERARCHY[normalizedRequired] || ROLE_HIERARCHY.basic;
 
   return function roleGuard(req, res, next) {
     if (!req.session || !req.session.authenticated) {

@@ -19,7 +19,6 @@
 require('dotenv').config();
 const { Pool } = require('pg');
 const fs = require('fs');
-const path = require('path');
 
 async function importDatabase() {
   const backupFile = process.argv[2];

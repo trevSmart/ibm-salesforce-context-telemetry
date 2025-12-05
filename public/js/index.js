@@ -12,7 +12,7 @@
 
     const eventLogLink = document.getElementById('eventLogLink');
     if (eventLogLink) {
-      if (data.role === 'advanced') {
+      if (data.role === 'advanced' || data.role === 'administrator') {
         eventLogLink.style.display = '';
       } else {
         eventLogLink.style.display = 'none';
@@ -22,7 +22,7 @@
     // Hide "Delete all events" option for basic users
     const deleteAllMenuItem = document.querySelector('.delete-all-menu-item');
     if (deleteAllMenuItem) {
-      if (data.role === 'advanced') {
+      if (data.role === 'advanced' || data.role === 'administrator') {
         deleteAllMenuItem.style.display = '';
       } else {
         deleteAllMenuItem.style.display = 'none';
@@ -90,7 +90,7 @@ function showUserMenu(e) {
         // Hide "Delete all events" option for basic users
         const deleteAllMenuItem = document.querySelector('.delete-all-menu-item');
         if (deleteAllMenuItem) {
-          if (data.role === 'advanced') {
+          if (data.role === 'advanced' || data.role === 'administrator') {
             deleteAllMenuItem.style.display = '';
           } else {
             deleteAllMenuItem.style.display = 'none';
@@ -109,7 +109,7 @@ function showUserMenu(e) {
 // Close user menu when clicking outside
 document.addEventListener('click', function(event) {
   const userMenu = document.getElementById('userMenu');
-  const userBtn = document.getElementById('userBtn');
+  const _userBtn = document.getElementById('userBtn');
   const userMenuContainer = event.target.closest('.user-menu-container');
 
   if (userMenu && userMenu.classList.contains('show')) {
@@ -158,6 +158,7 @@ function setupUserMenuHover() {
   });
 }
 
+// eslint-disable-next-line no-unused-vars
 async function handleLogout() {
   // Close menu
   const userMenu = document.getElementById('userMenu');
@@ -182,6 +183,7 @@ async function handleLogout() {
   }
 }
 
+// eslint-disable-next-line no-unused-vars
 function handleDeleteAll() {
   // Close menu
   const userMenu = document.getElementById('userMenu');
@@ -277,6 +279,7 @@ function initTheme() {
   applyTheme(theme);
 }
 
+// eslint-disable-next-line no-unused-vars
 function toggleTheme() {
   const isDark = document.documentElement.classList.contains('dark');
   const newTheme = isDark ? 'light' : 'dark';
@@ -296,6 +299,7 @@ function updateThemeMenuItem(theme) {
   btn.innerHTML = `<i class="${iconClass} user-menu-icon"></i>${label}`;
 }
 
+// eslint-disable-next-line no-unused-vars
 function clearLocalData() {
   openConfirmModal({
     title: 'Clear local data',
@@ -456,11 +460,28 @@ function ensureUserMenuStructure() {
 }
 
 // Shared settings modal used by both dashboard and event log pages
-function openSettingsModal() {
+// eslint-disable-next-line no-unused-vars
+async function openSettingsModal() {
   const existing = document.querySelector('.confirm-modal-backdrop.settings-backdrop');
   if (existing) {
     return;
   }
+
+  // Check user role first
+  let userRole = 'basic';
+  try {
+    const authResponse = await fetch('/api/auth/status', {
+      credentials: 'include'
+    });
+    if (authResponse.ok) {
+      const authData = await authResponse.json();
+      userRole = authData.role || 'basic';
+    }
+  } catch (error) {
+    console.error('Error checking auth status:', error);
+  }
+
+  const isAdministrator = userRole === 'administrator';
 
   const backdrop = document.createElement('div');
   backdrop.className = 'confirm-modal-backdrop settings-backdrop';
@@ -472,6 +493,42 @@ function openSettingsModal() {
   const savedTheme = localStorage.getItem('theme') || getSystemTheme();
   const isDarkTheme = savedTheme === 'dark';
   const showServerStats = localStorage.getItem('showServerStats') !== 'false';
+
+  // Build sidebar navigation
+  const sidebarNav = `
+    <a href="#settings-appearance" class="settings-sidebar-link flex items-center gap-2 rounded-md px-2 py-1.5 text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-secondary)]">
+      <span class="w-4 h-4 flex items-center justify-center rounded-full border border-[color:var(--border-color)] bg-[color:var(--bg-secondary)]">
+        <i class="fa-regular fa-moon text-[10px]"></i>
+      </span>
+      <span class="font-medium">Appearance</span>
+    </a>
+    <a href="#settings-events" class="settings-sidebar-link flex items-center gap-2 rounded-md px-2 py-1.5 text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-secondary)]">
+      <span class="w-4 h-4 flex items-center justify-center rounded-full border border-[color:var(--border-color)] bg-[color:var(--bg-secondary)]">
+        <i class="fa-solid fa-chart-line text-[10px]"></i>
+      </span>
+      <span class="font-medium">Events</span>
+    </a>
+    <a href="#settings-teams" class="settings-sidebar-link flex items-center gap-2 rounded-md px-2 py-1.5 text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-secondary)]">
+      <span class="w-4 h-4 flex items-center justify-center rounded-full border border-[color:var(--border-color)] bg-[color:var(--bg-secondary)]">
+        <i class="fa-solid fa-users text-[10px]"></i>
+      </span>
+      <span class="font-medium">Teams</span>
+    </a>
+    ${isAdministrator ? `
+    <a href="#settings-users" class="settings-sidebar-link flex items-center gap-2 rounded-md px-2 py-1.5 text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-secondary)]">
+      <span class="w-4 h-4 flex items-center justify-center rounded-full border border-[color:var(--border-color)] bg-[color:var(--bg-secondary)]">
+        <i class="fa-solid fa-user-gear text-[10px]"></i>
+      </span>
+      <span class="font-medium">Users</span>
+    </a>
+    ` : ''}
+    <a href="#settings-danger" class="settings-sidebar-link flex items-center gap-2 rounded-md px-2 py-1.5 text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-secondary)]">
+      <span class="w-4 h-4 flex items-center justify-center rounded-full border border-[color:var(--border-color)] bg-[color:var(--bg-secondary)]">
+        <i class="fa-solid fa-triangle-exclamation text-[10px]"></i>
+      </span>
+      <span class="font-medium">Danger zone</span>
+    </a>
+  `;
 
   modal.innerHTML = `
 		<div class="settings-modal-header">
@@ -486,30 +543,7 @@ function openSettingsModal() {
 						</p>
 					</div>
 					<nav class="flex md:flex-col gap-2 text-sm" aria-label="Settings sections">
-						<a href="#settings-appearance" class="settings-sidebar-link flex items-center gap-2 rounded-md px-2 py-1.5 text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-secondary)]">
-							<span class="w-4 h-4 flex items-center justify-center rounded-full border border-[color:var(--border-color)] bg-[color:var(--bg-secondary)]">
-								<i class="fa-regular fa-moon text-[10px]"></i>
-							</span>
-							<span class="font-medium">Appearance</span>
-						</a>
-						<a href="#settings-events" class="settings-sidebar-link flex items-center gap-2 rounded-md px-2 py-1.5 text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-secondary)]">
-							<span class="w-4 h-4 flex items-center justify-center rounded-full border border-[color:var(--border-color)] bg-[color:var(--bg-secondary)]">
-								<i class="fa-solid fa-chart-line text-[10px]"></i>
-							</span>
-							<span class="font-medium">Events</span>
-						</a>
-						<a href="#settings-teams" class="settings-sidebar-link flex items-center gap-2 rounded-md px-2 py-1.5 text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-secondary)]">
-							<span class="w-4 h-4 flex items-center justify-center rounded-full border border-[color:var(--border-color)] bg-[color:var(--bg-secondary)]">
-								<i class="fa-solid fa-users text-[10px]"></i>
-							</span>
-							<span class="font-medium">Teams</span>
-						</a>
-						<a href="#settings-danger" class="settings-sidebar-link flex items-center gap-2 rounded-md px-2 py-1.5 text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-secondary)]">
-							<span class="w-4 h-4 flex items-center justify-center rounded-full border border-[color:var(--border-color)] bg-[color:var(--bg-secondary)]">
-								<i class="fa-solid fa-triangle-exclamation text-[10px]"></i>
-							</span>
-							<span class="font-medium">Danger zone</span>
-						</a>
+						${sidebarNav}
 					</nav>
 				</aside>
 				<div class="settings-main flex-1 flex flex-col gap-4 mt-3 md:mt-0">
@@ -617,6 +651,36 @@ function openSettingsModal() {
 							</table>
 						</div>
 					</section>
+					${isAdministrator ? `
+					<section id="settings-users" class="settings-section" style="display: none;">
+						<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+							<div class="settings-modal-placeholder-title" style="margin: 0;">User Management</div>
+							<button type="button" class="confirm-modal-btn" id="addUserBtn" style="display: flex; align-items: center; gap: 6px;">
+								<i class="fa-solid fa-plus" style="font-size: 12px;"></i>Add User
+							</button>
+						</div>
+						<div style="overflow-x: auto; border: 1px solid var(--border-color); border-radius: 8px;">
+							<table id="usersTable" style="width: 100%; border-collapse: collapse;">
+								<thead>
+									<tr style="background: var(--bg-secondary); border-bottom: 1px solid var(--border-color);">
+										<th style="padding: 12px; text-align: left; font-weight: 600; color: var(--text-primary); font-size: 14px;">Username</th>
+										<th style="padding: 12px; text-align: left; font-weight: 600; color: var(--text-primary); font-size: 14px;">Role</th>
+										<th style="padding: 12px; text-align: left; font-weight: 600; color: var(--text-primary); font-size: 14px;">Created</th>
+										<th style="padding: 12px; text-align: left; font-weight: 600; color: var(--text-primary); font-size: 14px;">Last Login</th>
+										<th style="padding: 12px; text-align: right; width: 200px;">Actions</th>
+									</tr>
+								</thead>
+								<tbody id="usersTableBody">
+									<tr>
+										<td colspan="5" style="padding: 24px; text-align: center; color: var(--text-secondary);">
+											Loading users...
+										</td>
+									</tr>
+								</tbody>
+							</table>
+						</div>
+					</section>
+					` : ''}
 					<section id="settings-danger" class="settings-danger-section">
 						<div class="settings-modal-placeholder-title">Danger zone</div>
 						<div class="settings-modal-placeholder-text">
@@ -763,7 +827,7 @@ function openSettingsModal() {
       if (!teamsTableBody) return;
 
       teamsTableBody.innerHTML = filteredTeams.map(team => {
-        const statusClass = team.status === 'Active' ? 'active' : 'inactive';
+        const _statusClass = team.status === 'Active' ? 'active' : 'inactive';
         const statusColor = team.status === 'Active' ? '#10b981' : '#6b7280';
         return `
 					<tr style="border-bottom: 1px solid var(--border-color);">
@@ -854,6 +918,525 @@ function openSettingsModal() {
     // Initial render
     renderTeams();
   }
+
+  // Users section functionality (only for administrators)
+  if (isAdministrator) {
+    const usersSection = modal.querySelector('#settings-users');
+    if (usersSection) {
+      const usersTableBody = modal.querySelector('#usersTableBody');
+      const addUserBtn = modal.querySelector('#addUserBtn');
+
+      async function loadUsers() {
+        try {
+          const response = await fetch('/api/users', {
+            credentials: 'include'
+          });
+          if (response.status === 401) {
+            window.location.href = '/login';
+            return;
+          }
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          const data = await response.json();
+          await renderUsers(data.users || []);
+        } catch (error) {
+          console.error('Error loading users:', error);
+          if (usersTableBody) {
+            usersTableBody.innerHTML = `
+              <tr>
+                <td colspan="5" style="padding: 24px; text-align: center; color: var(--text-secondary);">
+                  Error loading users: ${escapeHtml(error.message)}
+                </td>
+              </tr>
+            `;
+          }
+        }
+      }
+
+      function formatDate(dateString) {
+        if (!dateString) return '-';
+        const date = new Date(dateString);
+        return date.toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+      }
+
+      function getRoleBadgeColor(role) {
+        switch (role) {
+        case 'administrator':
+          return '#dc2626'; // red
+        case 'advanced':
+          return '#2563eb'; // blue
+        case 'basic':
+          return '#16a34a'; // green
+        default:
+          return '#6b7280'; // gray
+        }
+      }
+
+      async function renderUsers(users) {
+        if (!usersTableBody) return;
+
+        if (users.length === 0) {
+          usersTableBody.innerHTML = `
+            <tr>
+              <td colspan="5" style="padding: 24px; text-align: center; color: var(--text-secondary);">
+                No users found. Click "Add User" to create one.
+              </td>
+            </tr>
+          `;
+          return;
+        }
+
+        // Get current username from auth status
+        let currentUsername = '';
+        try {
+          const authResponse = await fetch('/api/auth/status', {
+            credentials: 'include'
+          });
+          if (authResponse.ok) {
+            const authData = await authResponse.json();
+            currentUsername = authData.username || '';
+          }
+        } catch (error) {
+          console.error('Error getting current username:', error);
+        }
+
+        usersTableBody.innerHTML = users.map(user => {
+          const roleColor = getRoleBadgeColor(user.role);
+          const isCurrentUser = user.username === currentUsername;
+          return `
+            <tr style="border-bottom: 1px solid var(--border-color);">
+              <td style="padding: 12px; color: var(--text-primary); font-size: 14px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <div style="width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 12px;">
+                    ${escapeHtml(user.username.charAt(0).toUpperCase())}
+                  </div>
+                  <span style="font-weight: 500;">${escapeHtml(user.username)}</span>
+                  ${isCurrentUser ? '<span style="font-size: 11px; color: var(--text-secondary);">(you)</span>' : ''}
+                </div>
+              </td>
+              <td style="padding: 12px;">
+                <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 500; background: ${roleColor}20; color: ${roleColor};">
+                  <span style="width: 6px; height: 6px; border-radius: 50%; background: ${roleColor};"></span>
+                  ${escapeHtml(user.role || 'basic')}
+                </span>
+              </td>
+              <td style="padding: 12px; color: var(--text-secondary); font-size: 14px;">
+                ${formatDate(user.created_at)}
+              </td>
+              <td style="padding: 12px; color: var(--text-secondary); font-size: 14px;">
+                ${formatDate(user.last_login)}
+              </td>
+              <td style="padding: 12px; text-align: right;">
+                <div style="display: flex; gap: 6px; justify-content: flex-end;">
+                  <button type="button" class="confirm-modal-btn" style="padding: 6px 12px; font-size: 12px;" onclick="openEditPasswordModal('${escapeHtml(user.username)}')" title="Change password">
+                    <i class="fa-solid fa-key" style="font-size: 11px;"></i>
+                  </button>
+                  <button type="button" class="confirm-modal-btn" style="padding: 6px 12px; font-size: 12px;" onclick="openEditRoleModal('${escapeHtml(user.username)}', '${escapeHtml(user.role || 'basic')}')" title="Change role">
+                    <i class="fa-solid fa-user-tag" style="font-size: 11px;"></i>
+                  </button>
+                  ${!isCurrentUser ? `
+                  <button type="button" class="confirm-modal-btn confirm-modal-btn-destructive" style="padding: 6px 12px; font-size: 12px;" onclick="openDeleteUserModal('${escapeHtml(user.username)}')" title="Delete user">
+                    <i class="fa-solid fa-trash" style="font-size: 11px;"></i>
+                  </button>
+                  ` : ''}
+                </div>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+      // Load users when section is shown
+      const usersSectionObserver = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+          if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+            const isVisible = usersSection.style.display !== 'none';
+            if (isVisible) {
+              loadUsers();
+            }
+          }
+        });
+      });
+      usersSectionObserver.observe(usersSection, { attributes: true, attributeFilter: ['style'] });
+
+      // Add user button
+      if (addUserBtn) {
+        addUserBtn.addEventListener('click', () => {
+          window.openCreateUserModal();
+        });
+      }
+
+      // Initial load if section is visible
+      if (usersSection.style.display !== 'none') {
+        loadUsers();
+      }
+    }
+  }
+
+  // Global functions for user management (needed for onclick handlers)
+  window.openCreateUserModal = function() {
+    const existing = document.querySelector('.confirm-modal-backdrop.user-management-backdrop');
+    if (existing) {
+      return;
+    }
+
+    const backdrop = document.createElement('div');
+    backdrop.className = 'confirm-modal-backdrop user-management-backdrop';
+
+    const modal = document.createElement('div');
+    modal.className = 'confirm-modal settings-modal';
+    modal.style.maxWidth = '500px';
+
+    modal.innerHTML = `
+      <div class="confirm-modal-title">Create New User</div>
+      <form id="createUserForm" style="display: flex; flex-direction: column; gap: 16px; margin-top: 16px;">
+        <div>
+          <label class="settings-modal-placeholder-text" style="display: block; margin-bottom: 6px;">
+            Username
+            <input type="text" id="createUsernameInput" required
+              style="margin-top: 4px; width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 14px;"
+              placeholder="Enter username">
+          </label>
+        </div>
+        <div>
+          <label class="settings-modal-placeholder-text" style="display: block; margin-bottom: 6px;">
+            Password
+            <input type="password" id="createPasswordInput" required
+              style="margin-top: 4px; width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 14px;"
+              placeholder="Enter password">
+          </label>
+        </div>
+        <div>
+          <label class="settings-modal-placeholder-text" style="display: block; margin-bottom: 6px;">
+            Role
+            <select id="createRoleSelect"
+              style="margin-top: 4px; width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 14px; cursor: pointer;">
+              <option value="basic">Basic</option>
+              <option value="advanced">Advanced</option>
+              <option value="administrator">Administrator</option>
+            </select>
+          </label>
+        </div>
+        <div id="createUserError" style="color: #dc2626; font-size: 13px; display: none;"></div>
+        <div class="confirm-modal-actions">
+          <button type="button" class="confirm-modal-btn confirm-modal-btn-cancel" onclick="window.closeUserManagementModal()">
+            Cancel
+          </button>
+          <button type="submit" class="confirm-modal-btn confirm-modal-btn-confirm">
+            Create User
+          </button>
+        </div>
+      </form>
+    `;
+
+    backdrop.appendChild(modal);
+    document.body.appendChild(backdrop);
+
+    requestAnimationFrame(() => {
+      backdrop.classList.add('visible');
+    });
+
+    const form = modal.querySelector('#createUserForm');
+    const errorDiv = modal.querySelector('#createUserError');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorDiv.style.display = 'none';
+      errorDiv.textContent = '';
+
+      const username = modal.querySelector('#createUsernameInput').value.trim();
+      const password = modal.querySelector('#createPasswordInput').value;
+      const role = modal.querySelector('#createRoleSelect').value;
+
+      if (!username || !password) {
+        errorDiv.textContent = 'Username and password are required';
+        errorDiv.style.display = 'block';
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/users', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          credentials: 'include',
+          body: JSON.stringify({ username, password, role })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || 'Failed to create user');
+        }
+
+        // Close modal and reload users
+        window.closeUserManagementModal();
+        const usersSection = document.querySelector('#settings-users');
+        if (usersSection && usersSection.style.display !== 'none') {
+          // Trigger reload by dispatching a custom event or calling loadUsers
+          const event = new CustomEvent('reloadUsers');
+          usersSection.dispatchEvent(event);
+        }
+        // Reload the page to refresh the users list
+        window.location.reload();
+      } catch (error) {
+        errorDiv.textContent = error.message || 'Failed to create user';
+        errorDiv.style.display = 'block';
+      }
+    });
+
+    window.closeUserManagementModal = function() {
+      backdrop.classList.remove('visible');
+      backdrop.classList.add('hiding');
+      setTimeout(() => {
+        if (document.body.contains(backdrop)) {
+          backdrop.remove();
+        }
+      }, 220);
+    };
+  };
+
+  window.openEditPasswordModal = function(username) {
+    const existing = document.querySelector('.confirm-modal-backdrop.user-management-backdrop');
+    if (existing) {
+      return;
+    }
+
+    const backdrop = document.createElement('div');
+    backdrop.className = 'confirm-modal-backdrop user-management-backdrop';
+
+    const modal = document.createElement('div');
+    modal.className = 'confirm-modal settings-modal';
+    modal.style.maxWidth = '500px';
+
+    modal.innerHTML = `
+      <div class="confirm-modal-title">Change Password</div>
+      <div class="confirm-modal-message" style="margin-top: 8px; margin-bottom: 16px;">
+        <p class="settings-modal-placeholder-text">
+          Change password for user: <strong>${escapeHtml(username)}</strong>
+        </p>
+      </div>
+      <form id="editPasswordForm" style="display: flex; flex-direction: column; gap: 16px;">
+        <div>
+          <label class="settings-modal-placeholder-text" style="display: block; margin-bottom: 6px;">
+            New Password
+            <input type="password" id="editPasswordInput" required
+              style="margin-top: 4px; width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 14px;"
+              placeholder="Enter new password">
+          </label>
+        </div>
+        <div id="editPasswordError" style="color: #dc2626; font-size: 13px; display: none;"></div>
+        <div class="confirm-modal-actions">
+          <button type="button" class="confirm-modal-btn confirm-modal-btn-cancel" onclick="window.closeUserManagementModal()">
+            Cancel
+          </button>
+          <button type="submit" class="confirm-modal-btn confirm-modal-btn-confirm">
+            Update Password
+          </button>
+        </div>
+      </form>
+    `;
+
+    backdrop.appendChild(modal);
+    document.body.appendChild(backdrop);
+
+    requestAnimationFrame(() => {
+      backdrop.classList.add('visible');
+    });
+
+    const form = modal.querySelector('#editPasswordForm');
+    const errorDiv = modal.querySelector('#editPasswordError');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorDiv.style.display = 'none';
+      errorDiv.textContent = '';
+
+      const password = modal.querySelector('#editPasswordInput').value;
+
+      if (!password) {
+        errorDiv.textContent = 'Password is required';
+        errorDiv.style.display = 'block';
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/users/${encodeURIComponent(username)}/password`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          credentials: 'include',
+          body: JSON.stringify({ password })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || 'Failed to update password');
+        }
+
+        window.closeUserManagementModal();
+        alert('Password updated successfully');
+        window.location.reload();
+      } catch (error) {
+        errorDiv.textContent = error.message || 'Failed to update password';
+        errorDiv.style.display = 'block';
+      }
+    });
+
+    window.closeUserManagementModal = function() {
+      backdrop.classList.remove('visible');
+      backdrop.classList.add('hiding');
+      setTimeout(() => {
+        if (document.body.contains(backdrop)) {
+          backdrop.remove();
+        }
+      }, 220);
+    };
+  };
+
+  window.openEditRoleModal = function(username, currentRole) {
+    const existing = document.querySelector('.confirm-modal-backdrop.user-management-backdrop');
+    if (existing) {
+      return;
+    }
+
+    const backdrop = document.createElement('div');
+    backdrop.className = 'confirm-modal-backdrop user-management-backdrop';
+
+    const modal = document.createElement('div');
+    modal.className = 'confirm-modal settings-modal';
+    modal.style.maxWidth = '500px';
+
+    modal.innerHTML = `
+      <div class="confirm-modal-title">Change Role</div>
+      <div class="confirm-modal-message" style="margin-top: 8px; margin-bottom: 16px;">
+        <p class="settings-modal-placeholder-text">
+          Change role for user: <strong>${escapeHtml(username)}</strong>
+        </p>
+      </div>
+      <form id="editRoleForm" style="display: flex; flex-direction: column; gap: 16px;">
+        <div>
+          <label class="settings-modal-placeholder-text" style="display: block; margin-bottom: 6px;">
+            Role
+            <select id="editRoleSelect"
+              style="margin-top: 4px; width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 14px; cursor: pointer;">
+              <option value="basic" ${currentRole === 'basic' ? 'selected' : ''}>Basic</option>
+              <option value="advanced" ${currentRole === 'advanced' ? 'selected' : ''}>Advanced</option>
+              <option value="administrator" ${currentRole === 'administrator' ? 'selected' : ''}>Administrator</option>
+            </select>
+          </label>
+        </div>
+        <div id="editRoleError" style="color: #dc2626; font-size: 13px; display: none;"></div>
+        <div class="confirm-modal-actions">
+          <button type="button" class="confirm-modal-btn confirm-modal-btn-cancel" onclick="window.closeUserManagementModal()">
+            Cancel
+          </button>
+          <button type="submit" class="confirm-modal-btn confirm-modal-btn-confirm">
+            Update Role
+          </button>
+        </div>
+      </form>
+    `;
+
+    backdrop.appendChild(modal);
+    document.body.appendChild(backdrop);
+
+    requestAnimationFrame(() => {
+      backdrop.classList.add('visible');
+    });
+
+    const form = modal.querySelector('#editRoleForm');
+    const errorDiv = modal.querySelector('#editRoleError');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorDiv.style.display = 'none';
+      errorDiv.textContent = '';
+
+      const role = modal.querySelector('#editRoleSelect').value;
+
+      if (!role) {
+        errorDiv.textContent = 'Role is required';
+        errorDiv.style.display = 'block';
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/users/${encodeURIComponent(username)}/role`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          credentials: 'include',
+          body: JSON.stringify({ role })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || 'Failed to update role');
+        }
+
+        window.closeUserManagementModal();
+        alert('Role updated successfully');
+        window.location.reload();
+      } catch (error) {
+        errorDiv.textContent = error.message || 'Failed to update role';
+        errorDiv.style.display = 'block';
+      }
+    });
+
+    window.closeUserManagementModal = function() {
+      backdrop.classList.remove('visible');
+      backdrop.classList.add('hiding');
+      setTimeout(() => {
+        if (document.body.contains(backdrop)) {
+          backdrop.remove();
+        }
+      }, 220);
+    };
+  };
+
+  window.openDeleteUserModal = function(username) {
+    openConfirmModal({
+      title: 'Delete User',
+      message: `Are you sure you want to delete user "${escapeHtml(username)}"? This action cannot be undone.`,
+      confirmLabel: 'Delete User',
+      destructive: true
+    }).then((confirmed) => {
+      if (!confirmed) {
+        return;
+      }
+
+      fetch(`/api/users/${encodeURIComponent(username)}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      })
+        .then(response => response.json())
+        .then(data => {
+          if (data.status === 'ok') {
+            alert('User deleted successfully');
+            window.location.reload();
+          } else {
+            alert('Error: ' + (data.message || 'Failed to delete user'));
+          }
+        })
+        .catch(error => {
+          console.error('Error deleting user:', error);
+          alert('Error deleting user: ' + error.message);
+        });
+    });
+  };
 
   document.addEventListener(
     'keydown',
@@ -1144,7 +1727,7 @@ function setupIconButtonsGroupHover() {
   let currentHoveredButton = null;
   let hasEnteredFromOutside = false;
 
-  iconButtonsGroup.addEventListener('mouseenter', (e) => {
+  iconButtonsGroup.addEventListener('mouseenter', (_e) => {
     isInsideGroup = true;
     hasEnteredFromOutside = true;
     iconButtonsGroup.classList.add('no-transition');
@@ -1163,7 +1746,7 @@ function setupIconButtonsGroupHover() {
 
   const buttons = iconButtonsGroup.querySelectorAll('.icon-btn');
   buttons.forEach((button, index) => {
-    button.addEventListener('mouseenter', (e) => {
+    button.addEventListener('mouseenter', (_e) => {
       const wasFromOutside = currentHoveredButton === null || hasEnteredFromOutside;
 
       if (currentHoveredButton !== null && currentHoveredButton !== index && !wasFromOutside) {
@@ -1202,6 +1785,7 @@ function setupIconButtonsGroupHover() {
 }
 
 // Refresh dashboard function
+// eslint-disable-next-line no-unused-vars
 async function refreshDashboard(event) {
   if (event) {
     event.stopPropagation();
@@ -1301,7 +1885,8 @@ async function loadChartData(days = currentDays) {
 
     const isDark = document.documentElement.classList.contains('dark');
     const textColor = isDark ? '#a1a1aa' : '#52525b';
-    const gridColor = isDark ? '#3f3f46' : '#f4f4f5';
+    const gridColor = isDark ? '#50515c' : '#eaecf2';
+    const axisPointerBg = isDark ? '#27272a' : '#ffffff';
 
     // Colors for start sessions without end (match session badge blue)
     const startSessionsColor = '#2195cf';
@@ -1311,162 +1896,209 @@ async function loadChartData(days = currentDays) {
     const toolEventsColor = '#8e81ea';
     const toolEventsAreaColor = 'rgba(142, 129, 234, 0.15)';
 
-    // Colors for error events (red)
-    const errorEventsColor = '#f97373';
-    const errorEventsAreaColor = 'rgba(248, 113, 113, 0.18)';
+    // Colors for error events (match header icon red)
+    const errorEventsColor = '#ef4444';
+    const errorEventsAreaColor = 'rgba(239, 68, 68, 0.18)';
 
     const totalEventsColor = toolEventsColor;
     const totalEventsAreaColor = toolEventsAreaColor;
 
     // Prepare data for ECharts
-    const dates = data.map(item => item.date);
+    const _dates = data.map(item => item.date);
+    const weekdayLabels = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
     const labels = data.map(item => {
       const date = new Date(item.date);
-      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const dayIndex = date.getDay();
+      return weekdayLabels[dayIndex] || '';
     });
 
     let series = [];
     let legendData = [];
 
     if (hasBreakdown) {
-      const startSessionsData = data.map(item => Number(item.startSessionsWithoutEnd) || 0);
-      const toolEventsData = data.map(item => Number(item.toolEvents) || 0);
-      const errorEventsData = data.map(item => Number(item.errorEvents) || 0);
+      const startSessionsData = data.map(item => {
+        const value = Number(item.startSessionsWithoutEnd) || 0;
+        return value === 0 ? null : value; // hide zero bars
+      });
+      const toolEventsData = data.map(item => {
+        const value = Number(item.toolEvents) || 0;
+        return value === 0 ? null : value; // hide zero bars
+      });
+      const errorEventsData = data.map(item => {
+        const value = Number(item.errorEvents) || 0;
+        return value === 0 ? null : value; // hide zero bars
+      });
 
       series = [
         {
           name: 'Start Sessions',
-          type: 'line',
+          type: 'bar',
+          barWidth: 2,
+          barGap: '2px',
           data: startSessionsData,
-          smooth: 0.25,
-          symbol: 'circle',
-          symbolSize: 4,
-          lineStyle: {
-            color: startSessionsColor,
-            width: 2
-          },
           itemStyle: {
-            color: startSessionsColor,
-            borderColor: '#ffffff',
-            borderWidth: 1
-          },
-          areaStyle: {
             color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-              { offset: 0, color: startSessionsAreaColor },
-              { offset: 1, color: 'rgba(33, 149, 207, 0)' }
-            ])
+              { offset: 0, color: 'rgba(33, 149, 207, 0.16)' },
+              { offset: 1, color: startSessionsColor }
+            ]),
+            borderRadius: [4, 4, 0, 0]
+          },
+          label: {
+            show: true,
+            position: 'top',
+            formatter: function(params) {
+              const value = Number(params.value) || 0;
+              return value === 0 ? '' : value;
+            },
+            fontSize: 9,
+            color: '#ffffff',
+            backgroundColor: startSessionsColor,
+            padding: [2, 5],
+            borderRadius: 999,
+            distance: 1,
+            offset: [-8, -2]
           },
           emphasis: {
             focus: 'series',
             itemStyle: {
-              symbolSize: 6
+              color: startSessionsColor
             }
           }
         },
         {
           name: 'Tool Events',
-          type: 'line',
+          type: 'bar',
+          barWidth: 2,
+          barGap: '2px',
           data: toolEventsData,
-          smooth: 0.25,
-          symbol: 'circle',
-          symbolSize: 4,
-          lineStyle: {
-            color: toolEventsColor,
-            width: 2
-          },
           itemStyle: {
-            color: toolEventsColor,
-            borderColor: '#ffffff',
-            borderWidth: 1
-          },
-          areaStyle: {
             color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-              { offset: 0, color: toolEventsAreaColor },
-              { offset: 1, color: 'rgba(142, 129, 234, 0)' }
-            ])
+              { offset: 0, color: 'rgba(142, 129, 234, 0.16)' },
+              { offset: 1, color: toolEventsColor }
+            ]),
+            borderRadius: [4, 4, 0, 0]
+          },
+          label: {
+            show: true,
+            position: 'top',
+            formatter: function(params) {
+              const value = Number(params.value) || 0;
+              return value === 0 ? '' : value;
+            },
+            fontSize: 9,
+            color: '#ffffff',
+            backgroundColor: toolEventsColor,
+            padding: [2, 5],
+            borderRadius: 999,
+            distance: 1,
+            offset: [0, -2]
           },
           emphasis: {
             focus: 'series',
             itemStyle: {
-              symbolSize: 6
+              color: toolEventsColor
             }
           }
         },
         {
           name: 'Errors',
-          type: 'line',
+          type: 'bar',
+          barWidth: 2,
+          barGap: '2px',
           data: errorEventsData,
-          smooth: 0.25,
-          symbol: 'circle',
-          symbolSize: 4,
-          lineStyle: {
-            color: errorEventsColor,
-            width: 2
-          },
           itemStyle: {
-            color: errorEventsColor,
-            borderColor: '#ffffff',
-            borderWidth: 1
-          },
-          areaStyle: {
             color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-              { offset: 0, color: errorEventsAreaColor },
-              { offset: 1, color: 'rgba(248, 113, 113, 0)' }
-            ])
+              { offset: 0, color: 'rgba(239, 68, 68, 0.16)' },
+              { offset: 1, color: errorEventsColor }
+            ]),
+            borderRadius: [4, 4, 0, 0]
+          },
+          label: {
+            show: true,
+            position: 'top',
+            formatter: function(params) {
+              const value = Number(params.value) || 0;
+              return value === 0 ? '' : value;
+            },
+            fontSize: 9,
+            color: '#ffffff',
+            backgroundColor: errorEventsColor,
+            padding: [2, 5],
+            borderRadius: 999,
+            distance: 1,
+            offset: [8, -2]
           },
           emphasis: {
             focus: 'series',
             itemStyle: {
-              symbolSize: 6
+              color: errorEventsColor
             }
           }
         }
       ];
-      legendData = ['Start Sessions', 'Tool Events', 'Errors'];
+      legendData = [
+        { name: 'Start Sessions', icon: 'circle', itemStyle: { color: startSessionsColor } },
+        { name: 'Tool Events', icon: 'circle', itemStyle: { color: toolEventsColor } },
+        { name: 'Errors', icon: 'circle', itemStyle: { color: errorEventsColor } }
+      ];
     } else {
       const totalEventsData = data.map(item => Number(item.count ?? item.total ?? 0));
+      const totalEventsDataWithNulls = totalEventsData.map(value => {
+        const num = Number(value) || 0;
+        return num === 0 ? null : num; // hide zero bars
+      });
 
       series = [
         {
           name: 'Events',
-          type: 'line',
-          data: totalEventsData,
-          smooth: false,
-          symbol: 'circle',
-          symbolSize: 4,
-          lineStyle: {
-            color: totalEventsColor,
-            width: 2
-          },
+          type: 'bar',
+          barWidth: 2,
+          barGap: '2px',
+          data: totalEventsDataWithNulls,
           itemStyle: {
-            color: totalEventsColor,
-            borderColor: '#ffffff',
-            borderWidth: 1
-          },
-          areaStyle: {
             color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-              { offset: 0, color: totalEventsAreaColor },
-              { offset: 1, color: 'rgba(142, 129, 234, 0)' }
-            ])
+              { offset: 0, color: 'rgba(142, 129, 234, 0.16)' },
+              { offset: 1, color: totalEventsColor }
+            ]),
+            borderRadius: [4, 4, 0, 0]
+          },
+          label: {
+            show: true,
+            position: 'top',
+            formatter: function(params) {
+              const value = Number(params.value) || 0;
+              return value === 0 ? '' : value;
+            },
+            fontSize: 9,
+            color: '#ffffff',
+            backgroundColor: totalEventsColor,
+            padding: [2, 5],
+            borderRadius: 999,
+            distance: 1
           },
           emphasis: {
             focus: 'series',
             itemStyle: {
-              symbolSize: 6
+              color: totalEventsColor
             }
           }
         }
       ];
-      legendData = ['Events'];
+      legendData = [
+        { name: 'Events', icon: 'circle', itemStyle: { color: totalEventsColor } }
+      ];
     }
 
     const option = {
+      textStyle: {
+        fontFamily: 'Inter, \'Manrope\', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, \'Helvetica Neue\', Arial, sans-serif'
+      },
       animation: true,
       animationDuration: 350,
       grid: {
         left: '3%',
         right: '0%',
-        bottom: '5%',
+        bottom: '20%',
         top: '5%',
         containLabel: false,
         width: 'auto',
@@ -1504,10 +2136,11 @@ async function loadChartData(days = currentDays) {
       },
       legend: {
         data: legendData,
-        top: 10,
+        bottom: 0,
         textStyle: {
-          color: textColor,
-          fontSize: 12
+          color: isDark ? '#b8b8c2' : '#6b6b75',
+          fontSize: 11,
+          letterSpacing: 0.2
         },
         itemGap: 20,
         icon: 'circle',
@@ -1520,8 +2153,8 @@ async function loadChartData(days = currentDays) {
         axisLabel: {
           color: textColor,
           fontSize: 11,
-          rotate: 45,
-          interval: 0
+          interval: 0,
+          margin: 18
         },
         axisLine: {
           show: false
@@ -1537,11 +2170,7 @@ async function loadChartData(days = currentDays) {
         type: 'value',
         min: 0,
         axisLabel: {
-          color: textColor,
-          fontSize: 12,
-          inside: false,
-          margin: 8,
-          width: 40
+          show: false
         },
         axisLine: {
           show: false
@@ -1549,10 +2178,18 @@ async function loadChartData(days = currentDays) {
         axisTick: {
           show: false
         },
-        splitLine: {
-          lineStyle: {
-            color: gridColor
+        axisPointer: {
+          label: {
+            show: true,
+            backgroundColor: axisPointerBg,
+            color: textColor,
+            borderColor: gridColor,
+            borderWidth: 1,
+            padding: [4, 6]
           }
+        },
+        splitLine: {
+          show: false
         }
       },
       series: series

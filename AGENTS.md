@@ -39,14 +39,24 @@ When extending the telemetry server:
 4. **Scalability**: Consider performance implications for high-volume scenarios
 5. **Documentation**: Update this file and README.md when adding features
 
-### Data Storage
+### Data Storage and Environment Configuration
 
-Currently, telemetry events are logged to the console. When implementing persistent storage:
+The project uses a dual-database setup driven by environment variables:
 
-- Consider using a database (PostgreSQL, MongoDB) for structured queries
-- Use cloud storage (S3, Azure Blob) for large datasets or logs
-- Implement data retention policies
-- Ensure compliance with data protection regulations
+| Environment | `DB_TYPE` | Location / Connection | Notes |
+|-------------|-----------|-----------------------|-------|
+| Local development | `sqlite` | `DB_PATH=./src/data/telemetry.db` | SQLite file lives inside the repo, ideal for quick iteration. |
+| Production on Render.com | `postgresql` | `DATABASE_URL=postgresql://telemetry_db_qyln_user:ykHPylEvPOgZAG5Q7u9Ou6EiI7xpj9FW@dpg-d4j93qmr433s7397j4ag-a.frankfurt-postgres.render.com/telemetry_db_qyln?sslmode=require` | Requires `DATABASE_SSL=true`. Credentials are provisioned by Render and should be stored securely. |
+
+Key `.env` variables:
+
+- `TELEMETRY_UI_URL`: Full URL to the event log UI (set to Render URL in production, `http://localhost:3100/event-log` locally).
+- `DB_TYPE`: Switch between `sqlite` and `postgresql`.
+- `DB_PATH`: Only used when `DB_TYPE=sqlite`; keep the relative path unless you need a custom location.
+- `DATABASE_URL` / `DATABASE_SSL`: Only used when `DB_TYPE=postgresql`.
+- `TELEMETRY_DISABLED`: Optional flag that temporarily disables ingestion (set to `false` in production).
+
+Always keep the `.env` comments aligned with the current deployment strategy so agents and contributors know which configuration to pick up.
 
 ### Security Considerations
 

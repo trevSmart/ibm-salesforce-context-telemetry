@@ -101,14 +101,6 @@ function isWeekday(date) {
 }
 
 /**
- * Check if a date is during office hours
- */
-function isOfficeHours(date) {
-  const hour = date.getHours();
-  return hour >= OFFICE_HOURS_START && hour < OFFICE_HOURS_END;
-}
-
-/**
  * Add random minutes to a date
  */
 function addMinutes(date, minutes) {

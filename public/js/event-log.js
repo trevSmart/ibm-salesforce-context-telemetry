@@ -30,7 +30,7 @@ console.info(`[Telemetry Viewer] Runtime detected: ${isElectronRuntime ? 'Electr
       window.location.href = '/login';
       return;
     }
-    if (data.role !== 'advanced') {
+    if (data.role !== 'advanced' && data.role !== 'administrator') {
       window.location.href = '/';
       return;
     }
@@ -73,7 +73,7 @@ function showUserMenu(e) {
         // Hide "Delete all events" option for basic users
         const deleteAllMenuItem = document.querySelector('.delete-all-menu-item');
         if (deleteAllMenuItem) {
-          if (data.role === 'advanced') {
+          if (data.role === 'advanced' || data.role === 'administrator') {
             deleteAllMenuItem.style.display = '';
           } else {
             deleteAllMenuItem.style.display = 'none';
@@ -92,7 +92,7 @@ function showUserMenu(e) {
 // Close user menu when clicking outside
 document.addEventListener('click', function(event) {
   const userMenu = document.getElementById('userMenu');
-  const userBtn = document.getElementById('userBtn');
+  const _userBtn = document.getElementById('userBtn');
   const userMenuContainer = event.target.closest('.user-menu-container');
 
   if (userMenu && userMenu.classList.contains('show')) {
@@ -211,11 +211,28 @@ function ensureUserMenuStructure() {
   userMenu.dataset.initialized = 'true';
 }
 
-function openSettingsModal() {
+// eslint-disable-next-line no-unused-vars
+async function openSettingsModal() {
   const existing = document.querySelector('.confirm-modal-backdrop.settings-backdrop');
   if (existing) {
     return;
   }
+
+  // Check user role to determine if admin-only sections should be shown
+  let userRole = 'basic';
+  try {
+    const authResponse = await fetch('/api/auth/status', {
+      credentials: 'include'
+    });
+    if (authResponse.ok) {
+      const authData = await authResponse.json();
+      userRole = authData.role || 'basic';
+    }
+  } catch (error) {
+    console.error('Error checking auth status:', error);
+  }
+
+  const isAdministrator = userRole === 'administrator';
 
   const backdrop = document.createElement('div');
   backdrop.className = 'confirm-modal-backdrop settings-backdrop';
@@ -230,6 +247,41 @@ function openSettingsModal() {
   const autoRefreshEnabled = localStorage.getItem('autoRefreshEnabled') === 'true';
   const autoRefreshInterval = localStorage.getItem('autoRefreshInterval') || '';
 
+  const sidebarNav = `
+    <a href="#settings-appearance" class="settings-sidebar-link flex items-center gap-2 rounded-md px-2 py-1.5 text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-secondary)]">
+      <span class="w-4 h-4 flex items-center justify-center rounded-full border border-[color:var(--border-color)] bg-[color:var(--bg-secondary)]">
+        <i class="fa-regular fa-moon text-[10px]"></i>
+      </span>
+      <span class="font-medium">Appearance</span>
+    </a>
+    <a href="#settings-events" class="settings-sidebar-link flex items-center gap-2 rounded-md px-2 py-1.5 text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-secondary)]">
+      <span class="w-4 h-4 flex items-center justify-center rounded-full border border-[color:var(--border-color)] bg-[color:var(--bg-secondary)]">
+        <i class="fa-solid fa-chart-line text-[10px]"></i>
+      </span>
+      <span class="font-medium">Events</span>
+    </a>
+    <a href="#settings-teams" class="settings-sidebar-link flex items-center gap-2 rounded-md px-2 py-1.5 text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-secondary)]">
+      <span class="w-4 h-4 flex items-center justify-center rounded-full border border-[color:var(--border-color)] bg-[color:var(--bg-secondary)]">
+        <i class="fa-solid fa-users text-[10px]"></i>
+      </span>
+      <span class="font-medium">Teams</span>
+    </a>
+    ${isAdministrator ? `
+    <a href="#settings-users" class="settings-sidebar-link flex items-center gap-2 rounded-md px-2 py-1.5 text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-secondary)]">
+      <span class="w-4 h-4 flex items-center justify-center rounded-full border border-[color:var(--border-color)] bg-[color:var(--bg-secondary)]">
+        <i class="fa-solid fa-user-gear text-[10px]"></i>
+      </span>
+      <span class="font-medium">Users</span>
+    </a>
+    ` : ''}
+    <a href="#settings-danger" class="settings-sidebar-link flex items-center gap-2 rounded-md px-2 py-1.5 text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-secondary)]">
+      <span class="w-4 h-4 flex items-center justify-center rounded-full border border-[color:var(--border-color)] bg-[color:var(--bg-secondary)]">
+        <i class="fa-solid fa-triangle-exclamation text-[10px]"></i>
+      </span>
+      <span class="font-medium">Danger zone</span>
+    </a>
+  `;
+
   modal.innerHTML = `
 			<div class="settings-modal-header">
 				<div class="confirm-modal-title">Settings</div>
@@ -243,24 +295,7 @@ function openSettingsModal() {
 							</p>
 						</div>
 						<nav class="flex md:flex-col gap-2 text-sm" aria-label="Settings sections">
-							<a href="#settings-appearance" class="settings-sidebar-link flex items-center gap-2 rounded-md px-2 py-1.5 text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-secondary)]">
-								<span class="w-4 h-4 flex items-center justify-center rounded-full border border-[color:var(--border-color)] bg-[color:var(--bg-secondary)]">
-									<i class="fa-regular fa-moon text-[10px]"></i>
-								</span>
-								<span class="font-medium">Appearance</span>
-							</a>
-							<a href="#settings-events" class="settings-sidebar-link flex items-center gap-2 rounded-md px-2 py-1.5 text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-secondary)]">
-								<span class="w-4 h-4 flex items-center justify-center rounded-full border border-[color:var(--border-color)] bg-[color:var(--bg-secondary)]">
-									<i class="fa-solid fa-chart-line text-[10px]"></i>
-								</span>
-								<span class="font-medium">Events</span>
-							</a>
-							<a href="#settings-danger" class="settings-sidebar-link flex items-center gap-2 rounded-md px-2 py-1.5 text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-secondary)]">
-								<span class="w-4 h-4 flex items-center justify-center rounded-full border border-[color:var(--border-color)] bg-[color:var(--bg-secondary)]">
-									<i class="fa-solid fa-triangle-exclamation text-[10px]"></i>
-								</span>
-								<span class="font-medium">Danger zone</span>
-							</a>
+							${sidebarNav}
 						</nav>
 					</aside>
 					<div class="settings-main flex-1 flex flex-col gap-4 mt-3 md:mt-0">
@@ -324,6 +359,103 @@ function openSettingsModal() {
 								</div>
 							</div>
 						</section>
+						<section id="settings-teams" class="settings-section" style="display: none;">
+							<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+								<div class="settings-modal-placeholder-title" style="margin: 0;">Teams</div>
+								<button type="button" class="confirm-modal-btn" id="addTeamBtn" style="display: flex; align-items: center; gap: 6px;">
+									<i class="fa-solid fa-plus" style="font-size: 12px;"></i>Add Team
+								</button>
+							</div>
+							<div style="display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;">
+								<div style="position: relative; flex: 1; min-width: 200px;">
+									<i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-secondary); font-size: 14px;"></i>
+									<input type="text" id="teamsSearchInput" placeholder="Search..."
+										style="width: 100%; padding: 8px 12px 8px 36px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 14px;">
+								</div>
+								<div style="position: relative;">
+									<button type="button" id="teamsFilterBtn" class="confirm-modal-btn confirm-modal-btn-cancel" style="display: flex; align-items: center; gap: 6px; padding: 8px 12px;">
+										<i class="fa-solid fa-filter" style="font-size: 12px;"></i>
+										<span id="teamsFilterBadge" style="display: none; background: var(--text-primary); color: var(--bg-primary); border-radius: 10px; padding: 2px 6px; font-size: 11px; margin-left: 4px;">1</span>
+									</button>
+								</div>
+								<button type="button" class="confirm-modal-btn confirm-modal-btn-cancel" style="padding: 8px 12px;">
+									<i class="fa-solid fa-gear" style="font-size: 12px;"></i>
+								</button>
+								<div style="position: relative;">
+									<select id="teamsSortSelect" style="padding: 8px 32px 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 14px; cursor: pointer; appearance: none;">
+										<option>Sort by</option>
+										<option value="name-asc">Name (A-Z)</option>
+										<option value="name-desc">Name (Z-A)</option>
+										<option value="members-asc">Members (Low to High)</option>
+										<option value="members-desc">Members (High to Low)</option>
+										<option value="activity-desc">Last Activity (Recent)</option>
+										<option value="activity-asc">Last Activity (Oldest)</option>
+									</select>
+									<i class="fa-solid fa-chevron-down" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--text-secondary); font-size: 10px; pointer-events: none;"></i>
+								</div>
+							</div>
+							<div style="overflow-x: auto; border: 1px solid var(--border-color); border-radius: 8px;">
+								<table id="teamsTable" style="width: 100%; border-collapse: collapse;">
+									<thead>
+										<tr style="background: var(--bg-secondary); border-bottom: 1px solid var(--border-color);">
+											<th style="padding: 12px; text-align: left;">
+												<input type="checkbox" id="teamsSelectAll" style="cursor: pointer;">
+											</th>
+											<th style="padding: 12px; text-align: left; font-weight: 600; color: var(--text-primary); font-size: 14px; cursor: pointer;">
+												Team Name
+												<i class="fa-solid fa-arrows-up-down" style="margin-left: 6px; font-size: 10px; color: var(--text-secondary);"></i>
+											</th>
+											<th style="padding: 12px; text-align: left; font-weight: 600; color: var(--text-primary); font-size: 14px; cursor: pointer;">
+												Members
+												<i class="fa-solid fa-arrows-up-down" style="margin-left: 6px; font-size: 10px; color: var(--text-secondary);"></i>
+											</th>
+											<th style="padding: 12px; text-align: left; font-weight: 600; color: var(--text-primary); font-size: 14px; cursor: pointer;">
+												Last Activity
+												<i class="fa-solid fa-arrows-up-down" style="margin-left: 6px; font-size: 10px; color: var(--text-secondary);"></i>
+											</th>
+											<th style="padding: 12px; text-align: left; font-weight: 600; color: var(--text-primary); font-size: 14px; cursor: pointer;">
+												Status
+												<i class="fa-solid fa-arrows-up-down" style="margin-left: 6px; font-size: 10px; color: var(--text-secondary);"></i>
+											</th>
+											<th style="padding: 12px; text-align: right; width: 40px;"></th>
+										</tr>
+									</thead>
+									<tbody id="teamsTableBody">
+										<!-- Teams will be populated here -->
+									</tbody>
+								</table>
+							</div>
+						</section>
+						${isAdministrator ? `
+						<section id="settings-users" class="settings-section" style="display: none;">
+							<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+								<div class="settings-modal-placeholder-title" style="margin: 0;">User Management</div>
+								<button type="button" class="confirm-modal-btn" id="addUserBtn" style="display: flex; align-items: center; gap: 6px;">
+									<i class="fa-solid fa-plus" style="font-size: 12px;"></i>Add User
+								</button>
+							</div>
+							<div style="overflow-x: auto; border: 1px solid var(--border-color); border-radius: 8px;">
+								<table id="usersTable" style="width: 100%; border-collapse: collapse;">
+									<thead>
+										<tr style="background: var(--bg-secondary); border-bottom: 1px solid var(--border-color);">
+											<th style="padding: 12px; text-align: left; font-weight: 600; color: var(--text-primary); font-size: 14px;">Username</th>
+											<th style="padding: 12px; text-align: left; font-weight: 600; color: var(--text-primary); font-size: 14px;">Role</th>
+											<th style="padding: 12px; text-align: left; font-weight: 600; color: var(--text-primary); font-size: 14px;">Created</th>
+											<th style="padding: 12px; text-align: left; font-weight: 600; color: var(--text-primary); font-size: 14px;">Last Login</th>
+											<th style="padding: 12px; text-align: right; width: 200px;">Actions</th>
+										</tr>
+									</thead>
+									<tbody id="usersTableBody">
+										<tr>
+											<td colspan="5" style="padding: 24px; text-align: center; color: var(--text-secondary);">
+												Loading users...
+											</td>
+										</tr>
+									</tbody>
+								</table>
+							</div>
+						</section>
+						` : ''}
 						<section id="settings-danger" class="settings-danger-section">
 							<div class="settings-modal-placeholder-title">Danger zone</div>
 							<div class="settings-modal-placeholder-text">
@@ -411,6 +543,308 @@ function openSettingsModal() {
     });
   }
 
+  // Navigation between settings sections
+  const sidebarLinks = modal.querySelectorAll('.settings-sidebar-link');
+  const sections = modal.querySelectorAll('.settings-section, .settings-danger-section');
+
+  function showSection(sectionId) {
+    sections.forEach(section => {
+      section.style.display = 'none';
+    });
+    const targetSection = modal.querySelector(sectionId);
+    if (targetSection) {
+      targetSection.style.display = 'block';
+    }
+
+    sidebarLinks.forEach(link => {
+      link.classList.remove('active');
+      if (link.getAttribute('href') === sectionId) {
+        link.classList.add('active');
+      }
+    });
+  }
+
+  sidebarLinks.forEach(link => {
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      const sectionId = link.getAttribute('href');
+      showSection(sectionId);
+    });
+  });
+
+  if (sidebarLinks.length > 0) {
+    const firstSectionId = sidebarLinks[0].getAttribute('href');
+    showSection(firstSectionId);
+  }
+
+  // Teams section demo content
+  const teamsSection = modal.querySelector('#settings-teams');
+  if (teamsSection) {
+    const dummyTeams = [
+      { id: 1, name: 'Development Team', members: 8, lastActivity: 'Today, 3:52 PM', status: 'Active' },
+      { id: 2, name: 'QA Team', members: 5, lastActivity: 'Yesterday, 8:21 AM', status: 'Active' },
+      { id: 3, name: 'DevOps Team', members: 4, lastActivity: 'Sep 24, 2023 at 2:10 PM', status: 'Active' },
+      { id: 4, name: 'Sales Team', members: 12, lastActivity: 'Sep 23, 2023 at 1:30 PM', status: 'Active' },
+      { id: 5, name: 'Support Team', members: 6, lastActivity: 'Sep 22, 2023 at 4:45 PM', status: 'Inactive' },
+      { id: 6, name: 'Marketing Team', members: 7, lastActivity: 'Sep 21, 2023 at 10:15 AM', status: 'Active' }
+    ];
+
+    let filteredTeams = [...dummyTeams];
+    const teamsTableBody = modal.querySelector('#teamsTableBody');
+    const teamsSearchInput = modal.querySelector('#teamsSearchInput');
+    const teamsSortSelect = modal.querySelector('#teamsSortSelect');
+    const teamsSelectAll = modal.querySelector('#teamsSelectAll');
+    const addTeamBtn = modal.querySelector('#addTeamBtn');
+
+    function renderTeams() {
+      if (!teamsTableBody) return;
+
+      teamsTableBody.innerHTML = filteredTeams.map(team => {
+        const statusColor = team.status === 'Active' ? '#10b981' : '#6b7280';
+        return `
+					<tr style="border-bottom: 1px solid var(--border-color);">
+						<td style="padding: 12px;">
+							<input type="checkbox" class="team-checkbox" data-team-id="${team.id}" style="cursor: pointer;">
+						</td>
+						<td style="padding: 12px; color: var(--text-primary); font-size: 14px;">
+							<div style="display: flex; align-items: center; gap: 8px;">
+								<div style="width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 12px;">
+									${team.name.charAt(0).toUpperCase()}
+								</div>
+								<span style="font-weight: 500;">${escapeHtml(team.name)}</span>
+							</div>
+						</td>
+						<td style="padding: 12px; color: var(--text-primary); font-size: 14px;">
+							${team.members} members
+						</td>
+						<td style="padding: 12px; color: var(--text-secondary); font-size: 14px;">
+							${team.lastActivity}
+						</td>
+						<td style="padding: 12px;">
+							<span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 500; background: ${statusColor}20; color: ${statusColor};">
+								<span style="width: 6px; height: 6px; border-radius: 50%; background: ${statusColor};"></span>
+								${team.status}
+							</span>
+						</td>
+						<td style="padding: 12px; text-align: right;">
+							<button type="button" class="team-actions-btn" data-team-id="${team.id}" style="background: none; border: none; color: var(--text-secondary); cursor: pointer; padding: 4px 8px; border-radius: 4px;">
+								<i class="fa-solid fa-ellipsis-vertical"></i>
+							</button>
+						</td>
+					</tr>
+				`;
+      }).join('');
+    }
+
+    if (teamsSearchInput) {
+      teamsSearchInput.addEventListener('input', (e) => {
+        const searchTerm = e.target.value.toLowerCase();
+        filteredTeams = dummyTeams.filter(team =>
+          team.name.toLowerCase().includes(searchTerm) ||
+					team.status.toLowerCase().includes(searchTerm)
+        );
+        renderTeams();
+      });
+    }
+
+    if (teamsSortSelect) {
+      teamsSortSelect.addEventListener('change', (e) => {
+        const sortValue = e.target.value;
+        filteredTeams.sort((a, b) => {
+          switch(sortValue) {
+          case 'name-asc':
+            return a.name.localeCompare(b.name);
+          case 'name-desc':
+            return b.name.localeCompare(a.name);
+          case 'members-asc':
+            return a.members - b.members;
+          case 'members-desc':
+            return b.members - a.members;
+          default:
+            return 0;
+          }
+        });
+        renderTeams();
+      });
+    }
+
+    if (teamsSelectAll) {
+      teamsSelectAll.addEventListener('change', (e) => {
+        const checkboxes = teamsTableBody.querySelectorAll('.team-checkbox');
+        checkboxes.forEach(checkbox => {
+          checkbox.checked = e.target.checked;
+        });
+      });
+    }
+
+    if (addTeamBtn) {
+      addTeamBtn.addEventListener('click', () => {
+        alert('Add Team functionality will be implemented here');
+      });
+    }
+
+    renderTeams();
+  }
+
+  // Users section functionality
+  if (isAdministrator) {
+    const usersSection = modal.querySelector('#settings-users');
+    if (usersSection) {
+      const usersTableBody = modal.querySelector('#usersTableBody');
+      const addUserBtn = modal.querySelector('#addUserBtn');
+
+      async function loadUsers() {
+        try {
+          const response = await fetch('/api/users', {
+            credentials: 'include'
+          });
+          if (response.status === 401) {
+            window.location.href = '/login';
+            return;
+          }
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          const data = await response.json();
+          await renderUsers(data.users || []);
+        } catch (error) {
+          console.error('Error loading users:', error);
+          if (usersTableBody) {
+            usersTableBody.innerHTML = `
+              <tr>
+                <td colspan="5" style="padding: 24px; text-align: center; color: var(--text-secondary);">
+                  Error loading users: ${escapeHtml(error.message)}
+                </td>
+              </tr>
+            `;
+          }
+        }
+      }
+
+      function formatDate(dateString) {
+        if (!dateString) return '-';
+        const date = new Date(dateString);
+        return date.toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+      }
+
+      function getRoleBadgeColor(role) {
+        switch (role) {
+        case 'administrator':
+          return '#dc2626';
+        case 'advanced':
+          return '#2563eb';
+        case 'basic':
+          return '#16a34a';
+        default:
+          return '#6b7280';
+        }
+      }
+
+      async function renderUsers(users) {
+        if (!usersTableBody) return;
+
+        if (users.length === 0) {
+          usersTableBody.innerHTML = `
+            <tr>
+              <td colspan="5" style="padding: 24px; text-align: center; color: var(--text-secondary);">
+                No users found. Click "Add User" to create one.
+              </td>
+            </tr>
+          `;
+          return;
+        }
+
+        let currentUsername = '';
+        try {
+          const authResponse = await fetch('/api/auth/status', {
+            credentials: 'include'
+          });
+          if (authResponse.ok) {
+            const authData = await authResponse.json();
+            currentUsername = authData.username || '';
+          }
+        } catch (error) {
+          console.error('Error getting current username:', error);
+        }
+
+        usersTableBody.innerHTML = users.map(user => {
+          const roleColor = getRoleBadgeColor(user.role);
+          const isCurrentUser = user.username === currentUsername;
+          return `
+            <tr style="border-bottom: 1px solid var(--border-color);">
+              <td style="padding: 12px; color: var(--text-primary); font-size: 14px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <div style="width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 12px;">
+                    ${escapeHtml(user.username.charAt(0).toUpperCase())}
+                  </div>
+                  <span style="font-weight: 500;">${escapeHtml(user.username)}</span>
+                  ${isCurrentUser ? '<span style="font-size: 11px; color: var(--text-secondary);">(you)</span>' : ''}
+                </div>
+              </td>
+              <td style="padding: 12px;">
+                <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 500; background: ${roleColor}20; color: ${roleColor};">
+                  <span style="width: 6px; height: 6px; border-radius: 50%; background: ${roleColor};"></span>
+                  ${escapeHtml(user.role || 'basic')}
+                </span>
+              </td>
+              <td style="padding: 12px; color: var(--text-secondary); font-size: 14px;">
+                ${formatDate(user.created_at)}
+              </td>
+              <td style="padding: 12px; color: var(--text-secondary); font-size: 14px;">
+                ${formatDate(user.last_login)}
+              </td>
+              <td style="padding: 12px; text-align: right;">
+                <div style="display: flex; gap: 6px; justify-content: flex-end;">
+                  <button type="button" class="confirm-modal-btn" style="padding: 6px 12px; font-size: 12px;" onclick="openEditPasswordModal('${escapeHtml(user.username)}')" title="Change password">
+                    <i class="fa-solid fa-key" style="font-size: 11px;"></i>
+                  </button>
+                  <button type="button" class="confirm-modal-btn" style="padding: 6px 12px; font-size: 12px;" onclick="openEditRoleModal('${escapeHtml(user.username)}', '${escapeHtml(user.role || 'basic')}')" title="Change role">
+                    <i class="fa-solid fa-user-tag" style="font-size: 11px;"></i>
+                  </button>
+                  ${!isCurrentUser ? `
+                  <button type="button" class="confirm-modal-btn confirm-modal-btn-destructive" style="padding: 6px 12px; font-size: 12px;" onclick="openDeleteUserModal('${escapeHtml(user.username)}')" title="Delete user">
+                    <i class="fa-solid fa-trash" style="font-size: 11px;"></i>
+                  </button>
+                  ` : ''}
+                </div>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+      const usersSectionObserver = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+          if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+            const isVisible = usersSection.style.display !== 'none';
+            if (isVisible) {
+              loadUsers();
+            }
+          }
+        });
+      });
+      usersSectionObserver.observe(usersSection, { attributes: true, attributeFilter: ['style'] });
+
+      if (addUserBtn) {
+        addUserBtn.addEventListener('click', () => {
+          window.openCreateUserModal();
+        });
+      }
+
+      usersSection.addEventListener('reloadUsers', loadUsers);
+
+      if (usersSection.style.display !== 'none') {
+        loadUsers();
+      }
+    }
+  }
+
   // Handle dark theme toggle
   const darkThemeToggle = modal.querySelector('#darkThemeToggle');
   if (darkThemeToggle) {
@@ -462,18 +896,621 @@ function openSettingsModal() {
   );
 }
 
-function openOrgTeamMappingModal() {
-  // Use the shared org–team mapping modal implementation defined in the dashboard script
-  // Get a fresh reference to avoid infinite recursion
-  const globalOpenOrgTeamMappingModal = window.openOrgTeamMappingModal;
-  // Only call if it exists and is not this function itself
-  if (typeof globalOpenOrgTeamMappingModal === 'function' && globalOpenOrgTeamMappingModal !== openOrgTeamMappingModal) {
-    globalOpenOrgTeamMappingModal();
-  } else {
-    console.error('openOrgTeamMappingModal: The global function is not available. Make sure index.js is loaded.');
-  }
+if (!window.openCreateUserModal) {
+  window.openCreateUserModal = function() {
+    const existing = document.querySelector('.confirm-modal-backdrop.user-management-backdrop');
+    if (existing) {
+      return;
+    }
+
+    const backdrop = document.createElement('div');
+    backdrop.className = 'confirm-modal-backdrop user-management-backdrop';
+
+    const modal = document.createElement('div');
+    modal.className = 'confirm-modal settings-modal';
+    modal.style.maxWidth = '500px';
+
+    modal.innerHTML = `
+      <div class="confirm-modal-title">Create New User</div>
+      <form id="createUserForm" style="display: flex; flex-direction: column; gap: 16px; margin-top: 16px;">
+        <div>
+          <label class="settings-modal-placeholder-text" style="display: block; margin-bottom: 6px;">
+            Username
+            <input type="text" id="createUsernameInput" required
+              style="margin-top: 4px; width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 14px;"
+              placeholder="Enter username">
+          </label>
+        </div>
+        <div>
+          <label class="settings-modal-placeholder-text" style="display: block; margin-bottom: 6px;">
+            Password
+            <input type="password" id="createPasswordInput" required
+              style="margin-top: 4px; width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 14px;"
+              placeholder="Enter password">
+          </label>
+        </div>
+        <div>
+          <label class="settings-modal-placeholder-text" style="display: block; margin-bottom: 6px;">
+            Role
+            <select id="createRoleSelect"
+              style="margin-top: 4px; width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 14px; cursor: pointer;">
+              <option value="basic">Basic</option>
+              <option value="advanced">Advanced</option>
+              <option value="administrator">Administrator</option>
+            </select>
+          </label>
+        </div>
+        <div id="createUserError" style="color: #dc2626; font-size: 13px; display: none;"></div>
+        <div class="confirm-modal-actions">
+          <button type="button" class="confirm-modal-btn confirm-modal-btn-cancel" onclick="window.closeUserManagementModal()">
+            Cancel
+          </button>
+          <button type="submit" class="confirm-modal-btn confirm-modal-btn-confirm">
+            Create User
+          </button>
+        </div>
+      </form>
+    `;
+
+    backdrop.appendChild(modal);
+    document.body.appendChild(backdrop);
+
+    requestAnimationFrame(() => {
+      backdrop.classList.add('visible');
+    });
+
+    const form = modal.querySelector('#createUserForm');
+    const errorDiv = modal.querySelector('#createUserError');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorDiv.style.display = 'none';
+      errorDiv.textContent = '';
+
+      const username = modal.querySelector('#createUsernameInput').value.trim();
+      const password = modal.querySelector('#createPasswordInput').value;
+      const role = modal.querySelector('#createRoleSelect').value;
+
+      if (!username || !password) {
+        errorDiv.textContent = 'Username and password are required';
+        errorDiv.style.display = 'block';
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/users', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          credentials: 'include',
+          body: JSON.stringify({ username, password, role })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || 'Failed to create user');
+        }
+
+        window.closeUserManagementModal();
+        const usersSection = document.querySelector('#settings-users');
+        if (usersSection && usersSection.style.display !== 'none') {
+          const event = new CustomEvent('reloadUsers');
+          usersSection.dispatchEvent(event);
+        }
+        window.location.reload();
+      } catch (error) {
+        errorDiv.textContent = error.message || 'Failed to create user';
+        errorDiv.style.display = 'block';
+      }
+    });
+
+    window.closeUserManagementModal = function() {
+      backdrop.classList.remove('visible');
+      backdrop.classList.add('hiding');
+      setTimeout(() => {
+        if (document.body.contains(backdrop)) {
+          backdrop.remove();
+        }
+      }, 220);
+    };
+  };
 }
 
+if (!window.openEditPasswordModal) {
+  window.openEditPasswordModal = function(username) {
+    const existing = document.querySelector('.confirm-modal-backdrop.user-management-backdrop');
+    if (existing) {
+      return;
+    }
+
+    const backdrop = document.createElement('div');
+    backdrop.className = 'confirm-modal-backdrop user-management-backdrop';
+
+    const modal = document.createElement('div');
+    modal.className = 'confirm-modal settings-modal';
+    modal.style.maxWidth = '500px';
+
+    modal.innerHTML = `
+      <div class="confirm-modal-title">Change Password</div>
+      <div class="confirm-modal-message" style="margin-top: 8px; margin-bottom: 16px;">
+        <p class="settings-modal-placeholder-text">
+          Change password for user: <strong>${escapeHtml(username)}</strong>
+        </p>
+      </div>
+      <form id="editPasswordForm" style="display: flex; flex-direction: column; gap: 16px;">
+        <div>
+          <label class="settings-modal-placeholder-text" style="display: block; margin-bottom: 6px;">
+            New Password
+            <input type="password" id="editPasswordInput" required
+              style="margin-top: 4px; width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 14px;"
+              placeholder="Enter new password">
+          </label>
+        </div>
+        <div id="editPasswordError" style="color: #dc2626; font-size: 13px; display: none;"></div>
+        <div class="confirm-modal-actions">
+          <button type="button" class="confirm-modal-btn confirm-modal-btn-cancel" onclick="window.closeUserManagementModal()">
+            Cancel
+          </button>
+          <button type="submit" class="confirm-modal-btn confirm-modal-btn-confirm">
+            Update Password
+          </button>
+        </div>
+      </form>
+    `;
+
+    backdrop.appendChild(modal);
+    document.body.appendChild(backdrop);
+
+    requestAnimationFrame(() => {
+      backdrop.classList.add('visible');
+    });
+
+    const form = modal.querySelector('#editPasswordForm');
+    const errorDiv = modal.querySelector('#editPasswordError');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorDiv.style.display = 'none';
+      errorDiv.textContent = '';
+
+      const password = modal.querySelector('#editPasswordInput').value;
+
+      if (!password) {
+        errorDiv.textContent = 'Password is required';
+        errorDiv.style.display = 'block';
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/users/${encodeURIComponent(username)}/password`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          credentials: 'include',
+          body: JSON.stringify({ password })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || 'Failed to update password');
+        }
+
+        window.closeUserManagementModal();
+        alert('Password updated successfully');
+        window.location.reload();
+      } catch (error) {
+        errorDiv.textContent = error.message || 'Failed to update password';
+        errorDiv.style.display = 'block';
+      }
+    });
+
+    window.closeUserManagementModal = function() {
+      backdrop.classList.remove('visible');
+      backdrop.classList.add('hiding');
+      setTimeout(() => {
+        if (document.body.contains(backdrop)) {
+          backdrop.remove();
+        }
+      }, 220);
+    };
+  };
+}
+
+if (!window.openEditRoleModal) {
+  window.openEditRoleModal = function(username, currentRole) {
+    const existing = document.querySelector('.confirm-modal-backdrop.user-management-backdrop');
+    if (existing) {
+      return;
+    }
+
+    const backdrop = document.createElement('div');
+    backdrop.className = 'confirm-modal-backdrop user-management-backdrop';
+
+    const modal = document.createElement('div');
+    modal.className = 'confirm-modal settings-modal';
+    modal.style.maxWidth = '500px';
+
+    modal.innerHTML = `
+      <div class="confirm-modal-title">Change Role</div>
+      <div class="confirm-modal-message" style="margin-top: 8px; margin-bottom: 16px;">
+        <p class="settings-modal-placeholder-text">
+          Change role for user: <strong>${escapeHtml(username)}</strong>
+        </p>
+      </div>
+      <form id="editRoleForm" style="display: flex; flex-direction: column; gap: 16px;">
+        <div>
+          <label class="settings-modal-placeholder-text" style="display: block; margin-bottom: 6px;">
+            Role
+            <select id="editRoleSelect"
+              style="margin-top: 4px; width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 14px; cursor: pointer;">
+              <option value="basic" ${currentRole === 'basic' ? 'selected' : ''}>Basic</option>
+              <option value="advanced" ${currentRole === 'advanced' ? 'selected' : ''}>Advanced</option>
+              <option value="administrator" ${currentRole === 'administrator' ? 'selected' : ''}>Administrator</option>
+            </select>
+          </label>
+        </div>
+        <div id="editRoleError" style="color: #dc2626; font-size: 13px; display: none;"></div>
+        <div class="confirm-modal-actions">
+          <button type="button" class="confirm-modal-btn confirm-modal-btn-cancel" onclick="window.closeUserManagementModal()">
+            Cancel
+          </button>
+          <button type="submit" class="confirm-modal-btn confirm-modal-btn-confirm">
+            Update Role
+          </button>
+        </div>
+      </form>
+    `;
+
+    backdrop.appendChild(modal);
+    document.body.appendChild(backdrop);
+
+    requestAnimationFrame(() => {
+      backdrop.classList.add('visible');
+    });
+
+    const form = modal.querySelector('#editRoleForm');
+    const errorDiv = modal.querySelector('#editRoleError');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorDiv.style.display = 'none';
+      errorDiv.textContent = '';
+
+      const role = modal.querySelector('#editRoleSelect').value;
+
+      if (!role) {
+        errorDiv.textContent = 'Role is required';
+        errorDiv.style.display = 'block';
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/users/${encodeURIComponent(username)}/role`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          credentials: 'include',
+          body: JSON.stringify({ role })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || 'Failed to update role');
+        }
+
+        window.closeUserManagementModal();
+        alert('Role updated successfully');
+        window.location.reload();
+      } catch (error) {
+        errorDiv.textContent = error.message || 'Failed to update role';
+        errorDiv.style.display = 'block';
+      }
+    });
+
+    window.closeUserManagementModal = function() {
+      backdrop.classList.remove('visible');
+      backdrop.classList.add('hiding');
+      setTimeout(() => {
+        if (document.body.contains(backdrop)) {
+          backdrop.remove();
+        }
+      }, 220);
+    };
+  };
+}
+
+if (!window.openDeleteUserModal) {
+  window.openDeleteUserModal = function(username) {
+    openConfirmModal({
+      title: 'Delete User',
+      message: `Are you sure you want to delete user "${escapeHtml(username)}"? This action cannot be undone.`,
+      confirmLabel: 'Delete User',
+      destructive: true
+    }).then((confirmed) => {
+      if (!confirmed) {
+        return;
+      }
+
+      fetch(`/api/users/${encodeURIComponent(username)}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      })
+        .then(response => response.json())
+        .then(data => {
+          if (data.status === 'ok') {
+            alert('User deleted successfully');
+            window.location.reload();
+          } else {
+            alert('Error: ' + (data.message || 'Failed to delete user'));
+          }
+        })
+        .catch(error => {
+          console.error('Error deleting user:', error);
+          alert('Error deleting user: ' + error.message);
+        });
+    });
+  };
+}
+
+function openOrgTeamMappingModal() {
+  const existing = document.querySelector('.confirm-modal-backdrop.org-team-mapping-backdrop');
+  if (existing) {
+    return;
+  }
+
+  const backdrop = document.createElement('div');
+  backdrop.className = 'confirm-modal-backdrop org-team-mapping-backdrop';
+
+  const modal = document.createElement('div');
+  modal.className = 'confirm-modal settings-modal';
+  modal.innerHTML = `
+		<div class="confirm-modal-title">Org – Client – Team mapping</div>
+		<div class="confirm-modal-message">
+			<p class="settings-modal-placeholder-text">
+				Manage how Salesforce org identifiers are associated with clients and teams. This configuration is stored only in this browser.
+			</p>
+		</div>
+		<div style="display: flex; flex-direction: column; gap: 12px;">
+			<div id="orgTeamMappingList" style="max-height: 260px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 10px;">
+			</div>
+			<form id="orgTeamMappingForm" class="settings-toggle-row" style="flex-direction: column; align-items: stretch; gap: 10px; padding-top: 4px; padding-bottom: 0;">
+				<input type="hidden" id="orgTeamMappingEditingId" value="">
+				<div style="display: flex; flex-direction: column; gap: 6px;">
+					<label class="settings-modal-placeholder-text">
+						Salesforce org identifier
+						<input id="orgIdentifierInput" type="text" placeholder="Org ID or unique org key"
+							style="margin-top: 2px; width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 0.8rem;">
+					</label>
+					<label class="settings-modal-placeholder-text">
+						Client name
+						<input id="clientNameInput" type="text" placeholder="Client"
+							style="margin-top: 2px; width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 0.8rem;">
+					</label>
+					<label class="settings-modal-placeholder-text">
+						Team name
+						<input id="teamNameInput" type="text" placeholder="Team"
+							style="margin-top: 2px; width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 0.8rem;">
+					</label>
+					<label class="settings-modal-placeholder-text">
+						Color (optional)
+						<input id="teamColorInput" type="text" placeholder="#2195cf or CSS color name"
+							style="margin-top: 2px; width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 0.8rem;">
+					</label>
+					<label class="settings-modal-placeholder-text" style="display: flex; align-items: center; gap: 6px; margin-top: 4px;">
+						<input id="mappingActiveInput" type="checkbox" checked style="width: 14px; height: 14px;">
+						<span>Active mapping</span>
+					</label>
+				</div>
+				<div class="confirm-modal-actions" style="width: 100%; justify-content: space-between; margin-top: 4px;">
+					<button type="button" class="confirm-modal-btn confirm-modal-btn-cancel" id="resetOrgTeamMappingFormBtn">
+						Clear form
+					</button>
+					<button type="submit" class="confirm-modal-btn confirm-modal-btn-confirm">
+						Save mapping
+					</button>
+				</div>
+			</form>
+		</div>
+		<div class="confirm-modal-actions" style="margin-top: 16px;">
+			<button type="button" class="confirm-modal-btn confirm-modal-btn-cancel" id="orgTeamMappingCloseBtn">
+				Close
+			</button>
+		</div>
+	`;
+
+  backdrop.appendChild(modal);
+  document.body.appendChild(backdrop);
+
+  function closeMappingModal() {
+    backdrop.classList.remove('visible');
+    backdrop.classList.add('hiding');
+    const handleTransitionEnd = () => {
+      backdrop.removeEventListener('transitionend', handleTransitionEnd);
+      backdrop.remove();
+    };
+    backdrop.addEventListener('transitionend', handleTransitionEnd);
+    setTimeout(() => {
+      if (document.body.contains(backdrop)) {
+        backdrop.removeEventListener('transitionend', handleTransitionEnd);
+        backdrop.remove();
+      }
+    }, 220);
+  }
+
+  const closeBtn = modal.querySelector('#orgTeamMappingCloseBtn');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', closeMappingModal);
+  }
+
+  document.addEventListener(
+    'keydown',
+    function handleKeydown(e) {
+      if (e.key === 'Escape') {
+        document.removeEventListener('keydown', handleKeydown);
+        if (document.body.contains(backdrop)) {
+          closeMappingModal();
+        }
+      }
+    }
+  );
+
+  const listContainer = modal.querySelector('#orgTeamMappingList');
+  const form = modal.querySelector('#orgTeamMappingForm');
+  const editingIdInput = modal.querySelector('#orgTeamMappingEditingId');
+  const orgInput = modal.querySelector('#orgIdentifierInput');
+  const clientInput = modal.querySelector('#clientNameInput');
+  const teamInput = modal.querySelector('#teamNameInput');
+  const colorInput = modal.querySelector('#teamColorInput');
+  const activeInput = modal.querySelector('#mappingActiveInput');
+  const resetFormBtn = modal.querySelector('#resetOrgTeamMappingFormBtn');
+
+  function renderMappings() {
+    if (!listContainer) {
+      return;
+    }
+    const mappings = getOrgTeamMappings();
+    if (!mappings.length) {
+      listContainer.innerHTML = `
+				<div class="settings-modal-placeholder-text">
+					No mappings defined yet. Add a mapping using the form below.
+				</div>
+			`;
+      return;
+    }
+
+    const rowsHtml = mappings
+      .map((mapping, index) => {
+        const safeOrg = escapeHtml(mapping.orgIdentifier || '');
+        const safeClient = escapeHtml(mapping.clientName || '');
+        const safeTeam = escapeHtml(mapping.teamName || '');
+        const safeColor = escapeHtml(mapping.color || '');
+        const status = mapping.active === false ? 'Inactive' : 'Active';
+        return `
+					<div class="settings-toggle-row" data-mapping-index="${index}" style="padding-top: 6px; padding-bottom: 6px; border-bottom: 1px solid var(--border-color);">
+						<div class="settings-toggle-text">
+							<div class="settings-toggle-title">${safeTeam || '(Unnamed team)'} ${safeClient ? '· ' + safeClient : ''}</div>
+							<div class="settings-toggle-description">
+								Org: <code>${safeOrg || '-'}</code>
+								${safeColor ? ` · Color: <span style="display:inline-flex;align-items:center;gap:4px;"><span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:${safeColor};border:1px solid var(--border-color);"></span>${safeColor}</span>` : ''}
+								 · Status: ${status}
+							</div>
+						</div>
+						<div class="confirm-modal-actions" style="gap: 6px;">
+							<button type="button" class="confirm-modal-btn" data-action="edit" data-index="${index}">Edit</button>
+							<button type="button" class="confirm-modal-btn confirm-modal-btn-destructive" data-action="delete" data-index="${index}">Delete</button>
+						</div>
+					</div>
+				`;
+      })
+      .join('');
+
+    listContainer.innerHTML = rowsHtml;
+
+    listContainer.querySelectorAll('button[data-action="edit"]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const idx = Number(btn.dataset.index);
+        const mappingsData = getOrgTeamMappings();
+        const mapping = mappingsData[idx];
+        if (!mapping) {
+          return;
+        }
+        editingIdInput.value = String(idx);
+        orgInput.value = mapping.orgIdentifier || '';
+        clientInput.value = mapping.clientName || '';
+        teamInput.value = mapping.teamName || '';
+        colorInput.value = mapping.color || '';
+        activeInput.checked = mapping.active !== false;
+      });
+    });
+
+    listContainer.querySelectorAll('button[data-action="delete"]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const idx = Number(btn.dataset.index);
+        const mappingsData = getOrgTeamMappings();
+        if (idx >= 0 && idx < mappingsData.length) {
+          mappingsData.splice(idx, 1);
+          saveOrgTeamMappings(mappingsData);
+          renderMappings();
+        }
+      });
+    });
+  }
+
+  function resetForm() {
+    if (!editingIdInput || !orgInput || !clientInput || !teamInput || !colorInput || !activeInput) {
+      return;
+    }
+    editingIdInput.value = '';
+    orgInput.value = '';
+    clientInput.value = '';
+    teamInput.value = '';
+    colorInput.value = '';
+    activeInput.checked = true;
+  }
+
+  if (resetFormBtn) {
+    resetFormBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      resetForm();
+    });
+  }
+
+  if (form) {
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const orgIdentifier = orgInput.value.trim();
+      const clientName = clientInput.value.trim();
+      const teamName = teamInput.value.trim();
+      const color = colorInput.value.trim();
+      const active = !!activeInput.checked;
+
+      if (!orgIdentifier || !clientName || !teamName) {
+        alert('Org identifier, client name and team name are required.');
+        return;
+      }
+
+      const mappings = getOrgTeamMappings();
+      const editingIndex = editingIdInput.value !== '' ? Number(editingIdInput.value) : -1;
+
+      const duplicateIndex = mappings.findIndex((m, idx) => m.orgIdentifier === orgIdentifier && idx !== editingIndex);
+      if (duplicateIndex !== -1) {
+        alert('There is already a mapping for this org identifier. Edit the existing mapping instead.');
+        return;
+      }
+
+      const mappingData = {
+        orgIdentifier,
+        clientName,
+        teamName,
+        color,
+        active
+      };
+
+      if (editingIndex >= 0 && editingIndex < mappings.length) {
+        mappings[editingIndex] = mappingData;
+      } else {
+        mappings.push(mappingData);
+      }
+      saveOrgTeamMappings(mappings);
+      renderMappings();
+      resetForm();
+    });
+  }
+
+  renderMappings();
+
+  requestAnimationFrame(() => {
+    backdrop.classList.add('visible');
+  });
+}
+
+// eslint-disable-next-line no-unused-vars
 function handleDeleteAll() {
   // Close menu
   const userMenu = document.getElementById('userMenu');
@@ -484,6 +1521,7 @@ function handleDeleteAll() {
   confirmDeleteAll();
 }
 
+// eslint-disable-next-line no-unused-vars
 async function handleLogout() {
   // Close menu
   const userMenu = document.getElementById('userMenu');
@@ -579,7 +1617,7 @@ function startLastUpdatedInterval() {
 
 let currentOffset = 0;
 let limit = 50;
-let totalEvents = 0;
+let _totalEvents = 0;
 let hasMoreEvents = true;
 let isLoadingMore = false;
 let allLoadedEvents = []; // Accumulative array of all loaded events
@@ -594,7 +1632,7 @@ let lastSelectedSessionId = null; // Track last selected session for shift-click
 let searchQuery = '';
 let sortOrder = 'DESC';
 let startTime = performance.now();
-const NOTIFICATION_REFRESH_INTERVAL = 5 * 60 * 1000;
+const _NOTIFICATION_REFRESH_INTERVAL = 5 * 60 * 1000;
 let notificationModeEnabled = false;
 let notificationRefreshIntervalId = null;
 let autoRefreshIntervalId = null;
@@ -613,7 +1651,7 @@ let hoverPreviewState = null;
 let isHoverPreviewActive = false;
 let hoverTimeoutId = null;
 const SESSION_ACTIVITY_SLOT_MINUTES = 10;
-const SESSION_ACTIVITY_MARGIN_MINUTES = 30;
+const _SESSION_ACTIVITY_MARGIN_MINUTES = 30;
 const SESSION_SERIES_COLORS = [
   '#53cf98',
   '#38bdf8',
@@ -670,6 +1708,7 @@ function updateServerStatsVisibility() {
   }
 }
 
+// eslint-disable-next-line no-unused-vars
 function toggleTheme() {
   const isDark = document.documentElement.classList.contains('dark');
   const newTheme = isDark ? 'light' : 'dark';
@@ -678,6 +1717,7 @@ function toggleTheme() {
   refreshSessionActivityTheme();
 }
 
+// eslint-disable-next-line no-unused-vars
 function clearLocalData() {
   openConfirmModal({
     title: 'Clear local data',
@@ -811,7 +1851,7 @@ function setupLevelFilters() {
       }
     }
 
-    btn.addEventListener('click', (e) => {
+    btn.addEventListener('click', (_e) => {
       btn.classList.toggle('active');
       updateButtonState();
       currentOffset = 0;
@@ -1720,6 +2760,7 @@ function formatChartTimeLabel(dateObj) {
   return `${padNumber(dateObj.getHours())}:${padNumber(dateObj.getMinutes())}`;
 }
 
+// eslint-disable-next-line no-unused-vars
 function navigateToPreviousDay() {
   if (!lastSessionActivityEvents || lastSessionActivityEvents.length === 0) {
     return;
@@ -1734,6 +2775,7 @@ function navigateToPreviousDay() {
   renderSessionActivityChart(lastSessionActivityEvents, { sessionId: selectedSession });
 }
 
+// eslint-disable-next-line no-unused-vars
 function navigateToNextDay() {
   if (!lastSessionActivityEvents || lastSessionActivityEvents.length === 0) {
     return;
@@ -2460,7 +3502,7 @@ async function loadUsersList() {
 					</div>
 				`;
 
-      li.addEventListener('click', (e) => {
+      li.addEventListener('click', (_e) => {
         // Avoid flickering if clicking on the same user that's already selected
         if (selectedUserIds.has(user.user_id) && selectedUserIds.size === 1) {
           return;
@@ -2571,7 +3613,7 @@ async function loadEvents(options = {}) {
 
   startTime = performance.now();
   // const loadingMessageEl = document.getElementById('loadingMessage');
-  const logsTableEl = document.getElementById('logsTable');
+  const _logsTableEl = document.getElementById('logsTable');
   const errorMessageEl = document.getElementById('errorMessage');
   const emptyStateEl = document.getElementById('emptyState');
 
@@ -2951,7 +3993,7 @@ function getLevelClass(eventType) {
   return levelMap[eventType] || 'info';
 }
 
-function getLevelIcon(eventType) {
+function _getLevelIcon(eventType) {
   const iconMap = {
     'tool_call': '🐛',
     'session_start': 'ℹ️',
@@ -3038,7 +4080,7 @@ function formatDate(dateString) {
   return `${day}/${month}/${year} ${hours}:${minutes}`;
 }
 
-function formatSize(bytes) {
+function _formatSize(bytes) {
   if (bytes < 1024) return bytes + ' B';
   if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
   return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
@@ -3062,6 +4104,7 @@ function handleScroll() {
   }
 }
 
+// eslint-disable-next-line no-unused-vars
 async function refreshLogs(event) {
   if (event?.preventDefault) {
     event.preventDefault();
@@ -3154,6 +4197,7 @@ async function deleteAllEvents() {
   }
 }
 
+// eslint-disable-next-line no-unused-vars
 function toggleNotificationMode() {
   if (notificationModeEnabled) {
     disableNotificationMode();
@@ -3264,7 +4308,7 @@ function clearAutoRefreshInterval() {
   }
 }
 
-function handleNotificationState(events, triggeredByNotification) {
+function handleNotificationState(events, _triggeredByNotification) {
   if (!Array.isArray(events) || events.length === 0) {
     return;
   }
@@ -3402,7 +4446,7 @@ if (sortBtnEl && sortIconEl) {
   // Initialize icon
   updateSortIcon();
 
-  sortBtnEl.addEventListener('click', (e) => {
+  sortBtnEl.addEventListener('click', (_e) => {
     // Toggle sort order
     sortOrder = sortOrder === 'DESC' ? 'ASC' : 'DESC';
     currentOffset = 0;
@@ -3692,6 +4736,7 @@ document.addEventListener('click', (e) => {
   }
 });
 
+// eslint-disable-next-line no-unused-vars
 function toggleActionsDropdown(e, eventId) {
   e.stopPropagation();
   const dropdown = document.getElementById(`dropdown-${eventId}`);
@@ -3752,6 +4797,7 @@ function toggleActionsDropdown(e, eventId) {
   }
 }
 
+// eslint-disable-next-line no-unused-vars
 function toggleSessionActionsDropdown(e, sessionId) {
   e.stopPropagation();
   const dropdown = document.getElementById(`session-dropdown-${sessionId}`);
@@ -3809,6 +4855,7 @@ function toggleSessionActionsDropdown(e, sessionId) {
   }
 }
 
+// eslint-disable-next-line no-unused-vars
 async function copyEventPayload(eventId) {
   try {
     // Get event data from the DOM element (already loaded, no API call needed)
@@ -3868,6 +4915,7 @@ async function copyEventPayload(eventId) {
   }
 }
 
+// eslint-disable-next-line no-unused-vars
 function confirmDeleteEvent(eventId) {
   openConfirmModal({
     title: 'Delete event',
@@ -3891,7 +4939,7 @@ async function deleteEvent(eventId) {
     const validResponse = await handleApiResponse(response);
     if (!validResponse) return;
 
-    const data = await validResponse.json();
+    const _data = await validResponse.json();
 
     // Close dropdown
     closeAllDropdowns();
@@ -4128,6 +5176,7 @@ function updateDeleteSelectedButton() {
   }
 }
 
+// eslint-disable-next-line no-unused-vars
 function confirmDeleteSession(sessionId) {
   openConfirmModal({
     title: 'Delete session events',
@@ -4142,6 +5191,7 @@ function confirmDeleteSession(sessionId) {
   });
 }
 
+// eslint-disable-next-line no-unused-vars
 function confirmDeleteSelectedSessions() {
   const count = selectedSessionsForDeletion.size;
   if (count === 0) {
@@ -4169,7 +5219,7 @@ async function deleteSession(sessionId) {
     const validResponse = await handleApiResponse(response);
     if (!validResponse) return;
 
-    const data = await validResponse.json();
+    const _data = await validResponse.json();
 
     // Close dropdown
     closeAllDropdowns();
@@ -4549,7 +5599,7 @@ window.toggleUserFilterDropdown = function(event) {
 // Close user filter dropdown when clicking outside
 document.addEventListener('click', function(event) {
   const dropdown = document.getElementById('userFilterDropdown');
-  const dropdownBtn = document.getElementById('userFilterDropdownBtn');
+  const _dropdownBtn = document.getElementById('userFilterDropdownBtn');
   const dropdownContainer = event.target.closest('.user-filter-dropdown-container');
 
   if (dropdown && !dropdown.classList.contains('hidden')) {
@@ -4656,7 +5706,7 @@ initializeApp();
   let currentHoveredButton = null;
   let hasEnteredFromOutside = false;
 
-  iconButtonsGroup.addEventListener('mouseenter', (e) => {
+  iconButtonsGroup.addEventListener('mouseenter', (_e) => {
     isInsideGroup = true;
     hasEnteredFromOutside = true;
     iconButtonsGroup.classList.add('no-transition');
@@ -4675,7 +5725,7 @@ initializeApp();
 
   const buttons = iconButtonsGroup.querySelectorAll('.icon-btn');
   buttons.forEach((button, index) => {
-    button.addEventListener('mouseenter', (e) => {
+    button.addEventListener('mouseenter', (_e) => {
       const wasFromOutside = currentHoveredButton === null || hasEnteredFromOutside;
 
       if (currentHoveredButton !== null && currentHoveredButton !== index && !wasFromOutside) {
@@ -4713,6 +5763,7 @@ initializeApp();
 })();
 
 // Mobile sidebar toggle functionality
+// eslint-disable-next-line no-unused-vars
 function toggleMobileSidebar() {
   const sidebar = document.querySelector('.sidebar');
   const overlay = document.getElementById('mobileSidebarOverlay');

@@ -3,6 +3,15 @@ const js = require('@eslint/js');
 module.exports = [
   js.configs.recommended,
   {
+    ignores: [
+      'node_modules/**',
+      'dist/**',
+      'public/css/output.css',
+      'public/vendor/**',
+      '**/*.min.js'
+    ]
+  },
+  {
     languageOptions: {
       ecmaVersion: 'latest',
       sourceType: 'commonjs',
@@ -30,7 +39,21 @@ module.exports = [
         Event: 'readonly',
         CustomEvent: 'readonly',
         URL: 'readonly',
-        URLSearchParams: 'readonly'
+        URLSearchParams: 'readonly',
+        alert: 'readonly',
+        requestAnimationFrame: 'readonly',
+        cancelAnimationFrame: 'readonly',
+        performance: 'readonly',
+        MutationObserver: 'readonly',
+        Notification: 'readonly',
+        echarts: 'readonly',
+        Image: 'readonly',
+        WebKitCSSMatrix: 'readonly',
+        self: 'readonly',
+        wx: 'readonly',
+        define: 'readonly',
+        AbortController: 'readonly',
+        AbortSignal: 'readonly'
       }
     },
     rules: {
@@ -38,16 +61,16 @@ module.exports = [
       'linebreak-style': ['error', 'unix'],
       'quotes': ['error', 'single'],
       'semi': ['error', 'always'],
-      'no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
-      'no-console': 'off'
-    },
-    ignores: [
-      'node_modules/**',
-      'dist/**',
-      'public/css/output.css',
-      'public/vendor/**',
-      '**/*.min.js'
-    ]
+      'no-unused-vars': ['warn', {
+        argsIgnorePattern: '^_',
+        varsIgnorePattern: '^_',
+        caughtErrorsIgnorePattern: '^_'
+      }],
+      'no-console': 'off',
+      'no-prototype-builtins': 'off',
+      'no-fallthrough': 'warn',
+      'no-useless-escape': 'warn'
+    }
   }
 ];
 

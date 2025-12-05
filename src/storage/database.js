@@ -11,14 +11,14 @@ const path = require('path');
 
 // Database configuration constants
 const DEFAULT_MAX_DB_SIZE = 1024 * 1024 * 1024; // 1 GB in bytes
-const VALID_ROLES = ['basic', 'advanced'];
+const VALID_ROLES = ['basic', 'advanced', 'administrator'];
 
 let db = null;
 let dbType = process.env.DB_TYPE || 'sqlite';
 
 function normalizeRole(role) {
   const value = typeof role === 'string' ? role.toLowerCase() : '';
-  return VALID_ROLES.includes(value) ? value : 'advanced';
+  return VALID_ROLES.includes(value) ? value : 'basic';
 }
 
 /**
@@ -57,7 +57,7 @@ async function init() {
 				id INTEGER PRIMARY KEY AUTOINCREMENT,
 				username TEXT NOT NULL UNIQUE,
 				password_hash TEXT NOT NULL,
-				role TEXT NOT NULL DEFAULT 'advanced',
+				role TEXT NOT NULL DEFAULT 'basic',
 				created_at TEXT DEFAULT CURRENT_TIMESTAMP,
 				last_login TEXT
 			);
@@ -108,7 +108,7 @@ async function init() {
 				id SERIAL PRIMARY KEY,
 				username TEXT NOT NULL UNIQUE,
 				password_hash TEXT NOT NULL,
-				role TEXT NOT NULL DEFAULT 'advanced',
+				role TEXT NOT NULL DEFAULT 'basic',
 				created_at TIMESTAMPTZ DEFAULT NOW(),
 				last_login TIMESTAMPTZ
 			);
@@ -606,7 +606,6 @@ async function getEvents(options = {}) {
     sessionId,
     startDate,
     endDate,
-    userIds,
     orderBy = 'created_at',
     order = 'DESC'
   } = options;
@@ -857,7 +856,7 @@ async function getSessions(options = {}) {
           if (data) {
             user_name = data.userName || data.user_name || (data.user && data.user.name) || null;
           }
-        } catch (e) {
+        } catch (_e) {
           // If parsing fails, ignore and use user_id
         }
       }
@@ -943,7 +942,7 @@ async function getSessions(options = {}) {
           if (data) {
             user_name = data.userName || data.user_name || (data.user && data.user.name) || null;
           }
-        } catch (e) {
+        } catch (_e) {
           // If parsing fails, ignore and use user_id
         }
       }
@@ -1150,13 +1149,6 @@ async function getDailyStatsByEventType(days = 30) {
 			WHERE timestamp >= ? AND event = 'session_start'
 		`).all(startDateISO);
 
-    // Get all session_end events
-    const sessionEnds = db.prepare(`
-			SELECT DISTINCT session_id
-			FROM telemetry_events
-			WHERE timestamp >= ? AND event = 'session_end'
-		`).all(startDateISO);
-
     // Count all session_starts by date (regardless of whether they have an end)
     const startSessionsMap = new Map();
     sessionStarts.forEach(row => {
@@ -1224,13 +1216,6 @@ async function getDailyStatsByEventType(days = 30) {
 				id
 			FROM telemetry_events
 			WHERE timestamp >= $1 AND event = 'session_start'
-		`, [startDateISO]);
-
-    // Get all session_end events
-    const sessionEndsResult = await db.query(`
-			SELECT DISTINCT session_id
-			FROM telemetry_events
-			WHERE timestamp >= $1 AND event = 'session_end'
 		`, [startDateISO]);
 
     // Count all session_starts by date (regardless of whether they have an end)
@@ -1388,7 +1373,7 @@ async function getUserByUsername(username) {
  * @param {string} passwordHash - Bcrypt password hash
  * @returns {Promise<object>} Created user object
  */
-async function createUser(username, passwordHash, role = 'advanced') {
+async function createUser(username, passwordHash, role = 'basic') {
   if (!db) {
     throw new Error('Database not initialized. Call init() first.');
   }
@@ -1625,7 +1610,7 @@ async function getUniqueUserIds() {
     if (row.data) {
       try {
         parsedData = typeof row.data === 'string' ? JSON.parse(row.data) : row.data;
-      } catch (error) {
+      } catch (_error) {
         parsedData = null;
       }
     }
@@ -1677,10 +1662,10 @@ async function ensureUserRoleColumn() {
       const columns = db.prepare('PRAGMA table_info(users)').all();
       const hasRoleColumn = columns.some(column => column.name === 'role');
       if (!hasRoleColumn) {
-        db.exec('ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT \'advanced\'');
+        db.exec('ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT \'basic\'');
       }
     } else if (dbType === 'postgresql') {
-      await db.query('ALTER TABLE IF EXISTS users ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT \'advanced\'');
+      await db.query('ALTER TABLE IF EXISTS users ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT \'basic\'');
     }
   } catch (error) {
     console.error('Error ensuring user role column:', error);

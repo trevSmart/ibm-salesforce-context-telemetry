@@ -1,3 +1,6 @@
+// Load environment variables from .env file
+require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
 const Ajv = require('ajv');
@@ -47,7 +50,7 @@ if (isDevelopment) {
     }));
 
     console.log('🔄 Live reload enabled on port 35729');
-  } catch (error) {
+  } catch (_error) {
     // Live reload dependencies not installed, continue without it
     console.log('⚠️  Live reload not available (install dev dependencies: npm install)');
   }
@@ -247,7 +250,7 @@ app.post('/login', auth.requireGuest, async (req, res) => {
     const authResult = await auth.authenticate(username, password);
 
     if (authResult && authResult.success) {
-      const userInfo = authResult.user || { username, role: 'advanced' };
+      const userInfo = authResult.user || { username, role: 'basic' };
       req.session.authenticated = true;
       req.session.username = userInfo.username;
       req.session.role = userInfo.role;
@@ -322,7 +325,7 @@ app.get('/api/auth/status', (req, res) => {
 });
 
 // User management API endpoints
-app.get('/api/users', auth.requireAuth, auth.requireRole('advanced'), async (req, res) => {
+app.get('/api/users', auth.requireAuth, auth.requireRole('administrator'), async (req, res) => {
   try {
     const users = await db.getAllUsers();
     res.json({
@@ -338,7 +341,7 @@ app.get('/api/users', auth.requireAuth, auth.requireRole('advanced'), async (req
   }
 });
 
-app.post('/api/users', auth.requireAuth, auth.requireRole('advanced'), async (req, res) => {
+app.post('/api/users', auth.requireAuth, auth.requireRole('administrator'), async (req, res) => {
   try {
     const { username, password, role } = req.body;
 
@@ -362,7 +365,7 @@ app.post('/api/users', auth.requireAuth, auth.requireRole('advanced'), async (re
     const passwordHash = await auth.hashPassword(password);
 
     // Create user
-    const normalizedRole = role ? auth.normalizeRole(role) : 'advanced';
+    const normalizedRole = role ? auth.normalizeRole(role) : 'basic';
 
     const user = await db.createUser(username, passwordHash, normalizedRole);
 
@@ -385,7 +388,7 @@ app.post('/api/users', auth.requireAuth, auth.requireRole('advanced'), async (re
   }
 });
 
-app.delete('/api/users/:username', auth.requireAuth, auth.requireRole('advanced'), async (req, res) => {
+app.delete('/api/users/:username', auth.requireAuth, auth.requireRole('administrator'), async (req, res) => {
   try {
     const { username } = req.params;
 
@@ -418,7 +421,7 @@ app.delete('/api/users/:username', auth.requireAuth, auth.requireRole('advanced'
   }
 });
 
-app.put('/api/users/:username/password', auth.requireAuth, auth.requireRole('advanced'), async (req, res) => {
+app.put('/api/users/:username/password', auth.requireAuth, auth.requireRole('administrator'), async (req, res) => {
   try {
     const { username } = req.params;
     const { password } = req.body;
@@ -455,7 +458,7 @@ app.put('/api/users/:username/password', auth.requireAuth, auth.requireRole('adv
   }
 });
 
-app.put('/api/users/:username/role', auth.requireAuth, auth.requireRole('advanced'), async (req, res) => {
+app.put('/api/users/:username/role', auth.requireAuth, auth.requireRole('administrator'), async (req, res) => {
   try {
     const { username } = req.params;
     const { role } = req.body;

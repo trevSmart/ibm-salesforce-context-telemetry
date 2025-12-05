@@ -1,177 +1,208 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>IBM Salesforce Context Telemetry</title>
-        <link rel="icon" type="image/svg+xml" sizes="any" href="/resources/favicon.svg">
-        <link rel="icon" type="image/png" sizes="32x32" href="/resources/favicon.png">
-        <link href="/css/output.css" rel="stylesheet">
-        <link rel="preconnect" href="https://fonts.googleapis.com">
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;300;400;500;600;700;800&display=swap" rel="stylesheet">
-        <link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
-        <link rel="stylesheet" href="/vendor/fontawesome/css/v4-shims.min.css">
-        <script>
-                // Apply theme immediately before page render to prevent flash
-                (function() {
-                        const savedTheme = localStorage.getItem('theme');
-                        const systemTheme = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-                        const theme = savedTheme || systemTheme;
-                        if (theme === 'dark') {
-                                document.documentElement.classList.add('dark');
-                        }
-                        // Don't make container visible here - wait for chart to render
-                        // The container will be made visible when chart animation completes
-                        // Fallback: if chart doesn't load within 5 seconds, show page anyway
-                        setTimeout(() => {
-                                const container = document.querySelector('.container');
-                                if (container) {
-                                        const computedStyle = window.getComputedStyle(container);
-                                        if (computedStyle.visibility === 'hidden' || computedStyle.opacity === '0') {
-                                                container.style.visibility = 'visible';
-                                                requestAnimationFrame(() => {
-                                                        container.style.opacity = '1';
-                                                });
-                                        }
-                                }
-                        }, 5000);
-                })();
-        </script>
-</head>
-<body class="index-page">
-        <div class="container">
-                <nav class="top-nav">
-                        <a href="/" class="top-nav-logo">
-                                <div class="top-nav-logo-icon">
-                                        <img src="/resources/custom30.png" alt="IBM SF CTXT TELEMETRY" class="top-nav-logo-img">
-                                </div>
-                                <span>TELEMETRY</span>
-                        </a>
-                        <div class="top-nav-links">
-                                <a href="/" class="top-nav-link active">Dashboard</a>
-                                <a href="/event-log" class="top-nav-link">Logs</a>
-                                <a href="/settings" class="top-nav-link">Settings</a>
-                        </div>
-                        <div class="top-nav-search">
-                                <input type="text" class="top-nav-search-input" placeholder="Search" id="dashboardSearchInput">
-                        </div>
-                        <div class="top-nav-actions">
-                                <button type="button" class="icon-btn" onclick="refreshDashboard(event)"><i class="fa fa-refresh"></i></button>
-                                <div class="user-menu-container" style="position: relative;">
-                                        <button class="icon-btn user-btn" id="userBtn" onclick="showUserMenu(event)"><i class="fa-solid fa-wrench"></i></button>
-                                        <div class="user-menu" id="userMenu"></div>
-                                </div>
-                                <button type="button" class="icon-btn"><i class="fa fa-user"></i></button>
-                        </div>
-                </nav>
-                <div class="container-content">
-                        <div style="display: grid; grid-template-columns: 2fr 1.2fr; gap: 24px; align-items: start;">
-                                <section class="chart-container">
-                                        <div class="chart-header" style="flex-direction: row; justify-content: space-between; align-items: center;">
-                                                <div>
-                                                        <h1 class="log-viewer-title" style="margin: 0 0 4px 0;">Income Tracker</h1>
-                                                        <p style="margin: 0;">Track changes in income over time and access detailed data on each trend.</p>
-                                                </div>
-                                                <label class="sr-only" for="timeRangeSelect">Select date range</label>
-                                                <select id="timeRangeSelect" class="time-range-select">
-                                                        <option value="7" selected>Last 7 days</option>
-                                                        <option value="15">Last 15 days</option>
-                                                        <option value="30">Last 30 days</option>
-                                                        <option value="90">Last 3 months</option>
-                                                </select>
-                                        </div>
-                                        <div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; margin-top: 16px;">
-                                                <div class="chart-summary">Sun<br><strong>+12</strong></div>
-                                                <div class="chart-summary">Mon<br><strong>+14</strong></div>
-                                                <div class="chart-summary">Tue<br><strong>+11</strong></div>
-                                                <div class="chart-summary">Wed<br><strong>+24</strong></div>
-                                                <div class="chart-summary">Thu<br><strong>+18</strong></div>
-                                                <div class="chart-summary">Fri<br><strong>+16</strong></div>
-                                                <div class="chart-summary">Sat<br><strong>+10</strong></div>
-                                        </div>
-                                        <div id="eventsChart" style="margin-top: 16px;"></div>
-                                </section>
-                                <section class="chart-container">
-                                        <div class="chart-header" style="flex-direction: row; justify-content: space-between; align-items: center;">
-                                                <div>
-                                                        <h2 style="margin: 0 0 4px 0;">Your Recent Projects</h2>
-                                                        <p style="margin: 0;">Search and review in-progress work.</p>
-                                                </div>
-                                        </div>
-                                        <div style="display: flex; gap: 8px; align-items: center; margin: 12px 0;">
-                                                <i class="fa fa-search" aria-hidden="true"></i>
-                                                <input type="text" placeholder="Enter your search request..." aria-label="Search projects" class="top-nav-search-input" style="width: 100%;">
-                                        </div>
-                                        <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 12px;">
-                                                <li>
-                                                        <strong>Web Development Project</strong><br>
-                                                        Remote • $50/hour • Germany • 32 Tasks
-                                                </li>
-                                                <li>
-                                                        <strong>Copyright Project</strong><br>
-                                                        Remote • $20/hour • Switzerland • 8 Tasks
-                                                </li>
-                                                <li>
-                                                        <strong>Web Design Project</strong><br>
-                                                        Remote • $25/hour • USA • 12 Tasks
-                                                </li>
-                                        </ul>
-                                </section>
-                        </div>
-                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 24px; margin-top: 24px;">
-                                <section class="chart-container">
-                                        <h2 style="margin: 0 0 8px 0;">Let's Connect</h2>
-                                        <p style="margin: 0 0 12px 0;">Stay in touch with your collaborators.</p>
-                                        <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px;">
-                                                <li><strong>Randy Curtis</strong> — Product Designer</li>
-                                                <li><strong>Georgia Smith</strong> — Motion Designer</li>
-                                                <li><strong>Jane Flows</strong> — Architect</li>
-                                        </ul>
-                                </section>
-                                <section class="chart-container">
-                                        <h2 style="margin: 0 0 8px 0;">Premium Account</h2>
-                                        <p style="margin: 0 0 12px 0;">Try our limited features in your free month.</p>
-                                        <ul style="list-style: disc; padding-left: 20px; margin: 0 0 12px 0; display: flex; flex-direction: column; gap: 8px;">
-                                                <li>Increase your sales with premium tools.</li>
-                                                <li>Establish contacts with clients and get priority support.</li>
-                                        </ul>
-                                        <button type="button" class="icon-btn">Learn more</button>
-                                </section>
-                                <section class="chart-container">
-                                        <h2 style="margin: 0 0 8px 0;">Proposal Tracker</h2>
-                                        <p style="margin: 0 0 12px 0;">Keep track of your pitches.</p>
-                                        <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px;">
-                                                <li><input type="checkbox" aria-label="Design project submitted" checked> Design Project — Last month</li>
-                                                <li><input type="checkbox" aria-label="Video project submitted"> Video Project — Last week</li>
-                                                <li>Copyright Project — 72% complete</li>
-                                                <li>Web Design Project — 33% complete</li>
-                                        </ul>
-                                </section>
-                        </div>
-                        <div class="dashboard-header">
-                                Server is running •
-                                <a href="/health">Health Check</a> •
-                                <a href="/api/events">API</a> •
-                                <a href="/schema">Schema</a>
-                        </div>
-                </div>
-        </div>
 
-        <script>
-                // Load ECharts asynchronously to avoid blocking initial render
-                (function() {
-                        const script = document.createElement('script');
-                        script.src = '/vendor/echarts/echarts.min.js';
-                        script.async = true;
-                        script.onload = function() {
-                                // Dispatch event when ECharts is loaded
-                                window.dispatchEvent(new CustomEvent('echartsLoaded'));
-                        };
-                        document.head.appendChild(script);
-                })();
-        </script>
-        <script src="/js/user-menu.js"></script>
-        <script src="/js/index.js"></script>
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>IBM Salesforce Context Telemetry</title>
+	<link rel="icon" type="image/svg+xml" sizes="any" href="/resources/favicon.svg">
+	<link rel="icon" type="image/png" sizes="32x32" href="/resources/favicon.png">
+	<link href="/css/output.css" rel="stylesheet">
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;300;400;500;600;700;800&display=swap" rel="stylesheet">
+	<link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
+	<link rel="stylesheet" href="/vendor/fontawesome/css/v4-shims.min.css">
+	<script>
+		// Apply theme immediately before page render to prevent flash
+		(function () {
+			const savedTheme = localStorage.getItem('theme');
+			const systemTheme = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+			const theme = savedTheme || systemTheme;
+			if (theme === 'dark') {
+				document.documentElement.classList.add('dark');
+			}
+			// Don't make container visible here - wait for chart to render
+			// The container will be made visible when chart animation completes
+			// Fallback: if chart doesn't load within 5 seconds, show page anyway
+			setTimeout(() => {
+				const container = document.querySelector('.container');
+				if (container) {
+					const computedStyle = window.getComputedStyle(container);
+					if (computedStyle.visibility === 'hidden' || computedStyle.opacity === '0') {
+						container.style.visibility = 'visible';
+						requestAnimationFrame(() => {
+							container.style.opacity = '1';
+						});
+					}
+				}
+			}, 5000);
+		})();
+	</script>
+</head>
+
+<body class="index-page">
+	<div class="container">
+		<nav class="top-nav">
+			<a href="/" class="top-nav-logo">
+				<div class="top-nav-logo-icon">
+					<img src="/resources/custom30.png" alt="IBM SF CTXT TELEMETRY" class="top-nav-logo-img">
+				</div>
+				<span>TELEMETRY</span>
+			</a>
+			<div class="top-nav-links">
+				<a href="/" class="top-nav-link active">Dashboard</a>
+				<a href="/event-log" class="top-nav-link">Logs</a>
+				<a href="#" class="top-nav-link" onclick="openSettingsModal(); return false;">Settings</a>
+			</div>
+			<div class="top-nav-search">
+				<input type="text" class="top-nav-search-input" placeholder="Search" id="dashboardSearchInput">
+			</div>
+			<div class="top-nav-actions">
+				<button type="button" class="icon-btn" onclick="refreshDashboard(event)"><i class="fa fa-refresh"></i></button>
+				<div class="user-menu-container" style="position: relative;">
+					<button class="icon-btn user-btn" id="userBtn" onclick="showUserMenu(event)"><i class="fa-solid fa-wrench"></i></button>
+					<div class="user-menu" id="userMenu"></div>
+				</div>
+				<button type="button" class="icon-btn"><i class="fa fa-user"></i></button>
+			</div>
+		</nav>
+		<div class="container-content">
+			<div class="dashboard-row-top">
+				<div style="display: grid; grid-template-columns: 2fr 1.2fr; gap: 24px; align-items: stretch; height: 100%;">
+					<section class="chart-container">
+						<div class="chart-header" style="flex-direction: row; justify-content: space-between; align-items: center;">
+							<div>
+								<h1 class="log-viewer-title" style="margin: 0 0 4px 0;">Dashboard</h1>
+							</div>
+							<label class="sr-only" for="timeRangeSelect">Select date range</label>
+							<select id="timeRangeSelect" class="time-range-select">
+								<option value="7" selected>Week</option>
+								<option value="15">2 weeks</option>
+								<option value="30">Month</option>
+								<option value="90">6 months</option>
+							</select>
+						</div>
+						<div id="eventsChart"></div>
+					</section>
+					<section class="chart-container" style="background: transparent; box-shadow: none; text-align: left;">
+						<div class="chart-header" style="flex-direction: row; justify-content: space-between; align-items: center;">
+							<div>
+								<h2 style="margin: 0 0 4px 0;">Your Recent Projects</h2>
+							</div>
+						</div>
+						<ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 12px;">
+							<li>
+								<strong>Web Development Project</strong><br>
+								Remote · $50/hour · Germany · 32 Tasks
+							</li>
+							<li>
+								<strong>Copyright Project</strong><br>
+								Remote · $20/hour · Switzerland · 8 Tasks
+							</li>
+							<li>
+								<strong>Web Design Project</strong><br>
+								Remote · $25/hour · USA · 12 Tasks
+							</li>
+						</ul>
+					</section>
+				</div>
+			</div>
+			<div class="dashboard-row-bottom">
+				<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 24px; flex: 1;">
+					<section class="chart-container" style="background: transparent; box-shadow: none; text-align: left;">
+						<h2 style="margin: 0 0 8px 0;">Top users</h2>
+						<p style="margin: 0 0 12px 0;">Stay in touch with your collaborators.</p>
+						<ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0;">
+							<li style="display: flex; align-items: center; gap: 10px; padding: 10px 4px; border-bottom: 1px solid #e1e6f0;">
+								<span style="width: 32px; aspect-ratio: 1 / 1; border-radius: 50%; background: #c4d1de; display: inline-flex; align-items: center; justify-content: center; color: #2f3b52; font-weight: 700; font-size: 12px;">R</span>
+								<div style="display: flex; flex-direction: column; gap: 3px; color: #3a485f; flex: 1;">
+									<div style="display: flex; align-items: center; gap: 6px;">
+										<strong style="font-size: 12px;">Randy Curtis</strong>
+										<span style="background: #f77373; color: #fff; font-size: 9px; padding: 2px 6px; border-radius: 999px; font-weight: 700;">Senior</span>
+									</div>
+									<div style="font-size: 11.5px; color: #5b6477;">Product Designer</div>
+								</div>
+								<button type="button" aria-label="Open user" style="border: 1px solid #e1e6f0; background: white; width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: #3a485f; cursor: pointer;">
+									<i class="fa-solid fa-chevron-right" aria-hidden="true" style="font-size: 11px;"></i>
+								</button>
+							</li>
+							<li style="display: flex; align-items: center; gap: 10px; padding: 10px 4px; border-bottom: 1px solid #e1e6f0;">
+								<span style="width: 32px; aspect-ratio: 1 / 1; border-radius: 50%; background: #c4d1de; display: inline-flex; align-items: center; justify-content: center; color: #2f3b52; font-weight: 700; font-size: 12px;">G</span>
+								<div style="display: flex; flex-direction: column; gap: 3px; color: #3a485f; flex: 1;">
+									<div style="display: flex; align-items: center; gap: 6px;">
+										<strong style="font-size: 12px;">Georgia Smith</strong>
+										<span style="background: #2c95cf; color: #fff; font-size: 9px; padding: 2px 6px; border-radius: 999px; font-weight: 700;">Senior</span>
+									</div>
+									<div style="font-size: 11.5px; color: #5b6477;">Motion Designer</div>
+								</div>
+								<button type="button" aria-label="Open user" style="border: 1px solid #e1e6f0; background: white; width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: #3a485f; cursor: pointer;">
+									<i class="fa-solid fa-chevron-right" aria-hidden="true" style="font-size: 11px;"></i>
+								</button>
+							</li>
+							<li style="display: flex; align-items: center; gap: 10px; padding: 10px 4px;">
+								<span style="width: 32px; aspect-ratio: 1 / 1; border-radius: 50%; background: #c4d1de; display: inline-flex; align-items: center; justify-content: center; color: #2f3b52; font-weight: 700; font-size: 12px;">J</span>
+								<div style="display: flex; flex-direction: column; gap: 3px; color: #3a485f; flex: 1;">
+									<div style="display: flex; align-items: center; gap: 6px;">
+										<strong style="font-size: 12px;">Jane Flows</strong>
+										<span style="background: #f77373; color: #fff; font-size: 9px; padding: 2px 6px; border-radius: 999px; font-weight: 700;">Senior</span>
+									</div>
+									<div style="font-size: 11.5px; color: #5b6477;">Architect</div>
+								</div>
+								<button type="button" aria-label="Open user" style="border: 1px solid #e1e6f0; background: white; width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: #3a485f; cursor: pointer;">
+									<i class="fa-solid fa-chevron-right" aria-hidden="true" style="font-size: 11px;"></i>
+								</button>
+							</li>
+						</ul>
+					</section>
+					<section class="chart-container" style="background: #d5dbe4; text-align: left;">
+						<h2 style="margin: 0 0 8px 0;">Premium Account</h2>
+						<p style="margin: 0 0 12px 0;">Try our limited features in your free month.</p>
+						<ul style="list-style: disc; padding-left: 20px; margin: 0 0 12px 0; display: flex; flex-direction: column; gap: 8px;">
+							<li>Increase your sales with premium tools.</li>
+							<li>Establish contacts with clients and get priority support.</li>
+						</ul>
+						<button type="button" class="icon-btn" style="width: 100%; font-size: 12.5px; border-radius: 22px; display: flex; justify-content: space-between; align-items: center; text-align: left; padding: 8px 14px; transition: background-color 0.2s ease, color 0.2s ease;">
+							<span>Learn more</span>
+							<i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+						</button>
+					</section>
+					<section class="chart-container" style="text-align: left;">
+						<h2 style="margin: 0 0 8px 0;">Proposal Tracker</h2>
+						<p style="margin: 0 0 12px 0;">Keep track of your pitches.</p>
+						<ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px;">
+							<li><input type="checkbox" aria-label="Design project submitted" checked> Design Project · Last month</li>
+							<li><input type="checkbox" aria-label="Video project submitted"> Video Project · Last week</li>
+							<li>Copyright Project · 72% complete</li>
+							<li>Web Design Project · 33% complete</li>
+						</ul>
+					</section>
+				</div>
+			</div>
+			<div class="dashboard-footer">
+				Server is running ·
+				<a href="/health">Health Check</a> ·
+				<a href="/api/events">API</a> ·
+				<a href="/schema">Schema</a>
+			</div>
+		</div>
+	</div>
+
+	<script>
+		// Load ECharts asynchronously to avoid blocking initial render
+		(function () {
+			const script = document.createElement('script');
+			script.src = '/vendor/echarts/echarts.min.js';
+			script.async = true;
+			script.onload = function () {
+				// Dispatch event when ECharts is loaded
+				window.dispatchEvent(new CustomEvent('echartsLoaded'));
+			};
+			document.head.appendChild(script);
+		})();
+	</script>
+	<script src="/js/user-menu.js"></script>
+	<script src="/js/index.js"></script>
 </body>
+
 </html>

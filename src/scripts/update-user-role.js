@@ -15,7 +15,7 @@ async function updateUserRole() {
 
   if (!username || !roleInput) {
     console.error('Usage: node src/scripts/update-user-role.js <username> <role>');
-    console.error('Roles: basic, advanced');
+    console.error('Roles: basic, advanced, administrator');
     process.exit(1);
   }
 

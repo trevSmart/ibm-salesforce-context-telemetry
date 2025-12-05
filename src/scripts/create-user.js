@@ -33,7 +33,7 @@ async function createUser() {
 
     // Hash password
     const passwordHash = await auth.hashPassword(password);
-    const normalizedRole = roleInput ? auth.normalizeRole(roleInput) : 'advanced';
+    const normalizedRole = roleInput ? auth.normalizeRole(roleInput) : 'basic';
 
     // Create user
     const user = await db.createUser(username, passwordHash, normalizedRole);
