@@ -134,7 +134,7 @@
 
 		.login-header h1 {
 			font-size: 20px;
-			font-weight: 600;
+			font-weight: 400;
 			color: #3f3f46;
 			margin-bottom: 8px;
 			line-height: 1.2;
@@ -228,8 +228,8 @@
 		}
 
 		.form-group input:focus {
-			border-color: #8c5fd6;
-			box-shadow: 0 0 0 1px rgba(140, 95, 214, 0.3);
+			border-color: #71717a;
+			box-shadow: 0 0 0 1px rgba(113, 113, 122, 0.3);
 			background: #ffffff;
 		}
 
@@ -271,8 +271,8 @@
 			padding: 12px 32px;
 			font-size: 15px;
 			font-weight: 600;
-			color: white;
-			background: #8c5fd6;
+			color: #3f3f46;
+			background: #e4e4e7;
 			border: none;
 			border-radius: 24px;
 			cursor: pointer;
@@ -281,9 +281,9 @@
 		}
 
 		.login-button:hover {
-			background: #7a4fc4;
+			background: #d4d4d8;
 			transform: translateY(-1px);
-			box-shadow: 0 4px 12px rgba(140, 95, 214, 0.3);
+			box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 		}
 
 		.login-button:active {
@@ -295,6 +295,16 @@
 			cursor: not-allowed;
 			transform: none;
 			box-shadow: none;
+		}
+
+		html.dark .login-button {
+			color: #e4e4e7;
+			background: #3f3f46;
+		}
+
+		html.dark .login-button:hover {
+			background: #52525b;
+			box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 		}
 
 		.login-footer {
