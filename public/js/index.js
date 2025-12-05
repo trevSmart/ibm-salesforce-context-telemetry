@@ -1226,9 +1226,13 @@ async function openSettingsModal() {
                    · Status: ${status}
 								</div>
 							</div>
-              <div class="confirm-modal-actions" style="gap: 6px;">
-                <button type="button" class="confirm-modal-btn" data-action="edit" data-index="${index}">Edit</button>
-                <button type="button" class="confirm-modal-btn confirm-modal-btn-destructive" data-action="delete" data-index="${index}">Delete</button>
+              <div class="confirm-modal-actions org-team-actions" style="gap: 6px;">
+                <button type="button" class="icon-btn org-team-action-btn org-team-action-btn-edit" data-action="edit" data-index="${index}" aria-label="Edit mapping">
+                  <i class="fas fa-pen"></i>
+                </button>
+                <button type="button" class="icon-btn org-team-action-btn org-team-action-btn-delete" data-action="delete" data-index="${index}" aria-label="Delete mapping">
+                  <i class="fas fa-trash"></i>
+                </button>
 							</div>
             </div>
 				`;
@@ -1898,9 +1902,13 @@ function openOrgTeamMappingModal() {
 								 · Status: ${status}
 							</div>
 						</div>
-						<div class="confirm-modal-actions" style="gap: 6px;">
-							<button type="button" class="confirm-modal-btn" data-action="edit" data-index="${index}">Edit</button>
-							<button type="button" class="confirm-modal-btn confirm-modal-btn-destructive" data-action="delete" data-index="${index}">Delete</button>
+						<div class="confirm-modal-actions org-team-actions" style="gap: 6px;">
+							<button type="button" class="icon-btn org-team-action-btn org-team-action-btn-edit" data-action="edit" data-index="${index}" aria-label="Edit mapping">
+								<i class="fas fa-pen"></i>
+							</button>
+							<button type="button" class="icon-btn org-team-action-btn org-team-action-btn-delete" data-action="delete" data-index="${index}" aria-label="Delete mapping">
+								<i class="fas fa-trash"></i>
+							</button>
 						</div>
 					</div>
 				`;
