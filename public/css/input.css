@@ -669,14 +669,14 @@
   }
 
   .dashboard-row-top {
-    flex: 1 1 0%;
+    flex: 63 0 0;
     display: flex;
     flex-direction: column;
     min-height: 0;
   }
 
   .dashboard-row-bottom {
-    flex: 1 1 0%;
+    flex: 37 0 0;
     display: flex;
     flex-direction: column;
     min-height: 0;
@@ -3357,10 +3357,12 @@
     .dashboard-row-top {
       flex: 0 0 auto;
       min-height: 300px;
+      height: auto;
     }
 
     .dashboard-row-bottom {
       flex: 1;
+      height: auto;
     }
 
 
@@ -3630,6 +3632,11 @@
 
     .dashboard-row-top {
       min-height: 200px;
+      height: auto;
+    }
+
+    .dashboard-row-bottom {
+      height: auto;
     }
 
     .dashboard-card {

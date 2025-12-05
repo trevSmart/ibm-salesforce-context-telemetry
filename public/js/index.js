@@ -1,6 +1,22 @@
 // @ts-nocheck
-// Check authentication status on page load
-(async () => {
+// Initialize dashboard; reused on first load and on soft navigation
+async function initializeDashboardPage({ resetState = false } = {}) {
+  // Reset chart state when coming back from another page
+  if (resetState && chart) {
+    if (typeof chart.dispose === 'function') {
+      chart.dispose();
+    }
+    chart = null;
+  }
+  if (resetState) {
+    isInitialChartLoad = true;
+    currentDays = 7;
+    const timeRangeSelect = document.getElementById('timeRangeSelect');
+    if (timeRangeSelect) {
+      timeRangeSelect.value = String(currentDays);
+    }
+  }
+
   try {
     const response = await fetch('/api/auth/status', {
       credentials: 'include' // Ensure cookies are sent
@@ -31,21 +47,25 @@
     }
 
     // Only load chart data if authenticated
-    loadChartData();
+    await loadChartData();
 
-    // Set up time range selector
+    // Set up time range selector (guard against duplicate listeners)
     const timeRangeSelect = document.getElementById('timeRangeSelect');
-    if (timeRangeSelect) {
+    if (timeRangeSelect && timeRangeSelect.dataset.dashboardInitialized !== 'true') {
       timeRangeSelect.addEventListener('change', (e) => {
         const days = parseInt(e.target.value);
         loadChartData(days);
       });
+      timeRangeSelect.dataset.dashboardInitialized = 'true';
     }
   } catch (error) {
     console.error('Auth check failed:', error);
     window.location.href = '/login';
   }
-})();
+}
+
+// Initial bootstrap
+void initializeDashboardPage();
 
 // Helper function to escape HTML
 function escapeHtml(str) {
@@ -1948,16 +1968,16 @@ async function loadChartData(days = currentDays) {
 
     if (hasBreakdown) {
       const startSessionsData = data.map(item => {
-        const value = Number(item.startSessionsWithoutEnd) || 0;
-        return value === 0 ? null : value; // hide zero bars
+        const value = Number(item.startSessionsWithoutEnd);
+        return Number.isFinite(value) ? value : 0;
       });
       const toolEventsData = data.map(item => {
-        const value = Number(item.toolEvents) || 0;
-        return value === 0 ? null : value; // hide zero bars
+        const value = Number(item.toolEvents);
+        return Number.isFinite(value) ? value : 0;
       });
       const errorEventsData = data.map(item => {
-        const value = Number(item.errorEvents) || 0;
-        return value === 0 ? null : value; // hide zero bars
+        const value = Number(item.errorEvents);
+        return Number.isFinite(value) ? value : 0;
       });
 
       series = [
@@ -1978,8 +1998,8 @@ async function loadChartData(days = currentDays) {
             show: true,
             position: 'top',
             formatter: function(params) {
-              const value = Number(params.value) || 0;
-              return value === 0 ? '' : value;
+              const value = Number(params.value);
+              return Number.isFinite(value) ? value : 0;
             },
             fontSize: 9,
             color: '#ffffff',
@@ -2013,8 +2033,8 @@ async function loadChartData(days = currentDays) {
             show: true,
             position: 'top',
             formatter: function(params) {
-              const value = Number(params.value) || 0;
-              return value === 0 ? '' : value;
+              const value = Number(params.value);
+              return Number.isFinite(value) ? value : 0;
             },
             fontSize: 9,
             color: '#ffffff',
@@ -2048,8 +2068,8 @@ async function loadChartData(days = currentDays) {
             show: true,
             position: 'top',
             formatter: function(params) {
-              const value = Number(params.value) || 0;
-              return value === 0 ? '' : value;
+              const value = Number(params.value);
+              return Number.isFinite(value) ? value : 0;
             },
             fontSize: 9,
             color: '#ffffff',
@@ -2074,9 +2094,9 @@ async function loadChartData(days = currentDays) {
       ];
     } else {
       const totalEventsData = data.map(item => Number(item.count ?? item.total ?? 0));
-      const totalEventsDataWithNulls = totalEventsData.map(value => {
-        const num = Number(value) || 0;
-        return num === 0 ? null : num; // hide zero bars
+      const totalEventsDataWithZeroes = totalEventsData.map(value => {
+        const num = Number(value);
+        return Number.isFinite(num) ? num : 0;
       });
 
       series = [
@@ -2085,7 +2105,7 @@ async function loadChartData(days = currentDays) {
           type: 'bar',
           barWidth: 2,
           barGap: '2px',
-          data: totalEventsDataWithNulls,
+          data: totalEventsDataWithZeroes,
           itemStyle: {
             color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
               { offset: 0, color: 'rgba(142, 129, 234, 0.16)' },
@@ -2097,8 +2117,8 @@ async function loadChartData(days = currentDays) {
             show: true,
             position: 'top',
             formatter: function(params) {
-              const value = Number(params.value) || 0;
-              return value === 0 ? '' : value;
+              const value = Number(params.value);
+              return Number.isFinite(value) ? value : 0;
             },
             fontSize: 9,
             color: '#ffffff',
@@ -2280,3 +2300,10 @@ Object.assign(window, {
 });
 
 // Chart will be loaded after authentication check
+
+// Rehydrate dashboard when returning via soft navigation
+window.addEventListener('softNav:pageMounted', (event) => {
+  if (event?.detail?.path === '/') {
+    initializeDashboardPage({ resetState: true });
+  }
+});
