@@ -123,26 +123,6 @@ Based on test results (`test-performance.js`):
 ### Environment Variables
 
 ```bash
-# Database type (affects optimization strategy)
-DB_TYPE=sqlite|postgresql
-
-# PostgreSQL connection pool (defaults shown)
-PG_MAX_CONNECTIONS=20
-PG_MIN_CONNECTIONS=2
-PG_IDLE_TIMEOUT_MS=30000
-PG_CONNECTION_TIMEOUT_MS=10000
-
-# Cache TTLs (milliseconds)
-STATS_CACHE_TTL=30000
-SESSIONS_CACHE_TTL=60000
-USERIDS_CACHE_TTL=120000
-HEALTH_CHECK_CACHE_TTL_MS=5000
-
-# Performance limits
-MAX_API_LIMIT=1000
-MAX_EXPORT_LIMIT=50000
-```
-
 ## Memory Usage
 
 With default cache settings:
