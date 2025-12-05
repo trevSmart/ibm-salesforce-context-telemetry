@@ -1999,6 +1999,11 @@ async function getTopTeamsLastDays(orgTeamMappings = [], limit = 50, days = 3) {
     });
   }
 
+  // If there are no active mappings we can return early and avoid a full scan
+  if (teamAggregates.size === 0 || orgToTeamKey.size === 0) {
+    return [];
+  }
+
   const results = [];
   const orgIdCounts = new Map();
 
@@ -2009,7 +2014,7 @@ async function getTopTeamsLastDays(orgTeamMappings = [], limit = 50, days = 3) {
 			FROM telemetry_events
 			WHERE created_at >= datetime('now', 'localtime', ?)
 				AND org_id IS NOT NULL
-				AND TRIM(org_id) != ''
+				AND org_id != ''
 			GROUP BY org_id
 			ORDER BY event_count DESC, org_id ASC
 		`).all(lookbackModifier);
@@ -2028,7 +2033,7 @@ async function getTopTeamsLastDays(orgTeamMappings = [], limit = 50, days = 3) {
 				FROM telemetry_events
 				WHERE created_at >= (NOW() - ($1 || ' days')::interval)
 					AND org_id IS NOT NULL
-					AND TRIM(org_id) != ''
+					AND org_id != ''
 				GROUP BY org_id
 				ORDER BY event_count DESC, org_id ASC
 			`,
