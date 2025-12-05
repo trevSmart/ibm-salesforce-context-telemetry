@@ -52,6 +52,10 @@ function normalizeRole(role) {
 /**
  * Initialize session middleware
  * Uses PostgreSQL store if available, otherwise falls back to MemoryStore
+ * 
+ * NOTE: This function should be called AFTER the database is initialized
+ * to properly support PostgreSQL session store. If called before database
+ * initialization, it will fall back to MemoryStore.
  */
 function initSessionMiddleware() {
   const isProduction = process.env.NODE_ENV === 'production';
@@ -67,6 +71,17 @@ function initSessionMiddleware() {
         tableName: 'session', // Table name for sessions
         createTableIfMissing: true // Automatically create session table if it doesn't exist
       });
+      console.log('✅ Session store: PostgreSQL');
+    }
+  }
+
+  // If no PostgreSQL store, MemoryStore will be used
+  if (!store) {
+    if (isProduction) {
+      console.warn('⚠️  WARNING: Using MemoryStore for sessions in production. Sessions will not persist across server restarts.');
+      console.warn('⚠️  For production deployments with PostgreSQL, ensure initSessionMiddleware() is called after database initialization.');
+    } else {
+      console.log('📦 Session store: MemoryStore (development)');
     }
   }
 

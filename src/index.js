@@ -56,8 +56,30 @@ if (isDevelopment) {
   }
 }
 
-// Initialize session middleware early (will use MemoryStore initially, then upgrade to PostgreSQL if available)
-app.use(auth.initSessionMiddleware());
+// Temporary placeholder for session middleware - will be replaced after database init
+// This allows us to register routes early while deferring session store configuration
+let sessionMiddleware = null;
+app.use((req, res, next) => {
+  if (sessionMiddleware) {
+    return sessionMiddleware(req, res, next);
+  }
+  // Before database init, use a basic session with MemoryStore
+  const session = require('express-session');
+  const crypto = require('crypto');
+  const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex');
+  const tempSession = session({
+    secret: SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: process.env.NODE_ENV === 'production',
+      httpOnly: true,
+      sameSite: 'lax',
+      maxAge: 24 * 60 * 60 * 1000
+    }
+  });
+  tempSession(req, res, next);
+});
 
 // Serve static files from public directory
 app.use(express.static(path.join(__dirname, '..', 'public'), {
@@ -901,10 +923,9 @@ async function startServer() {
     auth.init(db);
     console.log('Authentication initialized with database support');
 
-    // Note: Session middleware was initialized earlier (before routes)
-    // It will use MemoryStore initially, which is fine for SQLite or development
-    // For PostgreSQL in production, the warning about MemoryStore will appear
-    // but sessions will still work correctly
+    // Now that database is initialized, upgrade session middleware to use PostgreSQL store if available
+    sessionMiddleware = auth.initSessionMiddleware();
+    console.log('Session middleware initialized with database support');
 
     app.listen(port, () => {
       console.log('\n' + '='.repeat(60));
