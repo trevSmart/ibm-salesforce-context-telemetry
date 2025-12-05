@@ -606,7 +606,27 @@ function showTeamFormModal(team = null) {
   backdrop.appendChild(modal);
   document.body.appendChild(backdrop);
 
-  const closeModal = () => backdrop.remove();
+  // Trigger enter transition on next frame
+  requestAnimationFrame(() => {
+    backdrop.classList.add('visible');
+  });
+
+  const closeModal = () => {
+    const handleTransitionEnd = () => {
+      backdrop.removeEventListener('transitionend', handleTransitionEnd);
+      backdrop.remove();
+    };
+    backdrop.addEventListener('transitionend', handleTransitionEnd);
+    backdrop.classList.remove('visible');
+    backdrop.classList.add('hiding');
+    // Fallback in case transitionend does not fire
+    setTimeout(() => {
+      if (document.body.contains(backdrop)) {
+        backdrop.removeEventListener('transitionend', handleTransitionEnd);
+        backdrop.remove();
+      }
+    }, 220);
+  };
   document.getElementById('cancelTeamFormBtn')?.addEventListener('click', closeModal);
   backdrop.addEventListener('click', (e) => {
     if (e.target === backdrop) closeModal();
@@ -714,7 +734,23 @@ async function showAddOrgModal(teamId) {
   backdrop.appendChild(modal);
   document.body.appendChild(backdrop);
 
-  const closeModal = () => backdrop.remove();
+  // Trigger enter transition on next frame
+  requestAnimationFrame(() => {
+    backdrop.classList.add('visible');
+  });
+
+  const closeModal = () => {
+    backdrop.classList.remove('visible');
+    backdrop.classList.add('hiding');
+    // Wait for transition to complete before removing
+    const onTransitionEnd = (e) => {
+      if (e.target === backdrop) {
+        backdrop.removeEventListener('transitionend', onTransitionEnd);
+        backdrop.remove();
+      }
+    };
+    backdrop.addEventListener('transitionend', onTransitionEnd);
+  };
   document.getElementById('cancelAddOrgBtn')?.addEventListener('click', closeModal);
   backdrop.addEventListener('click', (e) => {
     if (e.target === backdrop) closeModal();
@@ -795,7 +831,23 @@ async function showAddUserModal(teamId) {
   backdrop.appendChild(modal);
   document.body.appendChild(backdrop);
 
-  const closeModal = () => backdrop.remove();
+  // Trigger enter transition on next frame
+  requestAnimationFrame(() => {
+    backdrop.classList.add('visible');
+  });
+
+  const closeModal = () => {
+    backdrop.classList.remove('visible');
+    backdrop.classList.add('hiding');
+    // Wait for transition to complete before removing
+    const onTransitionEnd = (e) => {
+      if (e.target === backdrop) {
+        backdrop.removeEventListener('transitionend', onTransitionEnd);
+        backdrop.remove();
+      }
+    };
+    backdrop.addEventListener('transitionend', onTransitionEnd);
+  };
   document.getElementById('cancelAddUserBtn')?.addEventListener('click', closeModal);
   backdrop.addEventListener('click', (e) => {
     if (e.target === backdrop) closeModal();
