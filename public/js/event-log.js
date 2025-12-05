@@ -313,11 +313,6 @@ if (window.__EVENT_LOG_LOADED__) {
 			<div class="settings-modal-content">
 				<div class="settings-layout flex flex-col md:flex-row md:gap-8 mt-2">
 					<aside class="settings-sidebar-nav md:w-56 border-b md:border-b-0 md:border-r border-[color:var(--border-color)] pb-3 md:pb-0 md:pr-3">
-						<div class="confirm-modal-message mb-3">
-							<p class="settings-modal-placeholder-text">
-								Configure local preferences for the telemetry dashboard.
-							</p>
-						</div>
 						<nav class="flex md:flex-col gap-2 text-sm" aria-label="Settings sections">
 							${sidebarNav}
 						</nav>
@@ -451,27 +446,27 @@ if (window.__EVENT_LOG_LOADED__) {
 							</div>
 						</section>
 						${isAdministrator ? `
-						<section id="settings-users" class="settings-section" style="display: none;">
-							<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-								<div class="settings-modal-placeholder-title" style="margin: 0;">User Management</div>
-								<button type="button" class="confirm-modal-btn" id="addUserBtn" style="display: flex; align-items: center; gap: 6px;">
-									<i class="fa-solid fa-plus" style="font-size: 12px;"></i>Add User
+						<section id="settings-users" class="settings-section settings-users-section" style="display: none;">
+							<div class="settings-users-header">
+								<div class="settings-modal-placeholder-title settings-users-title">User Management</div>
+								<button type="button" class="confirm-modal-btn settings-users-add-btn" id="addUserBtn">
+									<i class="fa-solid fa-plus"></i>
+									Add User
 								</button>
 							</div>
-							<div style="overflow-x: auto; border: 1px solid var(--border-color); border-radius: 8px;">
-								<table id="usersTable" style="width: 100%; border-collapse: collapse;">
+							<div class="settings-users-table-wrapper">
+								<table id="usersTable" class="settings-users-table">
 									<thead>
-										<tr style="background: var(--bg-secondary); border-bottom: 1px solid var(--border-color);">
-											<th style="padding: 12px; text-align: left; font-weight: 600; color: var(--text-primary); font-size: 14px;">Username</th>
-											<th style="padding: 12px; text-align: left; font-weight: 600; color: var(--text-primary); font-size: 14px;">Role</th>
-											<th style="padding: 12px; text-align: left; font-weight: 600; color: var(--text-primary); font-size: 14px;">Created</th>
-											<th style="padding: 12px; text-align: left; font-weight: 600; color: var(--text-primary); font-size: 14px;">Last Login</th>
-											<th style="padding: 12px; text-align: right; width: 200px;">Actions</th>
+										<tr>
+											<th>Username</th>
+											<th>Created</th>
+											<th>Last Login</th>
+											<th class="settings-users-actions-column">Actions</th>
 										</tr>
 									</thead>
 									<tbody id="usersTableBody">
 										<tr>
-											<td colspan="5" style="padding: 24px; text-align: center; color: var(--text-secondary);">
+											<td colspan="4" class="settings-users-empty">
 												Loading users...
 											</td>
 										</tr>
@@ -745,7 +740,7 @@ if (window.__EVENT_LOG_LOADED__) {
             if (usersTableBody) {
               usersTableBody.innerHTML = `
               <tr>
-                <td colspan="5" style="padding: 24px; text-align: center; color: var(--text-secondary);">
+                <td colspan="4" class="settings-users-empty">
                   Error loading users: ${escapeHtml(error.message)}
                 </td>
               </tr>
@@ -785,7 +780,7 @@ if (window.__EVENT_LOG_LOADED__) {
           if (users.length === 0) {
             usersTableBody.innerHTML = `
             <tr>
-              <td colspan="5" style="padding: 24px; text-align: center; color: var(--text-secondary);">
+              <td colspan="4" class="settings-users-empty">
                 No users found. Click "Add User" to create one.
               </td>
             </tr>
@@ -810,39 +805,41 @@ if (window.__EVENT_LOG_LOADED__) {
             const roleColor = getRoleBadgeColor(user.role);
             const isCurrentUser = user.username === currentUsername;
             return `
-            <tr style="border-bottom: 1px solid var(--border-color);">
-              <td style="padding: 12px; color: var(--text-primary); font-size: 14px;">
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <div style="width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 12px;">
+            <tr class="settings-users-row">
+              <td>
+                <div class="settings-user-overview">
+                  <div class="settings-user-avatar">
                     ${escapeHtml(user.username.charAt(0).toUpperCase())}
                   </div>
-                  <span style="font-weight: 500;">${escapeHtml(user.username)}</span>
-                  ${isCurrentUser ? '<span style="font-size: 11px; color: var(--text-secondary);">(you)</span>' : ''}
+                  <div class="settings-user-meta">
+                    <div class="settings-user-identity">
+                      <span class="settings-user-name">${escapeHtml(user.username)}</span>
+                      ${isCurrentUser ? '<span class="settings-user-self">(you)</span>' : ''}
+                    </div>
+                    <span class="settings-user-role-badge" style="background: ${roleColor}20; color: ${roleColor};">
+                      <span class="settings-user-role-dot" style="background: ${roleColor};"></span>
+                      ${escapeHtml(user.role || 'basic')}
+                    </span>
+                  </div>
                 </div>
               </td>
-              <td style="padding: 12px;">
-                <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 500; background: ${roleColor}20; color: ${roleColor};">
-                  <span style="width: 6px; height: 6px; border-radius: 50%; background: ${roleColor};"></span>
-                  ${escapeHtml(user.role || 'basic')}
-                </span>
-              </td>
-              <td style="padding: 12px; color: var(--text-secondary); font-size: 14px;">
+              <td>
                 ${formatDate(user.created_at)}
               </td>
-              <td style="padding: 12px; color: var(--text-secondary); font-size: 14px;">
+              <td>
                 ${formatDate(user.last_login)}
               </td>
-              <td style="padding: 12px; text-align: right;">
-                <div style="display: flex; gap: 6px; justify-content: flex-end;">
-                  <button type="button" class="confirm-modal-btn" style="padding: 6px 12px; font-size: 12px;" onclick="openEditPasswordModal('${escapeHtml(user.username)}')" title="Change password">
-                    <i class="fa-solid fa-key" style="font-size: 11px;"></i>
+              <td class="settings-users-actions-cell">
+                <div class="settings-users-actions">
+                  <button type="button" class="confirm-modal-btn settings-users-action-btn" onclick="openEditPasswordModal('${escapeHtml(user.username)}')" title="Change password">
+                    <i class="fa-solid fa-key"></i>
                   </button>
-                  <button type="button" class="confirm-modal-btn" style="padding: 6px 12px; font-size: 12px;" onclick="openEditRoleModal('${escapeHtml(user.username)}', '${escapeHtml(user.role || 'basic')}')" title="Change role">
-                    <i class="fa-solid fa-user-tag" style="font-size: 11px;"></i>
+                  <button type="button" class="confirm-modal-btn settings-users-action-btn" onclick="openEditRoleModal('${escapeHtml(user.username)}', '${escapeHtml(user.role || 'basic')}')" title="Change role">
+                    <i class="fa-solid fa-user-tag"></i>
                   </button>
                   ${!isCurrentUser ? `
-                  <button type="button" class="confirm-modal-btn confirm-modal-btn-destructive" style="padding: 6px 12px; font-size: 12px;" onclick="openDeleteUserModal('${escapeHtml(user.username)}')" title="Delete user">
-                    <i class="fa-solid fa-trash" style="font-size: 11px;"></i>
+                  <button type="button" class="confirm-modal-btn confirm-modal-btn-destructive settings-users-action-btn" onclick="openDeleteUserModal('${escapeHtml(user.username)}')" title="Delete user">
+                    <i class="fa-solid fa-trash"></i>
                   </button>
                   ` : ''}
                 </div>
@@ -893,8 +890,7 @@ if (window.__EVENT_LOG_LOADED__) {
     if (showServerStatsToggle) {
       showServerStatsToggle.addEventListener('change', (e) => {
         localStorage.setItem('showServerStats', e.target.checked ? 'true' : 'false');
-        // Reload page to apply changes
-        window.location.reload();
+        updateServerStatsVisibility();
       });
     }
 

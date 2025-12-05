@@ -3860,8 +3860,8 @@
   }
 
   .confirm-modal.settings-modal {
-    max-width: 720px;
-    max-height: 80vh;
+    max-width: 840px;
+    max-height: 85vh;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -4115,6 +4115,174 @@
     padding-top: 14px;
     margin-top: 6px;
     border-top: 1px solid var(--border-color);
+  }
+
+  .settings-users-section {
+    padding-top: 10px;
+  }
+
+  .settings-users-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    gap: 12px;
+  }
+
+  .settings-users-title {
+    margin-bottom: 0;
+    font-size: 0.82rem;
+  }
+
+  .settings-users-add-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    font-size: 0.7rem;
+    border-radius: 6px;
+    line-height: 1.2;
+  }
+
+  .settings-users-add-btn i {
+    font-size: 0.65rem;
+  }
+
+  .settings-users-table-wrapper {
+    overflow-x: auto;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+  }
+
+  .settings-users-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.75rem;
+  }
+
+  .settings-users-table thead tr {
+    background: var(--bg-secondary);
+  }
+
+  .settings-users-table th {
+    text-align: left;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    padding: 8px 10px;
+    font-size: 0.7rem;
+    color: var(--text-primary);
+  }
+
+  .settings-users-table td {
+    padding: 8px 10px;
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+  }
+
+  .settings-users-table tbody tr + tr {
+    border-top: 1px solid var(--border-color);
+  }
+
+  .settings-users-table td:first-child {
+    color: var(--text-primary);
+    font-size: 0.75rem;
+  }
+
+  .settings-users-actions-column,
+  .settings-users-table td:last-child {
+    width: 130px;
+  }
+
+  .settings-users-empty {
+    padding: 16px;
+    text-align: center;
+    font-size: 0.72rem;
+  }
+
+  .settings-user-overview {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .settings-user-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    font-weight: 600;
+    font-size: 0.65rem;
+  }
+
+  .settings-user-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .settings-user-identity {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .settings-user-name {
+    font-weight: 500;
+    font-size: 0.78rem;
+    color: var(--text-primary);
+  }
+
+  .settings-user-self {
+    font-size: 0.65rem;
+    color: var(--text-secondary);
+  }
+
+  .settings-user-role-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 6px;
+    border-radius: 999px;
+    font-size: 0.65rem;
+    font-weight: 500;
+    width: fit-content;
+  }
+
+  .settings-user-role-dot {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+
+  .settings-users-actions-cell {
+    text-align: right;
+  }
+
+  .settings-users-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 6px;
+  }
+
+  .settings-users-action-btn {
+    width: 26px;
+    height: 26px;
+    min-width: 26px;
+    border-radius: 50%;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.65rem;
+  }
+
+  .settings-users-action-btn i {
+    font-size: 0.65rem;
   }
 
   .settings-sidebar-link.active {
