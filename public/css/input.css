@@ -589,13 +589,18 @@
     padding: 25px 32px 20px;
     border-radius: 23px;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
-    opacity: 0;
-    visibility: hidden;
     transition: opacity 0.1s ease-in-out;
     overflow: hidden;
     display: flex;
     flex-direction: column;
     gap: 15px;
+  }
+
+  /* Hide container initially only on pages with animations */
+  body.index-page .container,
+  body.event-log-page .container {
+    opacity: 0;
+    visibility: hidden;
   }
 
   .container-content {
