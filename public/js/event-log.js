@@ -1,5 +1,5 @@
 // @ts-nocheck
-/* global window document Notification requestAnimationFrame navigator MutationObserver */
+/* eslint-env browser */
 // Prevent double execution when soft navigation re-injects the script
 if (window.__EVENT_LOG_LOADED__) {
   console.info('[Telemetry Viewer] Event log script already loaded; skipping duplicate execution.');
@@ -1785,7 +1785,7 @@ if (window.__EVENT_LOG_LOADED__) {
     }
   }
 
-  // eslint-disable-next-line no-unused-vars
+
   function toggleTheme() {
     const isDark = document.documentElement.classList.contains('dark');
     const newTheme = isDark ? 'light' : 'dark';
@@ -2482,7 +2482,7 @@ if (window.__EVENT_LOG_LOADED__) {
     chartInstance.setOption({
       ...animationConfig,
       textStyle: {
-        fontFamily: "Inter, 'Manrope', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+        fontFamily: 'Inter, \'Manrope\', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, \'Helvetica Neue\', Arial, sans-serif'
       },
       grid: { left: 45, right: 10, top: 15, bottom: 30 },
       xAxis: {
@@ -5800,7 +5800,7 @@ if (window.__EVENT_LOG_LOADED__) {
     }
   });
 
-  initializeEventLogApp();
+  window.initializeEventLogApp();
   // Handle smooth hover animation for icon buttons group
   (function() {
     const iconButtonsGroup = document.querySelector('.icon-buttons-group');
