@@ -107,11 +107,14 @@ app.use((req, res, next) => {
 });
 
 // Serve static files from public directory with caching
+const LONG_CACHE_ASSETS = /\.(woff2?|ttf|svg|jpg|jpeg|png|gif|ico)$/;
+const SHORT_CACHE_ASSETS = /\.(css|js)$/;
+
 app.use(express.static(path.join(__dirname, '..', 'public'), {
   // Prevent automatic index.html serving so auth guard can handle "/"
   index: false,
-  // Ensure CSS files are served with correct MIME type
-  maxAge: isDevelopment ? 0 : '1y', // Cache static assets for 1 year in production
+  // Default to no cache; setHeaders will assign asset-specific policies
+  maxAge: 0,
   etag: true,
   lastModified: true,
   setHeaders: (res, filePath) => {
@@ -122,7 +125,11 @@ app.use(express.static(path.join(__dirname, '..', 'public'), {
     }
     // Add cache control for static assets
     if (!isDevelopment) {
-      if (filePath.match(/\.(js|css|woff|woff2|ttf|svg|jpg|jpeg|png|gif|ico)$/)) {
+      // Keep CSS/JS on a short leash so updates propagate quickly after deploys
+      if (SHORT_CACHE_ASSETS.test(filePath)) {
+        res.setHeader('Cache-Control', 'public, max-age=300, must-revalidate');
+      } else if (LONG_CACHE_ASSETS.test(filePath)) {
+        // Allow long-lived caching for binary assets
         res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
       }
     }
