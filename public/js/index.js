@@ -617,22 +617,17 @@ function openConfirmModal({ title, message, confirmLabel = 'Confirm', cancelLabe
     });
 
     function animateAndResolve(result) {
-      const handleTransitionEnd = () => {
-        backdrop.removeEventListener('transitionend', handleTransitionEnd);
+      const handleTransitionEnd = (event) => {
+        if (event.target !== backdrop) {
+          return;
+        }
+        backdrop.ontransitionend = null;
         backdrop.remove();
       };
 
-      backdrop.addEventListener('transitionend', handleTransitionEnd);
+      backdrop.ontransitionend = handleTransitionEnd;
       backdrop.classList.remove('visible');
       backdrop.classList.add('hiding');
-
-      // Fallback in case transitionend does not fire
-      setTimeout(() => {
-        if (document.body.contains(backdrop)) {
-          backdrop.removeEventListener('transitionend', handleTransitionEnd);
-          backdrop.remove();
-        }
-      }, 220);
 
       resolve(result);
     }
@@ -1075,19 +1070,16 @@ async function openSettingsModal() {
 
   function closeSettingsModal() {
     window.removeEventListener('resize', handleResize);
-    backdrop.classList.remove('visible');
-    backdrop.classList.add('hiding');
-    const handleTransitionEnd = () => {
-      backdrop.removeEventListener('transitionend', handleTransitionEnd);
+    const handleTransitionEnd = (event) => {
+      if (event.target !== backdrop) {
+        return;
+      }
+      backdrop.ontransitionend = null;
       backdrop.remove();
     };
-    backdrop.addEventListener('transitionend', handleTransitionEnd);
-    setTimeout(() => {
-      if (document.body.contains(backdrop)) {
-        backdrop.removeEventListener('transitionend', handleTransitionEnd);
-        backdrop.remove();
-      }
-    }, 220);
+    backdrop.ontransitionend = handleTransitionEnd;
+    backdrop.classList.remove('visible');
+    backdrop.classList.add('hiding');
   }
 
   const closeBtn = modal.querySelector('#settingsCloseBtn');
@@ -1828,19 +1820,16 @@ function openOrgTeamMappingModal() {
   document.body.appendChild(backdrop);
 
   function closeMappingModal() {
-    backdrop.classList.remove('visible');
-    backdrop.classList.add('hiding');
-    const handleTransitionEnd = () => {
-      backdrop.removeEventListener('transitionend', handleTransitionEnd);
+    const handleTransitionEnd = (event) => {
+      if (event.target !== backdrop) {
+        return;
+      }
+      backdrop.ontransitionend = null;
       backdrop.remove();
     };
-    backdrop.addEventListener('transitionend', handleTransitionEnd);
-    setTimeout(() => {
-      if (document.body.contains(backdrop)) {
-        backdrop.removeEventListener('transitionend', handleTransitionEnd);
-        backdrop.remove();
-      }
-    }, 220);
+    backdrop.ontransitionend = handleTransitionEnd;
+    backdrop.classList.remove('visible');
+    backdrop.classList.add('hiding');
   }
 
   const closeBtn = modal.querySelector('#orgTeamMappingCloseBtn');
@@ -2780,7 +2769,7 @@ async function loadChartData(days = currentDays) {
         name: 'Trend',
         type: 'line',
         data: [...trendLine.trendData, ...trendLine.extrapolatedData],
-        smooth: 0.3,
+        smooth: 0.6,
         symbol: 'none',
         zlevel: 0,
         z: -1,
@@ -2883,7 +2872,7 @@ async function loadChartData(days = currentDays) {
         name: 'Trend',
         type: 'line',
         data: [...trendLine.trendData, ...trendLine.extrapolatedData],
-        smooth: 0.3,
+        smooth: 0.6,
         symbol: 'none',
         zlevel: 0,
         z: -1,
