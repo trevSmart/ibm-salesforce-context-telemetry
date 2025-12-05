@@ -1919,6 +1919,14 @@
     animation: rotate360 0.7s linear infinite;
   }
 
+  .icon-btn .fa-refresh.rotating-finish {
+    animation: rotate360 0.7s linear forwards;
+  }
+
+  .icon-btn .refresh-icon.rotating-finish {
+    animation: rotate360 0.7s linear forwards;
+  }
+
   /* Bell icon shake animation */
   @keyframes bellShake {
     0% {

@@ -4384,7 +4384,14 @@ if (window.__EVENT_LOG_LOADED__) {
       console.error('Error refreshing logs:', error);
     } finally {
       if (refreshIcon) {
+        // Smooth transition: replace infinite animation with a finishing one
         refreshIcon.classList.remove('rotating');
+        refreshIcon.classList.add('rotating-finish');
+        
+        // Remove the finish class after animation completes
+        setTimeout(() => {
+          refreshIcon.classList.remove('rotating-finish');
+        }, 700); // Match the animation duration (0.7s)
       }
       isRefreshInProgress = false;
     }
