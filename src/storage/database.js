@@ -1948,16 +1948,44 @@ async function getTopTeamsLastDays(orgTeamMappings = [], limit = 50, days = 3) {
   const safeDays = Math.min(Math.max(1, Number.isFinite(days) ? Math.floor(days) : 3), 365);
   const lookbackModifier = `-${safeDays} days`;
 
-  // Create a map from orgIdentifier to team info for quick lookup
-  const orgToTeamMap = new Map();
+  const normalizeOrgId = (orgId) => String(orgId || '').trim().toLowerCase();
+  const normalizeTeamKey = (teamName) => String(teamName || '').trim().toLowerCase();
+
+  // Build lookups so multiple orgs that point to the same team name are grouped
+  const orgToTeamKey = new Map(); // normalized org id -> normalized team key
+  const teamAggregates = new Map(); // normalized team key -> aggregate info
   if (Array.isArray(orgTeamMappings)) {
     orgTeamMappings.forEach(mapping => {
-      if (mapping.active !== false && mapping.orgIdentifier && mapping.teamName) {
-        orgToTeamMap.set(mapping.orgIdentifier, {
-          teamName: mapping.teamName,
-          clientName: mapping.clientName || '',
-          color: mapping.color || ''
+      const isActive = mapping?.active !== false;
+      const rawTeamName = String(mapping?.teamName || '').trim();
+      const rawOrgId = normalizeOrgId(mapping?.orgIdentifier);
+      if (!isActive || !rawTeamName || !rawOrgId) {
+        return;
+      }
+
+      const teamKey = normalizeTeamKey(rawTeamName);
+      if (!teamAggregates.has(teamKey)) {
+        teamAggregates.set(teamKey, {
+          key: teamKey,
+          teamName: rawTeamName,
+          color: String(mapping?.color || '').trim(),
+          clients: new Set(),
+          orgIds: new Set(),
+          eventCount: 0
         });
+      }
+
+      const entry = teamAggregates.get(teamKey);
+      entry.orgIds.add(rawOrgId);
+      orgToTeamKey.set(rawOrgId, teamKey);
+
+      const clientName = String(mapping?.clientName || '').trim();
+      if (clientName) {
+        entry.clients.add(clientName);
+      }
+
+      if (!entry.color && mapping?.color) {
+        entry.color = String(mapping.color).trim();
       }
     });
   }
@@ -2021,19 +2049,40 @@ async function getTopTeamsLastDays(orgTeamMappings = [], limit = 50, days = 3) {
 
   // Map to team info and add to results
   sortedOrgs.forEach(({ orgId, count }) => {
-    const teamInfo = orgToTeamMap.get(orgId);
-    if (teamInfo) {
-      results.push({
-        id: orgId,
-        label: teamInfo.teamName,
-        clientName: teamInfo.clientName,
-        color: teamInfo.color,
-        eventCount: count
-      });
+    const normalizedOrgId = normalizeOrgId(orgId);
+    const teamKey = orgToTeamKey.get(normalizedOrgId);
+    if (!teamKey) {
+      return;
+    }
+    const teamEntry = teamAggregates.get(teamKey);
+    if (teamEntry) {
+      teamEntry.eventCount += count;
     }
   });
 
-  return results;
+  // Convert aggregates to sorted array and apply limit
+  Array.from(teamAggregates.values()).forEach(teamEntry => {
+    if (teamEntry.eventCount <= 0) {
+      return;
+    }
+    const clients = Array.from(teamEntry.clients);
+    results.push({
+      id: teamEntry.key,
+      label: teamEntry.teamName,
+      clientName: clients.join(' · '),
+      color: teamEntry.color,
+      eventCount: teamEntry.eventCount
+    });
+  });
+
+  return results
+    .sort((a, b) => {
+      if (b.eventCount !== a.eventCount) {
+        return b.eventCount - a.eventCount;
+      }
+      return a.label.localeCompare(b.label);
+    })
+    .slice(0, safeLimit);
 }
 
 async function ensureTelemetryParentSessionColumn() {
