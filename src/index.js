@@ -15,6 +15,12 @@ const app = express();
 const port = process.env.PORT || 3100;
 const isDevelopment = process.env.NODE_ENV !== 'production';
 
+// Performance constants
+const MAX_API_LIMIT = 1000; // Maximum events per API request
+const MAX_EXPORT_LIMIT = 50000; // Maximum events per export
+const HEALTH_CHECK_CACHE_TTL = parseInt(process.env.HEALTH_CHECK_CACHE_TTL_MS) || 5000; // 5 seconds default
+const STATS_CACHE_KEY_EMPTY = 'stats:::'; // Cache key for stats with no filters
+
 // Initialize caches for frequently accessed data
 const statsCache = new Cache(30000); // 30 seconds TTL for stats
 const sessionsCache = new Cache(60000); // 60 seconds TTL for sessions
@@ -169,12 +175,6 @@ app.post('/telemetry', (req, res) => {
     });
   }
 });
-
-// Performance constants
-const MAX_API_LIMIT = 1000; // Maximum events per API request
-const MAX_EXPORT_LIMIT = 50000; // Maximum events per export
-const HEALTH_CHECK_CACHE_TTL = parseInt(process.env.HEALTH_CHECK_CACHE_TTL_MS) || 5000; // 5 seconds default
-const STATS_CACHE_KEY_EMPTY = 'stats:::'; // Cache key for stats with no filters
 
 // Track server start time for uptime calculation
 const serverStartTime = Date.now();
