@@ -116,17 +116,26 @@
 							<li class="top-users-empty">Loading top users…</li>
 						</ul>
 					</section>
-					<section class="dashboard-card" style="background: #d5dbe4; text-align: left;">
-						<h2 style="margin: 0 0 8px 0;">Premium Account</h2>
-						<p style="margin: 0 0 12px 0;">Try our limited features in your free month.</p>
-						<ul style="list-style: disc; padding-left: 20px; margin: 0 0 12px 0; display: flex; flex-direction: column; gap: 8px;">
-							<li>Increase your sales with premium tools.</li>
-							<li>Establish contacts with clients and get priority support.</li>
+					<section class="dashboard-card promo-card" id="serverStatsCard" style="text-align: left; display: flex; flex-direction: column; gap: 10px;">
+						<h2 style="margin: 0;">Server Stats</h2>
+						<ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px;">
+							<li style="display: flex; justify-content: space-between; align-items: baseline;">
+								<span style="color: var(--text-secondary);">Last updated</span>
+								<span id="serverStatsLastUpdated" class="font-semibold">Loading...</span>
+							</li>
+							<li style="display: flex; justify-content: space-between; align-items: baseline;">
+								<span style="color: var(--text-secondary);">Load time</span>
+								<span id="serverStatsLoadTime" class="font-semibold">-</span>
+							</li>
+							<li style="display: flex; justify-content: space-between; align-items: baseline;">
+								<span style="color: var(--text-secondary);">Version</span>
+								<span id="serverStatsVersion" class="font-semibold">-</span>
+							</li>
+							<li style="display: flex; justify-content: space-between; align-items: baseline;">
+								<span style="color: var(--text-secondary);">DB size</span>
+								<span id="serverStatsDbSize" class="font-semibold">-</span>
+							</li>
 						</ul>
-						<button type="button" class="icon-btn" style="width: 100%; font-size: 12.5px; border-radius: 22px; display: flex; justify-content: space-between; align-items: center; text-align: left; padding: 8px 14px; transition: background-color 0.2s ease, color 0.2s ease;">
-							<span>Learn more</span>
-							<i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
-						</button>
 					</section>
 					<section class="dashboard-card" style="text-align: left;">
 						<h2 style="margin: 0 0 8px 0;">Proposal Tracker</h2>

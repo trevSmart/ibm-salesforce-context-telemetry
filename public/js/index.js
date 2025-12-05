@@ -1,4 +1,157 @@
 // @ts-nocheck
+// User menu functions
+let userMenuHideTimeout = null;
+const USER_MENU_HIDE_DELAY_MS = 300;
+const SESSION_START_SERIES_COLOR = '#2195cf';
+const TOP_USERS_LOOKBACK_DAYS = 3;
+const TOP_USERS_LIMIT = 3;
+const TOP_TEAMS_LOOKBACK_DAYS = 30;
+const TOP_TEAMS_LIMIT = 5;
+const SERVER_VERSION_LABEL = 'v1.0.0';
+let serverStatsLastFetchTime = null;
+let serverStatsUpdateIntervalId = null;
+
+// Helper function to escape HTML
+function escapeHtml(str) {
+  return String(str ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function formatTimeAgo(timestamp) {
+  if (!timestamp) {
+    return 'never';
+  }
+  const now = Date.now();
+  const diff = now - timestamp;
+  const seconds = Math.floor(diff / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+
+  if (seconds < 10) {
+    return 'just now';
+  }
+  if (seconds < 60) {
+    return `${seconds} second${seconds !== 1 ? 's' : ''} ago`;
+  }
+  if (minutes < 60) {
+    return `${minutes} minute${minutes !== 1 ? 's' : ''} ago`;
+  }
+  if (hours < 24) {
+    const remainingMinutes = minutes % 60;
+    if (remainingMinutes === 0) {
+      return `${hours} hour${hours !== 1 ? 's' : ''} ago`;
+    }
+    return `${hours}h ${remainingMinutes}min ago`;
+  }
+  if (days === 1) {
+    const remainingHours = hours % 24;
+    if (remainingHours === 0) {
+      return '1 day ago';
+    }
+    return `1 day ${remainingHours}h ago`;
+  }
+  return `${days} days ago`;
+}
+
+function updateServerStatsLastUpdatedText() {
+  const lastUpdatedEl = document.getElementById('serverStatsLastUpdated');
+  if (lastUpdatedEl) {
+    lastUpdatedEl.textContent = formatTimeAgo(serverStatsLastFetchTime);
+  }
+}
+
+function startServerStatsInterval() {
+  if (serverStatsUpdateIntervalId) {
+    clearInterval(serverStatsUpdateIntervalId);
+  }
+  serverStatsUpdateIntervalId = setInterval(updateServerStatsLastUpdatedText, 60000);
+}
+
+function setServerStatsLoadTime(durationMs) {
+  const loadTimeEl = document.getElementById('serverStatsLoadTime');
+  if (!loadTimeEl) {
+    return;
+  }
+  if (Number.isFinite(durationMs)) {
+    const clamped = Math.max(0, Math.round(durationMs));
+    loadTimeEl.textContent = `${clamped}ms`;
+  } else {
+    loadTimeEl.textContent = '-';
+  }
+}
+
+function setServerStatsVersion() {
+  const versionEl = document.getElementById('serverStatsVersion');
+  if (versionEl) {
+    versionEl.textContent = SERVER_VERSION_LABEL;
+  }
+}
+
+function resetServerStatsUi() {
+  serverStatsLastFetchTime = null;
+  if (serverStatsUpdateIntervalId) {
+    clearInterval(serverStatsUpdateIntervalId);
+    serverStatsUpdateIntervalId = null;
+  }
+  updateServerStatsLastUpdatedText();
+  setServerStatsLoadTime(null);
+  const dbSizeElement = document.getElementById('serverStatsDbSize');
+  if (dbSizeElement) {
+    dbSizeElement.textContent = '-';
+    dbSizeElement.style.color = '';
+  }
+}
+
+function recordServerStatsFetch(durationMs) {
+  serverStatsLastFetchTime = Date.now();
+  updateServerStatsLastUpdatedText();
+  if (!serverStatsUpdateIntervalId) {
+    startServerStatsInterval();
+  }
+  if (Number.isFinite(durationMs)) {
+    setServerStatsLoadTime(durationMs);
+  }
+}
+
+async function loadDashboardDatabaseSize() {
+  try {
+    const response = await fetch('/api/database-size', {
+      credentials: 'include'
+    });
+    if (!response.ok) {
+      return;
+    }
+    const data = await response.json();
+    if (data?.status !== 'ok') {
+      return;
+    }
+    const displayText = data.displayText || data.sizeFormatted;
+    const dbSizeElement = document.getElementById('serverStatsDbSize');
+    if (dbSizeElement && displayText) {
+      dbSizeElement.textContent = displayText;
+      if (data.percentage !== null && data.percentage !== undefined) {
+        if (data.percentage >= 80) {
+          dbSizeElement.style.color = 'var(--level-error)';
+        } else if (data.percentage >= 70) {
+          dbSizeElement.style.color = 'var(--level-warning)';
+        } else {
+          dbSizeElement.style.color = '';
+        }
+      }
+    }
+  } catch (error) {
+    console.debug('Database size not available:', error);
+  }
+}
+
+// Initial bootstrap
+void initializeDashboardPage();
+
 // Initialize dashboard; reused on first load and on soft navigation
 async function initializeDashboardPage({ resetState = false } = {}) {
   // Reset chart state when coming back from another page
@@ -11,11 +164,14 @@ async function initializeDashboardPage({ resetState = false } = {}) {
   if (resetState) {
     isInitialChartLoad = true;
     currentDays = 7;
+    resetServerStatsUi();
     const timeRangeSelect = document.getElementById('timeRangeSelect');
     if (timeRangeSelect) {
       timeRangeSelect.value = String(currentDays);
     }
   }
+
+  setServerStatsVersion();
 
   try {
     const response = await fetch('/api/auth/status', {
@@ -40,6 +196,7 @@ async function initializeDashboardPage({ resetState = false } = {}) {
     await loadChartData();
     await loadTopUsersToday();
     await loadTopTeamsToday();
+    await loadDashboardDatabaseSize();
 
     // Set up time range selector (guard against duplicate listeners)
     const timeRangeSelect = document.getElementById('timeRangeSelect');
@@ -56,27 +213,6 @@ async function initializeDashboardPage({ resetState = false } = {}) {
   }
 }
 
-// Initial bootstrap
-void initializeDashboardPage();
-
-// Helper function to escape HTML
-function escapeHtml(str) {
-  return String(str ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
-
-// User menu functions
-let userMenuHideTimeout = null;
-const USER_MENU_HIDE_DELAY_MS = 300;
-const SESSION_START_SERIES_COLOR = '#2195cf';
-const TOP_USERS_LOOKBACK_DAYS = 3;
-const TOP_USERS_LIMIT = 3;
-const TOP_TEAMS_LOOKBACK_DAYS = 30;
-const TOP_TEAMS_LIMIT = 5;
 
 function showUserMenu(e) {
   if (e) {
@@ -283,6 +419,10 @@ function updateServerStatsVisibility() {
   const footer = document.querySelector('.dashboard-footer');
   if (footer) {
     footer.style.display = showServerStats ? '' : 'none';
+  }
+  const serverStatsCard = document.getElementById('serverStatsCard');
+  if (serverStatsCard) {
+    serverStatsCard.style.display = showServerStats ? 'flex' : 'none';
   }
 }
 
@@ -1856,7 +1996,8 @@ async function refreshDashboard(event) {
     await Promise.all([
       loadChartData(currentDays),
       loadTopUsersToday(),
-      loadTopTeamsToday()
+      loadTopTeamsToday(),
+      loadDashboardDatabaseSize()
     ]);
   } catch (error) {
     // Any errors are already logged inside loadChartData; this catch
@@ -2066,6 +2207,7 @@ async function loadTopTeamsToday() {
 }
 
 async function loadChartData(days = currentDays) {
+  const fetchStartTime = performance.now();
   try {
     currentDays = days;
     const response = await fetch(`/api/daily-stats?days=${days}&byEventType=true`, {
@@ -2083,6 +2225,8 @@ async function loadChartData(days = currentDays) {
     if (!Array.isArray(data)) {
       throw new Error('Invalid stats response');
     }
+
+    recordServerStatsFetch(performance.now() - fetchStartTime);
 
     // If no data, show the page anyway
     if (data.length === 0 && isInitialChartLoad) {

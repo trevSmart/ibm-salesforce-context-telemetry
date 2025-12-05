@@ -314,7 +314,7 @@ if (window.__EVENT_LOG_LOADED__) {
     modal.className = 'confirm-modal settings-modal';
 
     // Get current settings
-    const savedTheme = localStorage.getItem('theme') || getSystemTheme();
+    const savedTheme = localStorage.getItem('theme') || 'light';
     const isDarkTheme = savedTheme === 'dark';
     const showServerStats = localStorage.getItem('showServerStats') !== 'false';
     const autoRefreshEnabled = localStorage.getItem('autoRefreshEnabled') === 'true';
@@ -1241,8 +1241,8 @@ if (window.__EVENT_LOG_LOADED__) {
       if (autoRefreshToggleWrapper) {
         autoRefreshToggleWrapper.addEventListener('click', (event) => {
           const clickedSelect = event.target.closest('#autoRefreshInterval');
-          const clickedInput = event.target === autoRefreshToggle;
-          if (clickedSelect || clickedInput) {
+          const clickedToggle = event.target.closest('label[for="autoRefreshToggle"]');
+          if (clickedSelect || clickedToggle) {
             return;
           }
           event.preventDefault();
@@ -1272,7 +1272,7 @@ if (window.__EVENT_LOG_LOADED__) {
     );
   }
 
-  // eslint-disable-next-line no-unused-vars
+
   async function handleLogout() {
   // Close menu
     const userMenu = document.getElementById('userMenu');
@@ -1471,12 +1471,6 @@ if (window.__EVENT_LOG_LOADED__) {
     hoverTimeoutId = null;
   }
 
-  // Theme management - using .dark class like Laravel Log Viewer
-  // Detects system theme by default, but allows manual override
-  function getSystemTheme() {
-    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-  }
-
   function applyTheme(theme) {
     if (theme === 'dark') {
       document.documentElement.classList.add('dark');
@@ -1493,7 +1487,7 @@ if (window.__EVENT_LOG_LOADED__) {
 
   function initTheme() {
     const savedTheme = localStorage.getItem('theme');
-    const theme = savedTheme || 'dark';
+    const theme = savedTheme || 'light';
     applyTheme(theme);
     updateServerStatsVisibility();
     // Wire up theme toggle if present
@@ -2181,7 +2175,7 @@ if (window.__EVENT_LOG_LOADED__) {
     const axisColor = themeIsDark ? '#a1a1aa' : '#52525b';
     const splitLineColor = themeIsDark ? 'rgba(63, 63, 70, 0.35)' : 'rgba(228, 228, 231, 0.35)';
     const gradientCap = 70;
-    const yAxisMax = Math.max(15, maxBucketCount || 0);
+    const yAxisMax = Math.max(10, maxBucketCount || 0);
     const warmOffset = Math.min(gradientCap / Math.max(yAxisMax, 1), 1);
 
     let chartSeries = [];
@@ -6035,6 +6029,7 @@ if (window.__EVENT_LOG_LOADED__) {
   window.openSettingsModal = openSettingsModal;
   window.toggleNotificationMode = toggleNotificationMode;
   window.showUserMenu = showUserMenu;
+  window.handleLogout = handleLogout;
   window.toggleSelectionMode = toggleSelectionMode;
   window.confirmDeleteSelectedSessions = confirmDeleteSelectedSessions;
   window.toggleMobileSidebar = toggleMobileSidebar;
