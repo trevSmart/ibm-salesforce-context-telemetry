@@ -1774,6 +1774,11 @@ if (window.__EVENT_LOG_LOADED__) {
     const theme = savedTheme || 'dark';
     applyTheme(theme);
     updateServerStatsVisibility();
+    // Wire up theme toggle if present
+    const darkThemeToggle = document.querySelector('#darkThemeToggle');
+    if (darkThemeToggle) {
+      darkThemeToggle.addEventListener('change', toggleTheme);
+    }
   }
 
   function updateServerStatsVisibility() {
