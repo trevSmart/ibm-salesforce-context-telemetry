@@ -263,5 +263,6 @@ module.exports = {
   hashPassword,
   init,
   requireRole,
-  normalizeRole
+  normalizeRole,
+  SESSION_SECRET
 };

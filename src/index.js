@@ -11,7 +11,6 @@ const db = require('./storage/database');
 const logFormatter = require('./storage/log-formatter');
 const auth = require('./auth/auth');
 const session = require('express-session');
-const crypto = require('crypto');
 const app = express();
 const port = process.env.PORT || 3100;
 const isDevelopment = process.env.NODE_ENV !== 'production';
@@ -60,9 +59,9 @@ if (isDevelopment) {
 
 // Temporary placeholder for session middleware - will be replaced after database init
 // This allows us to register routes early while deferring session store configuration
-const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex');
+// Use the same SESSION_SECRET from auth module to ensure session continuity
 const tempSession = session({
-  secret: SESSION_SECRET,
+  secret: auth.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
   cookie: {

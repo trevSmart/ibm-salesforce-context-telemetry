@@ -4918,7 +4918,7 @@ if (window.__EVENT_LOG_LOADED__) {
   // eslint-disable-next-line no-unused-vars
   function toggleSessionActionsDropdown(e, sessionId) {
     e.stopPropagation();
-    const dropdown = document.getElementById(`session-dropdown-${sessionId}`);
+    const dropdown = document.getElementById(`session-dropdown-${escapeHtml(sessionId)}`);
     if (!dropdown) return;
     const isShowing = dropdown.classList.contains('show');
     const button = e.currentTarget || e.target.closest('.actions-btn') || e.target.closest('button');
@@ -5160,7 +5160,7 @@ if (window.__EVENT_LOG_LOADED__) {
       // Only add if not already selected (to avoid unnecessary animations)
       if (!selectedSessionsForDeletion.has(sessionId)) {
         selectedSessionsForDeletion.add(sessionId);
-        const checkbox = document.getElementById(`session-checkbox-${sessionId}`);
+        const checkbox = document.getElementById(`session-checkbox-${escapeHtml(sessionId)}`);
         if (checkbox) {
           checkbox.checked = true;
           // Trigger animation
@@ -5214,7 +5214,7 @@ if (window.__EVENT_LOG_LOADED__) {
     const sessionList = document.getElementById('sessionList');
     const scrollTop = sessionList ? sessionList.scrollTop : 0;
 
-    const checkbox = document.getElementById(`session-checkbox-${sessionId}`);
+    const checkbox = document.getElementById(`session-checkbox-${escapeHtml(sessionId)}`);
     if (selectedSessionsForDeletion.has(sessionId)) {
       selectedSessionsForDeletion.delete(sessionId);
       if (checkbox) {
