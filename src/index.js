@@ -10,9 +10,15 @@ const path = require('path');
 const db = require('./storage/database');
 const logFormatter = require('./storage/log-formatter');
 const auth = require('./auth/auth');
+const { Cache } = require('./utils/performance');
 const app = express();
 const port = process.env.PORT || 3100;
 const isDevelopment = process.env.NODE_ENV !== 'production';
+
+// Initialize caches for frequently accessed data
+const statsCache = new Cache(30000); // 30 seconds TTL for stats
+const sessionsCache = new Cache(60000); // 60 seconds TTL for sessions
+const userIdsCache = new Cache(120000); // 2 minutes TTL for user IDs
 
 // Trust reverse proxy headers so secure cookies work behind Render/Cloudflare
 app.set('trust proxy', 1);
@@ -26,8 +32,12 @@ const validate = ajv.compile(schema);
 
 // Middleware
 app.use(cors()); // Allow requests from any origin
-app.use(express.json()); // Parse JSON request bodies
-app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies (for login form)
+app.use(express.json({ limit: '10mb' })); // Parse JSON request bodies with size limit
+app.use(express.urlencoded({ extended: true, limit: '10mb' })); // Parse URL-encoded bodies (for login form)
+
+// Add compression middleware for responses
+const compression = require('compression');
+app.use(compression());
 
 // Live reload middleware (development only)
 if (isDevelopment) {
@@ -59,16 +69,25 @@ if (isDevelopment) {
 // Initialize session middleware early (will use MemoryStore initially, then upgrade to PostgreSQL if available)
 app.use(auth.initSessionMiddleware());
 
-// Serve static files from public directory
+// Serve static files from public directory with caching
 app.use(express.static(path.join(__dirname, '..', 'public'), {
   // Prevent automatic index.html serving so auth guard can handle "/"
   index: false,
   // Ensure CSS files are served with correct MIME type
+  maxAge: isDevelopment ? 0 : '1y', // Cache static assets for 1 year in production
+  etag: true,
+  lastModified: true,
   setHeaders: (res, filePath) => {
     if (filePath.endsWith('.css')) {
       res.type('text/css');
     } else if (filePath.endsWith('sort-desc') || filePath.endsWith('sort-asc')) {
       res.type('image/svg+xml');
+    }
+    // Add cache control for static assets
+    if (!isDevelopment) {
+      if (filePath.match(/\.(js|css|woff|woff2|ttf|svg|jpg|jpeg|png|gif|ico)$/)) {
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      }
     }
   }
 }));
@@ -118,7 +137,12 @@ app.post('/telemetry', (req, res) => {
     console.log(`[${timestamp}] Telemetry event:`, JSON.stringify(telemetryData, null, 2));
 
     // Store in database (non-blocking - don't await to avoid blocking response)
-    db.storeEvent(telemetryData, timestamp).catch(err => {
+    db.storeEvent(telemetryData, timestamp).then(() => {
+      // Clear relevant caches when new data arrives
+      statsCache.clear();
+      sessionsCache.clear();
+      userIdsCache.clear();
+    }).catch(err => {
       console.error('Error storing telemetry event:', err);
       // Don't fail the request if storage fails - telemetry is non-critical
     });
@@ -513,6 +537,10 @@ app.get('/api/events', auth.requireAuth, auth.requireRole('advanced'), async (re
       orderBy = 'created_at',
       order = 'DESC'
     } = req.query;
+    
+    // Enforce maximum limit to prevent performance issues
+    const maxLimit = 1000;
+    const effectiveLimit = Math.min(parseInt(limit), maxLimit);
 
     // Handle multiple eventType values (Express converts them to an array)
     const eventTypes = Array.isArray(eventType) ? eventType : (eventType ? [eventType] : []);
@@ -530,7 +558,7 @@ app.get('/api/events', auth.requireAuth, auth.requireRole('advanced'), async (re
     }
 
     const result = await db.getEvents({
-      limit: parseInt(limit),
+      limit: effectiveLimit,
       offset: parseInt(offset),
       eventTypes: eventTypes.length > 0 ? eventTypes : undefined,
       serverId,
@@ -541,6 +569,11 @@ app.get('/api/events', auth.requireAuth, auth.requireRole('advanced'), async (re
       orderBy,
       order
     });
+    
+    // Add cache headers for repeated queries
+    if (!startDate && !endDate && !eventType && !serverId && !sessionId && !userId) {
+      res.setHeader('Cache-Control', 'private, max-age=10'); // Cache for 10 seconds
+    }
 
     res.json(result);
   } catch (error) {
@@ -586,7 +619,19 @@ app.get('/api/events/:id', auth.requireAuth, auth.requireRole('advanced'), async
 app.get('/api/stats', auth.requireAuth, async (req, res) => {
   try {
     const { startDate, endDate, eventType } = req.query;
+    
+    // Use cache for basic stats queries without filters
+    const cacheKey = `stats:${startDate || ''}:${endDate || ''}:${eventType || ''}`;
+    const cached = statsCache.get(cacheKey);
+    if (cached) {
+      return res.json(cached);
+    }
+    
     const stats = await db.getStats({ startDate, endDate, eventType });
+    
+    // Cache the result
+    statsCache.set(cacheKey, stats);
+    
     res.json(stats);
   } catch (error) {
     console.error('Error fetching stats:', error);
@@ -633,9 +678,20 @@ app.get('/api/sessions', auth.requireAuth, auth.requireRole('advanced'), async (
       return res.json([]);
     }
 
+    // Use cache for session queries
+    const cacheKey = `sessions:${userIds.join(',')}`;
+    const cached = sessionsCache.get(cacheKey);
+    if (cached) {
+      return res.json(cached);
+    }
+
     const sessions = await db.getSessions({
       userIds: userIds.length > 0 ? userIds : undefined
     });
+    
+    // Cache the result
+    sessionsCache.set(cacheKey, sessions);
+    
     res.json(sessions);
   } catch (error) {
     console.error('Error fetching sessions:', error);
@@ -685,7 +741,18 @@ app.get('/api/top-users-today', auth.requireAuth, async (req, res) => {
 
 app.get('/api/telemetry-users', auth.requireAuth, auth.requireRole('advanced'), async (req, res) => {
   try {
+    // Use cache for user IDs since they don't change frequently
+    const cacheKey = 'userIds:all';
+    const cached = userIdsCache.get(cacheKey);
+    if (cached) {
+      return res.json(cached);
+    }
+    
     const userIds = await db.getUniqueUserIds();
+    
+    // Cache the result
+    userIdsCache.set(cacheKey, userIds);
+    
     res.json(userIds);
   } catch (error) {
     console.error('Error fetching unique user IDs:', error);
