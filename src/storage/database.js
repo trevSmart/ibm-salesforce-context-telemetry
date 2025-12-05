@@ -709,14 +709,19 @@ async function getEvents(options = {}) {
     params.push(...options.userIds);
   }
 
-  // Get total count
-  let countQuery = `SELECT COUNT(*) as total FROM telemetry_events ${whereClause}`;
-  let total;
-  if (dbType === 'sqlite') {
-    total = db.prepare(countQuery).get(...params).total;
-  } else {
-    const countResult = await db.query(countQuery, params);
-    total = parseInt(countResult.rows[0].total);
+  // Get total count (optimize by skipping if not needed)
+  let total = 0;
+  // Only compute total if it's a reasonable query (not too expensive)
+  const shouldComputeTotal = limit <= 100 || offset === 0;
+  
+  if (shouldComputeTotal) {
+    let countQuery = `SELECT COUNT(*) as total FROM telemetry_events ${whereClause}`;
+    if (dbType === 'sqlite') {
+      total = db.prepare(countQuery).get(...params).total;
+    } else {
+      const countResult = await db.query(countQuery, params);
+      total = parseInt(countResult.rows[0].total);
+    }
   }
 
   // Get events

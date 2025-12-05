@@ -37,6 +37,18 @@ class Cache {
   size() {
     return this.cache.size;
   }
+  
+  /**
+   * Clean up expired entries
+   */
+  cleanup() {
+    const now = Date.now();
+    for (const [key, item] of this.cache.entries()) {
+      if (now > item.expiry) {
+        this.cache.delete(key);
+      }
+    }
+  }
 }
 
 /**

@@ -20,6 +20,13 @@ const statsCache = new Cache(30000); // 30 seconds TTL for stats
 const sessionsCache = new Cache(60000); // 60 seconds TTL for sessions
 const userIdsCache = new Cache(120000); // 2 minutes TTL for user IDs
 
+// Periodic cache cleanup to prevent memory bloat
+setInterval(() => {
+  statsCache.cleanup();
+  sessionsCache.cleanup();
+  userIdsCache.cleanup();
+}, 60000); // Clean up every minute
+
 // Trust reverse proxy headers so secure cookies work behind Render/Cloudflare
 app.set('trust proxy', 1);
 
@@ -164,13 +171,27 @@ app.post('/telemetry', (req, res) => {
 // Track server start time for uptime calculation
 const serverStartTime = Date.now();
 
+// Cache health check data to avoid hammering database
+let healthCheckCache = null;
+let healthCheckLastUpdated = 0;
+const HEALTH_CHECK_CACHE_TTL = 5000; // 5 seconds
+
 app.get('/health', async (req, res) => {
   const format = req.query.format || (req.headers.accept?.includes('application/json') ? 'json' : 'html');
 
   if (format === 'json') {
     try {
+      // Use cached health data if recent enough
+      const now = Date.now();
+      if (healthCheckCache && (now - healthCheckLastUpdated) < HEALTH_CHECK_CACHE_TTL) {
+        // Update uptime but use cached DB stats
+        healthCheckCache.uptime = Math.floor((now - serverStartTime) / 1000);
+        healthCheckCache.timestamp = new Date().toISOString();
+        return res.status(healthCheckCache.status === 'healthy' ? 200 : 503).json(healthCheckCache);
+      }
+
       // Get uptime
-      const uptime = Math.floor((Date.now() - serverStartTime) / 1000);
+      const uptime = Math.floor((now - serverStartTime) / 1000);
 
       // Get memory usage
       const memoryUsage = process.memoryUsage();
@@ -181,25 +202,26 @@ app.get('/health', async (req, res) => {
         rss: memoryUsage.rss
       };
 
-      // Check database status
+      // Check database status (lightweight check)
       let dbStatus = 'unknown';
       let dbType = process.env.DB_TYPE || 'sqlite';
+      let totalEvents = 0;
+      
       try {
-        // Try a simple query to check database connectivity
-        await db.getStats();
-        dbStatus = 'connected';
+        // Use cached stats from cache instead of querying DB
+        const cachedStats = statsCache.get('stats:::');
+        if (cachedStats) {
+          dbStatus = 'connected';
+          totalEvents = cachedStats.total || 0;
+        } else {
+          // Only query if not in cache
+          const stats = await db.getStats();
+          dbStatus = 'connected';
+          totalEvents = stats.total || 0;
+        }
       } catch (error) {
         dbStatus = 'error';
         console.error('Database health check failed:', error);
-      }
-
-      // Get total events count
-      let totalEvents = 0;
-      try {
-        const stats = await db.getStats();
-        totalEvents = stats.total || 0;
-      } catch (error) {
-        console.error('Failed to get event stats:', error);
       }
 
       // Determine overall health status
@@ -221,6 +243,10 @@ app.get('/health', async (req, res) => {
           totalEvents: totalEvents
         }
       };
+      
+      // Cache the health data
+      healthCheckCache = healthData;
+      healthCheckLastUpdated = now;
 
       res.status(isHealthy ? 200 : 503).json(healthData);
     } catch (error) {
@@ -852,10 +878,14 @@ app.get('/api/export/logs', auth.requireAuth, auth.requireRole('advanced'), asyn
       serverId,
       limit = 10000
     } = req.query;
+    
+    // Enforce maximum export limit for performance
+    const maxExportLimit = 50000;
+    const effectiveLimit = Math.min(parseInt(limit), maxExportLimit);
 
     // Get events from database
     const result = await db.getEvents({
-      limit: parseInt(limit),
+      limit: effectiveLimit,
       offset: 0,
       eventType,
       serverId,
@@ -872,6 +902,7 @@ app.get('/api/export/logs', auth.requireAuth, auth.requireRole('advanced'), asyn
 
     res.setHeader('Content-Type', 'application/x-ndjson');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Cache-Control', 'no-cache'); // Don't cache exports
     res.send(formattedLogs);
   } catch (error) {
     console.error('Error exporting logs:', error);
