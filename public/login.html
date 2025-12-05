@@ -321,21 +321,6 @@
 			color: #a1a1aa;
 		}
 
-		.loading {
-			display: none;
-			text-align: center;
-			color: #52525b;
-			font-size: 14px;
-			margin-top: 16px;
-		}
-
-		html.dark .loading {
-			color: #a1a1aa;
-		}
-
-		.loading.show {
-			display: block;
-		}
 
 		@media (max-width: 768px) {
 			.login-card {
@@ -393,7 +378,6 @@
 				</div>
 			</form>
 
-			<div id="loading" class="loading">Signing in...</div>
 		</div>
 	</div>
 
@@ -401,7 +385,6 @@
 		const form = document.getElementById('loginForm');
 		const errorMessage = document.getElementById('errorMessage');
 		const loginButton = document.getElementById('loginButton');
-		const loading = document.getElementById('loading');
 
 		// Check for error in URL parameters
 		const urlParams = new URLSearchParams(window.location.search);
@@ -423,10 +406,9 @@
 			const username = document.getElementById('username').value;
 			const password = document.getElementById('password').value;
 
-			// Hide error, show loading
+			// Hide error
 			errorMessage.classList.remove('show');
 			loginButton.disabled = true;
-			loading.classList.add('show');
 
 			try {
 				const response = await fetch('/login', {
@@ -447,13 +429,11 @@
 					errorMessage.textContent = data.message || 'Invalid username or password';
 					errorMessage.classList.add('show');
 					loginButton.disabled = false;
-					loading.classList.remove('show');
 				}
 			} catch (error) {
 				errorMessage.textContent = 'An error occurred. Please try again.';
 				errorMessage.classList.add('show');
 				loginButton.disabled = false;
-				loading.classList.remove('show');
 			}
 		});
 

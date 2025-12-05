@@ -114,6 +114,13 @@
         document.title = doc.title;
       }
 
+      // Sync container classes for page-specific styles (e.g., main-container for event-log page)
+      const currentContainer = document.querySelector('.container, .main-container');
+      const nextContainer = doc.querySelector('.container, .main-container');
+      if (currentContainer && nextContainer) {
+        currentContainer.className = nextContainer.className;
+      }
+
       updateActiveLink(targetPath);
       await ensurePageScripts(targetPath);
 

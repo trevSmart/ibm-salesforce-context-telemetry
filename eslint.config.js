@@ -8,7 +8,8 @@ module.exports = [
       'dist/**',
       'public/css/output.css',
       'public/vendor/**',
-      '**/*.min.js'
+      '**/*.min.js',
+      '**/*.d.ts'
     ]
   },
   {

@@ -174,6 +174,7 @@ async function init() {
 
   await ensureUserRoleColumn();
   await ensureTelemetryParentSessionColumn();
+  await ensureDenormalizedColumns();
 }
 
 /**
@@ -324,6 +325,69 @@ function extractCompanyName(eventData = {}) {
     const companyName = data.companyDetails.Name.trim();
     if (companyName !== '') {
       return companyName;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Extract org ID from telemetry event data
+ * Supports both new format (data.state.org.id) and legacy format (data.orgId)
+ * @param {object} eventData - The telemetry event data
+ * @returns {string|null} Org ID or null if not found
+ */
+function extractOrgId(eventData = {}) {
+  if (!eventData || !eventData.data) {
+    return null;
+  }
+
+  const data = eventData.data;
+
+  // New format: data.state.org.id
+  if (data.state && data.state.org && data.state.org.id) {
+    const orgId = data.state.org.id;
+    if (typeof orgId === 'string' && orgId.trim() !== '') {
+      return orgId.trim();
+    }
+  }
+
+  // Legacy format: data.orgId
+  if (data.orgId && typeof data.orgId === 'string') {
+    const orgId = data.orgId.trim();
+    if (orgId !== '') {
+      return orgId;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Extract tool name from telemetry event data
+ * @param {object} eventData - The telemetry event data
+ * @returns {string|null} Tool name or null if not found
+ */
+function extractToolName(eventData = {}) {
+  if (!eventData || !eventData.data) {
+    return null;
+  }
+
+  const data = eventData.data;
+
+  // Try data.toolName first (most common)
+  if (data.toolName && typeof data.toolName === 'string') {
+    const toolName = data.toolName.trim();
+    if (toolName !== '') {
+      return toolName;
+    }
+  }
+
+  // Try data.tool as fallback
+  if (data.tool && typeof data.tool === 'string') {
+    const toolName = data.tool.trim();
+    if (toolName !== '') {
+      return toolName;
     }
   }
 
@@ -543,11 +607,16 @@ async function storeEvent(eventData, receivedAt) {
       normalizedUserId
     );
 
+    // Extract denormalized fields for faster queries
+    const orgId = extractOrgId(eventData);
+    const userName = extractUserDisplayName(eventData.data || {});
+    const toolName = extractToolName(eventData);
+
     if (dbType === 'sqlite') {
       const stmt = getPreparedStatement('insertEvent', `
 				INSERT INTO telemetry_events
-				(event, timestamp, server_id, version, session_id, parent_session_id, user_id, data, received_at)
-				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+				(event, timestamp, server_id, version, session_id, parent_session_id, user_id, data, received_at, org_id, user_name, tool_name)
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 			`);
 
       stmt.run(
@@ -559,13 +628,16 @@ async function storeEvent(eventData, receivedAt) {
         parentSessionId || null,
         normalizedUserId || null,
         JSON.stringify(eventData.data || {}),
-        receivedAt
+        receivedAt,
+        orgId,
+        userName,
+        toolName
       );
     } else if (dbType === 'postgresql') {
       await db.query(
         `INSERT INTO telemetry_events
-				(event, timestamp, server_id, version, session_id, parent_session_id, user_id, data, received_at)
-				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+				(event, timestamp, server_id, version, session_id, parent_session_id, user_id, data, received_at, org_id, user_name, tool_name)
+				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
         [
           eventData.event,
           eventData.timestamp,
@@ -575,7 +647,10 @@ async function storeEvent(eventData, receivedAt) {
           parentSessionId || null,
           normalizedUserId || null,
           eventData.data || {},
-          receivedAt
+          receivedAt,
+          orgId,
+          userName,
+          toolName
         ]
       );
     }
@@ -892,36 +967,43 @@ async function getSessions(options = {}) {
 
   if (dbType === 'sqlite') {
     // Group by logical session: parent_session_id when available, otherwise session_id
-    let whereClause = 'WHERE s.session_id IS NOT NULL OR s.parent_session_id IS NOT NULL';
+    // Use optimized query with CTEs and aggregations instead of correlated subqueries
+    let whereClause = 'WHERE session_id IS NOT NULL OR parent_session_id IS NOT NULL';
     const params = [];
     if (userIds && Array.isArray(userIds) && userIds.length > 0) {
       const placeholders = userIds.map(() => '?').join(', ');
-      whereClause += ` AND s.user_id IN (${placeholders})`;
+      whereClause += ` AND user_id IN (${placeholders})`;
       params.push(...userIds);
     }
     const result = db.prepare(`
+			WITH session_aggregates AS (
+				SELECT
+					COALESCE(parent_session_id, session_id) AS logical_session_id,
+					COUNT(*) as count,
+					MIN(timestamp) as first_event,
+					MAX(timestamp) as last_event,
+					SUM(CASE WHEN event = 'session_start' THEN 1 ELSE 0 END) as has_start,
+					SUM(CASE WHEN event = 'session_end' THEN 1 ELSE 0 END) as has_end
+				FROM telemetry_events
+				${whereClause}
+				GROUP BY COALESCE(parent_session_id, session_id)
+			)
 			SELECT
-				COALESCE(s.parent_session_id, s.session_id) AS logical_session_id,
-				COUNT(*) as count,
-				MIN(s.timestamp) as first_event,
-				MAX(s.timestamp) as last_event,
+				sa.logical_session_id,
+				sa.count,
+				sa.first_event,
+				sa.last_event,
 				(SELECT user_id FROM telemetry_events
-				 WHERE COALESCE(parent_session_id, session_id) = COALESCE(s.parent_session_id, s.session_id)
+				 WHERE COALESCE(parent_session_id, session_id) = sa.logical_session_id
 				 ORDER BY timestamp ASC LIMIT 1) as user_id,
 				(SELECT data FROM telemetry_events
-				 WHERE COALESCE(parent_session_id, session_id) = COALESCE(s.parent_session_id, s.session_id)
+				 WHERE COALESCE(parent_session_id, session_id) = sa.logical_session_id
 				   AND event = 'session_start'
 				 ORDER BY timestamp ASC LIMIT 1) as session_start_data,
-				(SELECT COUNT(*) FROM telemetry_events
-				 WHERE COALESCE(parent_session_id, session_id) = COALESCE(s.parent_session_id, s.session_id)
-				   AND event = 'session_start') as has_start,
-				(SELECT COUNT(*) FROM telemetry_events
-				 WHERE COALESCE(parent_session_id, session_id) = COALESCE(s.parent_session_id, s.session_id)
-				   AND event = 'session_end') as has_end
-			FROM telemetry_events s
-			${whereClause}
-			GROUP BY COALESCE(s.parent_session_id, s.session_id)
-			ORDER BY last_event DESC
+				sa.has_start,
+				sa.has_end
+			FROM session_aggregates sa
+			ORDER BY sa.last_event DESC
 		`).all(...params);
     return result.map(row => {
       let user_name = null;
@@ -956,56 +1038,45 @@ async function getSessions(options = {}) {
       };
     });
   } else {
-    let whereClause = 'WHERE s.logical_session_id IS NOT NULL';
+    let whereClause = 'WHERE session_id IS NOT NULL OR parent_session_id IS NOT NULL';
     const params = [];
     let paramIndex = 1;
     if (userIds && Array.isArray(userIds) && userIds.length > 0) {
       const placeholders = userIds.map(() => `$${paramIndex++}`).join(', ');
-      whereClause += ` AND s.user_id IN (${placeholders})`;
+      whereClause += ` AND user_id IN (${placeholders})`;
       params.push(...userIds);
     }
 
-    // Use a CTE to compute logical_session_id once, then group on that.
-    // This avoids PostgreSQL errors about ungrouped columns in correlated subqueries.
+    // Use optimized query with CTEs and aggregations instead of correlated subqueries
     const result = await db.query(`
-			WITH logical_sessions AS (
+			WITH session_aggregates AS (
 				SELECT
 					COALESCE(parent_session_id, session_id) AS logical_session_id,
-					id,
-					event,
-					timestamp,
-					server_id,
-					version,
-					session_id,
-					parent_session_id,
-					user_id,
-					data,
-					received_at,
-					created_at
+					COUNT(*) as count,
+					MIN(timestamp) as first_event,
+					MAX(timestamp) as last_event,
+					SUM(CASE WHEN event = 'session_start' THEN 1 ELSE 0 END) as has_start,
+					SUM(CASE WHEN event = 'session_end' THEN 1 ELSE 0 END) as has_end
 				FROM telemetry_events
+				${whereClause}
+				GROUP BY COALESCE(parent_session_id, session_id)
 			)
 			SELECT
-				s.logical_session_id,
-				COUNT(*) as count,
-				MIN(s.timestamp) as first_event,
-				MAX(s.timestamp) as last_event,
-				(SELECT user_id FROM logical_sessions ls
-				 WHERE ls.logical_session_id = s.logical_session_id
-				 ORDER BY ls.timestamp ASC LIMIT 1) as user_id,
-				(SELECT data FROM logical_sessions ls
-				 WHERE ls.logical_session_id = s.logical_session_id
-				   AND ls.event = 'session_start'
-				 ORDER BY ls.timestamp ASC LIMIT 1) as session_start_data,
-				(SELECT COUNT(*) FROM logical_sessions ls
-				 WHERE ls.logical_session_id = s.logical_session_id
-				   AND ls.event = 'session_start') as has_start,
-				(SELECT COUNT(*) FROM logical_sessions ls
-				 WHERE ls.logical_session_id = s.logical_session_id
-				   AND ls.event = 'session_end') as has_end
-			FROM logical_sessions s
-			${whereClause}
-			GROUP BY s.logical_session_id
-			ORDER BY last_event DESC
+				sa.logical_session_id,
+				sa.count,
+				sa.first_event,
+				sa.last_event,
+				(SELECT user_id FROM telemetry_events
+				 WHERE COALESCE(parent_session_id, session_id) = sa.logical_session_id
+				 ORDER BY timestamp ASC LIMIT 1) as user_id,
+				(SELECT data FROM telemetry_events
+				 WHERE COALESCE(parent_session_id, session_id) = sa.logical_session_id
+				   AND event = 'session_start'
+				 ORDER BY timestamp ASC LIMIT 1) as session_start_data,
+				sa.has_start,
+				sa.has_end
+			FROM session_aggregates sa
+			ORDER BY sa.last_event DESC
 		`, params);
     return result.rows.map(row => {
       let user_name = null;
@@ -1892,25 +1963,17 @@ async function getTopTeamsLastDays(orgTeamMappings = [], limit = 50, days = 3) {
   }
 
   const results = [];
+  const orgIdCounts = new Map();
 
   if (dbType === 'sqlite') {
-    // Extract orgId from data JSON field (try data.orgId first, then data.state.org.id)
+    // Use denormalized org_id column for faster queries
     const aggregated = db.prepare(`
-			SELECT
-				COALESCE(
-					json_extract(data, '$.orgId'),
-					json_extract(data, '$.state.org.id')
-				) as org_id,
-				COUNT(*) as event_count
+			SELECT org_id, COUNT(*) as event_count
 			FROM telemetry_events
 			WHERE created_at >= datetime('now', 'localtime', ?)
-				AND data IS NOT NULL
-				AND (
-					json_extract(data, '$.orgId') IS NOT NULL
-					OR json_extract(data, '$.state.org.id') IS NOT NULL
-				)
+				AND org_id IS NOT NULL
+				AND TRIM(org_id) != ''
 			GROUP BY org_id
-			HAVING org_id IS NOT NULL AND TRIM(org_id) != ''
 			ORDER BY event_count DESC, org_id ASC
 			LIMIT ?
 		`).all(lookbackModifier, safeLimit);
@@ -1918,37 +1981,19 @@ async function getTopTeamsLastDays(orgTeamMappings = [], limit = 50, days = 3) {
     aggregated.forEach(row => {
       const orgId = row.org_id;
       if (orgId) {
-        const teamInfo = orgToTeamMap.get(orgId);
-        if (teamInfo) {
-          results.push({
-            id: orgId,
-            label: teamInfo.teamName,
-            clientName: teamInfo.clientName,
-            color: teamInfo.color,
-            eventCount: Number(row.event_count) || 0
-          });
-        }
+        orgIdCounts.set(orgId, parseInt(row.event_count) || 0);
       }
     });
   } else if (dbType === 'postgresql') {
-    // Extract orgId from data JSON field (try data.orgId first, then data.state.org.id)
+    // Use denormalized org_id column for faster queries
     const aggregated = await db.query(
       `
-				SELECT
-					COALESCE(
-						data->>'orgId',
-						data->'state'->'org'->>'id'
-					) as org_id,
-					COUNT(*) AS event_count
+				SELECT org_id, COUNT(*) AS event_count
 				FROM telemetry_events
 				WHERE created_at >= (NOW() - ($2 || ' days')::interval)
-					AND data IS NOT NULL
-					AND (
-						data->>'orgId' IS NOT NULL
-						OR data->'state'->'org'->>'id' IS NOT NULL
-					)
+					AND org_id IS NOT NULL
+					AND TRIM(org_id) != ''
 				GROUP BY org_id
-				HAVING org_id IS NOT NULL AND TRIM(org_id) != ''
 				ORDER BY event_count DESC, org_id ASC
 				LIMIT $1
 			`,
@@ -1958,19 +2003,35 @@ async function getTopTeamsLastDays(orgTeamMappings = [], limit = 50, days = 3) {
     aggregated.rows.forEach(row => {
       const orgId = row.org_id;
       if (orgId) {
-        const teamInfo = orgToTeamMap.get(orgId);
-        if (teamInfo) {
-          results.push({
-            id: orgId,
-            label: teamInfo.teamName,
-            clientName: teamInfo.clientName,
-            color: teamInfo.color,
-            eventCount: Number(row.event_count) || 0
-          });
-        }
+        orgIdCounts.set(orgId, parseInt(row.event_count) || 0);
       }
     });
   }
+
+  // Convert to array, sort by count, and apply limit
+  const sortedOrgs = Array.from(orgIdCounts.entries())
+    .map(([orgId, count]) => ({ orgId, count }))
+    .sort((a, b) => {
+      if (b.count !== a.count) {
+        return b.count - a.count;
+      }
+      return a.orgId.localeCompare(b.orgId);
+    })
+    .slice(0, safeLimit);
+
+  // Map to team info and add to results
+  sortedOrgs.forEach(({ orgId, count }) => {
+    const teamInfo = orgToTeamMap.get(orgId);
+    if (teamInfo) {
+      results.push({
+        id: orgId,
+        label: teamInfo.teamName,
+        clientName: teamInfo.clientName,
+        color: teamInfo.color,
+        eventCount: count
+      });
+    }
+  });
 
   return results;
 }
@@ -1994,6 +2055,184 @@ async function ensureTelemetryParentSessionColumn() {
     }
   } catch (error) {
     console.error('Error ensuring telemetry parent_session_id column:', error);
+  }
+}
+
+/**
+ * Ensure denormalized columns exist in telemetry_events table
+ * Adds org_id, user_name, and tool_name columns for faster queries
+ */
+async function ensureDenormalizedColumns() {
+  if (!db) {
+    return;
+  }
+
+  try {
+    if (dbType === 'sqlite') {
+      const columns = db.prepare('PRAGMA table_info(telemetry_events)').all();
+      const columnNames = columns.map(col => col.name);
+
+      // Add org_id column if it doesn't exist
+      if (!columnNames.includes('org_id')) {
+        db.exec('ALTER TABLE telemetry_events ADD COLUMN org_id TEXT');
+        console.log('Added org_id column to telemetry_events');
+      }
+
+      // Add user_name column if it doesn't exist
+      if (!columnNames.includes('user_name')) {
+        db.exec('ALTER TABLE telemetry_events ADD COLUMN user_name TEXT');
+        console.log('Added user_name column to telemetry_events');
+      }
+
+      // Add tool_name column if it doesn't exist
+      if (!columnNames.includes('tool_name')) {
+        db.exec('ALTER TABLE telemetry_events ADD COLUMN tool_name TEXT');
+        console.log('Added tool_name column to telemetry_events');
+      }
+
+      // Create indexes for denormalized columns (if they don't exist)
+      db.exec('CREATE INDEX IF NOT EXISTS idx_user_name_created_at ON telemetry_events(user_name, created_at)');
+      db.exec('CREATE INDEX IF NOT EXISTS idx_org_id_created_at ON telemetry_events(org_id, created_at)');
+      db.exec('CREATE INDEX IF NOT EXISTS idx_tool_name_created_at ON telemetry_events(tool_name, created_at)');
+      db.exec('CREATE INDEX IF NOT EXISTS idx_user_name_tool_name_created_at ON telemetry_events(user_name, tool_name, created_at)');
+      db.exec('CREATE INDEX IF NOT EXISTS idx_org_id_tool_name_created_at ON telemetry_events(org_id, tool_name, created_at)');
+    } else if (dbType === 'postgresql') {
+      // PostgreSQL supports IF NOT EXISTS in ALTER TABLE
+      await db.query('ALTER TABLE IF EXISTS telemetry_events ADD COLUMN IF NOT EXISTS org_id TEXT');
+      await db.query('ALTER TABLE IF EXISTS telemetry_events ADD COLUMN IF NOT EXISTS user_name TEXT');
+      await db.query('ALTER TABLE IF EXISTS telemetry_events ADD COLUMN IF NOT EXISTS tool_name TEXT');
+      console.log('Ensured denormalized columns (org_id, user_name, tool_name) in telemetry_events');
+
+      // Create indexes for denormalized columns (if they don't exist)
+      await db.query('CREATE INDEX IF NOT EXISTS idx_user_name_created_at ON telemetry_events(user_name, created_at)');
+      await db.query('CREATE INDEX IF NOT EXISTS idx_org_id_created_at ON telemetry_events(org_id, created_at)');
+      await db.query('CREATE INDEX IF NOT EXISTS idx_tool_name_created_at ON telemetry_events(tool_name, created_at)');
+      await db.query('CREATE INDEX IF NOT EXISTS idx_user_name_tool_name_created_at ON telemetry_events(user_name, tool_name, created_at)');
+      await db.query('CREATE INDEX IF NOT EXISTS idx_org_id_tool_name_created_at ON telemetry_events(org_id, tool_name, created_at)');
+
+      // GIN index for JSONB queries (PostgreSQL only)
+      await db.query('CREATE INDEX IF NOT EXISTS idx_data_gin ON telemetry_events USING GIN (data)');
+    }
+
+    // Populate existing data if columns were just added
+    await populateDenormalizedColumns();
+  } catch (error) {
+    console.error('Error ensuring denormalized columns:', error);
+  }
+}
+
+/**
+ * Populate denormalized columns from JSON data for existing records
+ * This is called after adding the columns to backfill existing data
+ */
+async function populateDenormalizedColumns() {
+  if (!db) {
+    return;
+  }
+
+  try {
+    // Check if we need to populate (only if there are records with NULL values in new columns)
+    let needsPopulation = false;
+
+    if (dbType === 'sqlite') {
+      const result = db.prepare(`
+        SELECT COUNT(*) as count
+        FROM telemetry_events
+        WHERE (org_id IS NULL OR user_name IS NULL OR tool_name IS NULL)
+          AND data IS NOT NULL
+          AND data != ''
+        LIMIT 1
+      `).get();
+      needsPopulation = result && result.count > 0;
+    } else if (dbType === 'postgresql') {
+      const result = await db.query(`
+        SELECT COUNT(*) as count
+        FROM telemetry_events
+        WHERE (org_id IS NULL OR user_name IS NULL OR tool_name IS NULL)
+          AND data IS NOT NULL
+        LIMIT 1
+      `);
+      needsPopulation = result.rows.length > 0 && parseInt(result.rows[0].count) > 0;
+    }
+
+    if (!needsPopulation) {
+      return; // No data to populate
+    }
+
+    console.log('Populating denormalized columns from existing data...');
+
+    if (dbType === 'sqlite') {
+      // For SQLite, we'll update in batches to avoid locking
+      const batchSize = 1000;
+      let offset = 0;
+      let hasMore = true;
+
+      while (hasMore) {
+        const rows = db.prepare(`
+          SELECT id, data
+          FROM telemetry_events
+          WHERE (org_id IS NULL OR user_name IS NULL OR tool_name IS NULL)
+            AND data IS NOT NULL
+            AND data != ''
+          LIMIT ? OFFSET ?
+        `).all(batchSize, offset);
+
+        if (rows.length === 0) {
+          hasMore = false;
+          break;
+        }
+
+        const updateStmt = db.prepare(`
+          UPDATE telemetry_events
+          SET org_id = ?, user_name = ?, tool_name = ?
+          WHERE id = ?
+        `);
+
+        for (const row of rows) {
+          try {
+            const data = typeof row.data === 'string' ? JSON.parse(row.data) : row.data;
+            const orgId = extractOrgId({ data });
+            const userName = extractUserDisplayName(data);
+            const toolName = extractToolName({ data });
+
+            updateStmt.run(orgId, userName, toolName, row.id);
+          } catch (error) {
+            // Skip invalid JSON
+            console.warn(`Error parsing data for event ${row.id}:`, error.message);
+          }
+        }
+
+        offset += batchSize;
+        if (rows.length < batchSize) {
+          hasMore = false;
+        }
+      }
+    } else if (dbType === 'postgresql') {
+      // For PostgreSQL, use a single UPDATE with JSON extraction
+      await db.query(`
+        UPDATE telemetry_events
+        SET
+          org_id = COALESCE(
+            data->>'orgId',
+            data->'state'->'org'->>'id'
+          ),
+          user_name = COALESCE(
+            data->>'userName',
+            data->>'user_name',
+            data->'user'->>'name'
+          ),
+          tool_name = COALESCE(
+            data->>'toolName',
+            data->>'tool'
+          )
+        WHERE (org_id IS NULL OR user_name IS NULL OR tool_name IS NULL)
+          AND data IS NOT NULL
+      `);
+    }
+
+    console.log('Finished populating denormalized columns');
+  } catch (error) {
+    console.error('Error populating denormalized columns:', error);
   }
 }
 

@@ -368,11 +368,13 @@
   }
 
   /* Event-log page specific main-container styles */
-  body.event-log-page .main-container {
-    width: calc(100vw - 58px);
-    max-width: none;
+  body.event-log-page .main-container,
+  body.event-log-page .container {
+    width: calc(100vw - 58px) !important;
+    max-width: none !important;
     backdrop-filter: blur(10px);
-    height: calc(100vh - 50px);
+    height: calc(100vh - 50px) !important;
+    min-height: calc(100vh - 50px) !important;
     opacity: 0;
     visibility: hidden;
     transition: opacity 0.1s ease-in-out;
@@ -3630,9 +3632,11 @@
       padding: 8px;
     }
 
-    body.event-log-page .main-container {
-      width: calc(100vw - 16px);
-      height: calc(100vh - 16px);
+    body.event-log-page .main-container,
+    body.event-log-page .container {
+      width: calc(100vw - 16px) !important;
+      height: calc(100vh - 16px) !important;
+      min-height: calc(100vh - 16px) !important;
       border-radius: 12px;
       padding: 28px 28px 20px 28px;
     }
