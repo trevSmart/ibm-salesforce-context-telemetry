@@ -10,6 +10,8 @@ const path = require('path');
 const db = require('./storage/database');
 const logFormatter = require('./storage/log-formatter');
 const auth = require('./auth/auth');
+const session = require('express-session');
+const crypto = require('crypto');
 const app = express();
 const port = process.env.PORT || 3100;
 const isDevelopment = process.env.NODE_ENV !== 'production';
@@ -58,26 +60,25 @@ if (isDevelopment) {
 
 // Temporary placeholder for session middleware - will be replaced after database init
 // This allows us to register routes early while deferring session store configuration
+const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex');
+const tempSession = session({
+  secret: SESSION_SECRET,
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    sameSite: 'lax',
+    maxAge: 24 * 60 * 60 * 1000
+  }
+});
+
 let sessionMiddleware = null;
 app.use((req, res, next) => {
   if (sessionMiddleware) {
     return sessionMiddleware(req, res, next);
   }
   // Before database init, use a basic session with MemoryStore
-  const session = require('express-session');
-  const crypto = require('crypto');
-  const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex');
-  const tempSession = session({
-    secret: SESSION_SECRET,
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      secure: process.env.NODE_ENV === 'production',
-      httpOnly: true,
-      sameSite: 'lax',
-      maxAge: 24 * 60 * 60 * 1000
-    }
-  });
   tempSession(req, res, next);
 });
 
