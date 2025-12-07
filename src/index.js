@@ -1400,14 +1400,14 @@ app.post('/api/teams/:teamId/event-users', auth.requireAuth, auth.requireRole('a
       });
     }
 
-    if (!user_name || typeof user_name !== 'string') {
+    if (!user_name || typeof user_name !== 'string' || user_name.trim() === '') {
       return res.status(400).json({
         status: 'error',
         message: 'Invalid user_name'
       });
     }
 
-    const result = await db.addEventUserToTeam(teamId, user_name);
+    const result = await db.addEventUserToTeam(teamId, user_name.trim());
     res.json(result);
   } catch (error) {
     console.error('Error adding event user to team:', error);
