@@ -499,7 +499,7 @@ async function renderTeamDetail(teamId) {
       <div class="divide-y divide-gray-200 overflow-hidden rounded-lg bg-white shadow-sm">
         <div class="px-4 py-5 sm:px-6" style="display: flex; justify-content: space-between; align-items: center;">
           <h2 style="margin: 0; font-size: 1.1rem; font-weight: 600;">Organizations</h2>
-          <button id="addOrgBtn" class="confirm-modal-btn confirm-modal-btn-cancel">
+          <button id="addOrgBtn" class="confirm-modal-btn confirm-modal-btn-cancel" onclick="showAddOrgModalForTeam(${teamId})">
             <i class="fas fa-plus" style="margin-right: 4px;"></i>Add Org
           </button>
         </div>
@@ -512,7 +512,7 @@ async function renderTeamDetail(teamId) {
       <div class="divide-y divide-gray-200 overflow-hidden rounded-lg bg-white shadow-sm">
         <div class="px-4 py-5 sm:px-6" style="display: flex; justify-content: space-between; align-items: center;">
           <h2 style="margin: 0; font-size: 1.1rem; font-weight: 600;">Users</h2>
-          <button id="addUserBtn" class="confirm-modal-btn confirm-modal-btn-cancel">
+          <button id="addUserBtn" class="confirm-modal-btn confirm-modal-btn-cancel" onclick="showAddUserModalForTeam(${teamId})">
             <i class="fas fa-plus" style="margin-right: 4px;"></i>Add User
           </button>
         </div>
@@ -565,8 +565,6 @@ async function renderTeamDetail(teamId) {
   // Event listeners
   document.getElementById('editTeamBtn')?.addEventListener('click', () => showEditTeamModal(team));
   document.getElementById('deleteTeamBtn')?.addEventListener('click', () => showDeleteTeamConfirm(team));
-  document.getElementById('addOrgBtn')?.addEventListener('click', () => showAddOrgModal(teamId));
-  document.getElementById('addUserBtn')?.addEventListener('click', () => showAddUserModal(teamId));
 }
 
 // Modal functions
@@ -934,6 +932,8 @@ window.viewTeamDetail = (teamId) => {
 };
 
 window.showCreateTeamModal = showCreateTeamModal;
+window.showAddOrgModalForTeam = showAddOrgModal;
+window.showAddUserModalForTeam = showAddUserModal;
 window.removeOrgFromTeam = removeOrgFromTeam;
 window.removeUserFromTeam = removeUserFromTeam;
 
