@@ -50,7 +50,7 @@ function showUserMenu(e) {
 }
 
 // Close user menu when clicking outside
-document.addEventListener('click', function(event) {
+document.addEventListener('click', function (event) {
   const userMenu = document.getElementById('userMenu');
   const userMenuContainer = event.target.closest('.user-menu-container');
 
