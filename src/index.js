@@ -1369,6 +1369,86 @@ app.post('/api/users/:id/assign-team', auth.requireAuth, auth.requireRole('admin
   }
 });
 
+// Event user management endpoints
+// Get all unique event user names from telemetry data
+app.get('/api/event-users', auth.requireAuth, auth.requireRole('advanced'), async (req, res) => {
+  try {
+    const userNames = await db.getEventUserNames();
+    res.json({
+      status: 'ok',
+      users: userNames
+    });
+  } catch (error) {
+    console.error('Error fetching event user names:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to fetch event users'
+    });
+  }
+});
+
+// Add event user to team
+app.post('/api/teams/:teamId/event-users', auth.requireAuth, auth.requireRole('administrator'), async (req, res) => {
+  try {
+    const teamId = parseInt(req.params.teamId);
+    const { user_name } = req.body;
+
+    if (isNaN(teamId)) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Invalid team ID'
+      });
+    }
+
+    if (!user_name || typeof user_name !== 'string' || user_name.trim() === '') {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Invalid user_name'
+      });
+    }
+
+    const result = await db.addEventUserToTeam(teamId, user_name.trim());
+    res.json(result);
+  } catch (error) {
+    console.error('Error adding event user to team:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to add event user to team'
+    });
+  }
+});
+
+// Remove event user from team
+app.delete('/api/teams/:teamId/event-users/:userName', auth.requireAuth, auth.requireRole('administrator'), async (req, res) => {
+  try {
+    const teamId = parseInt(req.params.teamId);
+    const userName = req.params.userName;
+
+    if (isNaN(teamId)) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Invalid team ID'
+      });
+    }
+
+    if (!userName) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Invalid user name'
+      });
+    }
+
+    const result = await db.removeEventUserFromTeam(teamId, userName);
+    res.json(result);
+  } catch (error) {
+    console.error('Error removing event user from team:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to remove event user from team'
+    });
+  }
+});
+
 app.get('/api/telemetry-users', auth.requireAuth, auth.requireRole('advanced'), async (req, res) => {
   try {
     // Use cache because counts are maintained eagerly during writes
