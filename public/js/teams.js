@@ -587,11 +587,9 @@ function showTeamFormModal(team = null) {
   const isEdit = team !== null;
   const backdrop = document.createElement('div');
   backdrop.className = 'confirm-modal-backdrop';
-  backdrop.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9999; display: flex; align-items: center; justify-content: center;';
 
   const modal = document.createElement('div');
   modal.className = 'confirm-modal';
-  modal.style.cssText = 'background: var(--bg-primary); border-radius: 8px; padding: 24px; max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto;';
   modal.innerHTML = `
     <h2 style="margin: 0 0 16px 0;">${isEdit ? 'Edit Team' : 'Create Team'}</h2>
     <form id="teamForm">
@@ -699,11 +697,9 @@ async function showAddOrgModal(teamId) {
 
   const backdrop = document.createElement('div');
   backdrop.className = 'confirm-modal-backdrop';
-  backdrop.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9999; display: flex; align-items: center; justify-content: center;';
 
   const modal = document.createElement('div');
   modal.className = 'confirm-modal';
-  modal.style.cssText = 'background: var(--bg-primary); border-radius: 8px; padding: 24px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto;';
   modal.innerHTML = `
     <h2 style="margin: 0 0 16px 0;">Add Organization</h2>
     <div style="margin-bottom: 16px;">
@@ -829,11 +825,9 @@ async function showAddUserModal(teamId) {
 
   const backdrop = document.createElement('div');
   backdrop.className = 'confirm-modal-backdrop';
-  backdrop.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9999; display: flex; align-items: center; justify-content: center;';
 
   const modal = document.createElement('div');
   modal.className = 'confirm-modal';
-  modal.style.cssText = 'background: var(--bg-primary); border-radius: 8px; padding: 24px; max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto;';
   modal.innerHTML = `
     <h2 style="margin: 0 0 16px 0;">Add User</h2>
     <div style="margin-bottom: 16px;">
