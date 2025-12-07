@@ -48,98 +48,8 @@ if (window.__EVENT_LOG_LOADED__) {
     }
   })();
 
-  let userMenuHideTimeout = null;
-  const USER_MENU_HIDE_DELAY_MS = 300;
+  // User menu functions are now in user-menu.js
   const REFRESH_ICON_ANIMATION_DURATION_MS = 700;
-
-  function showUserMenu(e) {
-    if (e) {
-      e.stopPropagation();
-    }
-    const userMenu = document.getElementById('userMenu');
-    if (!userMenu) {
-      return;
-    }
-
-    // Only open the menu; do not toggle/close it from this handler
-    if (!userMenu.classList.contains('show')) {
-      userMenu.classList.add('show');
-      // Load user info
-      fetch('/api/auth/status', {
-        credentials: 'include' // Ensure cookies are sent
-      })
-        .then(response => response.json())
-        .then(data => {
-          const usernameElement = document.getElementById('userMenuUsername');
-          if (usernameElement) {
-            if (data.authenticated && data.username) {
-              usernameElement.innerHTML = '<i class="fa-regular fa-user user-menu-icon"></i>' + escapeHtml(data.username);
-            } else {
-              usernameElement.innerHTML = '<i class="fa-regular fa-user user-menu-icon"></i>Not authenticated';
-            }
-          }
-
-        })
-        .catch(() => {
-          const usernameElement = document.getElementById('userMenuUsername');
-          if (usernameElement) {
-            usernameElement.innerHTML = '<i class="fa-regular fa-user user-menu-icon"></i>Error loading user';
-          }
-        });
-    }
-  }
-
-  // Close user menu when clicking outside
-  document.addEventListener('click', function(event) {
-    const userMenu = document.getElementById('userMenu');
-    const _userBtn = document.getElementById('userBtn');
-    const userMenuContainer = event.target.closest('.user-menu-container');
-
-    if (userMenu && userMenu.classList.contains('show')) {
-      if (!userMenuContainer && !userMenu.contains(event.target)) {
-        userMenu.classList.remove('show');
-      }
-    }
-  });
-
-  function setupUserMenuHover() {
-    const container = document.querySelector('.user-menu-container');
-    if (!container) {
-      return;
-    }
-
-    container.addEventListener('mouseenter', (event) => {
-      const userMenu = document.getElementById('userMenu');
-      if (!userMenu) {
-        return;
-      }
-
-      if (userMenuHideTimeout) {
-        clearTimeout(userMenuHideTimeout);
-        userMenuHideTimeout = null;
-      }
-
-      // Only open if it's not already visible
-      if (!userMenu.classList.contains('show')) {
-        showUserMenu(event);
-      }
-    });
-
-    container.addEventListener('mouseleave', () => {
-      const userMenu = document.getElementById('userMenu');
-      if (!userMenu) {
-        return;
-      }
-
-      if (userMenuHideTimeout) {
-        clearTimeout(userMenuHideTimeout);
-      }
-      userMenuHideTimeout = setTimeout(() => {
-        userMenu.classList.remove('show');
-        userMenuHideTimeout = null;
-      }, USER_MENU_HIDE_DELAY_MS);
-    });
-  }
 
   // Cache for org-team mappings to avoid repeated API calls
   let orgTeamMappingsCache = null;
@@ -1378,28 +1288,7 @@ if (window.__EVENT_LOG_LOADED__) {
   }
 
 
-  async function handleLogout() {
-  // Close menu
-    const userMenu = document.getElementById('userMenu');
-    if (userMenu) {
-      userMenu.classList.remove('show');
-    }
-
-    try {
-      const response = await fetch('/logout', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-      if (response.ok) {
-        window.location.href = '/login';
-      }
-    } catch (error) {
-      console.error('Logout error:', error);
-      window.location.href = '/login';
-    }
-  }
+  // handleLogout is now in user-menu.js
 
   // Helper function to handle authentication errors
   async function handleApiResponse(response) {
@@ -6016,7 +5905,7 @@ if (window.__EVENT_LOG_LOADED__) {
     runSafeInitStep('notification button state', updateNotificationButtonState);
     runSafeInitStep('theme initialization', initTheme);
     runSafeInitStep('user menu structure', ensureUserMenuStructure);
-    runSafeInitStep('user menu hover', setupUserMenuHover);
+    // Note: setupUserMenuHover is now auto-initialized in user-menu.js
     runSafeInitStep('level filters setup', setupLevelFilters);
     runSafeInitStep('sidebar resizer setup', setupSidebarResizer);
     runSafeInitStep('horizontal resizer setup', setupHorizontalResizer);
@@ -6170,11 +6059,10 @@ if (window.__EVENT_LOG_LOADED__) {
   });
 
   // Expose handlers used by inline HTML attributes
+  // Note: showUserMenu and handleLogout are now exposed by user-menu.js
   window.refreshLogs = refreshLogs;
   window.openSettingsModal = openSettingsModal;
   window.toggleNotificationMode = toggleNotificationMode;
-  window.showUserMenu = showUserMenu;
-  window.handleLogout = handleLogout;
   window.toggleSelectionMode = toggleSelectionMode;
   window.confirmDeleteSelectedSessions = confirmDeleteSelectedSessions;
   window.toggleMobileSidebar = toggleMobileSidebar;

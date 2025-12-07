@@ -1,7 +1,5 @@
 // @ts-nocheck
-// User menu functions
-let userMenuHideTimeout = null;
-const USER_MENU_HIDE_DELAY_MS = 300;
+// Dashboard constants
 const SESSION_START_SERIES_COLOR = '#2195cf';
 const TOP_USERS_LOOKBACK_DAYS = 3;
 const TOP_USERS_LIMIT = 3;
@@ -331,119 +329,7 @@ async function initializeDashboardPage({ resetState = false } = {}) {
 }
 
 
-function showUserMenu(e) {
-  if (e) {
-    e.stopPropagation();
-  }
-  const userMenu = document.getElementById('userMenu');
-  if (!userMenu) {
-    return;
-  }
-
-  // Only open the menu; do not toggle/close it from this handler
-  if (!userMenu.classList.contains('show')) {
-    userMenu.classList.add('show');
-    // Load user info
-    fetch('/api/auth/status', {
-      credentials: 'include' // Ensure cookies are sent
-    })
-      .then(response => response.json())
-      .then(data => {
-        const usernameElement = document.getElementById('userMenuUsername');
-        if (usernameElement) {
-          if (data.authenticated && data.username) {
-            usernameElement.innerHTML = '<i class="fa-regular fa-user user-menu-icon"></i>' + escapeHtml(data.username);
-          } else {
-            usernameElement.innerHTML = '<i class="fa-regular fa-user user-menu-icon"></i>Not authenticated';
-          }
-        }
-
-      })
-      .catch(() => {
-        const usernameElement = document.getElementById('userMenuUsername');
-        if (usernameElement) {
-          usernameElement.innerHTML = '<i class="fa-regular fa-user user-menu-icon"></i>Error loading user';
-        }
-      });
-  }
-}
-
-// Close user menu when clicking outside
-document.addEventListener('click', function(event) {
-  const userMenu = document.getElementById('userMenu');
-  const _userBtn = document.getElementById('userBtn');
-  const userMenuContainer = event.target.closest('.user-menu-container');
-
-  if (userMenu && userMenu.classList.contains('show')) {
-    if (!userMenuContainer && !userMenu.contains(event.target)) {
-      userMenu.classList.remove('show');
-    }
-  }
-});
-
-function setupUserMenuHover() {
-  const container = document.querySelector('.user-menu-container');
-  if (!container) {
-    return;
-  }
-
-  container.addEventListener('mouseenter', (event) => {
-    const userMenu = document.getElementById('userMenu');
-    if (!userMenu) {
-      return;
-    }
-
-    if (userMenuHideTimeout) {
-      clearTimeout(userMenuHideTimeout);
-      userMenuHideTimeout = null;
-    }
-
-    // Only open if it's not already visible
-    if (!userMenu.classList.contains('show')) {
-      showUserMenu(event);
-    }
-  });
-
-  container.addEventListener('mouseleave', () => {
-    const userMenu = document.getElementById('userMenu');
-    if (!userMenu) {
-      return;
-    }
-
-    if (userMenuHideTimeout) {
-      clearTimeout(userMenuHideTimeout);
-    }
-    userMenuHideTimeout = setTimeout(() => {
-      userMenu.classList.remove('show');
-      userMenuHideTimeout = null;
-    }, USER_MENU_HIDE_DELAY_MS);
-  });
-}
-
-
-async function handleLogout() {
-  // Close menu
-  const userMenu = document.getElementById('userMenu');
-  if (userMenu) {
-    userMenu.classList.remove('show');
-  }
-
-  try {
-    const response = await fetch('/logout', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      credentials: 'include' // Ensure cookies are sent
-    });
-    if (response.ok) {
-      window.location.href = '/login';
-    }
-  } catch (error) {
-    console.error('Logout error:', error);
-    window.location.href = '/login';
-  }
-}
+// User menu functions are now in user-menu.js
 
 
 let deleteAllConfirmed = false;
@@ -2004,14 +1890,12 @@ if (document.readyState === 'loading') {
     initTheme();
     updateServerStatsVisibility();
     ensureUserMenuStructure();
-    setupUserMenuHover();
     setupIconButtonsGroupHover();
   });
 } else {
   initTheme();
   updateServerStatsVisibility();
   ensureUserMenuStructure();
-  setupUserMenuHover();
   setupIconButtonsGroupHover();
 }
 
@@ -3048,9 +2932,8 @@ async function loadChartData(days = currentDays) {
 }
 
 // Expose functions used by inline handlers / shared markup
+// Note: showUserMenu and handleLogout are now exposed by user-menu.js
 Object.assign(window, {
-  showUserMenu,
-  handleLogout,
   clearLocalData,
   toggleTheme,
   openSettingsModal,

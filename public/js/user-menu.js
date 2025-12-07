@@ -84,3 +84,138 @@
   window.buildUserMenuTemplate = buildUserMenuTemplate;
   window.renderUserMenu = renderUserMenu;
 })();
+
+// User menu behavior - consolidated from index.js, event-log.js, and teams.js
+(function initUserMenuBehavior() {
+  const USER_MENU_HIDE_DELAY_MS = 300;
+  let userMenuHideTimeout = null;
+
+  function showUserMenu(e) {
+    if (e) {
+      e.stopPropagation();
+    }
+    const userMenu = document.getElementById('userMenu');
+    if (!userMenu) {
+      return;
+    }
+
+    // Only open the menu; do not toggle/close it from this handler
+    if (!userMenu.classList.contains('show')) {
+      userMenu.classList.add('show');
+      // Load user info
+      fetch('/api/auth/status', {
+        credentials: 'include' // Ensure cookies are sent
+      })
+        .then(response => response.json())
+        .then(data => {
+          const usernameElement = document.getElementById('userMenuUsername');
+          if (usernameElement) {
+            const usernameSpan = usernameElement.querySelector('span');
+            if (usernameSpan) {
+              if (data.authenticated && data.username) {
+                usernameSpan.textContent = data.username;
+              } else {
+                usernameSpan.textContent = 'Not authenticated';
+              }
+            }
+          }
+        })
+        .catch(() => {
+          const usernameElement = document.getElementById('userMenuUsername');
+          if (usernameElement) {
+            const usernameSpan = usernameElement.querySelector('span');
+            if (usernameSpan) {
+              usernameSpan.textContent = 'Error loading user';
+            }
+          }
+        });
+    }
+  }
+
+  // Close user menu when clicking outside
+  document.addEventListener('click', function(event) {
+    const userMenu = document.getElementById('userMenu');
+    const _userBtn = document.getElementById('userBtn');
+    const userMenuContainer = event.target.closest('.user-menu-container');
+
+    if (userMenu && userMenu.classList.contains('show')) {
+      if (!userMenuContainer && !userMenu.contains(event.target)) {
+        userMenu.classList.remove('show');
+      }
+    }
+  });
+
+  function setupUserMenuHover() {
+    const container = document.querySelector('.user-menu-container');
+    if (!container) {
+      return;
+    }
+
+    container.addEventListener('mouseenter', (event) => {
+      const userMenu = document.getElementById('userMenu');
+      if (!userMenu) {
+        return;
+      }
+
+      if (userMenuHideTimeout) {
+        clearTimeout(userMenuHideTimeout);
+        userMenuHideTimeout = null;
+      }
+
+      // Only open if it's not already visible
+      if (!userMenu.classList.contains('show')) {
+        showUserMenu(event);
+      }
+    });
+
+    container.addEventListener('mouseleave', () => {
+      const userMenu = document.getElementById('userMenu');
+      if (!userMenu) {
+        return;
+      }
+
+      if (userMenuHideTimeout) {
+        clearTimeout(userMenuHideTimeout);
+      }
+      userMenuHideTimeout = setTimeout(() => {
+        userMenu.classList.remove('show');
+        userMenuHideTimeout = null;
+      }, USER_MENU_HIDE_DELAY_MS);
+    });
+  }
+
+  async function handleLogout() {
+    // Close menu
+    const userMenu = document.getElementById('userMenu');
+    if (userMenu) {
+      userMenu.classList.remove('show');
+    }
+
+    try {
+      const response = await fetch('/logout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include' // Ensure cookies are sent
+      });
+      if (response.ok) {
+        window.location.href = '/login';
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+      window.location.href = '/login';
+    }
+  }
+
+  // Initialize hover functionality when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupUserMenuHover);
+  } else {
+    setupUserMenuHover();
+  }
+
+  // Expose functions globally
+  window.showUserMenu = showUserMenu;
+  window.handleLogout = handleLogout;
+})();
