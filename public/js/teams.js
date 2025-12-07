@@ -392,15 +392,27 @@ function renderTeamsList() {
     </div>
   `;
 
+  const createBtn = document.getElementById('createTeamBtn');
   const teamsList = document.getElementById('teamsList');
 
   if (teams.length === 0) {
     teamsList.innerHTML = `
-      <div style="grid-column: 1 / -1; padding: 48px; text-align: center; color: var(--text-secondary);">
-        <p style="margin: 0 0 16px 0;">No teams yet. Create your first team to get started.</p>
-        <button class="confirm-modal-btn confirm-modal-btn-cancel" onclick="showCreateTeamModal()">
-          <i class="fas fa-plus" style="margin-right: 6px;"></i>New team
-        </button>
+      <div style="grid-column: 1 / -1; display: flex; justify-content: center; padding: 32px 0;">
+        <div class="text-center">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true" class="mx-auto size-12 text-gray-400">
+            <path d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+          <h3 class="mt-2 text-sm font-semibold text-gray-900">No teams</h3>
+          <p class="mt-1 text-sm text-gray-500">Get started by creating a new team.</p>
+          <div class="mt-6">
+            <button type="button" class="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600" onclick="showCreateTeamModal()">
+              <svg viewBox="0 0 20 20" fill="currentColor" data-slot="icon" aria-hidden="true" class="mr-1.5 -ml-0.5 size-5">
+                <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
+              </svg>
+              New Team
+            </button>
+          </div>
+        </div>
       </div>
     `;
     return;
@@ -411,22 +423,21 @@ function renderTeamsList() {
     const colorDot = team.color ? `<span style="display: inline-block; width: 12px; height: 12px; border-radius: 999px; ${colorStyle} margin-right: 8px; border: 1px solid var(--border-color);"></span>` : '';
 
     return `
-      <div class="dashboard-card" style="cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;"
-           onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)'"
-           onmouseout="this.style.transform=''; this.style.boxShadow=''"
-           onclick="viewTeamDetail(${team.id})">
-        <div style="display: flex; align-items: center; margin-bottom: 12px;">
-          ${colorDot}
-          <h3 style="margin: 0; font-size: 1.1rem; font-weight: 600; flex: 1;">${escapeHtml(team.name)}</h3>
-        </div>
-        <div style="display: flex; gap: 16px; color: var(--text-secondary); font-size: 0.9rem;">
-          <span><i class="fas fa-building" style="margin-right: 4px;"></i>${team.org_count} org${team.org_count !== 1 ? 's' : ''}</span>
-          <span><i class="fas fa-users" style="margin-right: 4px;"></i>${team.user_count} user${team.user_count !== 1 ? 's' : ''}</span>
-        </div>
-        <div style="margin-top: 12px; display: flex; gap: 8px;">
-          <button class="btn-secondary" onclick="event.stopPropagation(); viewTeamDetail(${team.id})" style="flex: 1; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); cursor: pointer;">
-            Manage
-          </button>
+      <div class="overflow-hidden rounded-lg bg-white shadow-sm cursor-pointer transition duration-150 ease-in-out hover:-translate-y-0.5 hover:shadow-md" onclick="viewTeamDetail(${team.id})">
+        <div class="px-4 py-5 sm:p-6">
+          <div style="display: flex; align-items: center; margin-bottom: 12px;">
+            ${colorDot}
+            <h3 style="margin: 0; font-size: 1.1rem; font-weight: 600; flex: 1;">${escapeHtml(team.name)}</h3>
+          </div>
+          <div style="display: flex; gap: 16px; color: var(--text-secondary); font-size: 0.9rem;">
+            <span><i class="fas fa-building" style="margin-right: 4px;"></i>${team.org_count} org${team.org_count !== 1 ? 's' : ''}</span>
+            <span><i class="fas fa-users" style="margin-right: 4px;"></i>${team.user_count} user${team.user_count !== 1 ? 's' : ''}</span>
+          </div>
+          <div style="margin-top: 12px; display: flex; gap: 8px;">
+            <button class="btn-secondary" onclick="event.stopPropagation(); viewTeamDetail(${team.id})" style="flex: 1; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); cursor: pointer;">
+              Manage
+            </button>
+          </div>
         </div>
       </div>
     `;
@@ -490,26 +501,30 @@ async function renderTeamDetail(teamId) {
   const detailContent = document.getElementById('teamDetailContent');
   detailContent.innerHTML = `
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
-      <div class="dashboard-card">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <div class="divide-y divide-gray-200 overflow-hidden rounded-lg bg-white shadow-sm">
+        <div class="px-4 py-5 sm:px-6" style="display: flex; justify-content: space-between; align-items: center;">
           <h2 style="margin: 0; font-size: 1.1rem; font-weight: 600;">Organizations</h2>
-          <button id="addOrgBtn" class="btn-primary" style="padding: 6px 12px; border-radius: 6px; border: none; background: var(--accent-color); color: white; cursor: pointer; font-size: 0.9rem;">
+          <button id="addOrgBtn" class="confirm-modal-btn confirm-modal-btn-cancel">
             <i class="fas fa-plus" style="margin-right: 4px;"></i>Add Org
           </button>
         </div>
-        <div id="orgsList" style="display: flex; flex-direction: column; gap: 8px;">
-          ${team.orgs.length === 0 ? '<p style="color: var(--text-secondary); text-align: center; padding: 16px;">No organizations assigned</p>' : ''}
+        <div class="px-4 py-5 sm:p-6">
+          <div id="orgsList" style="display: flex; flex-direction: column; gap: 8px;">
+            ${team.orgs.length === 0 ? '<p style="color: var(--text-secondary); text-align: center; padding: 16px;">No organizations assigned</p>' : ''}
+          </div>
         </div>
       </div>
-      <div class="dashboard-card">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <div class="divide-y divide-gray-200 overflow-hidden rounded-lg bg-white shadow-sm">
+        <div class="px-4 py-5 sm:px-6" style="display: flex; justify-content: space-between; align-items: center;">
           <h2 style="margin: 0; font-size: 1.1rem; font-weight: 600;">Users</h2>
-          <button id="addUserBtn" class="btn-primary" style="padding: 6px 12px; border-radius: 6px; border: none; background: var(--accent-color); color: white; cursor: pointer; font-size: 0.9rem;">
+          <button id="addUserBtn" class="confirm-modal-btn confirm-modal-btn-cancel">
             <i class="fas fa-plus" style="margin-right: 4px;"></i>Add User
           </button>
         </div>
-        <div id="usersList" style="display: flex; flex-direction: column; gap: 8px;">
-          ${team.users.length === 0 ? '<p style="color: var(--text-secondary); text-align: center; padding: 16px;">No users assigned</p>' : ''}
+        <div class="px-4 py-5 sm:p-6">
+          <div id="usersList" style="display: flex; flex-direction: column; gap: 8px;">
+            ${team.users.length === 0 ? '<p style="color: var(--text-secondary); text-align: center; padding: 16px;">No users assigned</p>' : ''}
+          </div>
         </div>
       </div>
     </div>
@@ -583,7 +598,7 @@ function showTeamFormModal(team = null) {
       <div style="display: flex; flex-direction: column; gap: 12px;">
         <label>
           <div style="margin-bottom: 4px; font-weight: 500;">Team Name *</div>
-          <input type="text" id="teamNameInput" value="${team ? escapeHtml(team.name) : ''}" required
+          <input type="text" id="teamNameInput" value="${team ? escapeHtml(team.name) : ''}"
                  style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary);">
         </label>
         <label>
@@ -593,10 +608,10 @@ function showTeamFormModal(team = null) {
         </label>
       </div>
       <div style="display: flex; gap: 8px; margin-top: 20px; justify-content: flex-end;">
-        <button type="button" class="btn-secondary" id="cancelTeamFormBtn" style="padding: 8px 16px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); cursor: pointer;">
+        <button type="button" class="confirm-modal-btn confirm-modal-btn-cancel" id="cancelTeamFormBtn">
           Cancel
         </button>
-        <button type="submit" class="btn-primary" style="padding: 8px 16px; border-radius: 6px; border: none; background: var(--accent-color); color: white; cursor: pointer;">
+        <button type="submit" class="confirm-modal-btn confirm-modal-btn-cancel">
           ${isEdit ? 'Update' : 'Create'}
         </button>
       </div>
@@ -715,17 +730,27 @@ async function showAddOrgModal(teamId) {
     ${unassignedOrgs.length > 0 ? `
       <div style="margin-bottom: 16px;">
         <div style="margin-bottom: 8px; font-weight: 500;">Or select existing org:</div>
-        <select id="existingOrgSelect" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary);">
-          <option value="">-- Select an org --</option>
-          ${unassignedOrgs.map(org => `<option value="${escapeHtml(org.id)}">${escapeHtml(org.alias || org.id)}</option>`).join('')}
-        </select>
+        <el-autocomplete class="relative existing-org-combo">
+          <input id="existingOrgSelect" name="existingOrgSelect" type="text" value=""
+            class="block w-full rounded-md bg-white py-1.5 pr-12 pl-3 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6"
+            placeholder="-- Select an org --">
+          <button type="button" class="absolute inset-y-0 right-0 flex items-center rounded-r-md px-2">
+            <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5 text-gray-400">
+              <path d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" fill-rule="evenodd" />
+            </svg>
+          </button>
+          <el-options anchor="bottom end" popover class="max-h-60 w-(--input-width) overflow-auto rounded-md bg-white py-1 text-base shadow-lg outline outline-black/5 transition-discrete [--anchor-gap:--spacing(1)] data-leave:transition data-leave:duration-100 data-leave:ease-in data-closed:data-leave:opacity-0 sm:text-sm">
+            <el-option value="" class="block truncate px-3 py-2 text-gray-900 select-none aria-selected:bg-indigo-600 aria-selected:text-white">-- Select an org --</el-option>
+            ${unassignedOrgs.map(org => `<el-option value="${escapeHtml(org.id)}" class="block truncate px-3 py-2 text-gray-900 select-none aria-selected:bg-indigo-600 aria-selected:text-white">${escapeHtml(org.alias || org.id)}</el-option>`).join('')}
+          </el-options>
+        </el-autocomplete>
       </div>
     ` : ''}
     <div style="display: flex; gap: 8px; justify-content: flex-end;">
-      <button type="button" class="btn-secondary" id="cancelAddOrgBtn" style="padding: 8px 16px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); cursor: pointer;">
+      <button type="button" class="confirm-modal-btn confirm-modal-btn-cancel" id="cancelAddOrgBtn">
         Cancel
       </button>
-      <button type="button" class="btn-primary" id="saveAddOrgBtn" style="padding: 8px 16px; border-radius: 6px; border: none; background: var(--accent-color); color: white; cursor: pointer;">
+      <button type="button" class="confirm-modal-btn confirm-modal-btn-cancel" id="saveAddOrgBtn">
         Add Org
       </button>
     </div>
@@ -758,14 +783,16 @@ async function showAddOrgModal(teamId) {
 
   const existingSelect = document.getElementById('existingOrgSelect');
   if (existingSelect) {
-    existingSelect.addEventListener('change', (e) => {
-      const selectedOrg = unassignedOrgs.find(org => org.id === e.target.value);
+    const handleExistingOrgChange = (value) => {
+      const selectedOrg = unassignedOrgs.find(org => org.id === value);
       if (selectedOrg) {
         document.getElementById('newOrgIdInput').value = selectedOrg.id;
         document.getElementById('newOrgAliasInput').value = selectedOrg.alias || '';
         document.getElementById('newOrgColorInput').value = selectedOrg.color || '';
       }
-    });
+    };
+    existingSelect.addEventListener('change', (e) => handleExistingOrgChange(e.target.value));
+    existingSelect.addEventListener('input', (e) => handleExistingOrgChange(e.target.value));
   }
 
   document.getElementById('saveAddOrgBtn')?.addEventListener('click', async () => {
@@ -812,17 +839,27 @@ async function showAddUserModal(teamId) {
     <div style="margin-bottom: 16px;">
       <label>
         <div style="margin-bottom: 4px; font-weight: 500;">Select User</div>
-        <select id="userSelect" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary);">
-          <option value="">-- Select a user --</option>
-          ${availableUsers.map(user => `<option value="${user.id}">${escapeHtml(user.username)} (${escapeHtml(user.role)})</option>`).join('')}
-        </select>
+        <el-autocomplete class="relative user-select-combo">
+          <input id="userSelect" name="userSelect" type="text" value=""
+            class="block w-full rounded-md bg-white py-1.5 pr-12 pl-3 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6"
+            placeholder="-- Select a user --">
+          <button type="button" class="absolute inset-y-0 right-0 flex items-center rounded-r-md px-2">
+            <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5 text-gray-400">
+              <path d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" fill-rule="evenodd" />
+            </svg>
+          </button>
+          <el-options anchor="bottom end" popover class="max-h-60 w-(--input-width) overflow-auto rounded-md bg-white py-1 text-base shadow-lg outline outline-black/5 transition-discrete [--anchor-gap:--spacing(1)] data-leave:transition data-leave:duration-100 data-leave:ease-in data-closed:data-leave:opacity-0 sm:text-sm">
+            <el-option value="" class="block truncate px-3 py-2 text-gray-900 select-none aria-selected:bg-indigo-600 aria-selected:text-white">-- Select a user --</el-option>
+            ${availableUsers.map(user => `<el-option value="${user.id}" class="block truncate px-3 py-2 text-gray-900 select-none aria-selected:bg-indigo-600 aria-selected:text-white">${escapeHtml(user.username)} (${escapeHtml(user.role)})</el-option>`).join('')}
+          </el-options>
+        </el-autocomplete>
       </label>
     </div>
     <div style="display: flex; gap: 8px; justify-content: flex-end;">
-      <button type="button" class="btn-secondary" id="cancelAddUserBtn" style="padding: 8px 16px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); cursor: pointer;">
+      <button type="button" class="confirm-modal-btn confirm-modal-btn-cancel" id="cancelAddUserBtn">
         Cancel
       </button>
-      <button type="button" class="btn-primary" id="saveAddUserBtn" style="padding: 8px 16px; border-radius: 6px; border: none; background: var(--accent-color); color: white; cursor: pointer;">
+      <button type="button" class="confirm-modal-btn confirm-modal-btn-cancel" id="saveAddUserBtn">
         Add User
       </button>
     </div>
@@ -854,8 +891,9 @@ async function showAddUserModal(teamId) {
   });
 
   document.getElementById('saveAddUserBtn')?.addEventListener('click', async () => {
-    const userId = parseInt(document.getElementById('userSelect').value);
-    if (!userId) {
+    const userValue = document.getElementById('userSelect').value;
+    const userId = parseInt(userValue, 10);
+    if (!userId || Number.isNaN(userId)) {
       showToast('Please select a user', 'error');
       return;
     }

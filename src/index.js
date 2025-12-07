@@ -4,6 +4,7 @@ require('dotenv').config();
 const express = require('express');
 const session = require('express-session');
 const cors = require('cors');
+const cookieParser = require('cookie-parser');
 const Ajv = require('ajv');
 const addFormats = require('ajv-formats');
 const fs = require('fs');
@@ -48,6 +49,7 @@ const validate = ajv.compile(schema);
 
 // Middleware
 app.use(cors()); // Allow requests from any origin
+app.use(cookieParser()); // Parse cookies
 app.use(express.json({ limit: '10mb' })); // Parse JSON request bodies with size limit
 app.use(express.urlencoded({ extended: true, limit: '10mb' })); // Parse URL-encoded bodies (for login form)
 
@@ -104,6 +106,68 @@ app.use((req, res, next) => {
   }
   // Before database init, use a basic session with MemoryStore
   tempSession(req, res, next);
+});
+
+// Middleware to restore session from remember token
+app.use(async (req, res, next) => {
+  // Only check remember token if user is not already authenticated
+  if (!req.session || !req.session.authenticated) {
+    const cookieName = process.env.REMEMBER_COOKIE_NAME || 'remember_token';
+    const rememberToken = req.cookies[cookieName];
+
+    if (rememberToken) {
+      try {
+        // Validate token
+        const tokenData = await db.validateRememberToken(rememberToken);
+        if (tokenData) {
+          // Get user info from database by ID
+          const user = await db.getUserById(tokenData.userId);
+
+          if (user) {
+            // Restore session
+            req.session.authenticated = true;
+            req.session.username = user.username;
+            req.session.role = user.role || 'basic';
+
+            // Rotate token (create new, revoke old)
+            const rememberTokenDays = parseInt(process.env.REMEMBER_TOKEN_DAYS) || 30;
+            const expiresAt = new Date();
+            expiresAt.setDate(expiresAt.getDate() + rememberTokenDays);
+            const expiresAtISO = expiresAt.toISOString();
+
+            const userAgent = req.headers['user-agent'] || null;
+            const ipAddress = req.ip || req.connection.remoteAddress || null;
+
+            const { token: newToken } = await db.rotateRememberToken(
+              tokenData.tokenId,
+              tokenData.userId,
+              expiresAtISO,
+              userAgent,
+              ipAddress
+            );
+
+            // Update cookie with new token
+            const isProduction = process.env.NODE_ENV === 'production';
+            const maxAge = rememberTokenDays * 24 * 60 * 60 * 1000;
+            res.cookie(cookieName, newToken, {
+              httpOnly: true,
+              secure: isProduction,
+              sameSite: 'lax',
+              maxAge: maxAge
+            });
+          }
+        } else {
+          // Invalid or expired token, clear cookie
+          res.clearCookie(cookieName);
+        }
+      } catch (error) {
+        console.error('Error restoring session from remember token:', error);
+        // Clear invalid cookie
+        res.clearCookie(cookieName);
+      }
+    }
+  }
+  next();
 });
 
 // Serve static files from public directory with caching
@@ -334,6 +398,7 @@ app.post('/login', auth.requireGuest, async (req, res) => {
     // Support both JSON and form-urlencoded
     const username = req.body.username;
     const password = req.body.password;
+    const rememberMe = req.body.rememberMe === true || req.body.rememberMe === 'true' || req.body.rememberMe === 'on';
 
     if (!username || !password) {
       // If it's a form submission, redirect back with error
@@ -353,6 +418,50 @@ app.post('/login', auth.requireGuest, async (req, res) => {
       req.session.authenticated = true;
       req.session.username = userInfo.username;
       req.session.role = userInfo.role;
+
+      // Handle remember me token
+      if (rememberMe) {
+        try {
+          // Get user ID from database
+          const user = await db.getUserByUsername(userInfo.username);
+          if (user && user.id) {
+            // Check active tokens limit (max 3 per user)
+            const activeCount = await db.getActiveRememberTokensCount(user.id);
+            if (activeCount >= 3) {
+              // Revoke all existing tokens for this user to enforce limit
+              await db.revokeAllRememberTokensForUser(user.id);
+            }
+
+            // Calculate expiration (default 30 days, configurable)
+            const rememberTokenDays = parseInt(process.env.REMEMBER_TOKEN_DAYS) || 30;
+            const expiresAt = new Date();
+            expiresAt.setDate(expiresAt.getDate() + rememberTokenDays);
+            const expiresAtISO = expiresAt.toISOString();
+
+            // Get user agent and IP for tracking
+            const userAgent = req.headers['user-agent'] || null;
+            const ipAddress = req.ip || req.connection.remoteAddress || null;
+
+            // Create remember token
+            const { token } = await db.createRememberToken(user.id, expiresAtISO, userAgent, ipAddress);
+
+            // Set remember token cookie
+            const cookieName = process.env.REMEMBER_COOKIE_NAME || 'remember_token';
+            const isProduction = process.env.NODE_ENV === 'production';
+            const maxAge = rememberTokenDays * 24 * 60 * 60 * 1000; // Convert days to milliseconds
+
+            res.cookie(cookieName, token, {
+              httpOnly: true,
+              secure: isProduction,
+              sameSite: 'lax',
+              maxAge: maxAge
+            });
+          }
+        } catch (error) {
+          console.error('Error creating remember token:', error);
+          // Don't fail login if remember token creation fails
+        }
+      }
 
       // If it's a form submission, save session and redirect to home
       if (req.headers['content-type']?.includes('application/x-www-form-urlencoded')) {
@@ -396,7 +505,24 @@ app.post('/login', auth.requireGuest, async (req, res) => {
   }
 });
 
-app.post('/logout', (req, res) => {
+app.post('/logout', async (req, res) => {
+  // Revoke remember token if present
+  const cookieName = process.env.REMEMBER_COOKIE_NAME || 'remember_token';
+  const rememberToken = req.cookies[cookieName];
+
+  if (rememberToken) {
+    try {
+      const tokenData = await db.validateRememberToken(rememberToken);
+      if (tokenData) {
+        await db.revokeRememberToken(tokenData.tokenId);
+      }
+    } catch (error) {
+      console.error('Error revoking remember token on logout:', error);
+    }
+    // Clear remember token cookie
+    res.clearCookie(cookieName);
+  }
+
   req.session.destroy((err) => {
     if (err) {
       console.error('Logout error:', err);
@@ -1475,21 +1601,6 @@ async function startServer() {
   try {
     await db.init();
     console.log('Database initialized successfully');
-
-    // Send a START event to local database
-    const startEvent = {
-      event: 'session_start',
-      timestamp: new Date().toISOString(),
-      serverId: 'local-server',
-      version: '1.0.0',
-      allowMissingUser: true,
-      data: {
-        message: 'Server started',
-        environment: process.env.NODE_ENV || 'development'
-      }
-    };
-    await db.storeEvent(startEvent, new Date().toISOString());
-    console.log('START event sent to local database');
 
     // Initialize authentication with database
     auth.init(db);

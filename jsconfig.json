@@ -8,9 +8,9 @@
       "DOM.Iterable"
     ],
     "types": [
-      "dom"
+      "node"
     ],
-    "checkJs": true,
+    "checkJs": false,
     "allowJs": true,
     "skipLibCheck": true,
     "noEmit": true

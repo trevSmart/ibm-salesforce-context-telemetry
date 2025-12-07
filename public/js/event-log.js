@@ -318,23 +318,23 @@ if (window.__EVENT_LOG_LOADED__) {
     const savedTheme = localStorage.getItem('theme') || 'light';
     const isDarkTheme = savedTheme === 'dark';
     const showServerStats = localStorage.getItem('showServerStats') !== 'false';
-    const autoRefreshEnabled = localStorage.getItem('autoRefreshEnabled') === 'true';
-    const autoRefreshInterval = localStorage.getItem('autoRefreshInterval') || '';
+    const autoRefreshEnabled = autoRefreshEnabledState;
+    const autoRefreshInterval = autoRefreshIntervalMinutes;
 
     const sidebarNav = `
-    <a href="#settings-appearance" class="settings-sidebar-link flex items-center gap-2 rounded-md px-2 py-1.5 text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-secondary)]">
-      <span class="w-4 h-4 flex items-center justify-center rounded-full border border-[color:var(--border-color)] bg-[color:var(--bg-secondary)]">
+    <a href="#settings-appearance" class="settings-sidebar-link flex items-center gap-2 rounded-md px-2 py-1.5 text-(--text-secondary) hover:text-(--text-primary) hover:bg-(--bg-secondary)
+      <span class="w-4 h-4 flex items-center justify-center rounded-full border border-(--border-color)var(--bg-secondary)]">
         <i class="fa-regular fa-moon text-[10px]"></i>
       </span>
       <span class="font-medium">Appearance</span>
     </a>
-    <a href="#settings-events" class="settings-sidebar-link flex items-center gap-2 rounded-md px-2 py-1.5 text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-secondary)]">
-      <span class="w-4 h-4 flex items-center justify-center rounded-full border border-[color:var(--border-color)] bg-[color:var(--bg-secondary)]">
+    <a href="#settings-events" class="settings-sidebar-link flex items-center gap-2 rounded-md px-2 py-1.5 text-[color:var(--text-secondary)] hover:text-(--text-primary) hover:bg-(--bg-secondary)">
+      <span class="w-4 h-4 flex items-center justify-center rounded-full border border-(--border-color) bg-(--bg-secondary)">
         <i class="fa-solid fa-chart-line text-[10px]"></i>
       </span>
       <span class="font-medium">Events</span>
     </a>
-    <a href="#settings-teams" class="settings-sidebar-link flex items-center gap-2 rounded-md px-2 py-1.5 text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-secondary)]">
+    <a href="#settings-teams" class="settings-sidebar-link flex items-center gap-2 rounded-md px-2 py-1.5 text-(--text-secondary) hover:text-(--text-primary) hover:bg-[color:var(--bg-secondary)]">
       <span class="w-4 h-4 flex items-center justify-center rounded-full border border-[color:var(--border-color)] bg-[color:var(--bg-secondary)]">
         <i class="fa-solid fa-users text-[10px]"></i>
       </span>
@@ -375,9 +375,9 @@ if (window.__EVENT_LOG_LOADED__) {
 									<span class="text-sm font-medium text-[color:var(--text-primary)]">Show server stats</span>
 									<span class="text-xs text-[color:var(--text-secondary)]">Display server information in the footer (last updated, load time, version, etc.).</span>
 								</div>
-								<input type="checkbox" class="sr-only peer" id="showServerStatsToggle" ${showServerStats ? 'checked' : ''}>
-								<div class="relative w-11 h-6 bg-gray-200 dark:bg-gray-700 rounded-full peer peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600 transition-colors duration-200 ease-in-out">
-									<div class="absolute left-1 top-1 w-4 h-4 bg-white rounded-full toggle-knob"></div>
+								<div class="group relative inline-flex w-11 shrink-0 rounded-full bg-gray-200 p-0.5 inset-ring inset-ring-gray-900/5 outline-offset-2 outline-indigo-600 transition-colors duration-200 ease-in-out has-checked:bg-indigo-600 has-focus-visible:outline-2">
+									<span class="size-5 rounded-full bg-white shadow-xs ring-1 ring-gray-900/5 transition-transform duration-200 ease-in-out group-has-checked:translate-x-5"></span>
+									<input type="checkbox" id="showServerStatsToggle" ${showServerStats ? 'checked' : ''} aria-label="Show server stats" class="absolute inset-0 appearance-none focus:outline-hidden">
 								</div>
 							</label>
 							<label class="flex items-center justify-between cursor-pointer py-2">
@@ -385,9 +385,9 @@ if (window.__EVENT_LOG_LOADED__) {
 									<span class="text-sm font-medium text-[color:var(--text-primary)]">Dark theme</span>
 									<span class="text-xs text-[color:var(--text-secondary)]">Switch between light and dark color scheme.</span>
 								</div>
-								<input type="checkbox" class="sr-only peer" id="darkThemeToggle" ${isDarkTheme ? 'checked' : ''}>
-								<div class="relative w-11 h-6 bg-gray-200 dark:bg-gray-700 rounded-full peer peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600 transition-colors duration-200 ease-in-out">
-									<div class="absolute left-1 top-1 w-4 h-4 bg-white rounded-full toggle-knob"></div>
+								<div class="group relative inline-flex w-11 shrink-0 rounded-full bg-gray-200 p-0.5 inset-ring inset-ring-gray-900/5 outline-offset-2 outline-indigo-600 transition-colors duration-200 ease-in-out has-checked:bg-indigo-600 has-focus-visible:outline-2">
+									<span class="size-5 rounded-full bg-white shadow-xs ring-1 ring-gray-900/5 transition-transform duration-200 ease-in-out group-has-checked:translate-x-5"></span>
+									<input type="checkbox" id="darkThemeToggle" ${isDarkTheme ? 'checked' : ''} aria-label="Dark theme" class="absolute inset-0 appearance-none focus:outline-hidden">
 								</div>
 							</label>
 						</section>
@@ -402,20 +402,27 @@ if (window.__EVENT_LOG_LOADED__) {
 								</div>
 								<div id="autoRefreshToggleWrapper" style="display: flex; align-items: center; gap: 8px;">
 									<label for="autoRefreshToggle" class="flex items-center cursor-pointer" style="margin: 0;">
-										<input type="checkbox" class="sr-only peer" id="autoRefreshToggle" ${autoRefreshEnabled ? 'checked' : ''}>
-										<div class="relative w-11 h-6 bg-gray-200 dark:bg-gray-700 rounded-full peer peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600 transition-colors duration-200 ease-in-out">
-											<div id="autoRefreshToggleKnob" class="absolute left-1 top-1 w-4 h-4 bg-white rounded-full toggle-knob"></div>
+										<div class="group relative inline-flex w-11 shrink-0 rounded-full bg-gray-200 p-0.5 inset-ring inset-ring-gray-900/5 outline-offset-2 outline-indigo-600 transition-colors duration-200 ease-in-out has-checked:bg-indigo-600 has-focus-visible:outline-2">
+											<span class="size-5 rounded-full bg-white shadow-xs ring-1 ring-gray-900/5 transition-transform duration-200 ease-in-out group-has-checked:translate-x-5"></span>
+											<input type="checkbox" id="autoRefreshToggle" ${autoRefreshEnabled ? 'checked' : ''} aria-label="Toggle auto refresh" class="absolute inset-0 appearance-none focus:outline-hidden">
 										</div>
 									</label>
-									<div style="position: relative;">
-										<select id="autoRefreshInterval" style="padding: 6px 24px 6px 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 14px; cursor: pointer; appearance: none; min-width: 80px;" ${autoRefreshEnabled ? '' : 'disabled'}>
-											<option value="" ${autoRefreshInterval === '' ? 'selected' : ''}>Off</option>
-											<option value="3" ${autoRefreshInterval === '3' ? 'selected' : ''}>3</option>
-											<option value="5" ${autoRefreshInterval === '5' ? 'selected' : ''}>5</option>
-											<option value="10" ${autoRefreshInterval === '10' ? 'selected' : ''}>10</option>
-										</select>
-										<i class="fa-solid fa-chevron-down" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); color: var(--text-secondary); font-size: 10px; pointer-events: none;"></i>
-									</div>
+									<el-autocomplete class="relative auto-refresh-interval" data-disabled="${autoRefreshEnabled ? 'false' : 'true'}">
+										<input id="autoRefreshInterval" name="autoRefreshInterval" type="text" value="${autoRefreshInterval}"
+											class="block w-full rounded-md bg-white py-1.5 pr-12 pl-3 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6"
+											${autoRefreshEnabled ? '' : 'disabled'}>
+										<button type="button" class="absolute inset-y-0 right-0 flex items-center rounded-r-md px-2">
+											<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5 text-gray-400">
+												<path d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" fill-rule="evenodd" />
+											</svg>
+										</button>
+										<el-options anchor="bottom end" popover class="max-h-60 w-(--input-width) overflow-auto rounded-md bg-white py-1 text-base shadow-lg outline outline-black/5 transition-discrete [--anchor-gap:--spacing(1)] data-leave:transition data-leave:duration-100 data-leave:ease-in data-closed:data-leave:opacity-0 sm:text-sm">
+											<el-option value="" class="block truncate px-3 py-2 text-gray-900 select-none aria-selected:bg-indigo-600 aria-selected:text-white">Off</el-option>
+											<el-option value="3" class="block truncate px-3 py-2 text-gray-900 select-none aria-selected:bg-indigo-600 aria-selected:text-white">3</el-option>
+											<el-option value="5" class="block truncate px-3 py-2 text-gray-900 select-none aria-selected:bg-indigo-600 aria-selected:text-white">5</el-option>
+											<el-option value="10" class="block truncate px-3 py-2 text-gray-900 select-none aria-selected:bg-indigo-600 aria-selected:text-white">10</el-option>
+										</el-options>
+									</el-autocomplete>
 								</div>
 							</div>
 						</section>
@@ -1041,12 +1048,20 @@ if (window.__EVENT_LOG_LOADED__) {
               <div>
                 <label class="settings-modal-placeholder-text" style="display: block; margin-bottom: 6px;">
                   Role
-                  <select name="role"
-                    style="margin-top: 4px; width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 14px; cursor: pointer;">
-                    <option value="basic">Basic</option>
-                    <option value="advanced">Advanced</option>
-                    <option value="administrator">Administrator</option>
-                  </select>
+                  <el-autocomplete class="relative" style="margin-top: 4px;">
+                    <input id="createUserRole" name="role" type="text" value="basic"
+                      class="block w-full rounded-md bg-white py-1.5 pr-12 pl-3 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6">
+                    <button type="button" class="absolute inset-y-0 right-0 flex items-center rounded-r-md px-2">
+                      <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5 text-gray-400">
+                        <path d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" fill-rule="evenodd" />
+                      </svg>
+                    </button>
+                    <el-options anchor="bottom end" popover class="max-h-60 w-(--input-width) overflow-auto rounded-md bg-white py-1 text-base shadow-lg outline outline-black/5 transition-discrete [--anchor-gap:--spacing(1)] data-leave:transition data-leave:duration-100 data-leave:ease-in data-closed:data-leave:opacity-0 sm:text-sm">
+                      <el-option value="basic" class="block truncate px-3 py-2 text-gray-900 select-none aria-selected:bg-indigo-600 aria-selected:text-white">Basic</el-option>
+                      <el-option value="advanced" class="block truncate px-3 py-2 text-gray-900 select-none aria-selected:bg-indigo-600 aria-selected:text-white">Advanced</el-option>
+                      <el-option value="administrator" class="block truncate px-3 py-2 text-gray-900 select-none aria-selected:bg-indigo-600 aria-selected:text-white">Administrator</el-option>
+                    </el-options>
+                  </el-autocomplete>
                 </label>
               </div>
             `,
@@ -1131,12 +1146,20 @@ if (window.__EVENT_LOG_LOADED__) {
               <div>
                 <label class="settings-modal-placeholder-text" style="display: block; margin-bottom: 6px;">
                   Role
-                  <select name="role"
-                    style="margin-top: 4px; width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 14px; cursor: pointer;">
-                    <option value="basic" ${currentRole === 'basic' ? 'selected' : ''}>Basic</option>
-                    <option value="advanced" ${currentRole === 'advanced' ? 'selected' : ''}>Advanced</option>
-                    <option value="administrator" ${currentRole === 'administrator' ? 'selected' : ''}>Administrator</option>
-                  </select>
+                  <el-autocomplete class="relative" style="margin-top: 4px;">
+                    <input id="editUserRole" name="role" type="text" value="${currentRole}"
+                      class="block w-full rounded-md bg-white py-1.5 pr-12 pl-3 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6">
+                    <button type="button" class="absolute inset-y-0 right-0 flex items-center rounded-r-md px-2">
+                      <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5 text-gray-400">
+                        <path d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" fill-rule="evenodd" />
+                      </svg>
+                    </button>
+                    <el-options anchor="bottom end" popover class="max-h-60 w-(--input-width) overflow-auto rounded-md bg-white py-1 text-base shadow-lg outline outline-black/5 transition-discrete [--anchor-gap:--spacing(1)] data-leave:transition data-leave:duration-100 data-leave:ease-in data-closed:data-leave:opacity-0 sm:text-sm">
+                      <el-option value="basic" class="block truncate px-3 py-2 text-gray-900 select-none aria-selected:bg-indigo-600 aria-selected:text-white">Basic</el-option>
+                      <el-option value="advanced" class="block truncate px-3 py-2 text-gray-900 select-none aria-selected:bg-indigo-600 aria-selected:text-white">Advanced</el-option>
+                      <el-option value="administrator" class="block truncate px-3 py-2 text-gray-900 select-none aria-selected:bg-indigo-600 aria-selected:text-white">Administrator</el-option>
+                    </el-options>
+                  </el-autocomplete>
                 </label>
               </div>
             `,
@@ -1341,24 +1364,30 @@ if (window.__EVENT_LOG_LOADED__) {
     // Handle auto refresh toggle
     const autoRefreshToggle = modal.querySelector('#autoRefreshToggle');
     const autoRefreshToggleWrapper = modal.querySelector('#autoRefreshToggleWrapper');
-    const autoRefreshIntervalSelect = modal.querySelector('#autoRefreshInterval');
-    if (autoRefreshToggle && autoRefreshIntervalSelect) {
+    const autoRefreshIntervalInput = modal.querySelector('#autoRefreshInterval');
+    if (autoRefreshToggle && autoRefreshIntervalInput) {
       autoRefreshToggle.addEventListener('change', (e) => {
         const enabled = e.target.checked;
-        localStorage.setItem('autoRefreshEnabled', enabled ? 'true' : 'false');
-        autoRefreshIntervalSelect.disabled = !enabled;
+        autoRefreshEnabledState = enabled;
+        if (!enabled) {
+          autoRefreshIntervalMinutes = '';
+          autoRefreshIntervalInput.value = '';
+        }
+        autoRefreshIntervalInput.disabled = !enabled;
         updateAutoRefreshInterval();
       });
 
-      autoRefreshIntervalSelect.addEventListener('change', (e) => {
+      const handleAutoRefreshInput = (e) => {
         const interval = e.target.value;
-        localStorage.setItem('autoRefreshInterval', interval);
+        autoRefreshIntervalMinutes = interval;
         updateAutoRefreshInterval();
-      });
+      };
+      autoRefreshIntervalInput.addEventListener('change', handleAutoRefreshInput);
+      autoRefreshIntervalInput.addEventListener('input', handleAutoRefreshInput);
 
       if (autoRefreshToggleWrapper) {
         autoRefreshToggleWrapper.addEventListener('click', (event) => {
-          const clickedSelect = event.target.closest('#autoRefreshInterval');
+          const clickedSelect = event.target.closest('.auto-refresh-interval');
           const clickedToggle = event.target.closest('label[for="autoRefreshToggle"]');
           if (clickedSelect || clickedToggle) {
             return;
@@ -1509,6 +1538,8 @@ if (window.__EVENT_LOG_LOADED__) {
   let notificationModeEnabled = false;
   let notificationRefreshIntervalId = null;
   let autoRefreshIntervalId = null;
+  let autoRefreshEnabledState = false;
+  let autoRefreshIntervalMinutes = '';
   let isRefreshInProgress = false;
   let lastKnownEventTimestamp = null;
   let lastFetchTime = null; // Track when events were last fetched
@@ -4109,30 +4140,37 @@ if (window.__EVENT_LOG_LOADED__) {
       // Store event data in the row element to avoid API call when copying payload
       row.setAttribute('data-event', JSON.stringify(event));
       const userCellHtml = showUserColumn
-        ? `<td class="log-user">${escapeHtml(userLabel)}</td>`
+        ? `<td class="hidden px-3 py-4 text-sm text-gray-500 sm:table-cell log-user">${escapeHtml(userLabel)}</td>`
         : '';
 
       row.innerHTML = `
-				<td style="text-align: center; padding: 2px 8px;">
-					<button class="expand-btn" type="button" id="expand-btn-${event.id}">
+				<td class="relative py-4 pr-3 text-sm font-medium text-gray-900" style="text-align: center;">
+					<button class="expand-btn" type="button" id="expand-btn-${event.id}" style="background: none; border: none; cursor: pointer; padding: 4px;">
 						<i class="fa-solid fa-chevron-right"></i>
 					</button>
+					<div class="absolute right-full bottom-0 h-px w-screen bg-gray-100"></div>
+					<div class="absolute bottom-0 left-0 h-px w-screen bg-gray-100"></div>
 				</td>
-				<td style="text-align: center; padding: 2px 8px;">
+				<td class="relative py-4 pr-3 text-sm font-medium text-gray-900" style="text-align: center;">
 					<span class="status-indicator ${statusClass}">${statusLabel}</span>
+					<div class="absolute right-full bottom-0 h-px w-screen bg-gray-100"></div>
+					<div class="absolute bottom-0 left-0 h-px w-screen bg-gray-100"></div>
 				</td>
-				<td class="log-time">${formatDate(event.timestamp)}</td>
+				<td class="relative py-4 pr-3 text-sm font-medium text-gray-900 log-time">${formatDate(event.timestamp)}
+					<div class="absolute right-full bottom-0 h-px w-screen bg-gray-100"></div>
+					<div class="absolute bottom-0 left-0 h-px w-screen bg-gray-100"></div>
+				</td>
 				${userCellHtml}
-				<td>
+				<td class="px-3 py-4 text-sm text-gray-500">
 					<span class="level-badge ${levelClass}">
 						${event.event.replace('_', ' ')}
 					</span>
 				</td>
-				<td class="log-client">${escapeHtml(clientName)}</td>
-				<td class="log-tool-name">${toolName}</td>
-				<td class="log-description">${description}</td>
-				<td class="actions-cell">
-					<button class="actions-btn" onclick="toggleActionsDropdown(event, ${event.id})">
+				<td class="hidden px-3 py-4 text-sm text-gray-500 md:table-cell log-client">${escapeHtml(clientName)}</td>
+				<td class="hidden px-3 py-4 text-sm text-gray-500 lg:table-cell log-tool-name">${toolName}</td>
+				<td class="px-3 py-4 text-sm text-gray-500 log-description">${description}</td>
+				<td class="py-4 pl-3 text-right text-sm font-medium actions-cell">
+					<button class="actions-btn text-indigo-600 hover:text-indigo-900" onclick="toggleActionsDropdown(event, ${event.id})" style="background: none; border: none; cursor: pointer; padding: 4px;">
 						<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
 							<circle cx="8" cy="3" r="1.5"/>
 							<circle cx="8" cy="8" r="1.5"/>
@@ -4178,15 +4216,25 @@ if (window.__EVENT_LOG_LOADED__) {
       expandedRow.id = `expanded-${event.id}`;
 
       const expandedTd = document.createElement('td');
-      expandedTd.colSpan = showUserColumn ? 8 : 7;
-      expandedTd.className = 'log-description-expanded';
+      expandedTd.colSpan = showUserColumn ? 9 : 8;
+      expandedTd.className = 'log-description-expanded px-3 py-4';
+      expandedTd.style.cssText = 'position: relative;';
 
       const pre = document.createElement('pre');
       pre.className = 'json-pretty';
       pre.textContent = descriptionPretty;
 
       expandedTd.appendChild(pre);
-      expandedRow.appendChild(document.createElement('td')); // Empty first cell
+
+      // Add border separators like in Tailwind style
+      const borderDiv1 = document.createElement('div');
+      borderDiv1.className = 'absolute right-full bottom-0 h-px w-screen bg-gray-100';
+      expandedTd.appendChild(borderDiv1);
+
+      const borderDiv2 = document.createElement('div');
+      borderDiv2.className = 'absolute bottom-0 left-0 h-px w-screen bg-gray-100';
+      expandedTd.appendChild(borderDiv2);
+
       expandedRow.appendChild(expandedTd);
       tbody.appendChild(expandedRow);
     });
@@ -4388,7 +4436,7 @@ if (window.__EVENT_LOG_LOADED__) {
         // Smooth transition: replace infinite animation with a finishing one
         refreshIcon.classList.remove('rotating');
         refreshIcon.classList.add('rotating-finish');
-        
+
         // Remove the finish class after animation completes
         setTimeout(() => {
           refreshIcon.classList.remove('rotating-finish');
@@ -4557,8 +4605,8 @@ if (window.__EVENT_LOG_LOADED__) {
   function updateAutoRefreshInterval() {
     clearAutoRefreshInterval();
 
-    const enabled = localStorage.getItem('autoRefreshEnabled') === 'true';
-    const intervalMinutes = localStorage.getItem('autoRefreshInterval');
+    const enabled = autoRefreshEnabledState;
+    const intervalMinutes = autoRefreshIntervalMinutes;
 
     setRefreshButtonAutoState(enabled, intervalMinutes);
 

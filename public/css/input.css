@@ -1,3 +1,7 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap');
+@config "../../tailwind.config.js";
+@import "tailwindcss";
+
 /* Toggle knobs (manual peer-checked replacement) */
 .sr-only.peer + div .toggle-knob {
   transition: transform 200ms ease-in-out;
@@ -6,12 +10,13 @@
 .sr-only.peer:checked + div .toggle-knob {
   transform: translateX(20px);
 }
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
 
 /* Remove font-size from form elements */
 @layer base {
+  :root {
+    --button-bg: #f1f5f9;
+  }
+
 
   button,
   input,
@@ -114,13 +119,24 @@
 
   body {
     font-family: 'Manrope', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    background: #8896b5;
     min-height: 100vh;
+  }
+
+  body.index-page,
+  body.event-log-page,
+  body.teams-page,
+  body.login-page,
+  body.health-page {
+    background: #8896b5;
     padding: 20px;
     position: relative;
   }
 
-  html.dark body {
+  html.dark body.index-page,
+  html.dark body.event-log-page,
+  html.dark body.teams-page,
+  html.dark body.login-page,
+  html.dark body.health-page {
     background: #18181b url("/resources/bg-01.jpg") center center / cover no-repeat fixed;
     background-blend-mode: soft-light;
   }
@@ -233,17 +249,17 @@
   }
 
   .top-nav-actions .icon-btn {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
+    width: auto;
+    height: auto;
+    border-radius: 9999px;
     font-size: 0.875rem;
-    background: #f1f5f9;
-    color: #6a768a;
+    background: var(--button-bg);
+    color: var(--text-primary);
   }
 
   .top-nav-actions .icon-btn:hover {
-    background: #f1f5f9;
-    color: #6a768a;
+    background: var(--button-bg);
+    color: var(--text-primary);
   }
 
   /* Card titles (excluding main chart h1) */
@@ -781,21 +797,6 @@
 
   html.dark .time-range-select:hover {
     border-color: var(--accent-color);
-  }
-
-  h1 {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--text-primary);
-    margin-bottom: 16px;
-  }
-
-  p {
-    font-size: 1.125rem;
-    color: var(--text-secondary);
-    margin-bottom: 40px;
-    line-height: 1.6;
-    cursor: default;
   }
 
   .event-log-link {
@@ -1336,31 +1337,33 @@
   }
 
   .icon-buttons-group .icon-btn {
-    border-radius: 12px;
+    border-radius: 9999px;
     position: relative;
     z-index: 2;
-    background: white !important;
-    width: 38px;
-    height: 38px;
-    flex: 0 0 38px;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02), 0 0 1px rgba(0, 0, 0, 0.01), 0 2px 3px rgba(0, 0, 0, 0.03);
+    background: var(--button-bg);
+    width: auto;
+    height: auto;
+    flex: 0 0 auto;
+    padding: 8px;
+    color: var(--text-primary);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
   }
 
   .icon-buttons-group .icon-btn:hover {
-    background: white !important;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04), 0 0 2px rgba(0, 0, 0, 0.02), 0 4px 6px rgba(0, 0, 0, 0.05);
+    background: var(--button-bg);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
   }
 
   .icon-buttons-group .icon-btn:hover:not(.delete-all-btn):not(.notification-toggle.active) {
-    background: white !important;
+    background: var(--button-bg);
   }
 
   .icon-buttons-group .icon-btn:first-of-type {
-    border-radius: 12px;
+    border-radius: 9999px;
   }
 
   .icon-buttons-group .icon-btn:last-of-type {
-    border-radius: 12px;
+    border-radius: 9999px;
   }
 
   .user-menu-container {
@@ -1536,22 +1539,23 @@
   }
 
   .top-users-action {
-    border: 1px solid var(--border-color);
-    background: var(--bg-primary);
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
+    border: none;
+    background: var(--button-bg);
+    padding: 6px;
+    border-radius: 9999px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     color: var(--text-primary);
     cursor: pointer;
-    transition: background-color 0.15s ease, color 0.15s ease;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
+    transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
   }
 
   .top-users-action:hover {
-    background: var(--hover-bg);
+    background: var(--button-bg);
     color: var(--text-primary);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.16);
   }
 
   .top-users-empty {
@@ -1709,21 +1713,31 @@
   }
 
   .icon-btn {
-    width: 40px;
-    height: 40px;
     border: none;
-    border-radius: 12px;
-    background: white;
+    border-radius: 9999px;
+    background: var(--button-bg);
     cursor: pointer;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
+    padding: 8px;
     font-size: 1.125rem;
     line-height: 1.75rem;
     transition: background-color 0.2s ease, color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
-    color: #3a485f;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02), 0 0 1px rgba(0, 0, 0, 0.01), 0 2px 3px rgba(0, 0, 0, 0.03);
+    color: var(--text-primary);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
     position: relative;
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+  }
+
+  .icon-btn:hover:not(.delete-all-btn):not(.notification-toggle.active):not(.auto-refresh-active) {
+    background: var(--button-bg);
+  }
+
+  .icon-btn:focus-visible {
+    outline: 2px solid var(--button-bg);
+    outline-offset: 2px;
   }
 
   .icon-btn.auto-refresh-active {
@@ -1870,19 +1884,19 @@
   }
 
   html.dark .icon-btn {
-    background: var(--bg-table-header);
-    color: var(--text-muted);
+    background: var(--button-bg);
+    color: var(--text-primary);
   }
 
   .icon-btn:hover:not(.delete-all-btn):not(.notification-toggle.active):not(.auto-refresh-active) {
-    background: white;
-    color: #3d4152;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04), 0 0 2px rgba(0, 0, 0, 0.02), 0 4px 6px rgba(0, 0, 0, 0.05);
+    background: var(--button-bg);
+    color: var(--text-primary);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
     transform: translateY(-0.5px);
   }
 
   html.dark .icon-btn:hover:not(.delete-all-btn):not(.notification-toggle.active):not(.auto-refresh-active) {
-    background: var(--hover-bg);
+    background: var(--button-bg);
     color: var(--text-primary);
     transform: translateY(-0.5px);
   }
@@ -3585,10 +3599,10 @@
     .container-content {
       padding: 0;
     }
-
-    h1 {
+/*
+    body.index-page h1 {
       font-size: 1.25rem;
-    }
+    } */
 
     .dashboard-layout {
       flex-direction: column;
@@ -3879,7 +3893,7 @@
       padding: 0;
     }
 
-    h1 {
+    body.index-page h1 {
       font-size: 1.125rem;
     }
 
@@ -4810,4 +4824,28 @@
   #teamsTable tbody tr:hover {
     background: var(--bg-secondary);
   }
+}
+
+.teams-header {
+  padding: 24px 24px 0 24px;
+}
+
+.teams-breadcrumbs {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.teams-title {
+  margin: 0;
+}
+
+.teams-loading {
+  padding: 24px;
+  text-align: center;
+}
+
+.user-menu-container {
+  position: relative;
 }

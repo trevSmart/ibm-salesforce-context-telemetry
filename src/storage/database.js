@@ -177,6 +177,7 @@ async function init() {
   await ensureDenormalizedColumns();
   await ensureEventStatsTables();
   await ensureTeamsAndOrgsTables();
+  await ensureRememberTokensTable();
 }
 
 /**
@@ -1656,6 +1657,29 @@ async function updateLastLogin(username) {
     stmt.run(now, username);
   } else if (dbType === 'postgresql') {
     await db.query('UPDATE users SET last_login = $1 WHERE username = $2', [now, username]);
+  }
+}
+
+/**
+ * Get user by ID
+ * @param {number} userId - User ID
+ * @returns {Promise<object|null>} User object or null
+ */
+async function getUserById(userId) {
+  if (!db) {
+    throw new Error('Database not initialized. Call init() first.');
+  }
+
+  if (dbType === 'sqlite') {
+    const stmt = db.prepare('SELECT id, username, password_hash, role, created_at, last_login FROM users WHERE id = ?');
+    const user = stmt.get(userId);
+    return user || null;
+  } else if (dbType === 'postgresql') {
+    const result = await db.query(
+      'SELECT id, username, password_hash, role, created_at, last_login FROM users WHERE id = $1',
+      [userId]
+    );
+    return result.rows[0] || null;
   }
 }
 
@@ -3716,6 +3740,275 @@ async function assignUserToTeam(userId, teamId) {
   }
 }
 
+/**
+ * Ensure remember_tokens table exists
+ */
+async function ensureRememberTokensTable() {
+  if (!db) {
+    return;
+  }
+
+  try {
+    if (dbType === 'sqlite') {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS remember_tokens (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          token_hash TEXT NOT NULL UNIQUE,
+          expires_at TEXT NOT NULL,
+          revoked_at TEXT,
+          user_agent TEXT,
+          ip_address TEXT,
+          created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_remember_token_hash ON remember_tokens(token_hash);
+        CREATE INDEX IF NOT EXISTS idx_remember_user_id ON remember_tokens(user_id);
+        CREATE INDEX IF NOT EXISTS idx_remember_expires_at ON remember_tokens(expires_at);
+      `);
+    } else if (dbType === 'postgresql') {
+      await db.query(`
+        CREATE TABLE IF NOT EXISTS remember_tokens (
+          id SERIAL PRIMARY KEY,
+          user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          token_hash TEXT NOT NULL UNIQUE,
+          expires_at TIMESTAMPTZ NOT NULL,
+          revoked_at TIMESTAMPTZ,
+          user_agent TEXT,
+          ip_address TEXT,
+          created_at TIMESTAMPTZ DEFAULT NOW()
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_remember_token_hash ON remember_tokens(token_hash);
+        CREATE INDEX IF NOT EXISTS idx_remember_user_id ON remember_tokens(user_id);
+        CREATE INDEX IF NOT EXISTS idx_remember_expires_at ON remember_tokens(expires_at);
+      `);
+    }
+  } catch (error) {
+    console.error('Error ensuring remember_tokens table:', error);
+  }
+}
+
+/**
+ * Create a remember token for a user
+ * @param {number} userId - User ID
+ * @param {string} expiresAt - ISO timestamp when token expires
+ * @param {string} userAgent - Optional user agent string
+ * @param {string} ipAddress - Optional IP address
+ * @returns {Promise<{token: string, id: number}>} - Returns the plain token and token ID
+ */
+async function createRememberToken(userId, expiresAt, userAgent = null, ipAddress = null) {
+  if (!db) {
+    throw new Error('Database not initialized. Call init() first.');
+  }
+
+  const crypto = require('crypto');
+  // Generate a random token (32 bytes = 64 hex characters)
+  const token = crypto.randomBytes(32).toString('hex');
+  // Hash the token before storing
+  const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+
+  try {
+    if (dbType === 'sqlite') {
+      const stmt = db.prepare(`
+        INSERT INTO remember_tokens (user_id, token_hash, expires_at, user_agent, ip_address)
+        VALUES (?, ?, ?, ?, ?)
+      `);
+      const result = stmt.run(userId, tokenHash, expiresAt, userAgent, ipAddress);
+      return { token, id: result.lastInsertRowid };
+    } else if (dbType === 'postgresql') {
+      const result = await db.query(
+        `INSERT INTO remember_tokens (user_id, token_hash, expires_at, user_agent, ip_address)
+         VALUES ($1, $2, $3, $4, $5)
+         RETURNING id`,
+        [userId, tokenHash, expiresAt, userAgent, ipAddress]
+      );
+      return { token, id: result.rows[0].id };
+    }
+  } catch (error) {
+    console.error('Error creating remember token:', error);
+    throw error;
+  }
+}
+
+/**
+ * Validate and get user ID from a remember token
+ * @param {string} token - Plain token string
+ * @returns {Promise<{userId: number, tokenId: number} | null>} - Returns user ID and token ID if valid, null otherwise
+ */
+async function validateRememberToken(token) {
+  if (!db) {
+    throw new Error('Database not initialized. Call init() first.');
+  }
+
+  const crypto = require('crypto');
+  const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+  const now = new Date().toISOString();
+
+  try {
+    if (dbType === 'sqlite') {
+      const stmt = db.prepare(`
+        SELECT id, user_id
+        FROM remember_tokens
+        WHERE token_hash = ?
+          AND expires_at > ?
+          AND revoked_at IS NULL
+      `);
+      const row = stmt.get(tokenHash, now);
+      return row ? { userId: row.user_id, tokenId: row.id } : null;
+    } else if (dbType === 'postgresql') {
+      const result = await db.query(
+        `SELECT id, user_id
+         FROM remember_tokens
+         WHERE token_hash = $1
+           AND expires_at > NOW()
+           AND revoked_at IS NULL`,
+        [tokenHash]
+      );
+      return result.rows.length > 0
+        ? { userId: result.rows[0].user_id, tokenId: result.rows[0].id }
+        : null;
+    }
+  } catch (error) {
+    console.error('Error validating remember token:', error);
+    return null;
+  }
+}
+
+/**
+ * Revoke a remember token by ID
+ * @param {number} tokenId - Token ID to revoke
+ * @returns {Promise<boolean>} - Returns true if token was revoked
+ */
+async function revokeRememberToken(tokenId) {
+  if (!db) {
+    throw new Error('Database not initialized. Call init() first.');
+  }
+
+  try {
+    if (dbType === 'sqlite') {
+      const stmt = db.prepare('UPDATE remember_tokens SET revoked_at = CURRENT_TIMESTAMP WHERE id = ?');
+      const result = stmt.run(tokenId);
+      return result.changes > 0;
+    } else if (dbType === 'postgresql') {
+      const result = await db.query('UPDATE remember_tokens SET revoked_at = NOW() WHERE id = $1', [tokenId]);
+      return result.rowCount > 0;
+    }
+  } catch (error) {
+    console.error('Error revoking remember token:', error);
+    return false;
+  }
+}
+
+/**
+ * Revoke all remember tokens for a user
+ * @param {number} userId - User ID
+ * @returns {Promise<number>} - Returns number of tokens revoked
+ */
+async function revokeAllRememberTokensForUser(userId) {
+  if (!db) {
+    throw new Error('Database not initialized. Call init() first.');
+  }
+
+  try {
+    if (dbType === 'sqlite') {
+      const stmt = db.prepare('UPDATE remember_tokens SET revoked_at = CURRENT_TIMESTAMP WHERE user_id = ? AND revoked_at IS NULL');
+      const result = stmt.run(userId);
+      return result.changes;
+    } else if (dbType === 'postgresql') {
+      const result = await db.query('UPDATE remember_tokens SET revoked_at = NOW() WHERE user_id = $1 AND revoked_at IS NULL', [userId]);
+      return result.rowCount;
+    }
+  } catch (error) {
+    console.error('Error revoking all remember tokens for user:', error);
+    return 0;
+  }
+}
+
+/**
+ * Rotate a remember token (create new, revoke old)
+ * @param {number} oldTokenId - Old token ID to revoke
+ * @param {number} userId - User ID
+ * @param {string} expiresAt - New expiration timestamp
+ * @param {string} userAgent - Optional user agent string
+ * @param {string} ipAddress - Optional IP address
+ * @returns {Promise<{token: string, id: number}>} - Returns the new plain token and token ID
+ */
+async function rotateRememberToken(oldTokenId, userId, expiresAt, userAgent = null, ipAddress = null) {
+  if (!db) {
+    throw new Error('Database not initialized. Call init() first.');
+  }
+
+  // Revoke old token
+  await revokeRememberToken(oldTokenId);
+
+  // Create new token
+  return await createRememberToken(userId, expiresAt, userAgent, ipAddress);
+}
+
+/**
+ * Clean up expired remember tokens (optional maintenance)
+ * @returns {Promise<number>} - Returns number of tokens deleted
+ */
+async function cleanupExpiredRememberTokens() {
+  if (!db) {
+    throw new Error('Database not initialized. Call init() first.');
+  }
+
+  try {
+    if (dbType === 'sqlite') {
+      const stmt = db.prepare('DELETE FROM remember_tokens WHERE expires_at < CURRENT_TIMESTAMP');
+      const result = stmt.run();
+      return result.changes;
+    } else if (dbType === 'postgresql') {
+      const result = await db.query('DELETE FROM remember_tokens WHERE expires_at < NOW()');
+      return result.rowCount;
+    }
+  } catch (error) {
+    console.error('Error cleaning up expired remember tokens:', error);
+    return 0;
+  }
+}
+
+/**
+ * Get active remember tokens count for a user (to enforce limits)
+ * @param {number} userId - User ID
+ * @returns {Promise<number>} - Returns count of active tokens
+ */
+async function getActiveRememberTokensCount(userId) {
+  if (!db) {
+    throw new Error('Database not initialized. Call init() first.');
+  }
+
+  try {
+    if (dbType === 'sqlite') {
+      const stmt = db.prepare(`
+        SELECT COUNT(*) as count
+        FROM remember_tokens
+        WHERE user_id = ?
+          AND expires_at > CURRENT_TIMESTAMP
+          AND revoked_at IS NULL
+      `);
+      const row = stmt.get(userId);
+      return row ? row.count : 0;
+    } else if (dbType === 'postgresql') {
+      const result = await db.query(
+        `SELECT COUNT(*) as count
+         FROM remember_tokens
+         WHERE user_id = $1
+           AND expires_at > NOW()
+           AND revoked_at IS NULL`,
+        [userId]
+      );
+      return result.rows.length > 0 ? parseInt(result.rows[0].count, 10) : 0;
+    }
+  } catch (error) {
+    console.error('Error getting active remember tokens count:', error);
+    return 0;
+  }
+}
+
 module.exports = {
   init,
   storeEvent,
@@ -3738,6 +4031,7 @@ module.exports = {
   DEFAULT_MAX_DB_SIZE,
   // User management
   getUserByUsername,
+  getUserById,
   createUser,
   updateLastLogin,
   getAllUsers,
@@ -3767,6 +4061,14 @@ module.exports = {
   // Settings
   getSetting,
   saveSetting,
+  // Remember tokens
+  createRememberToken,
+  validateRememberToken,
+  revokeRememberToken,
+  revokeAllRememberTokensForUser,
+  rotateRememberToken,
+  cleanupExpiredRememberTokens,
+  getActiveRememberTokensCount,
   // Utilities
   getNormalizedUserId
 };

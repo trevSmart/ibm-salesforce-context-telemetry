@@ -1,30 +1,46 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>IBM Salesforce Context Telemetry</title>
 	<link rel="icon" type="image/svg+xml" sizes="any" href="/resources/favicon.svg">
 	<link rel="icon" type="image/png" sizes="32x32" href="/resources/favicon.png">
+	<link rel="stylesheet" href="https://rsms.me/inter/inter.css">
 	<link href="/css/output.css" rel="stylesheet">
 	<script src="/js/polyfills.js"></script>
+	<script>
+		// Apply theme immediately before page render to prevent flash
+		(function () {
+			const savedTheme = localStorage.getItem('theme');
+			const systemTheme = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+			const theme = savedTheme || systemTheme;
+			if (theme === 'dark') {
+				document.documentElement.classList.add('dark');
+			}
+		})();
+	</script>
 	<style>
 		:root {
 			--bg-primary: #ffffff;
-			--text-primary: #18181b;
-			--text-secondary: #52525b;
+			--bg-secondary: #f9fafb;
+			--text-primary: #3a485f;
+			--text-secondary: #9fa2a5;
 			--success: #10b981;
 			--warning: #f59e0b;
 			--error: #ef4444;
 			--info: #3b82f6;
-			--border: #e4e4e7;
+			--border: #e1e6f0;
 		}
 
 		html.dark {
 			--bg-primary: #27272a;
+			--bg-secondary: #18181b;
 			--text-primary: #e4e4e7;
 			--text-secondary: #a1a1aa;
 			--border: #3f3f46;
+			color-scheme: dark;
 		}
 
 		* {
@@ -34,45 +50,50 @@
 		}
 
 		body {
-			font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-			background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+			font-family: 'Manrope', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+			background: #8896b5;
 			min-height: 100vh;
-			padding: 40px 20px;
-			color: var(--text-primary);
+			padding: 20px;
+			position: relative;
 		}
 
-		html.dark {
-			color-scheme: dark;
+		html.dark body {
+			background: #18181b url("/resources/bg-01.jpg") center center / cover no-repeat fixed;
+			background-blend-mode: soft-light;
 		}
 
 		.container {
-			max-width: 1000px;
+			max-width: 1200px;
+			width: 100%;
 			margin: 0 auto;
+		}
+
+		.health-card {
 			background: var(--bg-primary);
-			border-radius: 16px;
-			box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+			border-radius: 12px;
+			box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 			overflow: hidden;
 		}
 
-		.header {
+		.card-header {
 			background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 			color: white;
-			padding: 40px;
+			padding: 32px 40px;
 			text-align: center;
 		}
 
-		.header h1 {
-			font-size: 2rem;
+		.card-header h1 {
+			font-size: 1.875rem;
 			font-weight: 700;
 			margin-bottom: 8px;
 		}
 
-		.header p {
+		.card-header p {
 			opacity: 0.9;
-			font-size: 1rem;
+			font-size: 0.875rem;
 		}
 
-		.content {
+		.card-content {
 			padding: 40px;
 		}
 
@@ -106,9 +127,12 @@
 		}
 
 		@keyframes pulse {
-			0%, 100% {
+
+			0%,
+			100% {
 				opacity: 1;
 			}
+
 			50% {
 				opacity: 0.5;
 			}
@@ -122,10 +146,10 @@
 		}
 
 		.stat-card {
-			background: var(--bg-primary);
+			background: var(--bg-secondary);
 			border: 1px solid var(--border);
-			border-radius: 12px;
-			padding: 24px;
+			border-radius: 8px;
+			padding: 20px;
 			transition: transform 0.2s ease, box-shadow 0.2s ease;
 		}
 
@@ -178,7 +202,7 @@
 			justify-content: space-between;
 			align-items: center;
 			padding: 16px;
-			background: var(--bg-primary);
+			background: var(--bg-secondary);
 			border: 1px solid var(--border);
 			border-radius: 8px;
 		}
@@ -194,23 +218,23 @@
 			font-size: 0.875rem;
 		}
 
-		.footer {
-			padding: 16px 24px;
-			background: var(--bg-primary);
+		.card-footer {
+			padding: 20px 40px;
+			background: var(--bg-secondary);
 			border-top: 1px solid var(--border);
 			text-align: center;
 			color: var(--text-secondary);
-			font-size: 13px;
+			font-size: 0.8125rem;
 			word-spacing: 0.5em;
 		}
 
-		.footer a {
+		.card-footer a {
 			color: #667eea;
 			text-decoration: none;
 			margin: 0 4px;
 		}
 
-		.footer a:hover {
+		.card-footer a:hover {
 			text-decoration: underline;
 		}
 
@@ -249,80 +273,152 @@
 		}
 	</style>
 </head>
-<body>
+<body class="health-page">
 	<div class="container">
-		<div class="header">
-			<h1>Health Check</h1>
-			<p>IBM Salesforce Context Telemetry Server</p>
-		</div>
-
-		<div class="content">
-			<div id="statusBadge" class="status-badge healthy">
-				<span class="status-indicator"></span>
-				<span>Checking...</span>
+		<div class="health-card">
+			<div class="card-header">
+				<h1>Health Check</h1>
+				<p>IBM Salesforce Context Telemetry Server</p>
 			</div>
 
-			<div class="stats-grid">
-				<div class="stat-card">
-					<div class="stat-label">Server Status</div>
-					<div class="stat-value" id="serverStatus">-</div>
+			<div class="card-content">
+				<div id="statusBadge" class="status-badge healthy">
+					<span class="status-indicator"></span>
+					<span>Checking...</span>
 				</div>
-				<div class="stat-card">
-					<div class="stat-label">Uptime</div>
-					<div class="stat-value" id="uptime">-</div>
+
+				<div class="stats-grid">
+					<div class="stat-card">
+						<div class="stat-label">Server Status</div>
+						<div class="stat-value" id="serverStatus">-</div>
+					</div>
+					<div class="stat-card">
+						<div class="stat-label">Uptime</div>
+						<div class="stat-value" id="uptime">-</div>
+					</div>
+					<div class="stat-card">
+						<div class="stat-label">Total Events</div>
+						<div class="stat-value" id="totalEvents">-</div>
+					</div>
+					<div class="stat-card">
+						<div class="stat-label">Memory Usage</div>
+						<div class="stat-value" id="memoryUsage">-</div>
+						<span class="stat-unit" id="memoryUnit"></span>
+					</div>
 				</div>
-				<div class="stat-card">
-					<div class="stat-label">Total Events</div>
-					<div class="stat-value" id="totalEvents">-</div>
+
+				<div class="section">
+					<h2 class="section-title">System Information</h2>
+					<ul role="list" class="divide-y divide-gray-100">
+						<li class="relative flex items-center space-x-4 py-4">
+							<div class="min-w-0 flex-auto">
+								<div class="flex items-center gap-x-3">
+									<div class="flex-none rounded-full bg-gray-100/10 p-1 text-gray-500">
+										<div class="size-2 rounded-full bg-current"></div>
+									</div>
+									<h2 class="min-w-0 text-sm/6 font-semibold text-gray-900">
+										<span class="truncate">Version</span>
+									</h2>
+								</div>
+								<div class="mt-3 flex items-center gap-x-2.5 text-xs/5 text-gray-500">
+									<p class="truncate font-mono" id="version">-</p>
+								</div>
+							</div>
+						</li>
+						<li class="relative flex items-center space-x-4 py-4">
+							<div class="min-w-0 flex-auto">
+								<div class="flex items-center gap-x-3">
+									<div class="flex-none rounded-full bg-gray-100/10 p-1 text-gray-500">
+										<div class="size-2 rounded-full bg-current"></div>
+									</div>
+									<h2 class="min-w-0 text-sm/6 font-semibold text-gray-900">
+										<span class="truncate">Database Type</span>
+									</h2>
+								</div>
+								<div class="mt-3 flex items-center gap-x-2.5 text-xs/5 text-gray-500">
+									<p class="truncate font-mono" id="dbType">-</p>
+								</div>
+							</div>
+						</li>
+						<li class="relative flex items-center space-x-4 py-4">
+							<div class="min-w-0 flex-auto">
+								<div class="flex items-center gap-x-3">
+									<div class="flex-none rounded-full bg-green-100 p-1 text-green-500" id="dbStatusIndicator">
+										<div class="size-2 rounded-full bg-current"></div>
+									</div>
+									<h2 class="min-w-0 text-sm/6 font-semibold text-gray-900">
+										<span class="truncate">Database Status</span>
+									</h2>
+								</div>
+								<div class="mt-3 flex items-center gap-x-2.5 text-xs/5 text-gray-500">
+									<p class="truncate font-mono" id="dbStatus">-</p>
+								</div>
+							</div>
+							<div class="flex-none rounded-full bg-green-50 px-2 py-1 text-xs font-medium text-green-700 inset-ring inset-ring-green-700/10" id="dbStatusTag" style="display: none;">Connected</div>
+						</li>
+						<li class="relative flex items-center space-x-4 py-4">
+							<div class="min-w-0 flex-auto">
+								<div class="flex items-center gap-x-3">
+									<div class="flex-none rounded-full bg-gray-100/10 p-1 text-gray-500">
+										<div class="size-2 rounded-full bg-current"></div>
+									</div>
+									<h2 class="min-w-0 text-sm/6 font-semibold text-gray-900">
+										<span class="truncate">Node.js Version</span>
+									</h2>
+								</div>
+								<div class="mt-3 flex items-center gap-x-2.5 text-xs/5 text-gray-500">
+									<p class="truncate font-mono" id="nodeVersion">-</p>
+								</div>
+							</div>
+						</li>
+						<li class="relative flex items-center space-x-4 py-4">
+							<div class="min-w-0 flex-auto">
+								<div class="flex items-center gap-x-3">
+									<div class="flex-none rounded-full bg-gray-100/10 p-1 text-gray-500">
+										<div class="size-2 rounded-full bg-current"></div>
+									</div>
+									<h2 class="min-w-0 text-sm/6 font-semibold text-gray-900">
+										<span class="truncate">Environment</span>
+									</h2>
+								</div>
+								<div class="mt-3 flex items-center gap-x-2.5 text-xs/5 text-gray-500">
+									<p class="truncate font-mono" id="environment">-</p>
+								</div>
+							</div>
+							<div class="flex-none rounded-full bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 inset-ring inset-ring-gray-500/10" id="environmentTag" style="display: none;">Development</div>
+						</li>
+						<li class="relative flex items-center space-x-4 py-4">
+							<div class="min-w-0 flex-auto">
+								<div class="flex items-center gap-x-3">
+									<div class="flex-none rounded-full bg-gray-100/10 p-1 text-gray-500">
+										<div class="size-2 rounded-full bg-current"></div>
+									</div>
+									<h2 class="min-w-0 text-sm/6 font-semibold text-gray-900">
+										<span class="truncate">Last Check</span>
+									</h2>
+								</div>
+								<div class="mt-3 flex items-center gap-x-2.5 text-xs/5 text-gray-500">
+									<p class="truncate font-mono" id="lastCheck">-</p>
+								</div>
+							</div>
+						</li>
+					</ul>
 				</div>
-				<div class="stat-card">
-					<div class="stat-label">Memory Usage</div>
-					<div class="stat-value" id="memoryUsage">-</div>
-					<span class="stat-unit" id="memoryUnit"></span>
-				</div>
+
+
+
+				<div id="errorMessage" class="error-message" style="display: none;"></div>
+				<button class="refresh-btn" onclick="loadHealthData()">Refresh</button>
 			</div>
 
-			<div class="section">
-				<h2 class="section-title">System Information</h2>
-				<div class="info-grid">
-					<div class="info-row">
-						<span class="info-label">Version</span>
-						<span class="info-value" id="version">-</span>
-					</div>
-					<div class="info-row">
-						<span class="info-label">Database Type</span>
-						<span class="info-value" id="dbType">-</span>
-					</div>
-					<div class="info-row">
-						<span class="info-label">Database Status</span>
-						<span class="info-value" id="dbStatus">-</span>
-					</div>
-					<div class="info-row">
-						<span class="info-label">Node.js Version</span>
-						<span class="info-value" id="nodeVersion">-</span>
-					</div>
-					<div class="info-row">
-						<span class="info-label">Environment</span>
-						<span class="info-value" id="environment">-</span>
-					</div>
-					<div class="info-row">
-						<span class="info-label">Last Check</span>
-						<span class="info-value" id="lastCheck">-</span>
-					</div>
-				</div>
+			<div class="card-footer">
+				<p>
+					<a href="/">Dashboard</a> •
+					<a href="/logs">Event Log</a> •
+					<a href="/api/events">API</a> •
+					<a href="/schema">Schema</a>
+				</p>
 			</div>
-
-			<div id="errorMessage" class="error-message" style="display: none;"></div>
-			<button class="refresh-btn" onclick="loadHealthData()">Refresh</button>
-		</div>
-
-		<div class="footer">
-			<p>
-				<a href="/">Dashboard</a> •
-				<a href="/logs">Event Log</a> •
-				<a href="/api/events">API</a> •
-				<a href="/schema">Schema</a>
-			</p>
 		</div>
 	</div>
 
@@ -358,7 +454,7 @@
 		}
 
 		async function loadHealthData() {
-			const container = document.querySelector('.content');
+			const container = document.querySelector('.card-content');
 			container.classList.add('loading');
 
 			try {
@@ -395,9 +491,42 @@
 				// Update system info
 				document.getElementById('version').textContent = data.version || 'Unknown';
 				document.getElementById('dbType').textContent = data.database?.type || 'Unknown';
-				document.getElementById('dbStatus').textContent = data.database?.status || 'Unknown';
+
+				// Update database status with dynamic indicator
+				const dbStatus = data.database?.status || 'Unknown';
+				document.getElementById('dbStatus').textContent = dbStatus;
+				const dbStatusIndicator = document.getElementById('dbStatusIndicator');
+				const dbStatusTag = document.getElementById('dbStatusTag');
+				if (dbStatus.toLowerCase() === 'connected') {
+					dbStatusIndicator.className = 'flex-none rounded-full bg-green-100 p-1 text-green-500';
+					dbStatusTag.className = 'flex-none rounded-full bg-green-50 px-2 py-1 text-xs font-medium text-green-700 inset-ring inset-ring-green-700/10';
+					dbStatusTag.textContent = 'Connected';
+					dbStatusTag.style.display = 'block';
+				} else {
+					dbStatusIndicator.className = 'flex-none rounded-full bg-rose-100 p-1 text-rose-500';
+					dbStatusTag.className = 'flex-none rounded-full bg-rose-50 px-2 py-1 text-xs font-medium text-rose-700 inset-ring inset-ring-rose-700/10';
+					dbStatusTag.textContent = 'Disconnected';
+					dbStatusTag.style.display = 'block';
+				}
+
 				document.getElementById('nodeVersion').textContent = data.nodeVersion || 'Unknown';
-				document.getElementById('environment').textContent = data.environment || 'Unknown';
+
+				// Update environment with tag
+				const environment = data.environment || 'Unknown';
+				document.getElementById('environment').textContent = environment;
+				const environmentTag = document.getElementById('environmentTag');
+				if (environment.toLowerCase() === 'production') {
+					environmentTag.className = 'flex-none rounded-full bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-700 inset-ring inset-ring-indigo-700/10';
+					environmentTag.textContent = 'Production';
+					environmentTag.style.display = 'block';
+				} else if (environment.toLowerCase() === 'development') {
+					environmentTag.className = 'flex-none rounded-full bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 inset-ring inset-ring-gray-500/10';
+					environmentTag.textContent = 'Development';
+					environmentTag.style.display = 'block';
+				} else {
+					environmentTag.style.display = 'none';
+				}
+
 				document.getElementById('lastCheck').textContent = formatTimestamp(new Date());
 
 			} catch (error) {
@@ -417,4 +546,5 @@
 		loadHealthData();
 	</script>
 </body>
+
 </html>

@@ -408,6 +408,8 @@ The server will start on port 3100 by default, or the port specified in the `POR
 | `ADMIN_PASSWORD` | Admin password in plain text (will be hashed) | - |
 | `ADMIN_PASSWORD_HASH` | Admin password as bcrypt hash (recommended) | - |
 | `SESSION_SECRET` | Secret key for session management (auto-generated if not set) | - |
+| `REMEMBER_TOKEN_DAYS` | Number of days remember me tokens are valid | `30` |
+| `REMEMBER_COOKIE_NAME` | Cookie name for remember me token | `remember_token` |
 
 **Note**: For multi-user authentication, create users in the database using the API or scripts. Environment variables are used as a fallback for backward compatibility.
 

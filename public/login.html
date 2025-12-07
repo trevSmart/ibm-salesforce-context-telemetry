@@ -6,10 +6,8 @@
 	<title>Login - IBM Salesforce Context Telemetry</title>
 	<link rel="icon" type="image/svg+xml" sizes="any" href="/resources/favicon.svg">
 	<link rel="icon" type="image/png" sizes="32x32" href="/resources/favicon.png">
+	<link rel="stylesheet" href="https://rsms.me/inter/inter.css">
 	<link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
-	<link rel="preconnect" href="https://fonts.googleapis.com">
-	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-	<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;300;400;500;600;700;800&display=swap" rel="stylesheet">
 	<script src="/js/polyfills.js"></script>
 	<script>
 		// Apply theme immediately before page render to prevent flash
@@ -41,7 +39,7 @@
 
 		body {
 			font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-			background: #f5f5f5;
+		background: #8896b5;
 			min-height: 100vh;
 			display: flex;
 			align-items: center;
@@ -51,23 +49,36 @@
 		}
 
 		html.dark body {
-			background: #18181b;
+		background: #18181b url("/resources/bg-01.jpg") center center / cover no-repeat fixed;
+		background-blend-mode: soft-light;
 		}
+
+	.visually-hidden {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		padding: 0;
+		margin: -1px;
+		overflow: hidden;
+		clip: rect(0, 0, 0, 0);
+		white-space: nowrap;
+		border: 0;
+	}
 
 		.login-card {
 			background: white;
 			border-radius: 11px;
-			box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+		box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
 			width: 100%;
-			max-width: 900px;
+		max-width: 600px;
 			display: flex;
 			overflow: hidden;
-			min-height: 442px;
+		min-height: 400px;
 		}
 
 		html.dark .login-card {
 			background: #27272a;
-			box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+		box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
 		}
 
 		.login-visual-panel {
@@ -78,7 +89,7 @@
 			align-items: center;
 			justify-content: center;
 			padding: 40px;
-			opacity: 0.8;
+		opacity: 0.77;
 		}
 
 		.login-visual-panel::before {
@@ -91,7 +102,7 @@
 			background:
 				radial-gradient(circle at 20% 50%, rgba(113, 113, 122, 0.15) 0%, transparent 50%),
 				radial-gradient(circle at 80% 80%, rgba(161, 161, 170, 0.1) 0%, transparent 50%);
-			opacity: 0.6;
+		opacity: 0.5;
 		}
 
 
@@ -122,7 +133,7 @@
 
 		.login-form-panel {
 			flex: 1;
-			padding: 60px 50px;
+		padding: 32px 28px;
 			display: flex;
 			flex-direction: column;
 			justify-content: center;
@@ -133,11 +144,12 @@
 		}
 
 		.login-header h1 {
-			font-size: 20px;
-			font-weight: 400;
+		font-size: clamp(17px, 2.8vw, 19px);
+		font-weight: 300;
 			color: #3f3f46;
 			margin-bottom: 8px;
 			line-height: 1.2;
+		white-space: nowrap;
 		}
 
 		html.dark .login-header h1 {
@@ -145,7 +157,7 @@
 		}
 
 		.login-header h1 .brand {
-			font-weight: 700;
+		font-weight: 500;
 		}
 
 		.login-header p {
@@ -184,80 +196,78 @@
 			position: relative;
 		}
 
-		.form-group label {
-			display: flex;
-			align-items: center;
-			gap: 12px;
-			font-size: 15px;
-			font-weight: 200;
-			color: #18181b;
-			margin-bottom: 8px;
-		}
+	.input-icon-wrapper {
+		position: relative;
+		display: flex;
+		align-items: center;
+	}
 
-		html.dark .form-group label {
-			color: #e4e4e7;
-		}
+	.input-icon {
+		position: absolute;
+		left: 14px;
+		color: #a1a1aa;
+		font-size: 15px;
+		pointer-events: none;
+	}
 
-		.form-group label i {
-			color: #a1a1aa;
-			font-size: 16px;
-			font-weight: 600;
-			width: 18px;
-		}
+	html.dark .input-icon {
+		color: #71717a;
+	}
 
-		html.dark .form-group label i {
-			color: #71717a;
-		}
+	.login-input {
+		width: 100%;
+		padding: 10px 16px 10px 44px;
+		font-size: 16px;
+		font-weight: 300;
+		letter-spacing: 0.2px;
+		border-radius: 22px;
+		border: none;
+		background: #f3f5f7;
+		color: #3d4152;
+		transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+		outline: none;
+		box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02), 0 0 1px rgba(0, 0, 0, 0.01), 0 2px 3px rgba(0, 0, 0, 0.03);
+	}
 
-		.form-group input {
-			width: 100%;
-			padding: 10px 12px;
-			font-size: 15px;
-			border-radius: 4px;
-			border: 1px solid #e4e4e7;
-			background: #f4f4ff;
-			transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
-			outline: none;
-			color: #18181b;
-		}
+	html.dark .login-input {
+		color: #e4e4e7;
+		background: #27272a;
+		border: 1px solid #3f3f46;
+		box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+	}
 
-		html.dark .form-group input {
-			color: #e4e4e7;
-			border-color: #3f3f46;
-			background: #18181b;
-		}
+	.login-input:focus {
+		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04), 0 0 2px rgba(0, 0, 0, 0.02), 0 4px 6px rgba(0, 0, 0, 0.05);
+		background: #ffffff;
+	}
 
-		.form-group input:focus {
-			border-color: #71717a;
-			box-shadow: 0 0 0 1px rgba(113, 113, 122, 0.3);
-			background: #ffffff;
-		}
-
-		html.dark .form-group input:focus {
-			background: #27272a;
-		}
+	html.dark .login-input:focus {
+		background: #27272a;
+		border-color: #0ea5e9;
+		box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.3);
+	}
 
 		/* Override browser autofill styles so dark mode colors are respected */
-		.form-group input:-webkit-autofill,
-		.form-group input:-webkit-autofill:hover,
-		.form-group input:-webkit-autofill:focus {
-			-webkit-box-shadow: 0 0 0px 1000px #f4f4ff inset;
+		.login-input:-webkit-autofill,
+		.login-input:-webkit-autofill:hover,
+		.login-input:-webkit-autofill:focus {
+			-webkit-box-shadow: 0 0 0px 1000px #f3f5f7 inset;
 			-webkit-text-fill-color: #18181b;
 			transition: background-color 9999s ease-out, color 9999s ease-out;
 		}
 
-		html.dark .form-group input:-webkit-autofill,
-		html.dark .form-group input:-webkit-autofill:hover,
-		html.dark .form-group input:-webkit-autofill:focus {
-			-webkit-box-shadow: 0 0 0px 1000px #18181b inset;
+		html.dark .login-input:-webkit-autofill,
+		html.dark .login-input:-webkit-autofill:hover,
+		html.dark .login-input:-webkit-autofill:focus {
+			-webkit-box-shadow: 0 0 0px 1000px #27272a inset;
 			-webkit-text-fill-color: #e4e4e7;
 		}
 
-		.form-group input::placeholder {
-			color: #a1a1aa;
+		.login-input::placeholder {
+			color: #9ca3af;
 		}
 
-		html.dark .form-group input::placeholder {
+		html.dark .login-input::placeholder {
 			color: #71717a;
 		}
 
@@ -268,48 +278,57 @@
 		}
 
 		.login-button {
-			padding: 12px 32px;
-			font-size: 15px;
-			font-weight: 600;
-			color: #3f3f46;
-			background: #e4e4e7;
-			border: none;
-			border-radius: 24px;
-			cursor: pointer;
-			transition: all 0.2s ease;
-			min-width: 120px;
+		width: 40px;
+		height: 40px;
+		border-radius: 50%;
+		border: 1px solid #e4e4e7;
+		background: #ffffff;
+		color: #3f3f46;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		cursor: pointer;
+		transition: background-color 0.15s ease, transform 0.12s ease, color 0.15s ease, box-shadow 0.15s ease;
+		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+		padding: 0;
 		}
 
 		.login-button:hover {
-			background: #d4d4d8;
-			transform: translateY(-1px);
-			box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+		background: #f4f4f5;
+		color: #18181b;
+		transform: scale(1.05);
+		box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12);
 		}
 
 		.login-button:active {
-			transform: translateY(0);
+		transform: scale(0.95);
 		}
 
 		.login-button:disabled {
-			background: #94a3b8;
-			cursor: not-allowed;
-			transform: none;
-			box-shadow: none;
+		background: #e4e4e7;
+		cursor: not-allowed;
+		transform: none;
+		box-shadow: none;
+		color: #a1a1aa;
 		}
 
 		html.dark .login-button {
-			color: #e4e4e7;
-			background: #3f3f46;
+		color: #e4e4e7;
+		background: #18181b;
+		border-color: #3f3f46;
+		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 		}
 
 		html.dark .login-button:hover {
-			background: #52525b;
-			box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+		background: #27272a;
+		color: #f4f4f5;
+		box-shadow: 0 3px 8px rgba(0, 0, 0, 0.35);
 		}
 
 		html.dark .login-button:disabled {
-			background: #52525b;
-			color: #71717a;
+		background: #27272a;
+		color: #71717a;
+		box-shadow: none;
 		}
 
 		.login-footer {
@@ -336,6 +355,87 @@
 			color: #a1a1aa;
 		}
 
+		.remember-me-group {
+			margin-bottom: 20px;
+		}
+
+		.remember-me-control {
+			display: flex;
+			align-items: center;
+			gap: 12px;
+		}
+
+		.remember-me-box {
+			position: relative;
+			display: grid;
+			place-items: center;
+			width: 18px;
+			height: 18px;
+		}
+
+		.remember-me-checkbox {
+			appearance: none;
+			width: 100%;
+			height: 100%;
+			border-radius: 4px;
+			border: 1px solid #d4d4d8;
+			background: #ffffff;
+			cursor: pointer;
+			outline: none;
+			transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+		}
+
+		.remember-me-checkbox:checked,
+		.remember-me-checkbox:indeterminate {
+			background: #4f46e5;
+			border-color: #4f46e5;
+		}
+
+		.remember-me-checkbox:focus-visible {
+			box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.35);
+			border-color: #4f46e5;
+		}
+
+		.remember-me-icon {
+			position: absolute;
+			width: 12px;
+			height: 12px;
+			stroke: #ffffff;
+			stroke-width: 2;
+			stroke-linecap: round;
+			stroke-linejoin: round;
+			opacity: 0;
+			transition: opacity 0.15s ease;
+			pointer-events: none;
+		}
+
+		.remember-me-checkbox:checked + .remember-me-icon,
+		.remember-me-checkbox:indeterminate + .remember-me-icon {
+			opacity: 1;
+		}
+
+		.remember-me-text {
+			font-size: 14px;
+			color: #52525b;
+			line-height: 1.5;
+			cursor: pointer;
+			user-select: none;
+		}
+
+		html.dark .remember-me-checkbox {
+			background: #18181b;
+			border-color: #3f3f46;
+		}
+
+		html.dark .remember-me-checkbox:checked,
+		html.dark .remember-me-checkbox:indeterminate {
+			background: #4f46e5;
+			border-color: #4f46e5;
+		}
+
+		html.dark .remember-me-text {
+			color: #a1a1aa;
+		}
 
 		@media (max-width: 768px) {
 			.login-card {
@@ -358,37 +458,52 @@
 		}
 	</style>
 </head>
-<body>
+<body class="login-page">
 	<div class="login-card">
 		<div class="login-visual-panel">
 		</div>
 		<div class="login-form-panel">
 			<div class="login-header">
-				<h1>IBM Salesforce Context Telemetry</h1>
+				<h1>IBM Salesforce Context <span class="brand">Telemetry</span></h1>
 			</div>
 
 			<div id="errorMessage" class="error-message"></div>
 
 			<form id="loginForm">
 				<div class="form-group">
-					<label for="username">
-						<i class="far fa-envelope"></i>
-						<span>Email</span>
-					</label>
-					<input type="text" id="username" name="username" placeholder="Enter your username" required autofocus>
+					<div class="input-icon-wrapper">
+						<svg xmlns="http://www.w3.org/2000/svg" class="input-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="20" height="20">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+						</svg>
+						<input type="text" class="login-input" id="username" name="username" aria-label="Email" required autofocus>
+					</div>
 				</div>
 
 				<div class="form-group">
-					<label for="password">
-						<i class="far fa-lock"></i>
-						<span>Password</span>
-					</label>
-					<input type="password" id="password" name="password" placeholder="Enter your password" required>
+					<div class="input-icon-wrapper">
+						<svg xmlns="http://www.w3.org/2000/svg" class="input-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="20" height="20">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+						</svg>
+						<input type="password" class="login-input" id="password" name="password" aria-label="Password" required>
+					</div>
+				</div>
+
+				<div class="form-group remember-me-group">
+					<div class="remember-me-control">
+						<div class="remember-me-box">
+							<input type="checkbox" id="rememberMe" name="rememberMe" class="remember-me-checkbox" aria-label="Remember me">
+							<svg viewBox="0 0 14 14" fill="none" class="remember-me-icon" aria-hidden="true">
+								<path d="M3 8L6 11L11 3.5" />
+							</svg>
+						</div>
+						<label for="rememberMe" class="remember-me-text">Remember me</label>
+					</div>
 				</div>
 
 				<div class="login-button-container">
 					<button type="submit" class="login-button" id="loginButton">
-						Log in
+						<i class="fas fa-arrow-right" aria-hidden="true"></i>
+						<span class="visually-hidden">Log in</span>
 					</button>
 				</div>
 			</form>
@@ -420,6 +535,7 @@
 
 			const username = document.getElementById('username').value;
 			const password = document.getElementById('password').value;
+			const rememberMe = document.getElementById('rememberMe').checked;
 
 			// Hide error
 			errorMessage.classList.remove('show');
@@ -431,7 +547,7 @@
 					headers: {
 						'Content-Type': 'application/json'
 					},
-					body: JSON.stringify({ username, password })
+					body: JSON.stringify({ username, password, rememberMe })
 				});
 
 				const data = await response.json();
