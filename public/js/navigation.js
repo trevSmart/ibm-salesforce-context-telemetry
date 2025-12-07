@@ -66,6 +66,91 @@
     }
   }
 
+  // Provide a lightweight notification toggle when the page-specific script
+  // (event-log.js) is not loaded. This keeps the nav button functional on all
+  // pages without interfering with the richer implementation on /logs.
+  if (typeof window.toggleNotificationMode !== 'function') {
+    let globalNotificationModeEnabled = false;
+
+    const ensureNotificationButtonState = () => {
+      const button = document.querySelector('.notification-toggle');
+      if (!button) {
+        return;
+      }
+
+      if (!button.querySelector('.notification-bell-icon')) {
+        button.innerHTML = `
+          <svg class="notification-bell-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="18" height="18" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
+          </svg>
+        `;
+      }
+
+      const bellIcon = button.querySelector('.notification-bell-icon');
+      button.classList.toggle('active', globalNotificationModeEnabled);
+      button.setAttribute('title', globalNotificationModeEnabled ? 'Disable notifications' : 'Enable notifications');
+      if (bellIcon) {
+        if (globalNotificationModeEnabled) {
+          bellIcon.classList.add('tilted');
+        } else {
+          bellIcon.classList.remove('tilted');
+        }
+      }
+    };
+
+    window.updateNotificationButtonState = function updateNotificationButtonState() {
+      ensureNotificationButtonState();
+    };
+
+    window.toggleNotificationMode = async function toggleNotificationMode() {
+      if (!('Notification' in window)) {
+        alert('Your browser does not support desktop notifications.');
+        return;
+      }
+
+      let permission = Notification.permission;
+      if (permission === 'default') {
+        try {
+          permission = await Notification.requestPermission();
+        } catch (_e) {
+          permission = 'denied';
+        }
+      }
+
+      if (permission !== 'granted') {
+        alert('You must allow browser notifications to enable this mode.');
+        return;
+      }
+
+      globalNotificationModeEnabled = !globalNotificationModeEnabled;
+      ensureNotificationButtonState();
+    };
+  }
+
+  function syncShellFromDocument(doc) {
+    const currentNavActions = document.querySelector('.top-nav-actions');
+    const nextNavActions = doc.querySelector('.top-nav-actions');
+    if (currentNavActions && nextNavActions) {
+      const cloned = nextNavActions.cloneNode(true);
+      currentNavActions.replaceWith(cloned);
+    }
+
+    const currentNavSearch = document.querySelector('.top-nav-search');
+    const nextNavSearch = doc.querySelector('.top-nav-search');
+    if (currentNavSearch && nextNavSearch) {
+      const cloned = nextNavSearch.cloneNode(true);
+      currentNavSearch.replaceWith(cloned);
+    }
+
+    const currentMainContainer = document.querySelector('.main-container');
+    const nextMainContainer = doc.querySelector('.main-container');
+    if (currentMainContainer && nextMainContainer) {
+      // Preserve shell sizing/styling by swapping class list while keeping node
+      currentMainContainer.className = nextMainContainer.className;
+      currentMainContainer.style.cssText = nextMainContainer.style.cssText;
+    }
+  }
+
   async function softNavigate(targetPath, { replace = false } = {}) {
     if (isNavigating) {
       return;
@@ -103,6 +188,9 @@
       if (!nextContent) {
         throw new Error('Target page missing container-content');
       }
+
+      // Keep nav, search, and container shell styling consistent across pages
+      syncShellFromDocument(doc);
 
       container.replaceWith(nextContent);
       // Keep container reference updated for future navigations

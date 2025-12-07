@@ -181,41 +181,43 @@
 					</div>
 				</div>
 				<div class="main-content-body">
-					<div id="sessionActivityCard" class="session-activity-card divide-y divide-gray-200 overflow-hidden rounded-lg bg-white shadow-sm hidden" style="display: none; flex-direction: column;">
-						<div class="session-activity-header px-4 py-5 sm:px-6">
-							<div style="display: flex; align-items: center; gap: 8px;">
-								<button class="date-nav-btn" id="prevDayBtn" onclick="navigateToPreviousDay()">
-									<i class="fa-solid fa-chevron-left"></i>
-								</button>
-								<div>
-									<p id="sessionActivityTitle" class="label">Timeline</p>
-									<p id="sessionActivitySubtitle" class="subtitle">–</p>
+					<div id="sessionActivityCard" class="session-activity-card overflow-hidden rounded-lg bg-white shadow-sm hidden" style="flex-direction: column;">
+						<div class="session-activity-header-floating px-4 py-5 sm:px-6">
+							<div class="session-activity-header">
+								<div style="display: flex; align-items: center; gap: 8px;">
+									<button class="date-nav-btn" id="prevDayBtn" onclick="navigateToPreviousDay()">
+										<i class="fa-solid fa-chevron-left"></i>
+									</button>
+									<div>
+										<p id="sessionActivityTitle" class="label">Timeline</p>
+										<p id="sessionActivitySubtitle" class="subtitle">–</p>
+									</div>
+									<button class="date-nav-btn" id="nextDayBtn" onclick="navigateToNextDay()">
+										<i class="fa-solid fa-chevron-right"></i>
+									</button>
 								</div>
-								<button class="date-nav-btn" id="nextDayBtn" onclick="navigateToNextDay()">
-									<i class="fa-solid fa-chevron-right"></i>
-								</button>
-							</div>
-							<div class="session-activity-legend-wrapper">
-								<button
-									type="button"
-									class="session-activity-legend-toggle"
-								>
-									<img src="resources/colors.png" alt="" class="session-activity-legend-toggle-image">
-								</button>
-							<div id="sessionActivityLegend" class="session-activity-legend">
-								<span class="legend-item">
-									<span class="legend-dot" style="background: #0ea5e9;"></span>
-									<span>Events per slot</span>
-								</span>
-								<span class="legend-item">
-									<span class="legend-dot" style="background: rgba(16,185,129,0.7);"></span>
-									<span>Office window</span>
-								</span>
+								<div class="session-activity-legend-wrapper">
+									<button
+										type="button"
+										class="session-activity-legend-toggle"
+									>
+										<img src="resources/colors.png" alt="" class="session-activity-legend-toggle-image">
+									</button>
+								<div id="sessionActivityLegend" class="session-activity-legend">
+									<span class="legend-item">
+										<span class="legend-dot" style="background: #0ea5e9;"></span>
+										<span>Events per slot</span>
+									</span>
+									<span class="legend-item">
+										<span class="legend-dot" style="background: rgba(16,185,129,0.7);"></span>
+										<span>Office window</span>
+									</span>
+									</div>
 								</div>
 							</div>
 						</div>
-						<div class="px-4 py-5 sm:p-6" style="flex: 1; min-height: 0;">
-							<div id="sessionActivityChart"></div>
+						<div class="session-activity-chart-body px-4 py-5 sm:p-6">
+							<div id="sessionActivityChart" style="width: 100%; min-height: 0; height: 100%;"></div>
 						</div>
 					</div>
 					<div class="horizontal-resizer" id="horizontalResizer" aria-hidden="true"></div>

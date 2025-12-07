@@ -2345,6 +2345,32 @@ function initChart() {
   return chart;
 }
 
+function updateChartLegendOverlay(legendItems) {
+  const overlay = document.getElementById('chartLegendOverlay');
+  if (!overlay) {
+    return;
+  }
+
+  if (!Array.isArray(legendItems) || legendItems.length === 0) {
+    overlay.innerHTML = '';
+    overlay.setAttribute('data-state', 'empty');
+    return;
+  }
+
+  const itemsMarkup = legendItems.map((item) => {
+    const name = escapeHtml(item?.name || '');
+    const color = escapeHtml(item?.itemStyle?.color || '#94a3b8');
+    const icon = item?.icon === 'line' ? 'line' : 'circle';
+    const markerClass = icon === 'line'
+      ? 'chart-legend-overlay-marker chart-legend-overlay-marker--line'
+      : 'chart-legend-overlay-marker';
+    return `<span class="chart-legend-overlay-item"><span class="${markerClass}" style="background:${color};"></span>${name}</span>`;
+  }).join('');
+
+  overlay.innerHTML = itemsMarkup;
+  overlay.setAttribute('data-state', 'ready');
+}
+
 function renderTopUsersPlaceholder(message) {
   const list = document.getElementById('topUsersList');
   if (!list) {
@@ -2935,6 +2961,8 @@ async function loadChartData(days = currentDays) {
       ];
     }
 
+    updateChartLegendOverlay(legendData);
+
     const option = {
       textStyle: {
         fontFamily: 'Inter, \'Manrope\', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, \'Helvetica Neue\', Arial, sans-serif'
@@ -2944,7 +2972,7 @@ async function loadChartData(days = currentDays) {
       grid: {
         left: '3%',
         right: '0%',
-        bottom: '20%',
+        bottom: '14%',
         top: '5%',
         containLabel: false,
         width: 'auto',
@@ -2981,17 +3009,8 @@ async function loadChartData(days = currentDays) {
         }
       },
       legend: {
-        data: legendData,
-        bottom: 0,
-        textStyle: {
-          color: isDark ? '#b8b8c2' : '#6b6b75',
-          fontSize: 11,
-          letterSpacing: 0.2
-        },
-        itemGap: 20,
-        icon: 'circle',
-        itemWidth: 12,
-        itemHeight: 12
+        show: false,
+        data: legendData
       },
       xAxis: {
         type: 'category',

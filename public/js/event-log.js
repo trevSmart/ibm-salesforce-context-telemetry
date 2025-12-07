@@ -3817,6 +3817,7 @@ if (window.__EVENT_LOG_LOADED__) {
     startTime = performance.now();
     // const loadingMessageEl = document.getElementById('loadingMessage');
     const _logsTableEl = document.getElementById('logsTable');
+    const durationInfoEl = document.getElementById('durationInfo');
     const errorMessageEl = document.getElementById('errorMessage');
     const emptyStateEl = document.getElementById('emptyState');
 
@@ -3886,7 +3887,9 @@ if (window.__EVENT_LOG_LOADED__) {
       }
 
       const duration = Math.round(performance.now() - startTime);
-      document.getElementById('durationInfo').textContent = `${duration}ms`;
+      if (durationInfoEl) {
+        durationInfoEl.textContent = `${duration}ms`;
+      }
 
       let fetchedEvents = Array.isArray(data.events) ? data.events : [];
 
@@ -3900,7 +3903,9 @@ if (window.__EVENT_LOG_LOADED__) {
         displayEvents(fetchedEvents, append);
         hasMoreEvents = data.hasMore || false;
         currentOffset += fetchedEvents.length;
-        document.getElementById('logsTable').style.display = 'table';
+        if (_logsTableEl) {
+          _logsTableEl.style.display = 'table';
+        }
         handleNotificationState(fetchedEvents, triggeredByNotification);
         if (!append) {
           updateSessionActivityChart({ sessionId: selectedSession });
@@ -3924,8 +3929,10 @@ if (window.__EVENT_LOG_LOADED__) {
       updateTeamEventCounts(allLoadedEvents);
     } catch (error) {
       console.error('Error loading events:', error);
-      document.getElementById('errorMessage').textContent = 'Error loading events: ' + error.message;
-      document.getElementById('errorMessage').style.display = 'block';
+      if (errorMessageEl) {
+        errorMessageEl.textContent = 'Error loading events: ' + error.message;
+        errorMessageEl.style.display = 'block';
+      }
     } finally {
       isLoadingMore = false;
     // if (loadingMessageEl && !append) {

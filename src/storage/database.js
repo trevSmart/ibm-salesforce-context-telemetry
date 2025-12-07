@@ -3179,10 +3179,10 @@ async function getAllTeams() {
           t.created_at,
           t.updated_at,
           COUNT(DISTINCT o.server_id) as org_count,
-          COUNT(DISTINCT u.id) as user_count
+          COUNT(DISTINCT teu.user_name) as user_count
         FROM teams t
         LEFT JOIN orgs o ON o.team_id = t.id
-        LEFT JOIN users u ON u.team_id = t.id
+        LEFT JOIN team_event_users teu ON teu.team_id = t.id
         GROUP BY t.id
         ORDER BY t.name ASC
       `).all();
@@ -3207,10 +3207,10 @@ async function getAllTeams() {
           t.created_at,
           t.updated_at,
           COUNT(DISTINCT o.server_id) as org_count,
-          COUNT(DISTINCT u.id) as user_count
+          COUNT(DISTINCT teu.user_name) as user_count
         FROM teams t
         LEFT JOIN orgs o ON o.team_id = t.id
-        LEFT JOIN users u ON u.team_id = t.id
+        LEFT JOIN team_event_users teu ON teu.team_id = t.id
         GROUP BY t.id
         ORDER BY t.name ASC
       `);
@@ -3457,24 +3457,36 @@ async function getEventUserNames(limit = 1000) {
   try {
     if (dbType === 'sqlite') {
       const users = db.prepare(`
-        SELECT DISTINCT user_name
-        FROM telemetry_events
-        WHERE user_name IS NOT NULL AND user_name != ''
-        ORDER BY user_name ASC
+        SELECT DISTINCT user_label
+        FROM (
+          SELECT COALESCE(
+            NULLIF(TRIM(user_name), ''),
+            NULLIF(TRIM(user_id), '')
+          ) AS user_label
+          FROM telemetry_events
+        ) AS labels
+        WHERE user_label IS NOT NULL
+        ORDER BY user_label ASC
         LIMIT ?
       `).all(limit);
-      
-      return users.map(u => u.user_name);
+
+      return users.map(u => u.user_label);
     } else if (dbType === 'postgresql') {
       const result = await db.query(`
-        SELECT DISTINCT user_name
-        FROM telemetry_events
-        WHERE user_name IS NOT NULL AND user_name != ''
-        ORDER BY user_name ASC
+        SELECT DISTINCT user_label
+        FROM (
+          SELECT COALESCE(
+            NULLIF(TRIM(user_name), ''),
+            NULLIF(TRIM(user_id), '')
+          ) AS user_label
+          FROM telemetry_events
+        ) AS labels
+        WHERE user_label IS NOT NULL
+        ORDER BY user_label ASC
         LIMIT $1
       `, [limit]);
-      
-      return result.rows.map(u => u.user_name);
+
+      return result.rows.map(u => u.user_label);
     }
   } catch (error) {
     console.error('Error getting event user names:', error);
