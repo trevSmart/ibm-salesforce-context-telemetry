@@ -812,7 +812,11 @@ async function showAddUserModal(teamId) {
   const availableUsers = users.filter(u => !teamUserIds.has(u.id));
 
   if (availableUsers.length === 0) {
-    showToast('No available users to add', 'info');
+    if (users.length === 0) {
+      showToast('No users exist in the system. Create users first before assigning them to teams.', 'info');
+    } else {
+      showToast(`All ${users.length} user${users.length !== 1 ? 's are' : ' is'} already assigned to this team.`, 'info');
+    }
     return;
   }
 
