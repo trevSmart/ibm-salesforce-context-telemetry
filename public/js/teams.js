@@ -220,9 +220,9 @@ async function fetchOrgs() {
   }
 }
 
-async function fetchUsers() {
+async function fetchEventUsers() {
   try {
-    const response = await fetch('/api/users', {
+    const response = await fetch('/api/event-users', {
       credentials: 'same-origin'
     });
     if (!response.ok) {
@@ -231,7 +231,7 @@ async function fetchUsers() {
     const data = await response.json();
     return data.users || [];
   } catch (error) {
-    console.error('Error fetching users:', error);
+    console.error('Error fetching event users:', error);
     return [];
   }
 }
@@ -326,15 +326,15 @@ async function moveOrgToTeam(orgId, teamId) {
   }
 }
 
-async function assignUserToTeam(userId, teamId) {
+async function addEventUserToTeam(userName, teamId) {
   try {
-    const response = await fetch(`/api/users/${userId}/assign-team`, {
+    const response = await fetch(`/api/teams/${teamId}/event-users`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
       credentials: 'same-origin',
-      body: JSON.stringify({ team_id: teamId })
+      body: JSON.stringify({ user_name: userName })
     });
 
     if (!response.ok) {
@@ -344,7 +344,7 @@ async function assignUserToTeam(userId, teamId) {
 
     return true;
   } catch (error) {
-    console.error('Error assigning user:', error);
+    console.error('Error adding event user:', error);
     throw error;
   }
 }
@@ -551,10 +551,10 @@ async function renderTeamDetail(teamId) {
       return `
         <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-secondary);">
           <div>
-            <div style="font-weight: 500;">${escapeHtml(user.username)}</div>
-            <div style="font-size: 0.85rem; color: var(--text-secondary);">${escapeHtml(user.role)}</div>
+            <div style="font-weight: 500;">${escapeHtml(user.user_name)}</div>
+            <div style="font-size: 0.85rem; color: var(--text-secondary);">Event log user</div>
           </div>
-          <button class="btn-danger" onclick="removeUserFromTeam(${user.id}, ${teamId})" style="padding: 4px 8px; border-radius: 4px; border: 1px solid var(--border-color); background: #dc3545; color: white; cursor: pointer; font-size: 0.85rem;">
+          <button class="btn-danger" onclick="removeUserFromTeam('${escapeHtml(user.user_name)}', ${teamId})" style="padding: 4px 8px; border-radius: 4px; border: 1px solid var(--border-color); background: #dc3545; color: white; cursor: pointer; font-size: 0.85rem;">
             <i class="fas fa-times"></i>
           </button>
         </div>
@@ -806,16 +806,16 @@ async function showAddOrgModal(teamId) {
 }
 
 async function showAddUserModal(teamId) {
-  const users = await fetchUsers();
+  const eventUsers = await fetchEventUsers();
   const team = await fetchTeam(teamId);
-  const teamUserIds = new Set(team.users.map(u => u.id));
-  const availableUsers = users.filter(u => !teamUserIds.has(u.id));
+  const teamUserNames = new Set(team.users.map(u => u.user_name));
+  const availableUsers = eventUsers.filter(userName => !teamUserNames.has(userName));
 
   if (availableUsers.length === 0) {
-    if (users.length === 0) {
-      showToast('No users exist in the system. Create users first before assigning them to teams.', 'info');
+    if (eventUsers.length === 0) {
+      showToast('No event log users found. Users will appear here once telemetry events with user data are received.', 'info');
     } else {
-      showToast(`All ${users.length} user${users.length !== 1 ? 's are' : ' is'} already assigned to this team.`, 'info');
+      showToast(`All ${eventUsers.length} event user${eventUsers.length !== 1 ? 's' : ''} ${eventUsers.length !== 1 ? 'are' : 'is'} already assigned to this team.`, 'info');
     }
     return;
   }
@@ -841,7 +841,7 @@ async function showAddUserModal(teamId) {
           </button>
           <el-options anchor="bottom end" popover class="max-h-60 w-(--input-width) overflow-auto rounded-md bg-white py-1 text-base shadow-lg outline outline-black/5 transition-discrete [--anchor-gap:--spacing(1)] data-leave:transition data-leave:duration-100 data-leave:ease-in data-closed:data-leave:opacity-0 sm:text-sm">
             <el-option value="" class="block truncate px-3 py-2 text-gray-900 select-none aria-selected:bg-indigo-600 aria-selected:text-white">-- Select a user --</el-option>
-            ${availableUsers.map(user => `<el-option value="${user.id}" class="block truncate px-3 py-2 text-gray-900 select-none aria-selected:bg-indigo-600 aria-selected:text-white">${escapeHtml(user.username)} (${escapeHtml(user.role)})</el-option>`).join('')}
+            ${availableUsers.map(userName => `<el-option value="${escapeHtml(userName)}" class="block truncate px-3 py-2 text-gray-900 select-none aria-selected:bg-indigo-600 aria-selected:text-white">${escapeHtml(userName)}</el-option>`).join('')}
           </el-options>
         </el-autocomplete>
       </label>
@@ -882,15 +882,14 @@ async function showAddUserModal(teamId) {
   });
 
   document.getElementById('saveAddUserBtn')?.addEventListener('click', async () => {
-    const userValue = document.getElementById('userSelect').value;
-    const userId = parseInt(userValue, 10);
-    if (!userId || Number.isNaN(userId)) {
+    const userName = document.getElementById('userSelect').value;
+    if (!userName || userName.trim() === '') {
       showToast('Please select a user', 'error');
       return;
     }
 
     try {
-      await assignUserToTeam(userId, teamId);
+      await addEventUserToTeam(userName, teamId);
       showToast('User added successfully', 'success');
       closeModal();
       renderTeamDetail(teamId);
@@ -914,13 +913,22 @@ async function removeOrgFromTeam(orgId, teamId) {
   }
 }
 
-async function removeUserFromTeam(userId, teamId) {
+async function removeUserFromTeam(userName, teamId) {
   if (!confirm('Remove this user from the team?')) {
     return;
   }
 
   try {
-    await assignUserToTeam(userId, null);
+    const response = await fetch(`/api/teams/${teamId}/event-users/${encodeURIComponent(userName)}`, {
+      method: 'DELETE',
+      credentials: 'same-origin'
+    });
+
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.message || `HTTP ${response.status}`);
+    }
+
     showToast('User removed successfully', 'success');
     renderTeamDetail(teamId);
   } catch (error) {

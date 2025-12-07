@@ -3080,13 +3080,26 @@ async function ensureTeamsAndOrgsTables() {
         db.exec('ALTER TABLE orgs ADD COLUMN color TEXT');
       }
 
-      // Add team_id to users table if it doesn't exist
+      // Add team_id to users table if it doesn't exist (for application users)
       const usersColumns = db.prepare('PRAGMA table_info(users)').all();
       const hasTeamIdInUsers = usersColumns.some(column => column.name === 'team_id');
       if (!hasTeamIdInUsers) {
         db.exec('ALTER TABLE users ADD COLUMN team_id INTEGER REFERENCES teams(id)');
         db.exec('CREATE INDEX IF NOT EXISTS idx_users_team_id ON users(team_id)');
       }
+
+      // Create team_event_users table for mapping event log users to teams
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS team_event_users (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          team_id INTEGER NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+          user_name TEXT NOT NULL,
+          created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE(team_id, user_name)
+        );
+        CREATE INDEX IF NOT EXISTS idx_team_event_users_team_id ON team_event_users(team_id);
+        CREATE INDEX IF NOT EXISTS idx_team_event_users_user_name ON team_event_users(user_name);
+      `);
     } else if (dbType === 'postgresql') {
       // Create teams table
       await db.query(`
@@ -3117,11 +3130,24 @@ async function ensureTeamsAndOrgsTables() {
         ADD COLUMN IF NOT EXISTS color TEXT;
       `);
 
-      // Add team_id to users table if it doesn't exist
+      // Add team_id to users table if it doesn't exist (for application users)
       await db.query(`
         ALTER TABLE IF EXISTS users
         ADD COLUMN IF NOT EXISTS team_id INTEGER REFERENCES teams(id);
         CREATE INDEX IF NOT EXISTS idx_users_team_id ON users(team_id);
+      `);
+
+      // Create team_event_users table for mapping event log users to teams
+      await db.query(`
+        CREATE TABLE IF NOT EXISTS team_event_users (
+          id SERIAL PRIMARY KEY,
+          team_id INTEGER NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+          user_name TEXT NOT NULL,
+          created_at TIMESTAMPTZ DEFAULT NOW(),
+          UNIQUE(team_id, user_name)
+        );
+        CREATE INDEX IF NOT EXISTS idx_team_event_users_team_id ON team_event_users(team_id);
+        CREATE INDEX IF NOT EXISTS idx_team_event_users_user_name ON team_event_users(user_name);
       `);
     }
   } catch (error) {
@@ -3248,17 +3274,14 @@ async function getTeamById(teamId) {
         ORDER BY alias ASC, server_id ASC
       `).all(teamId);
 
-      const users = db.prepare(`
+      // Get event log users assigned to this team
+      const eventUsers = db.prepare(`
         SELECT
-          id,
-          username,
-          role,
-          team_id,
-          created_at,
-          last_login
-        FROM users
+          user_name,
+          created_at
+        FROM team_event_users
         WHERE team_id = ?
-        ORDER BY username ASC
+        ORDER BY user_name ASC
       `).all(teamId);
 
       return {
@@ -3277,13 +3300,9 @@ async function getTeamById(teamId) {
           created_at: org.created_at,
           updated_at: org.updated_at
         })),
-        users: users.map(user => ({
-          id: user.id,
-          username: user.username,
-          role: user.role,
-          team_id: user.team_id || null,
-          created_at: user.created_at,
-          last_login: user.last_login || null
+        users: eventUsers.map(user => ({
+          user_name: user.user_name,
+          created_at: user.created_at
         }))
       };
     } else if (dbType === 'postgresql') {
@@ -3319,17 +3338,14 @@ async function getTeamById(teamId) {
         ORDER BY alias ASC, server_id ASC
       `, [teamId]);
 
-      const usersResult = await db.query(`
+      // Get event log users assigned to this team
+      const eventUsersResult = await db.query(`
         SELECT
-          id,
-          username,
-          role,
-          team_id,
-          created_at,
-          last_login
-        FROM users
+          user_name,
+          created_at
+        FROM team_event_users
         WHERE team_id = $1
-        ORDER BY username ASC
+        ORDER BY user_name ASC
       `, [teamId]);
 
       return {
@@ -3348,18 +3364,120 @@ async function getTeamById(teamId) {
           created_at: org.created_at,
           updated_at: org.updated_at
         })),
-        users: usersResult.rows.map(user => ({
-          id: user.id,
-          username: user.username,
-          role: user.role,
-          team_id: user.team_id || null,
-          created_at: user.created_at,
-          last_login: user.last_login || null
+        users: eventUsersResult.rows.map(user => ({
+          user_name: user.user_name,
+          created_at: user.created_at
         }))
       };
     }
   } catch (error) {
     console.error('Error getting team by ID:', error);
+    throw error;
+  }
+}
+
+/**
+ * Add an event log user to a team
+ * @param {number} teamId - Team ID
+ * @param {string} userName - Event log user name
+ * @returns {Promise<object>} Result object
+ */
+async function addEventUserToTeam(teamId, userName) {
+  if (!db) {
+    throw new Error('Database not initialized. Call init() first.');
+  }
+
+  try {
+    if (dbType === 'sqlite') {
+      db.prepare(`
+        INSERT INTO team_event_users (team_id, user_name)
+        VALUES (?, ?)
+        ON CONFLICT(team_id, user_name) DO NOTHING
+      `).run(teamId, userName);
+      
+      return { status: 'ok', message: 'Event user added to team successfully' };
+    } else if (dbType === 'postgresql') {
+      await db.query(`
+        INSERT INTO team_event_users (team_id, user_name)
+        VALUES ($1, $2)
+        ON CONFLICT (team_id, user_name) DO NOTHING
+      `, [teamId, userName]);
+      
+      return { status: 'ok', message: 'Event user added to team successfully' };
+    }
+  } catch (error) {
+    console.error('Error adding event user to team:', error);
+    throw error;
+  }
+}
+
+/**
+ * Remove an event log user from a team
+ * @param {number} teamId - Team ID
+ * @param {string} userName - Event log user name
+ * @returns {Promise<object>} Result object
+ */
+async function removeEventUserFromTeam(teamId, userName) {
+  if (!db) {
+    throw new Error('Database not initialized. Call init() first.');
+  }
+
+  try {
+    if (dbType === 'sqlite') {
+      db.prepare(`
+        DELETE FROM team_event_users
+        WHERE team_id = ? AND user_name = ?
+      `).run(teamId, userName);
+      
+      return { status: 'ok', message: 'Event user removed from team successfully' };
+    } else if (dbType === 'postgresql') {
+      await db.query(`
+        DELETE FROM team_event_users
+        WHERE team_id = $1 AND user_name = $2
+      `, [teamId, userName]);
+      
+      return { status: 'ok', message: 'Event user removed from team successfully' };
+    }
+  } catch (error) {
+    console.error('Error removing event user from team:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get all unique event log user names from telemetry data
+ * @param {number} limit - Maximum number of users to return
+ * @returns {Promise<Array>} Array of user names
+ */
+async function getEventUserNames(limit = 1000) {
+  if (!db) {
+    throw new Error('Database not initialized. Call init() first.');
+  }
+
+  try {
+    if (dbType === 'sqlite') {
+      const users = db.prepare(`
+        SELECT DISTINCT user_name
+        FROM telemetry_events
+        WHERE user_name IS NOT NULL AND user_name != ''
+        ORDER BY user_name ASC
+        LIMIT ?
+      `).all(limit);
+      
+      return users.map(u => u.user_name);
+    } else if (dbType === 'postgresql') {
+      const result = await db.query(`
+        SELECT DISTINCT user_name
+        FROM telemetry_events
+        WHERE user_name IS NOT NULL AND user_name != ''
+        ORDER BY user_name ASC
+        LIMIT $1
+      `, [limit]);
+      
+      return result.rows.map(u => u.user_name);
+    }
+  } catch (error) {
+    console.error('Error getting event user names:', error);
     throw error;
   }
 }
@@ -4052,6 +4170,9 @@ module.exports = {
   updateTeam,
   deleteTeam,
   assignUserToTeam,
+  addEventUserToTeam,
+  removeEventUserFromTeam,
+  getEventUserNames,
   // Event updates
   updateEventData,
   // User filtering
