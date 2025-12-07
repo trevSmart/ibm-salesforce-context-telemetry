@@ -269,7 +269,7 @@ function generateSession(userId, project, startDate, endDate) {
 
   // Session start
   const sessionStartTime = randomOfficeHourTimestamp(startDate);
-          events.push(generateSessionStart(sessionId, userId, serverId, version, sessionStartTime, project));
+  events.push(generateSessionStart(sessionId, userId, serverId, version, sessionStartTime, project));
 
   // Determine session duration (30 minutes to 4 hours)
   const sessionDurationMinutes = randomInt(30, 240);

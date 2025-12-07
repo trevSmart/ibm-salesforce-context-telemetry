@@ -2900,7 +2900,7 @@ async function loadChartData(days = currentDays) {
       ]);
 
       // Add trend line series with gradient from orange (past) to red (future)
-      const totalDataPoints = trendLine.trendData.length + trendLine.extrapolatedData.length;
+      const _totalDataPoints = trendLine.trendData.length + trendLine.extrapolatedData.length;
       series.push({
         name: 'Trend',
         type: 'line',

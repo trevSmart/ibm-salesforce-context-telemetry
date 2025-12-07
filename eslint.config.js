@@ -42,6 +42,7 @@ module.exports = [
         URL: 'readonly',
         URLSearchParams: 'readonly',
         alert: 'readonly',
+        confirm: 'readonly',
         requestAnimationFrame: 'readonly',
         cancelAnimationFrame: 'readonly',
         performance: 'readonly',
