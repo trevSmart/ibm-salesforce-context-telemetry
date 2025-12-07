@@ -932,8 +932,8 @@ window.viewTeamDetail = (teamId) => {
 };
 
 window.showCreateTeamModal = showCreateTeamModal;
-window.showAddOrgModalForTeam = showAddOrgModal;
-window.showAddUserModalForTeam = showAddUserModal;
+window.showAddOrgModal = showAddOrgModal;
+window.showAddUserModal = showAddUserModal;
 window.removeOrgFromTeam = removeOrgFromTeam;
 window.removeUserFromTeam = removeUserFromTeam;
 
