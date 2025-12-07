@@ -12,7 +12,7 @@
  */
 
 require('dotenv').config();
-const path = require('path');
+const _path = require('path');
 const db = require('../storage/database');
 
 async function migrateMappings() {

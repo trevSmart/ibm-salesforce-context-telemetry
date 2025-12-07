@@ -2,10 +2,10 @@
 // Teams management page
 
 let currentView = 'list'; // 'list' or 'detail'
-let currentTeamId = null;
+let _currentTeamId = null;
 let teams = [];
-let allOrgs = [];
-let allUsers = [];
+let _allOrgs = [];
+let _allUsers = [];
 
 // Utility functions
 function escapeHtml(text) {
@@ -481,7 +481,7 @@ async function renderTeamDetail(teamId) {
 
   document.getElementById('backBtn')?.addEventListener('click', () => {
     currentView = 'list';
-    currentTeamId = null;
+    _currentTeamId = null;
     renderTeamsList();
   });
 
@@ -686,7 +686,7 @@ function showDeleteTeamConfirm(team) {
   deleteTeam(team.id).then(() => {
     showToast('Team deleted successfully', 'success');
     currentView = 'list';
-    currentTeamId = null;
+    _currentTeamId = null;
     loadTeams().then(() => renderTeamsList());
   }).catch(error => {
     showToast(error.message || 'Failed to delete team', 'error');
@@ -940,7 +940,7 @@ async function removeUserFromTeam(userId, teamId) {
 // Global functions for onclick handlers
 window.viewTeamDetail = (teamId) => {
   currentView = 'detail';
-  currentTeamId = teamId;
+  _currentTeamId = teamId;
   renderTeamDetail(teamId);
 };
 
