@@ -392,7 +392,6 @@ function renderTeamsList() {
     </div>
   `;
 
-  const createBtn = document.getElementById('createTeamBtn');
   const teamsList = document.getElementById('teamsList');
 
   if (teams.length === 0) {
@@ -442,10 +441,6 @@ function renderTeamsList() {
       </div>
     `;
   }).join('');
-
-  if (createBtn) {
-    createBtn.addEventListener('click', showCreateTeamModal);
-  }
 }
 
 async function renderTeamDetail(teamId) {
