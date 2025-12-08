@@ -670,11 +670,8 @@ body.event-log-page .container {
     font-weight: 700;
   }
 
-  /* Soft navigation state (keeps chrome stable while swapping content) */
-  body.soft-nav-loading .container-content {
-    opacity: 0.35;
-    transition: opacity 0.2s ease;
-  }
+  /* Soft navigation with crossfade - no longer needs opacity reduction */
+  /* The navigation.js handles smooth crossfade transitions directly */
 
   .dashboard-header a {
     color: #3d4152;

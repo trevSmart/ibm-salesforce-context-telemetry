@@ -170,7 +170,6 @@
     }
 
     isNavigating = true;
-    document.body.classList.add('soft-nav-loading');
 
     try {
       const response = await fetch(targetPath, {
@@ -192,10 +191,17 @@
       // Keep nav, search, and container shell styling consistent across pages
       syncShellFromDocument(doc);
 
-      container.replaceWith(nextContent);
-      // Keep container reference updated for future navigations
+      // Prepare new content for crossfade: start invisible and position it
+      nextContent.style.opacity = '0';
+      nextContent.style.position = 'absolute';
+      nextContent.style.top = '0';
+      nextContent.style.left = '0';
+      nextContent.style.right = '0';
+      nextContent.style.width = '100%';
 
-      // (not strictly necessary because we re-query each time)
+      // Insert new content after current content (both will be visible briefly)
+      container.parentNode.style.position = 'relative';
+      container.after(nextContent);
 
       // Sync body class and title for page-specific styles
       document.body.className = doc.body.className || document.body.className;
@@ -213,6 +219,28 @@
       updateActiveLink(targetPath);
       await ensurePageScripts(targetPath);
 
+      // Trigger reflow to ensure opacity:0 is applied before transition
+      void nextContent.offsetHeight;
+
+      // Start crossfade: fade out old, fade in new
+      container.style.transition = 'opacity 150ms ease-out';
+      container.style.opacity = '0';
+      nextContent.style.transition = 'opacity 150ms ease-in';
+      nextContent.style.opacity = '1';
+
+      // Wait for transition to complete
+      await new Promise((resolve) => setTimeout(resolve, 150));
+
+      // Remove old content and reset positioning on new content
+      container.remove();
+      nextContent.style.position = '';
+      nextContent.style.top = '';
+      nextContent.style.left = '';
+      nextContent.style.right = '';
+      nextContent.style.width = '';
+      nextContent.style.transition = '';
+      nextContent.style.opacity = '';
+
       // Notify pages that a soft navigation completed so they can rehydrate
       window.dispatchEvent(new CustomEvent('softNav:pageMounted', { detail: { path: targetPath } }));
 
@@ -226,7 +254,6 @@
       console.error('Soft navigation failed, falling back to full load:', error);
       window.location.href = targetPath;
     } finally {
-      document.body.classList.remove('soft-nav-loading');
       isNavigating = false;
     }
   }
