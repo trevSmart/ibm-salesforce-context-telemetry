@@ -6075,7 +6075,7 @@ if (window.__EVENT_LOG_LOADED__) {
       });
       const validResponse = await handleApiResponse(response);
       if (!validResponse) {
-        tbody.innerHTML = '<tr><td colspan="6" class="py-8 text-center text-sm text-gray-500 dark:text-gray-400">Failed to load events</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="py-8 text-center text-sm text-gray-500 dark:text-gray-400">Failed to load events</td></tr>';
         return;
       }
 
@@ -6083,7 +6083,7 @@ if (window.__EVENT_LOG_LOADED__) {
       const events = Array.isArray(data.events) ? data.events : [];
 
       if (events.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="py-8 text-center text-sm text-gray-500 dark:text-gray-400">No events found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="py-8 text-center text-sm text-gray-500 dark:text-gray-400">No events found</td></tr>';
         return;
       }
 
@@ -6093,14 +6093,16 @@ if (window.__EVENT_LOG_LOADED__) {
       // Populate table rows
       events.forEach(event => {
         const row = document.createElement('tr');
-        
+
         // Parse event data
         const eventData = normalizeEventData(event.data);
         const userLabel = extractUserLabelFromEvent(event, eventData);
         const toolName = (event.event === 'tool_call' || event.event === 'tool_error') && eventData.toolName
           ? String(eventData.toolName)
           : '—';
-        
+        const clientName = extractClientName(eventData);
+        const payloadPreview = formatDescription(event);
+
         // Determine status
         const dataStatus = typeof eventData.status === 'string' ? eventData.status.toLowerCase() : null;
         const isToolFailure = event.event === 'tool_call' && (
@@ -6110,7 +6112,7 @@ if (window.__EVENT_LOG_LOADED__) {
           Boolean(eventData.error)
         );
         const isError = event.event === 'tool_error' || event.event === 'error' || isToolFailure;
-        
+
         // Status badge
         let statusBadge = '';
         if (isError) {
@@ -6120,16 +6122,16 @@ if (window.__EVENT_LOG_LOADED__) {
         } else {
           statusBadge = '<span class="inline-flex items-center rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20 dark:bg-green-400/10 dark:text-green-400 dark:ring-green-400/20">Success</span>';
         }
-        
+
         // Format timestamp
         const timestamp = new Date(event.timestamp);
-        const timeStr = timestamp.toLocaleTimeString('en-US', { 
-          hour: '2-digit', 
+        const timeStr = timestamp.toLocaleTimeString('en-US', {
+          hour: '2-digit',
           minute: '2-digit',
           second: '2-digit',
-          hour12: false 
+          hour12: false
         });
-        
+
         // Event type badge with color
         let eventTypeBadge = '';
         if (event.event === 'session_start') {
@@ -6149,17 +6151,24 @@ if (window.__EVENT_LOG_LOADED__) {
           <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">${escapeHtml(userLabel || '—')}</td>
           <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">${eventTypeBadge}</td>
           <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">${escapeHtml(toolName)}</td>
+          <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">${escapeHtml(clientName || '—')}</td>
+          <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400 blueprint-payload">${escapeHtml(payloadPreview)}</td>
           <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">${statusBadge}</td>
           <td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-0">
             <button onclick="scrollToEvent('${event.id}')" class="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300">View<span class="sr-only">, Event ${event.id}</span></button>
           </td>
         `;
-        
+
+        const payloadCell = row.querySelector('.blueprint-payload');
+        if (payloadCell) {
+          payloadCell.textContent = payloadPreview;
+        }
+
         tbody.appendChild(row);
       });
     } catch (error) {
       console.error('Error populating blueprint table:', error);
-      tbody.innerHTML = '<tr><td colspan="6" class="py-8 text-center text-sm text-gray-500 dark:text-gray-400">Error loading events</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="8" class="py-8 text-center text-sm text-gray-500 dark:text-gray-400">Error loading events</td></tr>';
     }
   }
 
