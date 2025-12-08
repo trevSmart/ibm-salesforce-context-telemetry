@@ -14,6 +14,19 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
+function hexToRgba(hex, alpha = 0.12) {
+  if (!hex || typeof hex !== 'string') return null;
+  const normalized = hex.replace('#', '');
+  if (normalized.length !== 3 && normalized.length !== 6) return null;
+  const full = normalized.length === 3 ? normalized.split('').map(c => c + c).join('') : normalized;
+  const intVal = parseInt(full, 16);
+  if (Number.isNaN(intVal)) return null;
+  const r = (intVal >> 16) & 255;
+  const g = (intVal >> 8) & 255;
+  const b = intVal & 255;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 // User menu functions (showUserMenu, handleLogout) are now in user-menu.js
 
 function toggleTheme() {
@@ -310,15 +323,23 @@ function renderTeamsList() {
   if (!container) return;
 
   container.innerHTML = `
-    <div style="padding: 24px;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-        <h1 style="margin: 0; font-size: 1.5rem; font-weight: 600;">Teams</h1>
-        <button id="createTeamBtn" type="button" class="confirm-modal-btn confirm-modal-btn-cancel" onclick="showCreateTeamModal()">
-          <i class="fas fa-plus" style="margin-right: 6px;"></i>New team
+    <div class="px-6 py-6 sm:px-8">
+      <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p class="text-sm font-semibold text-indigo-600">Teams</p>
+          <h1 class="text-2xl font-semibold text-gray-900">Teams overview</h1>
+          <p class="mt-1 text-sm text-gray-500">Select a team to manage organizations and users.</p>
+        </div>
+        <button id="createTeamBtn" type="button" onclick="showCreateTeamModal()"
+          class="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
+          <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5">
+            <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5z" />
+          </svg>
+          New team
         </button>
       </div>
-      <div id="teamsList" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">
-        <div style="padding: 16px; text-align: center; color: var(--text-secondary);">Loading teams...</div>
+      <div id="teamsList" class="mt-6 grid grid-cols-1 gap-px overflow-hidden rounded-lg bg-gray-200 shadow-sm sm:grid-cols-2">
+        <div class="bg-white p-6 text-center text-sm text-gray-500 sm:col-span-2">Loading teams...</div>
       </div>
     </div>
   `;
@@ -327,21 +348,19 @@ function renderTeamsList() {
 
   if (teams.length === 0) {
     teamsList.innerHTML = `
-      <div style="grid-column: 1 / -1; display: flex; justify-content: center; padding: 32px 0;">
-        <div class="text-center">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true" class="mx-auto size-12 text-gray-400">
-            <path d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round" />
-          </svg>
-          <h3 class="mt-2 text-sm font-semibold text-gray-900">No teams</h3>
-          <p class="mt-1 text-sm text-gray-500">Get started by creating a new team.</p>
-          <div class="mt-6">
-            <button type="button" class="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600" onclick="showCreateTeamModal()">
-              <svg viewBox="0 0 20 20" fill="currentColor" data-slot="icon" aria-hidden="true" class="mr-1.5 -ml-0.5 size-5">
-                <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
-              </svg>
-              New Team
-            </button>
-          </div>
+      <div class="bg-white px-8 py-10 text-center sm:col-span-2">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true" class="mx-auto size-12 text-gray-400">
+          <path d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+        <h3 class="mt-3 text-base font-semibold text-gray-900">No teams</h3>
+        <p class="mt-2 text-sm text-gray-500">Get started by creating a new team.</p>
+        <div class="mt-6">
+          <button type="button" class="inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600" onclick="showCreateTeamModal()">
+            <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="mr-2 size-5">
+              <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5z" />
+            </svg>
+            New team
+          </button>
         </div>
       </div>
     `;
@@ -349,21 +368,30 @@ function renderTeamsList() {
   }
 
   teamsList.innerHTML = teams.map(team => {
-    const colorStyle = team.color ? `background: ${team.color};` : '';
-    const colorDot = team.color ? `<span style="display: inline-block; width: 12px; height: 12px; border-radius: 999px; ${colorStyle} margin-right: 8px; border: 1px solid var(--border-color);"></span>` : '';
+    const accentColor = team.color || '#4f46e5';
+    const accentBg = hexToRgba(team.color, 0.14) || 'rgba(79, 70, 229, 0.12)';
 
     return `
-      <div class="overflow-hidden rounded-lg bg-white shadow-sm cursor-pointer transition duration-150 ease-in-out hover:-translate-y-0.5 hover:shadow-md" onclick="viewTeamDetail(${team.id})">
-        <div class="px-4 py-5 sm:p-6">
-          <div style="display: flex; align-items: center; margin-bottom: 12px;">
-            ${colorDot}
-            <h3 style="margin: 0; font-size: 1.1rem; font-weight: 600; flex: 1;">${escapeHtml(team.name)}</h3>
-          </div>
-          <div style="display: flex; gap: 16px; color: var(--text-secondary); font-size: 0.9rem;">
-            <span><i class="fas fa-building" style="margin-right: 4px;"></i>${team.org_count} org${team.org_count !== 1 ? 's' : ''}</span>
-            <span><i class="fas fa-users" style="margin-right: 4px;"></i>${team.user_count} user${team.user_count !== 1 ? 's' : ''}</span>
-          </div>
+      <div class="group relative bg-white p-6 transition hover:bg-gray-50 focus-within:outline focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-indigo-600" role="button" tabindex="0" onclick="viewTeamDetail(${team.id})" onkeypress="if(event.key==='Enter'||event.key===' '){event.preventDefault();viewTeamDetail(${team.id});}">
+        <div>
+          <span class="inline-flex rounded-lg p-3" style="color: ${accentColor}; background-color: ${accentBg};">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" class="size-6">
+              <path d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </span>
         </div>
+        <div class="mt-8">
+          <h3 class="text-base font-semibold text-gray-900">
+            <span aria-hidden="true" class="absolute inset-0"></span>
+            ${escapeHtml(team.name)}
+          </h3>
+          <p class="mt-2 text-sm text-gray-500">${team.org_count} org${team.org_count !== 1 ? 's' : ''} · ${team.user_count} user${team.user_count !== 1 ? 's' : ''}</p>
+        </div>
+        <span aria-hidden="true" class="pointer-events-none absolute top-6 right-6 text-gray-300 transition group-hover:text-gray-400">
+          <svg viewBox="0 0 24 24" fill="currentColor" class="size-6">
+            <path d="M20 4h1a1 1 0 00-1-1v1zm-1 12a1 1 0 102 0h-2zM8 3a1 1 0 000 2V3zM3.293 19.293a1 1 0 101.414 1.414l-1.414-1.414zM19 4v12h2V4h-2zm1-1H8v2h12V3zm-.707.293l-16 16 1.414 1.414 16-16-1.414-1.414z" />
+          </svg>
+        </span>
       </div>
     `;
   }).join('');
