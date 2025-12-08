@@ -6,6 +6,16 @@ if (window.__EVENT_LOG_LOADED__) {
 } else {
   window.__EVENT_LOG_LOADED__ = true;
 
+  // Utility to escape HTML special characters for safe output in innerHTML
+  function escapeHtml(unsafe) {
+    return String(unsafe)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
   const detectElectronEnvironment = () => {
     const userAgent = navigator?.userAgent?.toLowerCase() || '';
     if (userAgent.includes(' electron/')) {
@@ -276,7 +286,7 @@ if (window.__EVENT_LOG_LOADED__) {
 										</div>
 									</label>
 									<el-autocomplete class="relative auto-refresh-interval" data-disabled="${autoRefreshEnabled ? 'false' : 'true'}">
-										<input id="autoRefreshInterval" name="autoRefreshInterval" type="text" value="${autoRefreshInterval}"
+										<input id="autoRefreshInterval" name="autoRefreshInterval" type="text" value="${escapeHtml(autoRefreshInterval)}"
 											class="block w-full rounded-md bg-white py-1.5 pr-12 pl-3 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6"
 											${autoRefreshEnabled ? '' : 'disabled'}>
 										<button type="button" class="absolute inset-y-0 right-0 flex items-center rounded-r-md px-2">
