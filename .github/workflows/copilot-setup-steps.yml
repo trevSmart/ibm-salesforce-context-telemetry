@@ -46,7 +46,7 @@ jobs:
           fi
 
           npm run create-user -- "$ADMIN_USERNAME" "$ADMIN_PASSWORD" administrator || {
-            echo "User may already exist; ensuring administrator role"
+            echo "User may already exist; ensuring administrator role..."
             npm run update-admin-role -- "$ADMIN_USERNAME"
           }
 
