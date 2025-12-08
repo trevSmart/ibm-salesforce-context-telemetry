@@ -1194,9 +1194,38 @@ if (document.readyState === 'loading') {
   init();
 }
 
+// Pause/resume functions for soft navigation
+function pauseTeamsPage() {
+  // Teams page doesn't have intervals, but we can clear any pending timeouts if needed
+  // Currently no cleanup needed
+}
+
+function resumeTeamsPage() {
+  // Teams page doesn't have intervals to resume
+  // UI is preserved, no action needed
+}
+
+// Expose pause/resume hooks
+window.pauseTeamsPage = pauseTeamsPage;
+window.resumeTeamsPage = resumeTeamsPage;
+
+// Listen for soft navigation events
+window.addEventListener('softNav:pagePausing', (event) => {
+  if (event?.detail?.path === '/teams') {
+    pauseTeamsPage();
+  }
+});
+
 // Handle soft navigation
 window.addEventListener('softNav:pageMounted', (event) => {
   if (event.detail.path === '/teams') {
-    init();
+    const fromCache = event?.detail?.fromCache === true;
+    if (fromCache) {
+      // Page was restored from cache - no re-initialization needed
+      resumeTeamsPage();
+    } else {
+      // New page load - full initialization
+      init();
+    }
   }
 });

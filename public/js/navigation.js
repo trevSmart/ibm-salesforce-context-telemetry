@@ -21,6 +21,7 @@
 
   const domParser = new DOMParser();
   const pageCache = new Map();
+  const containerCache = new Map(); // Cache for DOM container nodes per path
   const loadedScripts = new Set(
     Array.from(document.querySelectorAll('script[src]')).map((script) => {
       try {
@@ -227,33 +228,71 @@
     isNavigating = true;
 
     try {
-      let doc;
-      let html;
+      const currentPath = window.location.pathname;
 
-      if (pageCache.has(targetPath)) {
-        html = pageCache.get(targetPath);
-        doc = domParser.parseFromString(html, 'text/html');
+      // Notify current page to pause intervals/listeners before caching
+      window.dispatchEvent(new CustomEvent('softNav:pagePausing', { detail: { path: currentPath } }));
+
+      // Cache the current container before removing it
+      if (currentPath && SUPPORTED_PATHS.includes(currentPath)) {
+        containerCache.set(currentPath, container.cloneNode(true));
+      }
+
+      let nextContent;
+      let doc = null;
+      const cachedContainer = containerCache.get(targetPath);
+
+      if (cachedContainer) {
+        // Restore from cache - no need to fetch
+        nextContent = cachedContainer.cloneNode(true);
+        containerCache.delete(targetPath); // Remove from cache to avoid stale references
       } else {
-        const response = await fetch(targetPath, {
-          headers: { 'X-Requested-With': 'soft-nav' },
-          credentials: 'include'
-        });
-        if (!response.ok) {
-          throw new Error(`Navigation failed with status ${response.status}`);
+        // Fetch new content
+        let html;
+
+        if (pageCache.has(targetPath)) {
+          html = pageCache.get(targetPath);
+        } else {
+          const response = await fetch(targetPath, {
+            headers: { 'X-Requested-With': 'soft-nav' },
+            credentials: 'include'
+          });
+          if (!response.ok) {
+            throw new Error(`Navigation failed with status ${response.status}`);
+          }
+
+          html = await response.text();
+          pageCache.set(targetPath, html);
+        }
+        doc = domParser.parseFromString(html, 'text/html');
+        nextContent = doc.querySelector('.container-content');
+
+        if (!nextContent) {
+          throw new Error('Target page missing container-content');
         }
 
-        html = await response.text();
-        doc = domParser.parseFromString(html, 'text/html');
-        pageCache.set(targetPath, html);
-      }
-      const nextContent = doc.querySelector('.container-content');
+        // Keep nav, search, and container shell styling consistent across pages
+        syncShellFromDocument(doc);
 
-      if (!nextContent) {
-        throw new Error('Target page missing container-content');
-      }
+        // Sync body class and title for page-specific styles (strip hydrating)
+        const nextBodyClasses = doc.body?.classList ? Array.from(doc.body.classList) : [];
+        const filteredBodyClasses = nextBodyClasses.filter((cls) => cls !== 'hydrating');
+        if (filteredBodyClasses.length > 0) {
+          document.body.className = filteredBodyClasses.join(' ');
+        } else if (document.body.classList.contains('hydrating')) {
+          document.body.classList.remove('hydrating');
+        }
+        if (doc.title) {
+          document.title = doc.title;
+        }
 
-      // Keep nav, search, and container shell styling consistent across pages
-      syncShellFromDocument(doc);
+        // Sync container classes for page-specific styles (e.g., main-container for event-log page)
+        const currentContainer = document.querySelector('.container, .main-container');
+        const nextContainer = doc.querySelector('.container, .main-container');
+        if (currentContainer && nextContainer) {
+          currentContainer.className = nextContainer.className;
+        }
+      }
 
       // Match current padding so the overlayed content keeps the same inset during crossfade
       const containerStyle = window.getComputedStyle(container);
@@ -261,35 +300,9 @@
         nextContent.style[prop] = containerStyle[prop];
       });
 
-      // Prepare new content for crossfade: start invisible and position it
-      // nextContent.style.opacity = '0';
-      // nextContent.style.position = 'absolute';
-      // nextContent.style.inset = '0';
-
-      // (not strictly necessary because we re-query each time);
-
       // Insert new content after current content (both will be visible briefly)
       container.parentNode.style.position = 'relative';
       container.after(nextContent);
-
-      // Sync body class and title for page-specific styles (strip hydrating)
-      const nextBodyClasses = doc.body?.classList ? Array.from(doc.body.classList) : [];
-      const filteredBodyClasses = nextBodyClasses.filter((cls) => cls !== 'hydrating');
-      if (filteredBodyClasses.length > 0) {
-        document.body.className = filteredBodyClasses.join(' ');
-      } else if (document.body.classList.contains('hydrating')) {
-        document.body.classList.remove('hydrating');
-      }
-      if (doc.title) {
-        document.title = doc.title;
-      }
-
-      // Sync container classes for page-specific styles (e.g., main-container for event-log page)
-      const currentContainer = document.querySelector('.container, .main-container');
-      const nextContainer = doc.querySelector('.container, .main-container');
-      if (currentContainer && nextContainer) {
-        currentContainer.className = nextContainer.className;
-      }
 
       updateActiveLink(targetPath);
       await ensurePageScripts(targetPath);
@@ -317,8 +330,8 @@
       nextContent.style.paddingBottom = '';
       nextContent.style.paddingLeft = '';
 
-      // Notify pages that a soft navigation completed so they can rehydrate
-      window.dispatchEvent(new CustomEvent('softNav:pageMounted', { detail: { path: targetPath } }));
+      // Notify pages that a soft navigation completed so they can resume
+      window.dispatchEvent(new CustomEvent('softNav:pageMounted', { detail: { path: targetPath, fromCache: !!cachedContainer } }));
 
       if (replace) {
         window.history.replaceState({ softNav: true }, '', targetPath);

@@ -3571,18 +3571,6 @@ body.hydrating .main-container {
     background: var(--text-secondary);
   }
 
-  /* Hide event type button labels when space is limited, before Users button gets hidden */
-  @media (max-width: 1400px) {
-    .level-filter-btn span:not(.level-count) {
-      display: none;
-    }
-
-    .level-filter-btn {
-      padding: 4px 8px;
-      min-width: auto;
-    }
-  }
-
   /* Hide event type buttons completely when space is very limited, before Users button gets hidden */
   @media (max-width: 1100px) {
     .level-filters {
@@ -4271,37 +4259,6 @@ body.hydrating .main-container {
   .settings-modal-header {
     flex-shrink: 0;
     padding-bottom: 10px;
-  }
-
-  .settings-modal-close-icon {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    border: 1px solid var(--border-color);
-    background: var(--bg-primary);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: background-color 0.15s ease, transform 0.12s ease;
-    z-index: 10000;
-    color: var(--text-secondary);
-    font-size: 14px;
-    padding: 0;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  }
-
-  .settings-modal-close-icon:hover {
-    background: var(--hover-bg);
-    color: var(--text-primary);
-    transform: scale(1.05);
-  }
-
-  .settings-modal-close-icon:active {
-    transform: scale(0.95);
   }
 
   .settings-modal-content {
@@ -5036,6 +4993,18 @@ body.hydrating .main-container {
 
 html.dark .level-filters .level-filter-btn .level-count {
   background: rgba(255, 255, 255, 0.12);
+}
+
+/* Hide event type counts first when space is limited, keeping labels visible */
+@media (max-width: 1400px) {
+  .level-filters .level-filter-btn .level-count {
+    display: none !important;
+  }
+
+  .level-filters .level-filter-btn {
+    padding: 4px 8px;
+    min-width: auto;
+  }
 }
 
 .level-filters .level-filter-btn:not(.active) {
