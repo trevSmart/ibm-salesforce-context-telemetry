@@ -15,6 +15,57 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
+/**
+ * Sanitize CSS color values to prevent XSS
+ * Only allows valid hex colors (#RGB or #RRGGBB format)
+ * @param {string} color - Color value to sanitize
+ * @returns {string|null} - Sanitized color or null if invalid
+ */
+function sanitizeCssColor(color) {
+  if (!color || typeof color !== 'string') {
+    return null;
+  }
+  // Only allow hex colors in format #RGB or #RRGGBB
+  const hexColorPattern = /^#([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})$/;
+  if (hexColorPattern.test(color.trim())) {
+    return color.trim();
+  }
+  return null;
+}
+
+// CSRF token helper
+let csrfToken = null;
+
+ 
+async function _getCsrfToken() {
+  if (csrfToken) {
+    return csrfToken;
+  }
+  try {
+    const response = await fetch('/api/auth/status', {
+      credentials: 'include'
+    });
+    const data = await response.json();
+    csrfToken = data.csrfToken;
+    return csrfToken;
+  } catch (error) {
+    console.error('Failed to get CSRF token:', error);
+    return null;
+  }
+}
+
+ 
+function _getRequestHeaders(includeJson = true) {
+  const headers = {};
+  if (includeJson) {
+    headers['Content-Type'] = 'application/json';
+  }
+  if (csrfToken) {
+    headers['X-CSRF-Token'] = csrfToken;
+  }
+  return headers;
+}
+
 function hexToRgba(hex, alpha = 0.12) {
   if (!hex || typeof hex !== 'string') return null;
   const normalized = hex.replace('#', '');
@@ -369,8 +420,10 @@ function renderTeamsList() {
   }
 
   teamsList.innerHTML = teams.map(team => {
-    const accentColor = team.color || '#4f46e5';
-    const accentBg = hexToRgba(team.color, 0.14) || 'rgba(79, 70, 229, 0.12)';
+    // Sanitize color values to prevent XSS
+    const sanitizedColor = sanitizeCssColor(team.color);
+    const accentColor = sanitizedColor || '#4f46e5';
+    const accentBg = sanitizedColor ? (hexToRgba(sanitizedColor, 0.14) || 'rgba(79, 70, 229, 0.12)') : 'rgba(79, 70, 229, 0.12)';
 
     return `
       <div class="group relative bg-white p-6 transition hover:bg-gray-50 focus-within:outline focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-indigo-600" role="button" tabindex="0" onclick="viewTeamDetail(${team.id})" onkeypress="if(event.key==='Enter'||event.key===' '){event.preventDefault();viewTeamDetail(${team.id});}">
@@ -443,7 +496,9 @@ async function renderTeamDetail(teamId) {
     return;
   }
 
-  const colorDot = team.color ? `<span style="display: inline-block; width: 16px; height: 16px; border-radius: 999px; background: ${team.color}; margin-right: 8px; border: 1px solid var(--border-color);"></span>` : '';
+  // Sanitize team color to prevent XSS
+  const sanitizedTeamColor = sanitizeCssColor(team.color);
+  const colorDot = sanitizedTeamColor ? `<span style="display: inline-block; width: 16px; height: 16px; border-radius: 999px; background: ${sanitizedTeamColor}; margin-right: 8px; border: 1px solid var(--border-color);"></span>` : '';
 
   document.getElementById('teamDetailName').innerHTML = `${colorDot}${escapeHtml(team.name)}`;
   document.getElementById('teamDetailMeta').textContent = `${team.orgs.length} org${team.orgs.length !== 1 ? 's' : ''} · ${team.users.length} user${team.users.length !== 1 ? 's' : ''}`;
@@ -484,7 +539,9 @@ async function renderTeamDetail(teamId) {
   const orgsList = document.getElementById('orgsList');
   if (team.orgs.length > 0) {
     orgsList.innerHTML = team.orgs.map(org => {
-      const colorDot = org.color ? `<span style="display: inline-block; width: 10px; height: 10px; border-radius: 999px; background: ${org.color}; margin-right: 6px; border: 1px solid var(--border-color);"></span>` : '';
+      // Sanitize org color to prevent XSS
+      const sanitizedOrgColor = sanitizeCssColor(org.color);
+      const colorDot = sanitizedOrgColor ? `<span style="display: inline-block; width: 10px; height: 10px; border-radius: 999px; background: ${sanitizedOrgColor}; margin-right: 6px; border: 1px solid var(--border-color);"></span>` : '';
       return `
         <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-secondary);">
           <div>

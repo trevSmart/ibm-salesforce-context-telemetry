@@ -55,7 +55,8 @@ module.exports = [
         wx: 'readonly',
         define: 'readonly',
         AbortController: 'readonly',
-        AbortSignal: 'readonly'
+        AbortSignal: 'readonly',
+        Element: 'readonly'
       }
     },
     rules: {

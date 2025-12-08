@@ -542,11 +542,21 @@
 			loginButton.disabled = true;
 
 			try {
+				// Get CSRF token if not already set
+				if (!csrfToken) {
+					csrfToken = await getCsrfToken();
+				}
+				
+				const headers = {
+					'Content-Type': 'application/json'
+				};
+				if (csrfToken) {
+					headers['X-CSRF-Token'] = csrfToken;
+				}
+				
 				const response = await fetch('/login', {
 					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json'
-					},
+					headers: headers,
 					body: JSON.stringify({ username, password, rememberMe })
 				});
 
@@ -568,6 +578,25 @@
 			}
 		});
 
+		// Get CSRF token
+		let csrfToken = null;
+		async function getCsrfToken() {
+			try {
+				// Read CSRF token from cookie
+				const cookies = document.cookie.split(';');
+				for (let cookie of cookies) {
+					const [name, value] = cookie.trim().split('=');
+					if (name === 'csrf-token') {
+						return decodeURIComponent(value);
+					}
+				}
+				return null;
+			} catch (error) {
+				console.error('Failed to get CSRF token:', error);
+				return null;
+			}
+		}
+
 		// Check if already logged in
 		(async () => {
 			try {
@@ -576,6 +605,8 @@
 				if (data.authenticated) {
 					window.location.href = '/';
 				}
+				// Store CSRF token
+				csrfToken = data.csrfToken || await getCsrfToken();
 			} catch (error) {
 				// Ignore errors
 			}

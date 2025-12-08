@@ -16,6 +16,39 @@ if (window.__EVENT_LOG_LOADED__) {
       .replace(/'/g, '&#039;');
   }
 
+  // CSRF token helper
+  let csrfToken = null;
+  
+   
+  async function _getCsrfToken() {
+    if (csrfToken) {
+      return csrfToken;
+    }
+    try {
+      const response = await fetch('/api/auth/status', {
+        credentials: 'include'
+      });
+      const data = await response.json();
+      csrfToken = data.csrfToken;
+      return csrfToken;
+    } catch (error) {
+      console.error('Failed to get CSRF token:', error);
+      return null;
+    }
+  }
+  
+   
+  function _getRequestHeaders(includeJson = true) {
+    const headers = {};
+    if (includeJson) {
+      headers['Content-Type'] = 'application/json';
+    }
+    if (csrfToken) {
+      headers['X-CSRF-Token'] = csrfToken;
+    }
+    return headers;
+  }
+
   const detectElectronEnvironment = () => {
     const userAgent = navigator?.userAgent?.toLowerCase() || '';
     if (userAgent.includes(' electron/')) {
@@ -52,6 +85,8 @@ if (window.__EVENT_LOG_LOADED__) {
         window.location.href = '/';
         return;
       }
+      // Store CSRF token
+      csrfToken = data.csrfToken;
     } catch (error) {
       console.error('Auth check failed:', error);
       window.location.href = '/login';
@@ -2816,15 +2851,6 @@ if (window.__EVENT_LOG_LOADED__) {
     const separatorHtml = '<span class="session-separator"><i class="fa-solid fa-circle"></i></span>';
     const userHtml = `<span class="session-user">${escapeHtml(userText)}</span>`;
     return { html: `${dateHtml}${separatorHtml}${userHtml}`, text: `${dateStr} • ${userText}` };
-  }
-
-  function escapeHtml(str) {
-    return String(str ?? '')
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
   }
 
   function renderSessionActivityLegend(seriesEntries, isAllSessionsView = false) {
