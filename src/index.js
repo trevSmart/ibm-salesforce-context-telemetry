@@ -21,6 +21,18 @@ const deleteEventsLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// Limit user management (user creation) requests to prevent abuse: max 10 creates per hour per IP
+const userManagementLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 10, // max 10 requests per hour per IP
+  message: {
+    status: 'error',
+    message: 'Too many user creation requests. Please try again later.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // Rate limit for telemetry users endpoint: max 20 requests per hour per IP
 const telemetryUsersLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
