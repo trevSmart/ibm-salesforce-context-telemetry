@@ -21,6 +21,18 @@ const deleteEventsLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// Rate limit for telemetry users endpoint: max 20 requests per hour per IP
+const telemetryUsersLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 20, // max 20 requests per hour per IP
+  message: {
+    status: 'error',
+    message: 'Too many requests for telemetry users stats. Please try again later.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // Limit DELETE requests to /api/teams/:teamId/event-users/:userName to prevent abuse: max 5 deletes per hour per IP
 const deleteEventUserFromTeamLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
@@ -1474,7 +1486,7 @@ app.delete('/api/teams/:teamId/event-users/:userName', auth.requireAuth, auth.re
   }
 });
 
-app.get('/api/telemetry-users', auth.requireAuth, auth.requireRole('advanced'), async (req, res) => {
+app.get('/api/telemetry-users', auth.requireAuth, auth.requireRole('advanced'), telemetryUsersLimiter, async (req, res) => {
   try {
     // Use cache because counts are maintained eagerly during writes
     const cacheKey = 'userStats:all';
