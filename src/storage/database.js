@@ -2075,6 +2075,9 @@ async function getTopTeamsLastDays(orgTeamMappings = [], limit = 50, days = 3) {
           key: teamKey,
           teamName: rawTeamName,
           color: String(mapping?.color || '').trim(),
+          teamId: mapping?.teamId || null,
+          hasLogo: Boolean(mapping?.hasLogo),
+          logoUrl: String(mapping?.logoUrl || '').trim(),
           clients: new Set(),
           orgIds: new Set(),
           eventCount: 0
@@ -2084,6 +2087,17 @@ async function getTopTeamsLastDays(orgTeamMappings = [], limit = 50, days = 3) {
       const entry = teamAggregates.get(teamKey);
       entry.orgIds.add(rawOrgId);
       orgToTeamKey.set(rawOrgId, teamKey);
+
+      if (!entry.teamId && mapping?.teamId) {
+        entry.teamId = mapping.teamId;
+      }
+      const mappingHasLogo = Boolean(mapping?.hasLogo);
+      if (mappingHasLogo && !entry.hasLogo) {
+        entry.hasLogo = true;
+      }
+      if (mapping?.logoUrl && !entry.logoUrl) {
+        entry.logoUrl = String(mapping.logoUrl).trim();
+      }
 
       const clientName = String(mapping?.clientName || '').trim();
       if (clientName) {
@@ -2179,7 +2193,10 @@ async function getTopTeamsLastDays(orgTeamMappings = [], limit = 50, days = 3) {
       label: teamEntry.teamName,
       clientName: clients.join(' · '),
       color: teamEntry.color,
-      eventCount: teamEntry.eventCount
+      eventCount: teamEntry.eventCount,
+      teamId: teamEntry.teamId,
+      hasLogo: Boolean(teamEntry.hasLogo),
+      logoUrl: teamEntry.logoUrl || ''
     });
   });
 
@@ -2208,8 +2225,10 @@ async function getOrgTeamMappingsFromTeamsTable() {
         SELECT
           o.server_id AS org_id,
           COALESCE(o.company_name, o.alias, '') AS client_name,
+          t.id AS team_id,
           t.name AS team_name,
-          t.color AS team_color
+          t.color AS team_color,
+          t.logo_mime AS team_logo_mime
         FROM orgs o
         JOIN teams t ON t.id = o.team_id
         WHERE o.server_id IS NOT NULL
@@ -2221,8 +2240,11 @@ async function getOrgTeamMappingsFromTeamsTable() {
         .map(row => ({
           orgIdentifier: row.org_id,
           clientName: row.client_name || '',
+          teamId: row.team_id || null,
           teamName: row.team_name,
           color: row.team_color || '',
+          hasLogo: Boolean(row.team_logo_mime && String(row.team_logo_mime).trim() !== ''),
+          logoUrl: row.team_id && row.team_logo_mime ? `/api/teams/${row.team_id}/logo` : '',
           active: true
         }));
     } else if (dbType === 'postgresql') {
@@ -2230,8 +2252,10 @@ async function getOrgTeamMappingsFromTeamsTable() {
         SELECT
           o.server_id AS org_id,
           COALESCE(o.company_name, o.alias, '') AS client_name,
+          t.id AS team_id,
           t.name AS team_name,
-          t.color AS team_color
+          t.color AS team_color,
+          t.logo_mime AS team_logo_mime
         FROM orgs o
         JOIN teams t ON t.id = o.team_id
         WHERE o.server_id IS NOT NULL
@@ -2243,8 +2267,11 @@ async function getOrgTeamMappingsFromTeamsTable() {
         .map(row => ({
           orgIdentifier: row.org_id,
           clientName: row.client_name || '',
+          teamId: row.team_id || null,
           teamName: row.team_name,
           color: row.team_color || '',
+          hasLogo: Boolean(row.team_logo_mime && String(row.team_logo_mime).trim() !== ''),
+          logoUrl: row.team_id && row.team_logo_mime ? `/api/teams/${row.team_id}/logo` : '',
           active: true
         }));
     }
@@ -2991,11 +3018,20 @@ async function getTeamStats(orgTeamMappings = []) {
   const normalizeTeamKey = (value) => String(value || '').trim().toLowerCase();
   const normalizeOrgId = (value) => String(value || '').trim().toLowerCase();
 
+  const mappingsFromRequest = Array.isArray(orgTeamMappings) ? orgTeamMappings : [];
+  const effectiveMappings = mappingsFromRequest.length > 0
+    ? mappingsFromRequest
+    : await getOrgTeamMappingsFromTeamsTable();
+
+  if (!effectiveMappings || effectiveMappings.length === 0) {
+    return [];
+  }
+
   const orgStats = await getOrgStatsMap();
   const teamsMap = new Map();
 
-  if (Array.isArray(orgTeamMappings)) {
-    orgTeamMappings.forEach(mapping => {
+  if (Array.isArray(effectiveMappings)) {
+    effectiveMappings.forEach(mapping => {
       const rawTeamName = String(mapping?.teamName || '').trim();
       const rawOrgId = normalizeOrgId(mapping?.orgIdentifier);
       const clientName = String(mapping?.clientName || '').trim();
@@ -3012,6 +3048,9 @@ async function getTeamStats(orgTeamMappings = []) {
           key: teamKey,
           teamName: rawTeamName,
           color: color,
+          teamId: mapping?.teamId || null,
+          hasLogo: Boolean(mapping?.hasLogo),
+          logoUrl: String(mapping?.logoUrl || '').trim(),
           clients: new Set(),
           orgs: new Set(),
           activeCount: 0,
@@ -3028,6 +3067,15 @@ async function getTeamStats(orgTeamMappings = []) {
       if (!entry.color && color) {
         entry.color = color;
       }
+      if (!entry.teamId && mapping?.teamId) {
+        entry.teamId = mapping.teamId;
+      }
+      if (mapping?.hasLogo && !entry.hasLogo) {
+        entry.hasLogo = true;
+      }
+      if (mapping?.logoUrl && !entry.logoUrl) {
+        entry.logoUrl = String(mapping.logoUrl).trim();
+      }
       if (isActive) {
         entry.activeCount += 1;
       } else {
@@ -3038,7 +3086,7 @@ async function getTeamStats(orgTeamMappings = []) {
 
   // Apply event counts based on org stats and only active mappings
   orgStats.forEach((stats, orgKey) => {
-    orgTeamMappings
+    effectiveMappings
       .filter(mapping => mapping?.active !== false && normalizeOrgId(mapping?.orgIdentifier) === orgKey)
       .forEach(mapping => {
         const teamKey = normalizeTeamKey(mapping.teamName);

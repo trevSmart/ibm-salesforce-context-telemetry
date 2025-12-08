@@ -2370,14 +2370,28 @@ function renderTopTeams(teams) {
     const countLabel = eventCount === 1 ? '1 event last 30 days' : `${eventCount} events last 30 days`;
     const clientName = team.clientName ? ` · ${team.clientName}` : '';
     const badgeBackground = index === 0 ? '#dc2626' : SESSION_START_SERIES_COLOR;
+    const logoUrl = team.logoUrl || (team.teamId && team.hasLogo ? `/api/teams/${team.teamId}/logo` : '');
 
-    return `
-      <li class="top-users-item">
+    const avatar = logoUrl
+      ? `
+        <span class="top-users-avatar top-users-avatar--team" style="padding: 0; background: transparent; border-radius: 0;">
+          <img src="${escapeHtml(logoUrl)}" alt="${escapeHtml(teamName)} logo" style="width: 24px; height: 24px; object-fit: contain;" onerror="this.style.display='none'; const fallback=this.nextElementSibling; if (fallback) { fallback.style.display='flex'; }">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false" style="width: 24px; height: 24px; color: ${team.color || badgeBackground}; display:none;">
+            <path d="m21 7.5-9-5.25L3 7.5m18 0-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" />
+          </svg>
+        </span>
+      `
+      : `
         <span class="top-users-avatar top-users-avatar--team">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false" style="width: 24px; height: 24px; color: ${team.color || badgeBackground};">
             <path d="m21 7.5-9-5.25L3 7.5m18 0-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" />
           </svg>
         </span>
+      `;
+
+    return `
+      <li class="top-users-item">
+        ${avatar}
         <div class="top-users-info">
           <div class="top-users-name-row">
             <strong class="top-users-name" title="${escapeHtml(teamName)}${clientName}">${escapeHtml(teamName)}${clientName}</strong>
