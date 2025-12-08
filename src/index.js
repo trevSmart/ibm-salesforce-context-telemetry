@@ -20,6 +20,18 @@ const deleteEventsLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
+
+// Limit DELETE requests to /api/teams/:teamId/event-users/:userName to prevent abuse: max 5 deletes per hour per IP
+const deleteEventUserFromTeamLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 5, // max 5 requests per hour per IP
+  message: {
+    status: 'error',
+    message: 'Too many team user deletion requests. Please try again later.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 const fs = require('fs');
 const path = require('path');
 const db = require('./storage/database');
@@ -1432,7 +1444,7 @@ app.post('/api/teams/:teamId/event-users', auth.requireAuth, auth.requireRole('a
 });
 
 // Remove event user from team
-app.delete('/api/teams/:teamId/event-users/:userName', auth.requireAuth, auth.requireRole('administrator'), async (req, res) => {
+app.delete('/api/teams/:teamId/event-users/:userName', auth.requireAuth, auth.requireRole('administrator'), deleteEventUserFromTeamLimiter, async (req, res) => {
   try {
     const teamId = parseInt(req.params.teamId);
     const userName = req.params.userName;
