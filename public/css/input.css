@@ -3455,38 +3455,6 @@ body.hydrating .main-container {
     color: #a1a1aa;
   }
 
-  .footer-info {
-    cursor: default;
-    position: absolute;
-    bottom: 12px;
-    right: 18px;
-    display: flex;
-    gap: 20px;
-    font-size: 0.75rem;
-    line-height: 1rem;
-    color: #52525b;
-    background: var(--bg-secondary);
-    padding: 12px 14px;
-    backdrop-filter: blur(4px);
-    border-radius: 8px;
-    font-weight: 200;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    opacity: 0.6;
-    border: 1px solid #3f3f4615;
-    transition: opacity 0.18s ease-out, backdrop-filter 0.18s ease-out;
-  }
-
-  html.dark .footer-info {
-    color: #bcbcc3;
-    background: #0f426978;
-  }
-
-  .footer-info:hover {
-    opacity: 0.83;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.15), 0 2px 4px -1px rgba(0, 0, 0, 0.1);
-    backdrop-filter: blur(2px);
-  }
-
   .loading {
     text-align: center;
     color: #52525b;
@@ -3921,17 +3889,6 @@ body.hydrating .main-container {
 
     .session-activity-header {
       margin-bottom: 8px;
-    }
-
-    /* Adjust footer info for mobile */
-    .footer-info {
-      position: static;
-      flex-wrap: wrap;
-      gap: 10px;
-      padding: 8px;
-      margin-top: 12px;
-      background: var(--bg-secondary);
-      border-radius: 8px;
     }
 
     /* Make user filter dropdown full width */
@@ -5075,7 +5032,7 @@ html.dark .level-filters .level-filter-btn.level-error {
 }
 
 .teams-list-container {
-  max-width: 1400px;
+  max-width: 1000px;
   margin: 0 auto;
   width: 100%;
 }

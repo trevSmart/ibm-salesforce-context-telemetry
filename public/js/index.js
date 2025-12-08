@@ -306,18 +306,6 @@ function initTheme() {
   applyTheme(theme);
 }
 
-function updateServerStatsVisibility() {
-  const showServerStats = localStorage.getItem('showServerStats') !== 'false';
-  const footer = document.querySelector('.dashboard-footer');
-  if (footer) {
-    footer.style.display = showServerStats ? '' : 'none';
-  }
-  const serverStatsCard = document.getElementById('serverStatsCard');
-  if (serverStatsCard) {
-    serverStatsCard.style.display = showServerStats ? '' : 'none';
-  }
-}
-
 
 function toggleTheme() {
   const isDark = document.documentElement.classList.contains('dark');
@@ -454,6 +442,21 @@ function ensureUserMenuStructure() {
   }
 }
 
+// Older builds referenced this helper; keep a safe no-op to avoid runtime errors
+function positionCloseIcon() {
+  const closeIcon = document.querySelector('.settings-modal .close-icon');
+  if (!closeIcon) {
+    return;
+  }
+  // If a close icon exists in the future, position it safely relative to the modal header
+  const modal = closeIcon.closest('.settings-modal');
+  if (!modal) {
+    return;
+  }
+  const { right } = modal.getBoundingClientRect();
+  closeIcon.style.right = `${Math.max(12, window.innerWidth - right + 12)}px`;
+}
+
 // Shared settings modal used by both dashboard and event log pages
 
 async function openSettingsModal() {
@@ -488,7 +491,6 @@ async function openSettingsModal() {
   // Get current settings
   const savedTheme = localStorage.getItem('theme') || getSystemTheme();
   const isDarkTheme = savedTheme === 'dark';
-  const showServerStats = localStorage.getItem('showServerStats') !== 'false';
   const autoRefreshInterval = autoRefreshIntervalMinutes;
 
   // Build sidebar navigation
@@ -529,16 +531,6 @@ async function openSettingsModal() {
 				<div class="settings-main flex-1 flex flex-col gap-4 mt-3 md:mt-0">
 					<section id="settings-general" class="settings-section">
 						<div class="settings-modal-placeholder-title">General</div>
-						<label class="flex items-center justify-between cursor-pointer py-2">
-							<div class="flex flex-col">
-								<span class="text-sm font-medium text-(--text-primary)">Show server stats</span>
-								<span class="text-xs text-[color:var(--text-secondary)]">Display server information in the footer (last updated, load time, version, etc.).</span>
-							</div>
-							<div class="group relative inline-flex w-11 shrink-0 rounded-full bg-gray-200 p-0.5 inset-ring inset-ring-gray-900/5 outline-offset-2 outline-indigo-600 transition-colors duration-200 ease-in-out has-checked:bg-indigo-600 has-focus-visible:outline-2">
-								<span class="size-5 rounded-full bg-white shadow-xs ring-1 ring-gray-900/5 transition-transform duration-200 ease-in-out group-has-checked:translate-x-5"></span>
-								<input type="checkbox" id="showServerStatsToggle" ${showServerStats ? 'checked' : ''} aria-label="Show server stats" class="absolute inset-0 appearance-none focus:outline-hidden">
-							</div>
-						</label>
 						<label class="flex items-center justify-between cursor-pointer py-2">
 							<div class="flex flex-col">
 								<span class="text-sm font-medium text-[color:var(--text-primary)]">Dark theme</span>
@@ -677,15 +669,6 @@ async function openSettingsModal() {
       const newTheme = e.target.checked ? 'dark' : 'light';
       localStorage.setItem('theme', newTheme);
       applyTheme(newTheme);
-    });
-  }
-
-  const showServerStatsToggle = modal.querySelector('#showServerStatsToggle');
-  if (showServerStatsToggle) {
-    showServerStatsToggle.addEventListener('change', (e) => {
-      const enabled = e.target.checked;
-      localStorage.setItem('showServerStats', enabled ? 'true' : 'false');
-      updateServerStatsVisibility();
     });
   }
 
@@ -1210,13 +1193,11 @@ async function openSettingsModal() {
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => {
     initTheme();
-    updateServerStatsVisibility();
     ensureUserMenuStructure();
     setupIconButtonsGroupHover();
   });
 } else {
   initTheme();
-  updateServerStatsVisibility();
   ensureUserMenuStructure();
   setupIconButtonsGroupHover();
 }
@@ -2376,11 +2357,9 @@ window.addEventListener('softNav:pageMounted', async (event) => {
     const fromCache = event?.detail?.fromCache === true;
     if (fromCache) {
       // Page was restored from cache - resume intervals and reinitialize chart
-      updateServerStatsVisibility();
       await resumeDashboardPage();
     } else {
       // New page load - full initialization
-      updateServerStatsVisibility();
       initializeDashboardPage({ resetState: true });
     }
   }

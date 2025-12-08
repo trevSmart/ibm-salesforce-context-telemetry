@@ -119,7 +119,6 @@ if (window.__EVENT_LOG_LOADED__) {
     // Get current settings
     const savedTheme = localStorage.getItem('theme') || 'light';
     const isDarkTheme = savedTheme === 'dark';
-    const showServerStats = localStorage.getItem('showServerStats') !== 'false';
     const autoRefreshInterval = autoRefreshIntervalMinutes;
 
     const sidebarNav = `
@@ -157,18 +156,8 @@ if (window.__EVENT_LOG_LOADED__) {
 						</nav>
 					</aside>
 					<div class="settings-main flex-1 flex flex-col gap-4 mt-3 md:mt-0">
-						<section id="settings-general" class="settings-section">
-							<div class="settings-modal-placeholder-title">General</div>
-							<label class="flex items-center justify-between cursor-pointer py-2">
-								<div class="flex flex-col">
-									<span class="text-sm font-medium text-[color:var(--text-primary)]">Show server stats</span>
-									<span class="text-xs text-[color:var(--text-secondary)]">Display server information in the footer (last updated, load time, version, etc.).</span>
-								</div>
-								<div class="group relative inline-flex w-11 shrink-0 rounded-full bg-gray-200 p-0.5 inset-ring inset-ring-gray-900/5 outline-offset-2 outline-indigo-600 transition-colors duration-200 ease-in-out has-checked:bg-indigo-600 has-focus-visible:outline-2">
-									<span class="size-5 rounded-full bg-white shadow-xs ring-1 ring-gray-900/5 transition-transform duration-200 ease-in-out group-has-checked:translate-x-5"></span>
-									<input type="checkbox" id="showServerStatsToggle" ${showServerStats ? 'checked' : ''} aria-label="Show server stats" class="absolute inset-0 appearance-none focus:outline-hidden">
-								</div>
-							</label>
+            <section id="settings-general" class="settings-section">
+              <div class="settings-modal-placeholder-title">General</div>
 							<label class="flex items-center justify-between cursor-pointer py-2">
 								<div class="flex flex-col">
 									<span class="text-sm font-medium text-[color:var(--text-primary)]">Dark theme</span>
@@ -789,15 +778,6 @@ if (window.__EVENT_LOG_LOADED__) {
       });
     }
 
-    // Handle show server stats toggle
-    const showServerStatsToggle = modal.querySelector('#showServerStatsToggle');
-    if (showServerStatsToggle) {
-      showServerStatsToggle.addEventListener('change', (e) => {
-        localStorage.setItem('showServerStats', e.target.checked ? 'true' : 'false');
-        updateServerStatsVisibility();
-      });
-    }
-
     const clearLocalDataBtn = modal.querySelector('#clearLocalDataBtn');
     if (clearLocalDataBtn) {
       clearLocalDataBtn.addEventListener('click', () => {
@@ -984,6 +964,15 @@ if (window.__EVENT_LOG_LOADED__) {
   ];
   const OFFICE_START = { hour: 8, minute: 30 };
   const OFFICE_END = { hour: 18, minute: 30 };
+  const logChartTrace = (message, details = {}) => {
+    try {
+      // Lightweight tracing to understand intermittent chart load issues
+      console.info('[LogsChart]', message, details);
+    } catch (_traceError) {
+      // No-op: tracing should never break the UI
+    }
+  };
+
   let isResizingSidebar = false;
   let sidebarResizeStartX = 0;
   let sidebarResizeStartWidth = 0;
@@ -1060,19 +1049,10 @@ if (window.__EVENT_LOG_LOADED__) {
     const savedTheme = localStorage.getItem('theme');
     const theme = savedTheme || 'light';
     applyTheme(theme);
-    updateServerStatsVisibility();
     // Wire up theme toggle if present
     const darkThemeToggle = document.querySelector('#darkThemeToggle');
     if (darkThemeToggle) {
       darkThemeToggle.addEventListener('change', toggleTheme);
-    }
-  }
-
-  function updateServerStatsVisibility() {
-    const showServerStats = localStorage.getItem('showServerStats') !== 'false';
-    const footerInfo = document.querySelector('.footer-info');
-    if (footerInfo) {
-      footerInfo.style.display = showServerStats ? '' : 'none';
     }
   }
 
@@ -1258,49 +1238,92 @@ if (window.__EVENT_LOG_LOADED__) {
       return;
     }
 
-    const startResize = (event) => {
-      const point = event.touches ? event.touches[0] : event;
-      isResizingSidebar = true;
-      sidebarResizeStartX = point.clientX;
-      sidebarResizeStartWidth = sidebar.offsetWidth;
-      document.body.classList.add('sidebar-resizing');
-      document.addEventListener('mousemove', handleResize);
-      document.addEventListener('mouseup', stopResize);
-      document.addEventListener('touchmove', handleResize, { passive: false });
-      document.addEventListener('touchend', stopResize);
-      event.preventDefault();
-    };
-
-    const handleResize = (event) => {
-      if (!isResizingSidebar) {
-        return;
-      }
-      const point = event.touches ? event.touches[0] : event;
-      const delta = point.clientX - sidebarResizeStartX;
+    const handleResize = (clientX) => {
+      const delta = clientX - sidebarResizeStartX;
       let newWidth = sidebarResizeStartWidth + delta;
       newWidth = Math.max(220, Math.min(500, newWidth));
       document.documentElement.style.setProperty('--sidebar-width', `${newWidth}px`);
     };
 
-    const stopResize = () => {
-      if (!isResizingSidebar) {
-        return;
-      }
-      isResizingSidebar = false;
-      document.body.classList.remove('sidebar-resizing');
-      document.removeEventListener('mousemove', handleResize);
-      document.removeEventListener('mouseup', stopResize);
-      document.removeEventListener('touchmove', handleResize);
-      document.removeEventListener('touchend', stopResize);
-    };
-
-    resizer.addEventListener('mousedown', startResize);
-    resizer.addEventListener('touchstart', startResize, { passive: false });
-    resizer.addEventListener('pointerdown', (event) => {
-      if (event.pointerType !== 'mouse') {
-        startResize(event);
-      }
-    });
+    // Pointer events preferred to avoid duplicate mouse/touch firing
+    if (window.PointerEvent) {
+      const onPointerMove = (event) => {
+        if (!isResizingSidebar) return;
+        handleResize(event.clientX);
+      };
+      const stopResize = (event) => {
+        if (!isResizingSidebar) {
+          return;
+        }
+        isResizingSidebar = false;
+        document.body.classList.remove('sidebar-resizing');
+        document.removeEventListener('pointermove', onPointerMove);
+        document.removeEventListener('pointerup', stopResize);
+        document.removeEventListener('pointercancel', stopResize);
+        if (event?.pointerId !== undefined && typeof resizer.releasePointerCapture === 'function') {
+          try {
+            resizer.releasePointerCapture(event.pointerId);
+          } catch (_releaseError) {
+            /* ignore */
+          }
+        }
+      };
+      const startResize = (event) => {
+        isResizingSidebar = true;
+        sidebarResizeStartX = event.clientX;
+        sidebarResizeStartWidth = sidebar.offsetWidth;
+        document.body.classList.add('sidebar-resizing');
+        if (event.pointerId !== undefined && typeof resizer.setPointerCapture === 'function') {
+          try {
+            resizer.setPointerCapture(event.pointerId);
+          } catch (_captureError) {
+            /* ignore */
+          }
+        }
+        document.addEventListener('pointermove', onPointerMove);
+        document.addEventListener('pointerup', stopResize);
+        document.addEventListener('pointercancel', stopResize);
+        event.preventDefault();
+      };
+      resizer.addEventListener('pointerdown', startResize);
+    } else {
+      // Fallback for older browsers: mouse + touch
+      const onMouseMove = (event) => {
+        if (!isResizingSidebar) return;
+        handleResize(event.clientX);
+      };
+      const onTouchMove = (event) => {
+        if (!isResizingSidebar || !event.touches?.length) return;
+        handleResize(event.touches[0].clientX);
+      };
+      const stopResize = () => {
+        if (!isResizingSidebar) {
+          return;
+        }
+        isResizingSidebar = false;
+        document.body.classList.remove('sidebar-resizing');
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', stopResize);
+        document.removeEventListener('touchmove', onTouchMove);
+        document.removeEventListener('touchend', stopResize);
+        document.removeEventListener('touchcancel', stopResize);
+      };
+      const startResize = (event) => {
+        const point = event.touches ? event.touches[0] : event;
+        isResizingSidebar = true;
+        sidebarResizeStartX = point.clientX;
+        sidebarResizeStartWidth = sidebar.offsetWidth;
+        document.body.classList.add('sidebar-resizing');
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', stopResize);
+        document.addEventListener('touchmove', onTouchMove, { passive: false });
+        document.addEventListener('touchend', stopResize);
+        document.addEventListener('touchcancel', stopResize);
+        event.preventDefault();
+      };
+      resizer.addEventListener('mousedown', startResize);
+      resizer.addEventListener('touchstart', startResize, { passive: false });
+    }
   }
 
   function setupHorizontalResizer() {
@@ -1325,59 +1348,103 @@ if (window.__EVENT_LOG_LOADED__) {
     observer.observe(activityCard, { attributes: true, attributeFilter: ['class'] });
     updateResizerVisibility();
 
-    const startResize = (event) => {
-      const point = event.touches ? event.touches[0] : event;
-      isResizingActivity = true;
-      activityResizeStartY = point.clientY;
-      activityResizeStartHeight = activityCard.offsetHeight;
-      document.body.classList.add('activity-resizing');
-      document.addEventListener('mousemove', handleResize);
-      document.addEventListener('mouseup', stopResize);
-      document.addEventListener('touchmove', handleResize, { passive: false });
-      document.addEventListener('touchend', stopResize);
-      event.preventDefault();
-    };
-
-    const handleResize = (event) => {
-      if (!isResizingActivity) {
-        return;
-      }
-      const point = event.touches ? event.touches[0] : event;
-      const delta = point.clientY - activityResizeStartY;
+    const resizeActivityCard = (clientY) => {
+      const delta = clientY - activityResizeStartY;
       let newHeight = activityResizeStartHeight + delta;
       newHeight = Math.max(190, Math.min(600, newHeight));
       activityCard.style.height = `${newHeight}px`;
-      // Redimensionar la gràfica per adaptar-se al nou espai
       if (sessionActivityChart) {
         sessionActivityChart.resize();
       }
     };
 
-    const stopResize = () => {
-      if (!isResizingActivity) {
-        return;
-      }
-      isResizingActivity = false;
-      document.body.classList.remove('activity-resizing');
-      document.removeEventListener('mousemove', handleResize);
-      document.removeEventListener('mouseup', stopResize);
-      document.removeEventListener('touchmove', handleResize);
-      document.removeEventListener('touchend', stopResize);
-      // Ensure the chart resizes when resizing ends
-      if (sessionActivityChart) {
-        setTimeout(() => {
-          sessionActivityChart.resize();
-        }, 0);
-      }
-    };
-
-    resizer.addEventListener('mousedown', startResize);
-    resizer.addEventListener('touchstart', startResize, { passive: false });
-    resizer.addEventListener('pointerdown', (event) => {
-      if (event.pointerType !== 'mouse') {
-        startResize(event);
-      }
-    });
+    if (window.PointerEvent) {
+      const onPointerMove = (event) => {
+        if (!isResizingActivity) return;
+        resizeActivityCard(event.clientY);
+      };
+      const stopResize = (event) => {
+        if (!isResizingActivity) {
+          return;
+        }
+        isResizingActivity = false;
+        document.body.classList.remove('activity-resizing');
+        document.removeEventListener('pointermove', onPointerMove);
+        document.removeEventListener('pointerup', stopResize);
+        document.removeEventListener('pointercancel', stopResize);
+        if (event?.pointerId !== undefined && typeof resizer.releasePointerCapture === 'function') {
+          try {
+            resizer.releasePointerCapture(event.pointerId);
+          } catch (_releaseError) {
+            /* ignore */
+          }
+        }
+        if (sessionActivityChart) {
+          setTimeout(() => {
+            sessionActivityChart.resize();
+          }, 0);
+        }
+      };
+      const startResize = (event) => {
+        isResizingActivity = true;
+        activityResizeStartY = event.clientY;
+        activityResizeStartHeight = activityCard.offsetHeight;
+        document.body.classList.add('activity-resizing');
+        if (event.pointerId !== undefined && typeof resizer.setPointerCapture === 'function') {
+          try {
+            resizer.setPointerCapture(event.pointerId);
+          } catch (_captureError) {
+            /* ignore */
+          }
+        }
+        document.addEventListener('pointermove', onPointerMove);
+        document.addEventListener('pointerup', stopResize);
+        document.addEventListener('pointercancel', stopResize);
+        event.preventDefault();
+      };
+      resizer.addEventListener('pointerdown', startResize);
+    } else {
+      const onMouseMove = (event) => {
+        if (!isResizingActivity) return;
+        resizeActivityCard(event.clientY);
+      };
+      const onTouchMove = (event) => {
+        if (!isResizingActivity || !event.touches?.length) return;
+        resizeActivityCard(event.touches[0].clientY);
+      };
+      const stopResize = () => {
+        if (!isResizingActivity) {
+          return;
+        }
+        isResizingActivity = false;
+        document.body.classList.remove('activity-resizing');
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', stopResize);
+        document.removeEventListener('touchmove', onTouchMove);
+        document.removeEventListener('touchend', stopResize);
+        document.removeEventListener('touchcancel', stopResize);
+        if (sessionActivityChart) {
+          setTimeout(() => {
+            sessionActivityChart.resize();
+          }, 0);
+        }
+      };
+      const startResize = (event) => {
+        const point = event.touches ? event.touches[0] : event;
+        isResizingActivity = true;
+        activityResizeStartY = point.clientY;
+        activityResizeStartHeight = activityCard.offsetHeight;
+        document.body.classList.add('activity-resizing');
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', stopResize);
+        document.addEventListener('touchmove', onTouchMove, { passive: false });
+        document.addEventListener('touchend', stopResize);
+        document.addEventListener('touchcancel', stopResize);
+        event.preventDefault();
+      };
+      resizer.addEventListener('mousedown', startResize);
+      resizer.addEventListener('touchstart', startResize, { passive: false });
+    }
   }
 
   function initSessionActivityChart() {
@@ -1386,10 +1453,14 @@ if (window.__EVENT_LOG_LOADED__) {
     }
     const chartEl = document.getElementById('sessionActivityChart');
     if (!chartEl) {
+      logChartTrace('initSessionActivityChart: missing #sessionActivityChart element', {
+        sessionActivityCardPresent: !!document.getElementById('sessionActivityCard')
+      });
       return null;
     }
     // Wait for ECharts to load if not available yet
     if (typeof echarts === 'undefined') {
+      logChartTrace('initSessionActivityChart: echarts not ready, waiting for echartsLoaded event');
       window.addEventListener('echartsLoaded', function onEChartsLoaded() {
         window.removeEventListener('echartsLoaded', onEChartsLoaded);
         initSessionActivityChart();
@@ -1397,6 +1468,10 @@ if (window.__EVENT_LOG_LOADED__) {
       return null;
     }
     sessionActivityChart = echarts.init(chartEl);
+    logChartTrace('initSessionActivityChart: chart initialized', {
+      chartElementReady: !!chartEl,
+      existingInstance: !!sessionActivityChart
+    });
     window.addEventListener('resize', () => {
       sessionActivityChart?.resize();
     });
@@ -1436,13 +1511,29 @@ if (window.__EVENT_LOG_LOADED__) {
       order: 'ASC'
     });
 
-    const response = await fetch(`/api/events?${params}`, {
-      credentials: 'include' // Ensure cookies are sent
-    });
-    const validResponse = await handleApiResponse(response);
-    if (!validResponse) return [];
-    const data = await validResponse.json();
-    return Array.isArray(data.events) ? data.events : [];
+    const fetchUrl = `/api/events?${params}`;
+    logChartTrace('fetchAllSessionsActivityEvents: requesting', { url: fetchUrl });
+    try {
+      const response = await fetch(fetchUrl, {
+        credentials: 'include' // Ensure cookies are sent
+      });
+      const validResponse = await handleApiResponse(response);
+      if (!validResponse) return [];
+      const data = await validResponse.json();
+      logChartTrace('fetchAllSessionsActivityEvents: response', {
+        url: fetchUrl,
+        status: response.status,
+        eventCount: Array.isArray(data.events) ? data.events.length : 0
+      });
+      return Array.isArray(data.events) ? data.events : [];
+    } catch (error) {
+      logChartTrace('fetchAllSessionsActivityEvents: fetch failed', {
+        url: fetchUrl,
+        online: navigator.onLine,
+        message: error?.message
+      });
+      throw error;
+    }
   }
 
   // Save current chart state for hover preview restoration
@@ -1586,8 +1677,14 @@ if (window.__EVENT_LOG_LOADED__) {
   async function updateSessionActivityChart(options = {}) {
     const eventsOverride = Array.isArray(options.events) ? options.events : null;
     const targetSession = typeof options.sessionId !== 'undefined' ? options.sessionId : selectedSession;
+    logChartTrace('updateSessionActivityChart: start', {
+      targetSession,
+      hasEventsOverride: !!eventsOverride,
+      eventsOverrideCount: eventsOverride ? eventsOverride.length : 0
+    });
 
     if (eventsOverride && eventsOverride.length > 0) {
+      logChartTrace('updateSessionActivityChart: using provided events', { count: eventsOverride.length, targetSession });
       renderSessionActivityChart(eventsOverride, { sessionId: targetSession });
       return;
     }
@@ -1595,6 +1692,9 @@ if (window.__EVENT_LOG_LOADED__) {
     if (targetSession === 'all') {
       try {
         const allEvents = await fetchAllSessionsActivityEvents();
+        logChartTrace('updateSessionActivityChart: fetched all sessions activity', {
+          count: allEvents.length
+        });
         if (allEvents.length === 0) {
           hideSessionActivityCard();
           // If this is the initial load and there are no events, show the page anyway
@@ -1624,6 +1724,10 @@ if (window.__EVENT_LOG_LOADED__) {
         order: 'ASC',
         limit: SESSION_ACTIVITY_FETCH_LIMIT.toString()
       });
+      logChartTrace('updateSessionActivityChart: fetching session activity', {
+        targetSession,
+        params: params.toString()
+      });
       const response = await fetch(`/api/events?${params}`);
       const validResponse = await handleApiResponse(response);
       if (!validResponse) {
@@ -1635,6 +1739,10 @@ if (window.__EVENT_LOG_LOADED__) {
         return;
       }
       const data = await validResponse.json();
+      logChartTrace('updateSessionActivityChart: fetch result', {
+        targetSession,
+        eventCount: data.events ? data.events.length : 0
+      });
       if (!data.events || data.events.length === 0) {
         hideSessionActivityCard();
         // If this is the initial load and there are no events, show the page anyway
@@ -1647,6 +1755,10 @@ if (window.__EVENT_LOG_LOADED__) {
       renderSessionActivityChart(data.events, { sessionId: targetSession });
     } catch (error) {
       console.error('Error loading session activity chart:', error);
+      logChartTrace('updateSessionActivityChart: error', {
+        targetSession,
+        message: error?.message
+      });
       hideSessionActivityCard();
       // If this is the initial load and there's an error, show the page anyway
       if (isInitialChartLoad) {
@@ -1658,6 +1770,9 @@ if (window.__EVENT_LOG_LOADED__) {
 
   function renderSessionActivityChart(events, options = {}) {
     if (!Array.isArray(events) || events.length === 0) {
+      logChartTrace('renderSessionActivityChart: no events to render', {
+        targetSession: options.sessionId || selectedSession
+      });
       hideSessionActivityCard();
       // If this is the initial load and there are no events, show the page anyway
       if (isInitialChartLoad) {
@@ -1670,6 +1785,9 @@ if (window.__EVENT_LOG_LOADED__) {
     const chartInstance = initSessionActivityChart();
     if (!chartInstance) {
     // If this is the initial load and chart can't be initialized, show the page anyway
+      logChartTrace('renderSessionActivityChart: chart instance unavailable', {
+        targetSession: options.sessionId || selectedSession
+      });
       if (isInitialChartLoad) {
         isInitialChartLoad = false;
         revealEventLogShell();
@@ -1687,6 +1805,13 @@ if (window.__EVENT_LOG_LOADED__) {
 
     // Enable smooth transitions when hovering (notMerge: false allows ECharts to animate)
     const enableTransition = options.enableTransition === true;
+
+    logChartTrace('renderSessionActivityChart: rendering', {
+      targetSession,
+      eventCount: events.length,
+      uniqueSessions: uniqueSessions.length,
+      isAllSessionsView
+    });
 
     let seriesData = [];
     let windowStart;
@@ -2283,6 +2408,11 @@ if (window.__EVENT_LOG_LOADED__) {
   function handleInitializationError(context, error) {
     const details = error?.message || error || 'Unknown error';
     console.error(`Initialization error (${context}):`, error);
+    logChartTrace('handleInitializationError', {
+      context,
+      message: details,
+      online: navigator.onLine
+    });
     showGlobalError(`Initialization error (${context}): ${details}`);
   }
 
@@ -2943,7 +3073,9 @@ if (window.__EVENT_LOG_LOADED__) {
       let aggregatedTeams = [];
 
       try {
-        const statsResponse = await fetch('/api/team-stats', { credentials: 'include' });
+        const teamStatsUrl = '/api/team-stats';
+        logChartTrace('loadTeamsList: fetching aggregated team stats', { url: teamStatsUrl });
+        const statsResponse = await fetch(teamStatsUrl, { credentials: 'include' });
         const validStatsResponse = await handleApiResponse(statsResponse);
         if (validStatsResponse) {
           const statsData = await validStatsResponse.json();
@@ -2952,6 +3084,10 @@ if (window.__EVENT_LOG_LOADED__) {
           }
         }
       } catch (error) {
+        logChartTrace('loadTeamsList: aggregated team stats failed', {
+          online: navigator.onLine,
+          message: error?.message
+        });
         console.warn('Error fetching aggregated team stats:', error);
       }
 
@@ -5181,6 +5317,10 @@ if (window.__EVENT_LOG_LOADED__) {
         const displayText = data.displayText || data.sizeFormatted;
         if (displayText) {
           const dbSizeElement = document.getElementById('dbSize');
+          if (!dbSizeElement) {
+            console.debug('Database size element not present; skipping update');
+            return;
+          }
           dbSizeElement.textContent = displayText;
 
           // Apply color based on percentage
@@ -5196,8 +5336,10 @@ if (window.__EVENT_LOG_LOADED__) {
               dbSizeElement.style.color = '';
             }
           }
-
-          document.getElementById('dbSizeInfo').style.display = '';
+          const dbSizeInfo = document.getElementById('dbSizeInfo');
+          if (dbSizeInfo) {
+            dbSizeInfo.style.display = '';
+          }
         }
       }
     } catch (error) {
