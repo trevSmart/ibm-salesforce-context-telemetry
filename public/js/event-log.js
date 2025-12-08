@@ -3923,6 +3923,15 @@ if (window.__EVENT_LOG_LOADED__) {
     const renderableEvents = selectedTeamKey ? events.filter(eventMatchesSelectedTeam) : events;
     const tbody = document.getElementById('logsBody');
 
+    // Gracefully handle pages that don't include the legacy logs table
+    if (!tbody) {
+      console.warn('[Telemetry Viewer] logsBody not found; skipping legacy table render');
+      allLoadedEvents = append
+        ? [...allLoadedEvents, ...renderableEvents]
+        : [...renderableEvents];
+      return;
+    }
+
     // Save selected event state before clearing (only if not appending)
     let selectedEventId = null;
     let expandedEventIds = new Set();
