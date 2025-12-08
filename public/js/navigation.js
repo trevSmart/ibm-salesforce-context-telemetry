@@ -194,13 +194,16 @@
       // Keep nav, search, and container shell styling consistent across pages
       syncShellFromDocument(doc);
 
+      // Match current padding so the overlayed content keeps the same inset during crossfade
+      const containerStyle = window.getComputedStyle(container);
+      ['paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft'].forEach((prop) => {
+        nextContent.style[prop] = containerStyle[prop];
+      });
+
       // Prepare new content for crossfade: start invisible and position it
       nextContent.style.opacity = '0';
       nextContent.style.position = 'absolute';
-      nextContent.style.top = '0';
-      nextContent.style.left = '0';
-      nextContent.style.right = '0';
-      nextContent.style.width = '100%';
+      nextContent.style.inset = '0';
 
       // Insert new content after current content (both will be visible briefly)
       container.parentNode.style.position = 'relative';
@@ -243,12 +246,13 @@
       // Remove old content and reset positioning on new content
       container.remove();
       nextContent.style.position = '';
-      nextContent.style.top = '';
-      nextContent.style.left = '';
-      nextContent.style.right = '';
-      nextContent.style.width = '';
+      nextContent.style.inset = '';
       nextContent.style.transition = '';
       nextContent.style.opacity = '';
+      nextContent.style.paddingTop = '';
+      nextContent.style.paddingRight = '';
+      nextContent.style.paddingBottom = '';
+      nextContent.style.paddingLeft = '';
 
       // Notify pages that a soft navigation completed so they can rehydrate
       window.dispatchEvent(new CustomEvent('softNav:pageMounted', { detail: { path: targetPath } }));
