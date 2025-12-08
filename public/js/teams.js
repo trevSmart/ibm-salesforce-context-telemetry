@@ -420,8 +420,8 @@ function renderTeamsList() {
   container.innerHTML = `
     <div class="px-6 sm:px-8 teams-list-container">
 
-      <div id="teamsList" class="grid grid-cols-1 gap-px overflow-hidden rounded-lg bg-gray-200 shadow-sm sm:grid-cols-2">
-        <div class="bg-white p-6 text-center text-sm text-gray-500 sm:col-span-2">Loading teams...</div>
+      <div id="teamsList" class="grid grid-cols-1 gap-px overflow-hidden rounded-lg sm:grid-cols-2 lg:grid-cols-3">
+        <div class="bg-white p-6 text-center text-sm text-gray-500 sm:col-span-2 lg:col-span-3">Loading teams...</div>
       </div>
     </div>
   `;
@@ -430,14 +430,14 @@ function renderTeamsList() {
 
   if (teams.length === 0) {
     teamsList.innerHTML = `
-      <div class="bg-white px-8 py-10 text-center sm:col-span-2">
+      <div class="bg-white px-8 py-10 text-center sm:col-span-2 lg:col-span-3">
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1" stroke="currentColor" aria-hidden="true" class="mx-auto size-12 text-gray-400">
           <path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z" />
         </svg>
         <h3 class="mt-3 text-base font-semibold text-gray-900">No teams</h3>
         <p class="mt-2 text-sm text-gray-500">Get started by creating a new team.</p>
         <div class="mt-6">
-          <button type="button" class="inline-flex items-center gap-2 rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-gray-900 shadow-xs inset-ring inset-ring-gray-300 hover:bg-gray-50" onclick="showCreateTeamModal()">
+          <button type="button" class="btn" onclick="showCreateTeamModal()">
             <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="mr-2 size-5">
               <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5z" />
             </svg>
@@ -469,20 +469,33 @@ function renderTeamsList() {
          </span>`;
 
     return `
-      <div class="group relative bg-white p-6 transition hover:bg-gray-50 focus-within:outline focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-indigo-600" role="button" tabindex="0" onclick="viewTeamDetail(${team.id})" onkeypress="if(event.key==='Enter'||event.key===' '){event.preventDefault();viewTeamDetail(${team.id});}">
+      <div class="group relative bg-white p-6 transition hover:bg-gray-50 focus:outline-none focus-visible:outline-none" role="button" tabindex="0" onclick="viewTeamDetail(${team.id})" onkeypress="if(event.key==='Enter'||event.key===' '){event.preventDefault();viewTeamDetail(${team.id});}">
         <div>
           ${logoOrAvatar}
         </div>
-        <div class="mt-8">
+        <div class="mt-8 space-y-2">
           <h3 class="text-base font-semibold text-gray-900">
             <span aria-hidden="true" class="absolute inset-0"></span>
             ${escapeHtml(team.name)}
           </h3>
-          <p class="mt-2 text-sm text-gray-500">${team.org_count} org${team.org_count !== 1 ? 's' : ''} · ${team.user_count} user${team.user_count !== 1 ? 's' : ''}</p>
+          <div class="flex items-center gap-4 text-sm text-gray-500">
+            <span class="inline-flex items-center gap-1.5">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" class="size-4">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15a4.5 4.5 0 0 0 4.5 4.5H18a3.75 3.75 0 0 0 1.332-7.257 3 3 0 0 0-3.758-3.848 5.25 5.25 0 0 0-10.233 2.33A4.502 4.502 0 0 0 2.25 15Z" />
+              </svg>
+              ${team.org_count} org${team.org_count !== 1 ? 's' : ''}
+            </span>
+            <span class="inline-flex items-center gap-1.5">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" class="size-4">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
+              </svg>
+              ${team.user_count} user${team.user_count !== 1 ? 's' : ''}
+            </span>
+          </div>
         </div>
-        <span aria-hidden="true" class="pointer-events-none absolute top-6 right-6 text-gray-300 transition group-hover:text-gray-400">
-          <svg viewBox="0 0 24 24" fill="currentColor" class="size-6">
-            <path d="M20 4h1a1 1 0 00-1-1v1zm-1 12a1 1 0 102 0h-2zM8 3a1 1 0 000 2V3zM3.293 19.293a1 1 0 101.414 1.414l-1.414-1.414zM19 4v12h2V4h-2zm1-1H8v2h12V3zm-.707.293l-16 16 1.414 1.414 16-16-1.414-1.414z" />
+        <span aria-hidden="true" class="pointer-events-none absolute top-6 right-6 text-gray-300 opacity-0 transition duration-150 group-hover:opacity-100 group-hover:text-gray-400">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
+            <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
           </svg>
         </span>
       </div>
@@ -502,10 +515,10 @@ async function renderTeamDetail(teamId) {
           <div id="teamDetailMeta" style="color: var(--text-secondary); font-size: 0.9rem;"></div>
         </div>
         <div style="display: flex; gap: 8px;">
-          <button id="editTeamBtn" class="btn-secondary" style="padding: 8px 16px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); cursor: pointer;">
+          <button id="editTeamBtn" class="btn">
             <i class="fas fa-pen" style="margin-right: 6px;"></i>Edit
           </button>
-          <button id="deleteTeamBtn" class="btn-danger" style="padding: 8px 16px; border-radius: 6px; border: 1px solid var(--border-color); background: #dc3545; color: white; cursor: pointer;">
+          <button id="deleteTeamBtn" class="btn btn-destructive">
             <i class="fas fa-trash" style="margin-right: 6px;"></i>Delete
           </button>
         </div>
@@ -576,7 +589,7 @@ async function renderTeamDetail(teamId) {
             <div style="font-weight: 500;">${colorDot}${escapeHtml(org.alias || org.id)}</div>
             <div style="font-size: 0.85rem; color: var(--text-secondary);">${escapeHtml(org.id)}</div>
           </div>
-          <button class="btn-danger" onclick="removeOrgFromTeam('${escapeHtml(org.id)}', ${teamId})" style="padding: 4px 8px; border-radius: 4px; border: 1px solid var(--border-color); background: #dc3545; color: white; cursor: pointer; font-size: 0.85rem;">
+          <button class="btn btn-compact btn-destructive" onclick="removeOrgFromTeam('${escapeHtml(org.id)}', ${teamId})">
             <i class="fas fa-times"></i>
           </button>
         </div>
@@ -594,7 +607,7 @@ async function renderTeamDetail(teamId) {
             <div style="font-weight: 500;">${escapeHtml(user.user_name)}</div>
             <div style="font-size: 0.85rem; color: var(--text-secondary);">Event log user</div>
           </div>
-          <button class="btn-danger" onclick="removeUserFromTeam('${escapeHtml(user.user_name)}', ${teamId})" style="padding: 4px 8px; border-radius: 4px; border: 1px solid var(--border-color); background: #dc3545; color: white; cursor: pointer; font-size: 0.85rem;">
+          <button class="btn btn-compact btn-destructive" onclick="removeUserFromTeam('${escapeHtml(user.user_name)}', ${teamId})">
             <i class="fas fa-times"></i>
           </button>
         </div>
@@ -646,7 +659,7 @@ function showTeamFormModal(team = null) {
                 <img id="logoPreview" src="${logoPreviewUrl}" alt="Current logo" style="width: 48px; height: 48px; object-fit: contain; border-radius: 4px; background: white;">
                 <div style="flex: 1;">
                   <div style="font-size: 0.875rem; color: var(--text-secondary);">Current logo</div>
-                  <button type="button" id="removeLogoBtn" style="margin-top: 4px; padding: 4px 8px; font-size: 0.75rem; color: #dc3545; background: transparent; border: 1px solid #dc3545; border-radius: 4px; cursor: pointer;">Remove logo</button>
+                  <button type="button" id="removeLogoBtn" class="btn btn-compact btn-destructive" style="margin-top: 4px;">Remove logo</button>
                 </div>
               </div>
             ` : ''}
@@ -663,7 +676,7 @@ function showTeamFormModal(team = null) {
         <button type="button" class="confirm-modal-btn confirm-modal-btn-cancel" id="cancelTeamFormBtn">
           Cancel
         </button>
-        <button type="submit" class="confirm-modal-btn confirm-modal-btn-cancel">
+        <button type="submit" class="confirm-modal-btn confirm-modal-btn-confirm">
           ${isEdit ? 'Update' : 'Create'}
         </button>
       </div>
@@ -683,7 +696,8 @@ function showTeamFormModal(team = null) {
     backdrop.classList.add('visible');
   });
 
-  const closeModal = () => {
+  function closeModal() {
+    document.removeEventListener('keydown', handleKeydown);
     const handleTransitionEnd = () => {
       backdrop.removeEventListener('transitionend', handleTransitionEnd);
       backdrop.remove();
@@ -698,7 +712,16 @@ function showTeamFormModal(team = null) {
         backdrop.remove();
       }
     }, 220);
-  };
+  }
+
+  function handleKeydown(e) {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      closeModal();
+    }
+  }
+
+  document.addEventListener('keydown', handleKeydown);
   document.getElementById('cancelTeamFormBtn')?.addEventListener('click', closeModal);
   backdrop.addEventListener('click', (e) => {
     if (e.target === backdrop) closeModal();
@@ -863,7 +886,7 @@ async function showAddOrgModal(teamId) {
       <button type="button" class="confirm-modal-btn confirm-modal-btn-cancel" id="cancelAddOrgBtn">
         Cancel
       </button>
-      <button type="button" class="confirm-modal-btn confirm-modal-btn-cancel" id="saveAddOrgBtn">
+      <button type="button" class="confirm-modal-btn confirm-modal-btn-confirm" id="saveAddOrgBtn">
         Add Org
       </button>
     </div>
@@ -877,7 +900,8 @@ async function showAddOrgModal(teamId) {
     backdrop.classList.add('visible');
   });
 
-  const closeModal = () => {
+  function closeModal() {
+    document.removeEventListener('keydown', handleKeydown);
     backdrop.classList.remove('visible');
     backdrop.classList.add('hiding');
     // Wait for transition to complete before removing
@@ -888,7 +912,16 @@ async function showAddOrgModal(teamId) {
       }
     };
     backdrop.addEventListener('transitionend', onTransitionEnd);
-  };
+  }
+
+  function handleKeydown(e) {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      closeModal();
+    }
+  }
+
+  document.addEventListener('keydown', handleKeydown);
   document.getElementById('cancelAddOrgBtn')?.addEventListener('click', closeModal);
   backdrop.addEventListener('click', (e) => {
     if (e.target === backdrop) closeModal();
@@ -965,7 +998,7 @@ async function showAddUserModal(teamId) {
       <button type="button" class="confirm-modal-btn confirm-modal-btn-cancel" id="cancelAddUserBtn">
         Cancel
       </button>
-      <button type="button" class="confirm-modal-btn confirm-modal-btn-cancel" id="saveAddUserBtn">
+      <button type="button" class="confirm-modal-btn confirm-modal-btn-confirm" id="saveAddUserBtn">
         Add User
       </button>
     </div>
@@ -979,7 +1012,8 @@ async function showAddUserModal(teamId) {
     backdrop.classList.add('visible');
   });
 
-  const closeModal = () => {
+  function closeModal() {
+    document.removeEventListener('keydown', handleKeydown);
     backdrop.classList.remove('visible');
     backdrop.classList.add('hiding');
     // Wait for transition to complete before removing
@@ -990,7 +1024,16 @@ async function showAddUserModal(teamId) {
       }
     };
     backdrop.addEventListener('transitionend', onTransitionEnd);
-  };
+  }
+
+  function handleKeydown(e) {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      closeModal();
+    }
+  }
+
+  document.addEventListener('keydown', handleKeydown);
   document.getElementById('cancelAddUserBtn')?.addEventListener('click', closeModal);
   backdrop.addEventListener('click', (e) => {
     if (e.target === backdrop) closeModal();

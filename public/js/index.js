@@ -58,14 +58,17 @@ function attachColorPicker(textInput) {
   pickerButton.className = 'color-picker-button';
   pickerButton.style.display = 'inline-flex';
   pickerButton.style.alignItems = 'center';
+  pickerButton.style.justifyContent = 'center';
   pickerButton.style.gap = '8px';
-  pickerButton.style.padding = '6px 10px';
-  pickerButton.style.borderRadius = '6px';
+  pickerButton.style.padding = '8px';
+  pickerButton.style.borderRadius = '8px';
   pickerButton.style.border = '1px solid var(--border-color)';
   pickerButton.style.background = 'var(--bg-secondary)';
   pickerButton.style.color = 'var(--text-primary)';
   pickerButton.style.fontSize = '0.8rem';
   pickerButton.style.cursor = 'pointer';
+  pickerButton.setAttribute('aria-label', 'Pick color');
+  pickerButton.title = 'Pick color';
 
   const swatch = document.createElement('span');
   swatch.style.width = '14px';
@@ -74,8 +77,35 @@ function attachColorPicker(textInput) {
   swatch.style.border = '1px solid var(--border-color)';
   swatch.style.background = 'transparent';
 
+  const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  icon.setAttribute('viewBox', '0 0 24 24');
+  icon.setAttribute('fill', 'none');
+  icon.setAttribute('stroke', 'currentColor');
+  icon.setAttribute('stroke-width', '1.5');
+  icon.setAttribute('aria-hidden', 'true');
+  icon.style.width = '20px';
+  icon.style.height = '20px';
+
+  const iconPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  iconPath.setAttribute('stroke-linecap', 'round');
+  iconPath.setAttribute('stroke-linejoin', 'round');
+  iconPath.setAttribute(
+    'd',
+    'm15 11.25 1.5 1.5.75-.75V8.758l2.276-.61a3 3 0 1 0-3.675-3.675l-.61 2.277H12l-.75.75 1.5 1.5M15 11.25l-8.47 8.47c-.34.34-.8.53-1.28.53s-.94.19-1.28.53l-.97.97-.75-.75.97-.97c.34-.34.53-.8.53-1.28s.19-.94.53-1.28L12.75 9M15 11.25 12.75 9'
+  );
+  icon.appendChild(iconPath);
+
   const valueLabel = document.createElement('span');
   valueLabel.textContent = 'Pick color';
+  valueLabel.style.position = 'absolute';
+  valueLabel.style.width = '1px';
+  valueLabel.style.height = '1px';
+  valueLabel.style.padding = '0';
+  valueLabel.style.margin = '-1px';
+  valueLabel.style.overflow = 'hidden';
+  valueLabel.style.clip = 'rect(0, 0, 0, 0)';
+  valueLabel.style.whiteSpace = 'nowrap';
+  valueLabel.style.border = '0';
 
   const hiddenColorInput = document.createElement('input');
   hiddenColorInput.type = 'color';
@@ -88,6 +118,7 @@ function attachColorPicker(textInput) {
   hiddenColorInput.tabIndex = -1;
 
   pickerButton.appendChild(swatch);
+  pickerButton.appendChild(icon);
   pickerButton.appendChild(valueLabel);
   wrapper.appendChild(pickerButton);
   wrapper.appendChild(hiddenColorInput);
@@ -97,6 +128,8 @@ function attachColorPicker(textInput) {
     const nextColor = normalized || defaultColor;
     swatch.style.background = nextColor;
     valueLabel.textContent = normalized || 'Pick color';
+    pickerButton.setAttribute('aria-label', normalized ? `Color ${normalized}` : 'Pick color');
+    pickerButton.title = normalized || 'Pick color';
     hiddenColorInput.value = nextColor;
   }
 

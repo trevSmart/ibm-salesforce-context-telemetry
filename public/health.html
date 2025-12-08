@@ -252,24 +252,50 @@
 			margin-top: 16px;
 		}
 
-		.refresh-btn {
-			background: #667eea;
-			color: white;
-			border: none;
-			padding: 12px 24px;
-			border-radius: 8px;
+		.btn {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			gap: 8px;
+			padding: 6px 10px;
+			font-size: 0.875rem;
 			font-weight: 600;
+			color: #111827;
+			background: #ffffff;
+			border: 1px solid #d1d5db;
+			border-radius: 6px;
+			box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 			cursor: pointer;
-			transition: background 0.2s ease;
+			transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, transform 0.12s ease;
+		}
+
+		.btn:hover {
+			background: #f8fafc;
+		}
+
+		.btn:active {
+			transform: translateY(0);
+		}
+
+		.btn:disabled {
+			opacity: 0.6;
+			cursor: not-allowed;
+			transform: none;
+		}
+
+		html.dark .btn {
+			background: #18181b;
+			color: #f4f4f5;
+			border-color: #3f3f46;
+			box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+		}
+
+		html.dark .btn:hover {
+			background: #27272a;
+		}
+
+		.refresh-btn {
 			margin-top: 16px;
-		}
-
-		.refresh-btn:hover {
-			background: #5568d3;
-		}
-
-		.refresh-btn:active {
-			transform: scale(0.98);
 		}
 	</style>
 </head>
@@ -408,7 +434,7 @@
 
 
 				<div id="errorMessage" class="error-message" style="display: none;"></div>
-				<button class="refresh-btn" onclick="loadHealthData()">Refresh</button>
+				<button class="btn refresh-btn" onclick="loadHealthData()">Refresh</button>
 			</div>
 
 			<div class="card-footer">

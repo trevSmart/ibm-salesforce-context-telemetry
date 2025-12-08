@@ -107,8 +107,8 @@ const teamOrgLimiter = rateLimit({
 
 // Rate limit for general API GET requests: max 100 requests per 15 minutes per IP
 const apiReadLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // max 100 requests per 15 minutes per IP
+  windowMs: 10 * 60 * 1000, // 15 minutes
+  max: 500, // max 500 requests per 10 minutes per IP
   message: {
     status: 'error',
     message: 'Too many API requests. Please try again later.'
