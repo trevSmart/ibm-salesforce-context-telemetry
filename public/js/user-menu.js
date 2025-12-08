@@ -306,11 +306,24 @@
     hideUserMenu();
 
     try {
+      // Obtain CSRF token (double submit cookie pattern)
+      const csrfToken = typeof window.getCsrfToken === 'function'
+        ? await window.getCsrfToken()
+        : (typeof window.getCsrfTokenFromCookie === 'function'
+          ? window.getCsrfTokenFromCookie()
+          : null);
+
+      const headers = (typeof window.getRequestHeaders === 'function')
+        ? window.getRequestHeaders(true)
+        : { 'Content-Type': 'application/json' };
+
+      if (csrfToken && !headers['X-CSRF-Token']) {
+        headers['X-CSRF-Token'] = csrfToken;
+      }
+
       const response = await fetch('/logout', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers,
         credentials: 'include' // Ensure cookies are sent
       });
       if (response.ok) {

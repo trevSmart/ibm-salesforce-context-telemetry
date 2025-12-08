@@ -3,6 +3,13 @@
 // Lightweight client-side navigation to avoid repainting shared chrome
 (() => {
   const SUPPORTED_PATHS = ['/', '/logs', '/teams'];
+  const SOFT_NAV_SELECTOR = [
+    'a.top-nav-link',
+    'a.top-nav-logo',
+    'a.back-link',
+    'a[data-soft-nav="true"]',
+    'a[data-soft-nav]'
+  ].join(',');
   const PAGE_SCRIPTS = {
     '/': [{ src: '/js/index.js', type: 'module' }],
     '/logs': [{ src: '/js/event-log.js' }],
@@ -41,6 +48,38 @@
         link.classList.remove('active');
       }
     });
+  }
+
+  function isModifiedClick(event) {
+    return (
+      event.defaultPrevented ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.button !== 0
+    );
+  }
+
+  function resolveSoftNavTarget(event) {
+    const link = event.target.closest(SOFT_NAV_SELECTOR);
+    if (!link) {
+      return null;
+    }
+    if (link.hasAttribute('download')) {
+      return null;
+    }
+    if (link.target && link.target !== '_self') {
+      return null;
+    }
+    const href = link.getAttribute('href');
+    if (!href || href.startsWith('#') || href.startsWith('mailto:') || href.startsWith('tel:')) {
+      return null;
+    }
+    const targetPath = getPath(href);
+    if (!SUPPORTED_PATHS.includes(targetPath)) {
+      return null;
+    }
+    return targetPath;
   }
 
   async function ensurePageScripts(targetPath) {
@@ -205,12 +244,7 @@
       // nextContent.style.position = 'absolute';
       // nextContent.style.inset = '0';
 
-      // (not strictly necessary because we re-query each time)
-
-      // Prepare new content for crossfade: start invisible and position it
-      nextContent.style.opacity = '0';
-      nextContent.style.position = 'absolute';
-      nextContent.style.inset = '0';
+      // (not strictly necessary because we re-query each time);
 
       // Insert new content after current content (both will be visible briefly)
       container.parentNode.style.position = 'relative';
@@ -278,13 +312,12 @@
     }
   }
 
-  function handleNavClick(event) {
-    if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) {
+  function handleSoftNavClick(event) {
+    if (isModifiedClick(event)) {
       return;
     }
-    const link = event.currentTarget;
-    const targetPath = getPath(link.getAttribute('href'));
-    if (!SUPPORTED_PATHS.includes(targetPath)) {
+    const targetPath = resolveSoftNavTarget(event);
+    if (!targetPath) {
       return;
     }
     event.preventDefault();
@@ -292,13 +325,7 @@
   }
 
   function initNav() {
-    const navLinks = document.querySelectorAll('.top-nav-link');
-    navLinks.forEach((link) => {
-      const targetPath = getPath(link.getAttribute('href'));
-      if (SUPPORTED_PATHS.includes(targetPath)) {
-        link.addEventListener('click', handleNavClick);
-      }
-    });
+    document.addEventListener('click', handleSoftNavClick);
     window.history.replaceState({ softNav: true }, '', window.location.pathname);
     window.addEventListener('popstate', () => {
       softNavigate(window.location.pathname, { replace: true });

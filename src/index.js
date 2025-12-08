@@ -9,124 +9,124 @@ const Ajv = require('ajv');
 const addFormats = require('ajv-formats');
 const rateLimit = require('express-rate-limit');
 
+const isDevelopment = process.env.NODE_ENV !== 'production';
+
+// In dev we bypass rate limits to avoid "Too many requests" noise
+const createLimiter = (config) => rateLimit({
+  skip: () => isDevelopment,
+  standardHeaders: true,
+  legacyHeaders: false,
+  ...config
+});
+
 // Limit DELETE requests to /api/events to prevent abuse: max 5 deletes per hour per IP
-const deleteEventsLimiter = rateLimit({
+const deleteEventsLimiter = createLimiter({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 5, // max 5 requests per hour per IP
   message: {
     status: 'error',
     message: 'Too many delete requests for events. Please try again later.'
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
+  }
 });
 
 
 // Limit POST requests to /api/teams to prevent admin abuse: max 10 creates per hour per IP
-const teamCreationLimiter = rateLimit({
+const teamCreationLimiter = createLimiter({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 10, // max 10 requests per hour per IP
   message: {
     status: 'error',
     message: 'Too many team creation requests. Please try again later.'
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
+  }
 });
 // Limit POST requests to /api/orgs to prevent abuse: max 10 per hour per IP
-const createOrgsLimiter = rateLimit({
+const createOrgsLimiter = createLimiter({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 10, // max 10 org creations/updates per hour
   message: {
     status: 'error',
     message: 'Too many create/update requests for orgs. Please try again later.'
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
+  }
+});
+
+// Limit team/org admin mutations to prevent abuse: max 50 requests per hour per IP
+const teamOrgLimiter = createLimiter({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 50, // max 50 requests per hour per IP
+  message: {
+    status: 'error',
+    message: 'Too many team/org admin requests. Please try again later.'
+  }
 });
 
 // Limit user management (user creation) requests to prevent abuse: max 10 creates per hour per IP
-const userManagementLimiter = rateLimit({
+const userManagementLimiter = createLimiter({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 10, // max 10 requests per hour per IP
   message: {
     status: 'error',
     message: 'Too many user creation requests. Please try again later.'
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
+  }
 });
 
 // Rate limit for telemetry users endpoint: max 20 requests per hour per IP
-const telemetryUsersLimiter = rateLimit({
+const telemetryUsersLimiter = createLimiter({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 20, // max 20 requests per hour per IP
   message: {
     status: 'error',
     message: 'Too many requests for telemetry users stats. Please try again later.'
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
+  }
 });
 
 // Limit DELETE requests to /api/teams/:teamId/event-users/:userName to prevent abuse: max 5 deletes per hour per IP
-const deleteEventUserFromTeamLimiter = rateLimit({
+const deleteEventUserFromTeamLimiter = createLimiter({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 5, // max 5 requests per hour per IP
   message: {
     status: 'error',
     message: 'Too many team user deletion requests. Please try again later.'
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
+  }
 });
 
 // Rate limit for telemetry ingestion: max 100 requests per 15 minutes per IP
-const telemetryLimiter = rateLimit({
+const telemetryLimiter = createLimiter({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // max 100 requests per 15 minutes per IP
   message: {
     status: 'error',
     message: 'Too many telemetry submissions. Please try again later.'
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
+  }
 });
 
 // Rate limit for login attempts: max 10 attempts per 15 minutes per IP
-const loginLimiter = rateLimit({
+const loginLimiter = createLimiter({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 10, // max 10 attempts per 15 minutes per IP
   message: {
     status: 'error',
     message: 'Too many login attempts. Please try again later.'
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
+  }
 });
 
 // Rate limit for general API GET requests: max 100 requests per 15 minutes per IP
-const apiReadLimiter = rateLimit({
+const apiReadLimiter = createLimiter({
   windowMs: 10 * 60 * 1000, // 15 minutes
   max: 500, // max 500 requests per 10 minutes per IP
   message: {
     status: 'error',
     message: 'Too many API requests. Please try again later.'
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
+  }
 });
 
 // Rate limit for settings changes: max 10 requests per hour per IP
-const settingsLimiter = rateLimit({
+const settingsLimiter = createLimiter({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 10, // max 10 requests per hour per IP
   message: {
     status: 'error',
     message: 'Too many settings update requests. Please try again later.'
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
+  }
 });
 
 const fs = require('fs');
@@ -139,7 +139,6 @@ const csrf = require('./auth/csrf');
 const { Cache } = require('./utils/performance');
 const app = express();
 const port = process.env.PORT || 3100;
-const isDevelopment = process.env.NODE_ENV !== 'production';
 
 // Performance constants
 const MAX_API_LIMIT = 1000; // Maximum events per API request
@@ -364,7 +363,7 @@ app.use((req, res, next) => {
       if (cssPath.startsWith(publicRoot) && fs.existsSync(cssPath)) {
         resolvedPath = fs.realpathSync(cssPath);
       }
-    } catch (e) {
+    } catch (_err) {
       // If any error occurs, treat as not found
       resolvedPath = '';
     }

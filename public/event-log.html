@@ -72,7 +72,7 @@
 				<div class="sidebar">
 					<div class="sidebar-header">
 						<div style="display: flex; align-items: center; gap: 12px; margin-top: 8px;">
-							<a href="/" class="back-link subtitle">← Back to Dashboard</a>
+							<a href="/" class="back-link subtitle" data-soft-nav="true">← Back to Dashboard</a>
 						</div>
 						<div class="log-viewer-title font-semibold">Event logs</div>
 					</div>
@@ -212,7 +212,7 @@
 								<div class="font-semibold mt-2.5">No events found</div>
 							</div>
 
-						<div class="px-4 sm:px-6 lg:px-8" style="background-color: #ffffff;">
+						<div class="px-4 sm:px-6 lg:px-8" style="background-color: #ffffff; overflow-y: auto;">
 							<div style="overflow: auto;" id="logsTableScroll">
 								<table class="min-w-full divide-y divide-gray-300 dark:divide-white/10" id="blueprintTable">
 									<thead>
