@@ -21,6 +21,18 @@ const deleteEventsLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+
+// Limit POST requests to /api/teams to prevent admin abuse: max 10 creates per hour per IP
+const teamOrgLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 10, // max 10 requests per hour per IP
+  message: {
+    status: 'error',
+    message: 'Too many team creation requests. Please try again later.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 // Limit POST requests to /api/orgs to prevent abuse: max 10 per hour per IP
 const createOrgsLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
