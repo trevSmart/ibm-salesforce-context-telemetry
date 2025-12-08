@@ -511,6 +511,9 @@
 		</div>
 	</div>
 
+	<!-- Load CSRF helper first -->
+	<script src="/js/csrf-helper.js"></script>
+	
 	<script>
 		const form = document.getElementById('loginForm');
 		const errorMessage = document.getElementById('errorMessage');
@@ -542,17 +545,10 @@
 			loginButton.disabled = true;
 
 			try {
-				// Get CSRF token if not already set
-				if (!csrfToken) {
-					csrfToken = await getCsrfToken();
-				}
-				
-				const headers = {
+				// Use shared CSRF helper
+				const headers = window.getRequestHeaders ? window.getRequestHeaders(true) : {
 					'Content-Type': 'application/json'
 				};
-				if (csrfToken) {
-					headers['X-CSRF-Token'] = csrfToken;
-				}
 				
 				const response = await fetch('/login', {
 					method: 'POST',
@@ -578,26 +574,7 @@
 			}
 		});
 
-		// Get CSRF token
-		let csrfToken = null;
-		async function getCsrfToken() {
-			try {
-				// Read CSRF token from cookie
-				const cookies = document.cookie.split(';');
-				for (let cookie of cookies) {
-					const [name, value] = cookie.trim().split('=');
-					if (name === 'csrf-token') {
-						return decodeURIComponent(value);
-					}
-				}
-				return null;
-			} catch (error) {
-				console.error('Failed to get CSRF token:', error);
-				return null;
-			}
-		}
-
-		// Check if already logged in
+		// Wait for CSRF helper to load, then check if already logged in
 		(async () => {
 			try {
 				const response = await fetch('/api/auth/status');
@@ -605,8 +582,15 @@
 				if (data.authenticated) {
 					window.location.href = '/';
 				}
-				// Store CSRF token
-				csrfToken = data.csrfToken || await getCsrfToken();
+				// Store CSRF token (CSRF helper loaded first via script tag)
+				if (window.setCsrfToken && data.csrfToken) {
+					window.setCsrfToken(data.csrfToken);
+				} else if (window.getCsrfTokenFromCookie) {
+					const token = window.getCsrfTokenFromCookie();
+					if (token && window.setCsrfToken) {
+						window.setCsrfToken(token);
+					}
+				}
 			} catch (error) {
 				// Ignore errors
 			}

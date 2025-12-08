@@ -16,39 +16,6 @@ if (window.__EVENT_LOG_LOADED__) {
       .replace(/'/g, '&#039;');
   }
 
-  // CSRF token helper
-  let csrfToken = null;
-  
-   
-  async function _getCsrfToken() {
-    if (csrfToken) {
-      return csrfToken;
-    }
-    try {
-      const response = await fetch('/api/auth/status', {
-        credentials: 'include'
-      });
-      const data = await response.json();
-      csrfToken = data.csrfToken;
-      return csrfToken;
-    } catch (error) {
-      console.error('Failed to get CSRF token:', error);
-      return null;
-    }
-  }
-  
-   
-  function _getRequestHeaders(includeJson = true) {
-    const headers = {};
-    if (includeJson) {
-      headers['Content-Type'] = 'application/json';
-    }
-    if (csrfToken) {
-      headers['X-CSRF-Token'] = csrfToken;
-    }
-    return headers;
-  }
-
   const detectElectronEnvironment = () => {
     const userAgent = navigator?.userAgent?.toLowerCase() || '';
     if (userAgent.includes(' electron/')) {
@@ -86,7 +53,7 @@ if (window.__EVENT_LOG_LOADED__) {
         return;
       }
       // Store CSRF token
-      csrfToken = data.csrfToken;
+      window.setCsrfToken(data.csrfToken);
     } catch (error) {
       console.error('Auth check failed:', error);
       window.location.href = '/login';

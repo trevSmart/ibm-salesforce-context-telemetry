@@ -134,39 +134,6 @@ function escapeHtml(str) {
     .replace(/'/g, '&#39;');
 }
 
-// CSRF token helper
-let csrfToken = null;
-
- 
-async function _getCsrfToken() {
-  if (csrfToken) {
-    return csrfToken;
-  }
-  try {
-    const response = await fetch('/api/auth/status', {
-      credentials: 'include'
-    });
-    const data = await response.json();
-    csrfToken = data.csrfToken;
-    return csrfToken;
-  } catch (error) {
-    console.error('Failed to get CSRF token:', error);
-    return null;
-  }
-}
-
- 
-function _getRequestHeaders(includeJson = true) {
-  const headers = {};
-  if (includeJson) {
-    headers['Content-Type'] = 'application/json';
-  }
-  if (csrfToken) {
-    headers['X-CSRF-Token'] = csrfToken;
-  }
-  return headers;
-}
-
 function formatTimeAgo(timestamp) {
   if (!timestamp) {
     return 'never';

@@ -11,13 +11,7 @@
       'dark:text-gray-100 dark:hover:bg-white/10 dark:focus-visible:bg-white/10 dark:hover:text-white',
       'transition-colors cursor-pointer focus-visible:outline-none'
     ].join(' ');
-    const _destructiveButtonClasses = [
-      'group/item flex w-full items-center gap-3 px-4 py-2 text-sm font-medium text-red-600',
-      'hover:bg-red-50 focus-visible:bg-red-50 dark:text-red-400 dark:hover:bg-red-500/10 dark:focus-visible:bg-red-500/10',
-      'transition-colors cursor-pointer focus-visible:outline-none'
-    ].join(' ');
     const iconClasses = 'size-5 shrink-0 text-gray-400 transition-colors group-hover/item:text-gray-500 group-focus-visible/item:text-gray-500 dark:text-gray-400 dark:group-hover/item:text-gray-200';
-    const _destructiveIconClasses = `${iconClasses} text-red-500 dark:text-red-400`;
     const themeIcon = isDark
       ? `
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="${iconClasses}" aria-hidden="true">
