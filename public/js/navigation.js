@@ -201,9 +201,9 @@
       });
 
       // Prepare new content for crossfade: start invisible and position it
-      nextContent.style.opacity = '0';
-      nextContent.style.position = 'absolute';
-      nextContent.style.inset = '0';
+      // nextContent.style.opacity = '0';
+      // nextContent.style.position = 'absolute';
+      // nextContent.style.inset = '0';
 
       // (not strictly necessary because we re-query each time)
 
