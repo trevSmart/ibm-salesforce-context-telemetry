@@ -1296,6 +1296,11 @@ if (window.__EVENT_LOG_LOADED__) {
 
     resizer.addEventListener('mousedown', startResize);
     resizer.addEventListener('touchstart', startResize, { passive: false });
+    resizer.addEventListener('pointerdown', (event) => {
+      if (event.pointerType !== 'mouse') {
+        startResize(event);
+      }
+    });
   }
 
   function setupHorizontalResizer() {
@@ -1368,6 +1373,11 @@ if (window.__EVENT_LOG_LOADED__) {
 
     resizer.addEventListener('mousedown', startResize);
     resizer.addEventListener('touchstart', startResize, { passive: false });
+    resizer.addEventListener('pointerdown', (event) => {
+      if (event.pointerType !== 'mouse') {
+        startResize(event);
+      }
+    });
   }
 
   function initSessionActivityChart() {
@@ -1773,6 +1783,65 @@ if (window.__EVENT_LOG_LOADED__) {
       animationEasing: 'cubicOut'
     };
 
+    let finishedHandled = false;
+    let chartRenderFallbackTimeoutId = null;
+
+    const ensureChartVisible = () => {
+      const chartEl = document.getElementById('sessionActivityChart');
+      if (chartEl) {
+        chartEl.style.visibility = 'visible';
+      }
+    };
+
+    const finalizeChartRender = (triggeredByFallback = false) => {
+      if (finishedHandled) {
+        return;
+      }
+      finishedHandled = true;
+      if (chartRenderFallbackTimeoutId) {
+        clearTimeout(chartRenderFallbackTimeoutId);
+        chartRenderFallbackTimeoutId = null;
+      }
+      // Remove the listener after it fires once
+      chartInstance.off('finished', onChartFinished);
+      ensureChartVisible();
+
+      // Call the callback if provided
+      if (options.onRenderComplete && typeof options.onRenderComplete === 'function') {
+        options.onRenderComplete();
+      }
+
+      const wasInitialLoad = isInitialChartLoad;
+
+      // Dispatch a custom event for external listeners
+      const event = new CustomEvent('chartRenderComplete', {
+        detail: {
+          sessionId: targetSession,
+          eventCount: totalEvents,
+          timestamp: Date.now(),
+          isInitialLoad: wasInitialLoad
+        }
+      });
+      window.dispatchEvent(event);
+
+      // Mark that initial load is complete
+      if (wasInitialLoad) {
+        isInitialChartLoad = false;
+        if (triggeredByFallback) {
+          revealEventLogShell();
+        }
+      }
+    };
+
+    const onChartFinished = () => finalizeChartRender(false);
+
+    // Register the listener for the 'finished' event before rendering to avoid missing it
+    chartInstance.off('finished', onChartFinished);
+    chartInstance.on('finished', onChartFinished);
+
+    // Fallback: ensure the chart becomes visible even if 'finished' doesn't fire
+    chartRenderFallbackTimeoutId = setTimeout(() => finalizeChartRender(true), 800);
+
     chartInstance.setOption({
       ...animationConfig,
       textStyle: {
@@ -1862,42 +1931,6 @@ if (window.__EVENT_LOG_LOADED__) {
     }, !enableTransition); // notMerge: false when transition is enabled, true otherwise
 
     chartInstance.resize();
-
-    // Listen for chart rendering completion
-    const onChartFinished = () => {
-    // Remove the listener after it fires once
-      chartInstance.off('finished', onChartFinished);
-
-      // Show the chart once rendering is complete
-      const chartEl = document.getElementById('sessionActivityChart');
-      if (chartEl) {
-        chartEl.style.visibility = 'visible';
-      }
-
-      // Call the callback if provided
-      if (options.onRenderComplete && typeof options.onRenderComplete === 'function') {
-        options.onRenderComplete();
-      }
-
-      // Dispatch a custom event for external listeners
-      const event = new CustomEvent('chartRenderComplete', {
-        detail: {
-          sessionId: targetSession,
-          eventCount: totalEvents,
-          timestamp: Date.now(),
-          isInitialLoad: isInitialChartLoad
-        }
-      });
-      window.dispatchEvent(event);
-
-      // Mark that initial load is complete
-      if (isInitialChartLoad) {
-        isInitialChartLoad = false;
-      }
-    };
-
-    // Register the listener for the 'finished' event
-    chartInstance.on('finished', onChartFinished);
 
     // Filter legend to only show series with data during the displayed day
     let legendEntries = null;

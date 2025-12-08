@@ -800,7 +800,7 @@ body.hydrating .main-container {
     min-height: 350px;
     display: flex;
     align-items: stretch;
-    padding: 0 1.5rem 0.5rem !important;
+    padding: 0.7rem 1.5rem 0.5rem !important;
     position: relative;
   }
 
@@ -2086,6 +2086,10 @@ body.hydrating .main-container {
     cursor: col-resize;
     position: relative;
     z-index: 10;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    pointer-events: auto;
     margin: 0;
   }
 
@@ -2940,6 +2944,11 @@ body.hydrating .main-container {
     position: relative;
     cursor: row-resize;
     flex-shrink: 0;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    pointer-events: auto;
+    z-index: 10;
   }
 
   .horizontal-resizer::before {

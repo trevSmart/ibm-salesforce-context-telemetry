@@ -1330,6 +1330,7 @@ let chart = null;
 let currentDays = 7;
 let isInitialChartLoad = true; // Track if this is the initial chart load
 let savedChartOption = null; // Store chart option when pausing for cache restoration
+let chartResizeObserver = null;
 
 function revealDashboardShell() {
   const body = document.body;
@@ -1506,6 +1507,19 @@ function generateTrendLine(dataPoints, futurePoints = 3, method = 'polynomial') 
   };
 }
 
+function attachChartResizeObserver(chartEl) {
+  if (typeof ResizeObserver === 'undefined' || !chartEl) {
+    return;
+  }
+  if (chartResizeObserver) {
+    chartResizeObserver.disconnect();
+  }
+  chartResizeObserver = new ResizeObserver(() => {
+    chart?.resize();
+  });
+  chartResizeObserver.observe(chartEl);
+}
+
 function initChart() {
   if (chart) {
     return chart;
@@ -1526,6 +1540,7 @@ function initChart() {
   window.addEventListener('resize', () => {
     chart?.resize();
   });
+  attachChartResizeObserver(chartEl);
   return chart;
 }
 
@@ -2285,6 +2300,10 @@ function pauseDashboardPage() {
     clearInterval(serverStatsUpdateIntervalId);
     serverStatsUpdateIntervalId = null;
   }
+  if (chartResizeObserver) {
+    chartResizeObserver.disconnect();
+    chartResizeObserver = null;
+  }
   // Save chart option before disposing to restore it later
   if (chart && typeof chart.getOption === 'function') {
     try {
@@ -2327,6 +2346,7 @@ async function resumeDashboardPage() {
       window.addEventListener('resize', () => {
         chart?.resize();
       });
+      attachChartResizeObserver(chartEl);
       // Restore the saved option (notMerge: true to replace entirely)
       chart.setOption(savedChartOption, true);
       chart.resize();
