@@ -227,44 +227,40 @@
 						<div id="emptyState" class="empty-state" style="display: none;">
 							<div class="font-semibold mt-2.5">No events found</div>
 						</div>
-					<div id="logsTableScroll" class="mt-8 flow-root overflow-hidden" style="flex: 1; overflow-y: auto; min-height: 0;">
-						<div class="mx-auto max-w-full px-4 sm:px-6 lg:px-8">
-							<table class="w-full text-left" id="logsTable" style="display: none;">
-								<thead class="bg-white">
-									<tr>
-										<th scope="col" class="relative isolate py-3.5 pr-3 text-left text-sm font-semibold text-gray-900" style="width: 40px;">
-											<span class="sr-only">Expand</span>
-											<div class="absolute inset-y-0 right-full -z-10 w-screen border-b border-b-gray-200"></div>
-											<div class="absolute inset-y-0 left-0 -z-10 w-screen border-b border-b-gray-200"></div>
-										</th>
-										<th scope="col" class="relative isolate py-3.5 pr-3 text-left text-sm font-semibold text-gray-900" style="width: 40px;">
-											<span class="sr-only">Status</span>
-											<div class="absolute inset-y-0 right-full -z-10 w-screen border-b border-b-gray-200"></div>
-											<div class="absolute inset-y-0 left-0 -z-10 w-screen border-b border-b-gray-200"></div>
-										</th>
-										<th scope="col" class="relative isolate py-3.5 pr-3 text-left text-sm font-semibold text-gray-900 time-column" style="width: 110px;">
-											<div style="display: flex; align-items: center; gap: 8px;">
-												<span>Time</span>
-												<button class="icon-btn sort-btn" id="sortBtn" title="Toggle sort order" style="padding: 0; background: none; border: none;">
-													<img src="/resources/sort-desc" alt="Sort descending" id="sortIcon" style="width: 16px; height: 16px;">
-												</button>
-											</div>
-											<div class="absolute inset-y-0 right-full -z-10 w-screen border-b border-b-gray-200"></div>
-											<div class="absolute inset-y-0 left-0 -z-10 w-screen border-b border-b-gray-200"></div>
-										</th>
-										<th scope="col" class="hidden px-3 py-3.5 text-left text-sm font-semibold text-gray-900 sm:table-cell user-column" style="width: 180px;">User</th>
-										<th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900" style="width: 130px;">Event</th>
-										<th scope="col" class="hidden px-3 py-3.5 text-left text-sm font-semibold text-gray-900 md:table-cell" style="width: 200px;">Company3</th>
-										<th scope="col" class="hidden px-3 py-3.5 text-left text-sm font-semibold text-gray-900 lg:table-cell" style="width: 150px;">Tool name</th>
-										<th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Payload</th>
-										<th scope="col" class="py-3.5 pl-3" style="width: 50px;">
-											<span class="sr-only">Actions</span>
-										</th>
-									</tr>
-								</thead>
-								<tbody id="logsBody">
-								</tbody>
-							</table>
+					<div id="logsTableScroll" class="mt-8 flow-root" style="flex: 1; overflow-y: auto; min-height: 0;">
+						<div class="-mx-4 -my-2 sm:-mx-6 lg:-mx-8">
+							<div class="inline-block min-w-full py-2 align-middle">
+								<table class="min-w-full border-separate border-spacing-0" id="logsTable" style="display: none;">
+									<thead>
+										<tr>
+											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 py-3.5 pr-3 pl-4 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter sm:pl-6 lg:pl-8" style="width: 40px;">
+												<span class="sr-only">Expand</span>
+											</th>
+											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 py-3.5 pr-3 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter" style="width: 40px;">
+												<span class="sr-only">Status</span>
+											</th>
+											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 py-3.5 pr-3 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter time-column" style="width: 110px;">
+												<div style="display: flex; align-items: center; gap: 8px;">
+													<span>Time</span>
+													<button class="icon-btn sort-btn" id="sortBtn" title="Toggle sort order" style="padding: 0; background: none; border: none;">
+														<img src="/resources/sort-desc" alt="Sort descending" id="sortIcon" style="width: 16px; height: 16px;">
+													</button>
+												</div>
+											</th>
+											<th scope="col" class="sticky top-0 z-10 hidden border-b border-gray-300 bg-white/75 px-3 py-3.5 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter sm:table-cell user-column" style="width: 180px;">User</th>
+											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 px-3 py-3.5 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter" style="width: 130px;">Event</th>
+											<th scope="col" class="sticky top-0 z-10 hidden border-b border-gray-300 bg-white/75 px-3 py-3.5 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter md:table-cell" style="width: 200px;">Company3</th>
+											<th scope="col" class="sticky top-0 z-10 hidden border-b border-gray-300 bg-white/75 px-3 py-3.5 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter lg:table-cell" style="width: 150px;">Tool name</th>
+											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 px-3 py-3.5 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter">Payload</th>
+											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 py-3.5 pr-4 pl-3 backdrop-blur-sm backdrop-filter sm:pr-6 lg:pr-8" style="width: 50px;">
+												<span class="sr-only">Actions</span>
+											</th>
+										</tr>
+									</thead>
+									<tbody id="logsBody">
+									</tbody>
+								</table>
+							</div>
 						</div>
 					</div>
 					</div>

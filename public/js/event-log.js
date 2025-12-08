@@ -3994,36 +3994,30 @@ if (window.__EVENT_LOG_LOADED__) {
       // Store event data in the row element to avoid API call when copying payload
       row.setAttribute('data-event', JSON.stringify(event));
       const userCellHtml = showUserColumn
-        ? `<td class="hidden px-3 py-4 text-sm text-gray-500 sm:table-cell log-user">${escapeHtml(userLabel)}</td>`
+        ? `<td class="hidden border-b border-gray-200 px-3 py-4 text-sm text-gray-500 sm:table-cell log-user whitespace-nowrap">${escapeHtml(userLabel)}</td>`
         : '';
 
       row.innerHTML = `
-				<td class="relative py-4 pr-3 text-sm font-medium text-gray-900" style="text-align: center;">
+				<td class="border-b border-gray-200 py-4 pr-3 pl-4 text-sm font-medium text-gray-900 sm:pl-6 lg:pl-8 whitespace-nowrap" style="text-align: center;">
 					<button class="expand-btn" type="button" id="expand-btn-${event.id}" style="background: none; border: none; cursor: pointer; padding: 4px;">
 						<i class="fa-solid fa-chevron-right"></i>
 					</button>
-					<div class="absolute right-full bottom-0 h-px w-screen bg-gray-100"></div>
-					<div class="absolute bottom-0 left-0 h-px w-screen bg-gray-100"></div>
 				</td>
-				<td class="relative py-4 pr-3 text-sm font-medium text-gray-900" style="text-align: center;">
+				<td class="border-b border-gray-200 py-4 pr-3 text-sm font-medium text-gray-900 whitespace-nowrap" style="text-align: center;">
 					<span class="status-indicator ${statusClass}">${statusLabel}</span>
-					<div class="absolute right-full bottom-0 h-px w-screen bg-gray-100"></div>
-					<div class="absolute bottom-0 left-0 h-px w-screen bg-gray-100"></div>
 				</td>
-				<td class="relative py-4 pr-3 text-sm font-medium text-gray-900 log-time">${formatDate(event.timestamp)}
-					<div class="absolute right-full bottom-0 h-px w-screen bg-gray-100"></div>
-					<div class="absolute bottom-0 left-0 h-px w-screen bg-gray-100"></div>
+				<td class="border-b border-gray-200 py-4 pr-3 text-sm font-medium text-gray-900 log-time whitespace-nowrap">${formatDate(event.timestamp)}
 				</td>
 				${userCellHtml}
-				<td class="px-3 py-4 text-sm text-gray-500">
+				<td class="border-b border-gray-200 px-3 py-4 text-sm text-gray-500 whitespace-nowrap">
 					<span class="level-badge ${levelClass}">
 						${event.event.replace('_', ' ')}
 					</span>
 				</td>
-				<td class="hidden px-3 py-4 text-sm text-gray-500 md:table-cell log-client">${escapeHtml(clientName)}</td>
-				<td class="hidden px-3 py-4 text-sm text-gray-500 lg:table-cell log-tool-name">${toolName}</td>
-				<td class="px-3 py-4 text-sm text-gray-500 log-description">${description}</td>
-				<td class="py-4 pl-3 text-right text-sm font-medium actions-cell">
+				<td class="hidden border-b border-gray-200 px-3 py-4 text-sm text-gray-500 md:table-cell log-client whitespace-nowrap">${escapeHtml(clientName)}</td>
+				<td class="hidden border-b border-gray-200 px-3 py-4 text-sm text-gray-500 lg:table-cell log-tool-name whitespace-nowrap">${toolName}</td>
+				<td class="border-b border-gray-200 px-3 py-4 text-sm text-gray-500 log-description whitespace-nowrap">${description}</td>
+				<td class="border-b border-gray-200 py-4 pr-4 pl-3 text-right text-sm font-medium actions-cell whitespace-nowrap sm:pr-8 lg:pr-8">
 					<button class="actions-btn text-indigo-600 hover:text-indigo-900" onclick="toggleActionsDropdown(event, ${event.id})" style="background: none; border: none; cursor: pointer; padding: 4px;">
 						<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
 							<circle cx="8" cy="3" r="1.5"/>
@@ -4071,23 +4065,13 @@ if (window.__EVENT_LOG_LOADED__) {
 
       const expandedTd = document.createElement('td');
       expandedTd.colSpan = showUserColumn ? 9 : 8;
-      expandedTd.className = 'log-description-expanded px-3 py-4';
-      expandedTd.style.cssText = 'position: relative;';
+      expandedTd.className = 'log-description-expanded border-b border-gray-200 px-3 py-4';
 
       const pre = document.createElement('pre');
       pre.className = 'json-pretty';
       pre.textContent = descriptionPretty;
 
       expandedTd.appendChild(pre);
-
-      // Add border separators like in Tailwind style
-      const borderDiv1 = document.createElement('div');
-      borderDiv1.className = 'absolute right-full bottom-0 h-px w-screen bg-gray-100';
-      expandedTd.appendChild(borderDiv1);
-
-      const borderDiv2 = document.createElement('div');
-      borderDiv2.className = 'absolute bottom-0 left-0 h-px w-screen bg-gray-100';
-      expandedTd.appendChild(borderDiv2);
 
       expandedRow.appendChild(expandedTd);
       tbody.appendChild(expandedRow);
