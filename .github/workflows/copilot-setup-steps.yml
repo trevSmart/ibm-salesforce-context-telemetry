@@ -1,0 +1,51 @@
+name: Copilot Setup Steps
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+  pull_request:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+
+jobs:
+  # The job MUST be called `copilot-setup-steps` for Copilot to pick it up.
+  copilot-setup-steps:
+    runs-on: ubuntu-latest
+
+    permissions:
+      # Minimal permission needed to read repository contents. Copilot gets its own token.
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Ensure admin user exists with administrator role
+        env:
+          ADMIN_USERNAME: ${{ secrets.COPILOT_ADMIN_USERNAME }}
+          ADMIN_PASSWORD: ${{ secrets.COPILOT_ADMIN_PASSWORD }}
+          DB_TYPE: sqlite
+          DB_PATH: ./src/data/telemetry.db
+        run: |
+          set -euo pipefail
+
+          if [ -z "${ADMIN_USERNAME:-}" ] || [ -z "${ADMIN_PASSWORD:-}" ]; then
+            echo "Missing admin credentials. Set COPILOT_ADMIN_USERNAME and COPILOT_ADMIN_PASSWORD secrets."
+            exit 1
+          fi
+
+          npm run create-user -- "$ADMIN_USERNAME" "$ADMIN_PASSWORD" administrator || {
+            echo "User may already exist; ensuring administrator role"
+            npm run update-admin-role -- "$ADMIN_USERNAME"
+          }
