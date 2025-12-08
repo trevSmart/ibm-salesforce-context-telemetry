@@ -241,20 +241,24 @@ app.use(express.static(path.join(__dirname, '..', 'public'), {
 // Fallback for CSS files - return empty CSS if file doesn't exist (prevents HTML 404)
 app.use((req, res, next) => {
   if (req.path.endsWith('.css') && !res.headersSent) {
-    const publicRoot = path.resolve(__dirname, '..', 'public');
-    let cssPath;
+    // Ensure publicRoot ends with a path separator for proper containment checking
+    let rawPublicRoot = path.resolve(__dirname, '..', 'public');
+    const publicRoot = rawPublicRoot.endsWith(path.sep) ? rawPublicRoot : rawPublicRoot + path.sep;
+    let cssPath, resolvedPath = '';
     try {
-      cssPath = path.resolve(publicRoot, '.' + req.path); // Prepend '.' to ensure relative join
-      // Optional: follow symlinks. If the file doesn't exist, realpathSync will throw
-      if (fs.existsSync(cssPath)) {
-        cssPath = fs.realpathSync(cssPath);
+      // Construct the absolute path to the requested CSS file
+      cssPath = path.resolve(publicRoot, '.' + req.path);
+      // Only proceed if the target is strictly within the public directory
+      // (use normalized version for test, prior to reading)
+      if (cssPath.startsWith(publicRoot) && fs.existsSync(cssPath)) {
+        resolvedPath = fs.realpathSync(cssPath);
       }
     } catch (e) {
       // If any error occurs, treat as not found
-      cssPath = '';
+      resolvedPath = '';
     }
-    // Check containment in the public directory
-    if (!cssPath || !cssPath.startsWith(publicRoot + path.sep)) {
+    // Check containment in the public directory after resolving symlinks
+    if (!resolvedPath || !resolvedPath.startsWith(publicRoot)) {
       // Return empty CSS with correct MIME type instead of HTML 404
       res.type('text/css');
       return res.status(200).send('/* CSS file not found */');
