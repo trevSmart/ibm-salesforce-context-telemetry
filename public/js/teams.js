@@ -1,6 +1,7 @@
 // @ts-nocheck
 // Teams management page
 
+const REFRESH_ICON_ANIMATION_DURATION_MS = 700;
 let currentView = 'list'; // 'list' or 'detail'
 let _currentTeamId = null;
 let teams = [];
@@ -910,7 +911,14 @@ window.refreshTeams = async function refreshTeams(event) {
     showToast('Failed to refresh teams', 'error');
   } finally {
     if (icon) {
+      // Smooth transition: replace infinite animation with a finishing one
       icon.classList.remove('rotating');
+      icon.classList.add('rotating-finish');
+
+      // Remove the finish class after animation completes
+      setTimeout(() => {
+        icon.classList.remove('rotating-finish');
+      }, REFRESH_ICON_ANIMATION_DURATION_MS);
     }
   }
 };
