@@ -205,6 +205,13 @@
       nextContent.style.position = 'absolute';
       nextContent.style.inset = '0';
 
+      // (not strictly necessary because we re-query each time)
+
+      // Prepare new content for crossfade: start invisible and position it
+      nextContent.style.opacity = '0';
+      nextContent.style.position = 'absolute';
+      nextContent.style.inset = '0';
+
       // Insert new content after current content (both will be visible briefly)
       container.parentNode.style.position = 'relative';
       container.after(nextContent);

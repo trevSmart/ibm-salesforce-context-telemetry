@@ -105,18 +105,6 @@ const loginLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// Rate limit for team/org operations: max 30 requests per hour per IP
-const teamOrgLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 30, // max 30 requests per hour per IP
-  message: {
-    status: 'error',
-    message: 'Too many team/org management requests. Please try again later.'
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
 // Rate limit for general API GET requests: max 100 requests per 15 minutes per IP
 const apiReadLimiter = rateLimit({
   windowMs: 10 * 60 * 1000, // 15 minutes
