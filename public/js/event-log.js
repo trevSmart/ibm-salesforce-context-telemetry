@@ -3753,7 +3753,7 @@ if (window.__EVENT_LOG_LOADED__) {
 
       const hasEventsToShow = fetchedEvents.length > 0;
 
-      if (hasEventsToShow) {
+    if (hasEventsToShow) {
         displayEvents(fetchedEvents, append);
         hasMoreEvents = data.hasMore || false;
         currentOffset += fetchedEvents.length;
@@ -3772,7 +3772,7 @@ if (window.__EVENT_LOG_LOADED__) {
             emptyStateEl.style.display = 'block';
           }
           hideSessionActivityCard();
-          const tbody = document.getElementById('logsBody');
+          const tbody = document.getElementById('logsBody') || document.getElementById('blueprintTableBody');
           if (tbody) {
             tbody.innerHTML = '';
           }
@@ -3931,11 +3931,11 @@ if (window.__EVENT_LOG_LOADED__) {
   function displayEvents(events, append = false) {
     // Enforce team filter just before rendering to avoid any leakage
     const renderableEvents = selectedTeamKey ? events.filter(eventMatchesSelectedTeam) : events;
-    const tbody = document.getElementById('logsBody');
+    const tbody = document.getElementById('logsBody') || document.getElementById('blueprintTableBody');
 
     // Gracefully handle pages that don't include the legacy logs table
     if (!tbody) {
-      console.warn('[Telemetry Viewer] logsBody not found; skipping legacy table render');
+      console.warn('[Telemetry Viewer] logs table body not found; skipping legacy table render');
       allLoadedEvents = append
         ? [...allLoadedEvents, ...renderableEvents]
         : [...renderableEvents];
@@ -4859,7 +4859,7 @@ if (window.__EVENT_LOG_LOADED__) {
 
   // Get all event rows (excluding expanded rows)
   function getAllEventRows() {
-    return Array.from(document.querySelectorAll('#logsBody tr[data-event-id]')).filter(row => {
+    return Array.from(document.querySelectorAll('#logsBody tr[data-event-id], #blueprintTableBody tr[data-event-id]')).filter(row => {
       return !row.classList.contains('log-item-expanded');
     });
   }

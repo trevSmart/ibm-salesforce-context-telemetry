@@ -4,11 +4,54 @@ This document provides instructions for AI agents working with the IBM Salesforc
 
 ## Overview
 
-The IBM Salesforce Context Telemetry Server is a backend service that collects telemetry data from IBM Salesforce Context MCP server instances. It provides REST API endpoints for receiving telemetry events and monitoring server health.
+The *IBM Salesforce Context Telemetry Server* is a backend service that collects telemetry data from *IBM Salesforce Context MCP server* instances. It provides:
+- REST API endpoints for receiving telemetry events and monitoring server health
+- A web-based UI for viewing and analyzing telemetry data
+
+## UI
+
+La UI està construïda amb Tailwind CSS amb una capa lleugera de personalitzacions pròpies.
+
+### Elements comuns a totes les pàgines:
+
+#### Top header
+- Logo and site title: "TELEMETRY"
+- Horizontal navigation bar with the following links:
+	- Dashboard
+	- Logs
+	- Teams
+- Controls:
+	- Search input
+	- Refresh button
+	- Notifications enabled toggle
+	- User dropdown menu with the following options:
+		- Username (non interactive)
+		- Light/Dark theme toggle
+		- Open settings modal
+		- Logout
+
+#### Footer
+- Links to:
+	- Health check
+	- JSON schema
+
+### Pages
+- #### Login (`/login`)
+    Branded login card with username/password fields, remember-me toggle, error banner, and submit button. Posts to `/login` and redirects to dashboard on success; checks `/api/auth/status` to skip already-authenticated users.
+
+- #### Dashboard (`/`)
+    Top navigation with search, refresh, notifications, and user menu. Main events time-series chart with range selector, plus cards for top teams (last 30 days), top users (last 3 days), server stats (last updated/load time/version/DB size), and a lightweight proposal tracker list. Footer links to health check, API, and schema.
+
+- #### Logs (`/logs`)
+    Event log viewer with sidebar tabs for Sessions/Users/Teams, list with totals and multi-select/delete controls. Filters include search, sort toggle, user dropdown, and level filters (session_start/tool_call/custom/tool_error). Main area shows session activity timeline chart with legend and navigation, plus the paginated logs table (time, user, event type, tool name, company, payload, status). Footer shows last updated, load time, version, and optional DB size.
+
+- #### Teams (`/teams`)
+    Same top navigation as dashboard, breadcrumb back link, and Teams header. Content is loaded by `teams.js`, refreshed via the top refresh button; notifications toggle and user menu remain available.
+
 
 ## Key Endpoints
 
-### Telemetry Collection
+-### Telemetry Collection
 
 **POST `/telemetry`**
 - Receives telemetry events from MCP server instances

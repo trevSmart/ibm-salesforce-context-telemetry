@@ -52,14 +52,6 @@
         </button>
       </div>
       <div class="py-1">
-        <button type="button" class="${destructiveButtonClasses}" onclick="clearLocalData()">
-          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke="currentColor" class="${destructiveIconClasses}" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z" />
-          </svg>
-          <span>Clear local data</span>
-        </button>
-      </div>
-      <div class="py-1">
         <button type="button" class="${baseButtonClasses}" onclick="handleLogout()">
           <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke="currentColor" class="${iconClasses}" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 9V5.25A2.25 2.25 0 0 1 10.5 3h6a2.25 2.25 0 0 1 2.25 2.25v13.5A2.25 2.25 0 0 1 16.5 21h-6a2.25 2.25 0 0 1-2.25-2.25V15m-3 0-3-3m0 0 3-3m-3 3H15" />
@@ -89,12 +81,25 @@
 (function initUserMenuBehavior() {
   const USER_MENU_HIDE_DELAY_MS = 300;
   let userMenuHideTimeout = null;
+  let cleanupHoverHandlers = null;
+
+  function ensureUserMenuReady() {
+    const userMenu = document.getElementById('userMenu');
+    if (!userMenu) {
+      return null;
+    }
+    if (userMenu.dataset.initialized !== 'true' && typeof window.renderUserMenu === 'function') {
+      window.renderUserMenu();
+      return document.getElementById('userMenu');
+    }
+    return userMenu;
+  }
 
   function showUserMenu(e) {
     if (e) {
       e.stopPropagation();
     }
-    const userMenu = document.getElementById('userMenu');
+    const userMenu = ensureUserMenuReady();
     if (!userMenu) {
       return;
     }
@@ -146,42 +151,91 @@
   });
 
   function setupUserMenuHover() {
+    if (cleanupHoverHandlers) {
+      cleanupHoverHandlers();
+      cleanupHoverHandlers = null;
+    }
+
     const container = document.querySelector('.user-menu-container');
     if (!container) {
       return;
     }
 
-    container.addEventListener('mouseenter', (event) => {
-      const userMenu = document.getElementById('userMenu');
-      if (!userMenu) {
-        return;
-      }
+    const userMenu = ensureUserMenuReady();
+    if (!userMenu) {
+      return;
+    }
 
+    const cancelHide = () => {
       if (userMenuHideTimeout) {
         clearTimeout(userMenuHideTimeout);
         userMenuHideTimeout = null;
       }
+    };
 
-      // Only open if it's not already visible
-      if (!userMenu.classList.contains('show')) {
-        showUserMenu(event);
-      }
-    });
-
-    container.addEventListener('mouseleave', () => {
-      const userMenu = document.getElementById('userMenu');
-      if (!userMenu) {
-        return;
-      }
-
-      if (userMenuHideTimeout) {
-        clearTimeout(userMenuHideTimeout);
-      }
+    const scheduleHide = () => {
+      cancelHide();
       userMenuHideTimeout = setTimeout(() => {
         userMenu.classList.remove('show');
         userMenuHideTimeout = null;
       }, USER_MENU_HIDE_DELAY_MS);
-    });
+    };
+
+    // Treat the trigger + popover as a single hover region even if the
+    // popover is teleported elsewhere in the DOM.
+    const isInsideMenuRegion = (node) => {
+      if (!node) {
+        return false;
+      }
+      return container.contains(node) || userMenu.contains(node);
+    };
+
+    const handleMouseEnter = (event) => {
+      cancelHide();
+      // Only open if it's not already visible
+      if (!userMenu.classList.contains('show')) {
+        showUserMenu(event);
+      }
+    };
+
+    const handleMouseLeave = (event) => {
+      const nextTarget = event?.relatedTarget;
+      if (nextTarget && isInsideMenuRegion(nextTarget)) {
+        return;
+      }
+      scheduleHide();
+    };
+
+    container.addEventListener('mouseenter', handleMouseEnter);
+    container.addEventListener('mouseleave', handleMouseLeave);
+    container.addEventListener('focusin', handleMouseEnter);
+    container.addEventListener('focusout', handleMouseLeave);
+
+    const userBtn = container.querySelector('#userBtn');
+    if (userBtn) {
+      userBtn.addEventListener('mouseenter', handleMouseEnter);
+      userBtn.addEventListener('focus', handleMouseEnter);
+    }
+
+    userMenu.addEventListener('mouseenter', handleMouseEnter);
+    userMenu.addEventListener('mouseleave', handleMouseLeave);
+    userMenu.addEventListener('focusin', handleMouseEnter);
+    userMenu.addEventListener('focusout', handleMouseLeave);
+
+    cleanupHoverHandlers = () => {
+      container.removeEventListener('mouseenter', handleMouseEnter);
+      container.removeEventListener('mouseleave', handleMouseLeave);
+      container.removeEventListener('focusin', handleMouseEnter);
+      container.removeEventListener('focusout', handleMouseLeave);
+      if (userBtn) {
+        userBtn.removeEventListener('mouseenter', handleMouseEnter);
+        userBtn.removeEventListener('focus', handleMouseEnter);
+      }
+      userMenu.removeEventListener('mouseenter', handleMouseEnter);
+      userMenu.removeEventListener('mouseleave', handleMouseLeave);
+      userMenu.removeEventListener('focusin', handleMouseEnter);
+      userMenu.removeEventListener('focusout', handleMouseLeave);
+    };
   }
 
   async function handleLogout() {
@@ -214,6 +268,25 @@
   } else {
     setupUserMenuHover();
   }
+
+  // Rehydrate menu after soft navigation replaces the header.
+  window.addEventListener('softNav:pageMounted', () => {
+    if (typeof window.renderUserMenu === 'function') {
+      window.renderUserMenu();
+    }
+    setupUserMenuHover();
+  });
+
+  // Fallback: delegate hover to handle cases where the nav is replaced and a
+  // specific listener was not yet attached. This keeps hover-open reliable.
+  document.addEventListener('pointerover', (event) => {
+    if (!(event.target instanceof Element)) {
+      return;
+    }
+    const trigger = event.target.closest('.user-menu-container');
+    if (!trigger) return;
+    showUserMenu(event);
+  });
 
   // Expose functions globally
   window.showUserMenu = showUserMenu;

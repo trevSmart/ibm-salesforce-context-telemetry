@@ -149,6 +149,9 @@
 							<button class="mobile-sidebar-toggle" id="mobileSidebarToggle" onclick="toggleMobileSidebar()">
 								<i class="fa-solid fa-bars"></i>
 							</button>
+							<button type="button" class="icon-btn" id="sortBtn" aria-label="Toggle sort order" title="Toggle sort order">
+								<img id="sortIcon" src="/resources/sort-desc" alt="Sort descending" width="18" height="18">
+							</button>
 							<div class="user-filter-dropdown-container relative">
 								<button type="button" class="relative w-full cursor-default rounded-md bg-white dark:bg-(--bg-secondary) py-1.5 pl-3 pr-10 text-left text-gray-900 dark:text-(--text-primary) shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-(--border-color) focus:outline-none focus:ring-2 focus:ring-blue-600 sm:text-sm sm:leading-6" id="userFilterDropdownBtn" onclick="toggleUserFilterDropdown(event)">
 									<span class="flex items-center">
@@ -233,12 +236,12 @@
 							</div>
 
 						<div class="px-4 sm:px-6 lg:px-8" style="background-color: #ffffff;">
-							<div style="overflow: auto;">
+							<div style="overflow: auto;" id="logsTableScroll">
 								<table class="min-w-full divide-y divide-gray-300 dark:divide-white/10" id="blueprintTable">
 									<thead>
 										<tr>
 											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:border-zinc-700 dark:bg-zinc-900/75 dark:text-white sm:pl-0 uppercase">Time</th>
-											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 px-3 py-3.5 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:border-zinc-700 dark:bg-zinc-900/75 dark:text-white uppercase">User</th>
+											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 px-3 py-3.5 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:border-zinc-700 dark:bg-zinc-900/75 dark:text-white uppercase user-column">User</th>
 											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 px-3 py-3.5 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:border-zinc-700 dark:bg-zinc-900/75 dark:text-white uppercase">Event Type</th>
 											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 px-3 py-3.5 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:border-zinc-700 dark:bg-zinc-900/75 dark:text-white uppercase">Tool Name</th>
 											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 px-3 py-3.5 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:border-zinc-700 dark:bg-zinc-900/75 dark:text-white uppercase">Company</th>
