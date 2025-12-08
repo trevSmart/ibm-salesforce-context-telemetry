@@ -442,21 +442,6 @@ function ensureUserMenuStructure() {
   }
 }
 
-// Older builds referenced this helper; keep a safe no-op to avoid runtime errors
-function positionCloseIcon() {
-  const closeIcon = document.querySelector('.settings-modal .close-icon');
-  if (!closeIcon) {
-    return;
-  }
-  // If a close icon exists in the future, position it safely relative to the modal header
-  const modal = closeIcon.closest('.settings-modal');
-  if (!modal) {
-    return;
-  }
-  const { right } = modal.getBoundingClientRect();
-  closeIcon.style.right = `${Math.max(12, window.innerWidth - right + 12)}px`;
-}
-
 // Shared settings modal used by both dashboard and event log pages
 
 async function openSettingsModal() {

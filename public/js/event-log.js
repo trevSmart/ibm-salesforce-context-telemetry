@@ -981,6 +981,7 @@ if (window.__EVENT_LOG_LOADED__) {
   let activityResizeStartHeight = 0;
   const globalErrorMessages = [];
   const MAX_GLOBAL_ERROR_MESSAGES = 3;
+  let pendingChartRender = null; // Stores events/options when ECharts isn't ready yet
 
   function resetEventLogState() {
     currentOffset = 0;
@@ -1463,7 +1464,16 @@ if (window.__EVENT_LOG_LOADED__) {
       logChartTrace('initSessionActivityChart: echarts not ready, waiting for echartsLoaded event');
       window.addEventListener('echartsLoaded', function onEChartsLoaded() {
         window.removeEventListener('echartsLoaded', onEChartsLoaded);
-        initSessionActivityChart();
+        const chart = initSessionActivityChart();
+        if (pendingChartRender && chart) {
+          const payload = pendingChartRender;
+          pendingChartRender = null;
+          logChartTrace('initSessionActivityChart: retrying pending render after echarts load', {
+            pendingEventCount: payload.events.length,
+            targetSession: payload.options?.sessionId
+          });
+          renderSessionActivityChart(payload.events, payload.options || {});
+        }
       }, { once: true });
       return null;
     }
@@ -1472,6 +1482,15 @@ if (window.__EVENT_LOG_LOADED__) {
       chartElementReady: !!chartEl,
       existingInstance: !!sessionActivityChart
     });
+    if (pendingChartRender) {
+      const payload = pendingChartRender;
+      pendingChartRender = null;
+      logChartTrace('initSessionActivityChart: applying pending render immediately after init', {
+        pendingEventCount: payload.events.length,
+        targetSession: payload.options?.sessionId
+      });
+      renderSessionActivityChart(payload.events, payload.options || {});
+    }
     window.addEventListener('resize', () => {
       sessionActivityChart?.resize();
     });
@@ -1785,8 +1804,14 @@ if (window.__EVENT_LOG_LOADED__) {
     const chartInstance = initSessionActivityChart();
     if (!chartInstance) {
     // If this is the initial load and chart can't be initialized, show the page anyway
-      logChartTrace('renderSessionActivityChart: chart instance unavailable', {
-        targetSession: options.sessionId || selectedSession
+      const targetSession = options.sessionId || selectedSession;
+      pendingChartRender = {
+        events: events.slice(),
+        options: { ...options, sessionId: targetSession }
+      };
+      logChartTrace('renderSessionActivityChart: chart instance unavailable, storing pending render', {
+        targetSession,
+        eventCount: events.length
       });
       if (isInitialChartLoad) {
         isInitialChartLoad = false;
@@ -5336,10 +5361,8 @@ if (window.__EVENT_LOG_LOADED__) {
               dbSizeElement.style.color = '';
             }
           }
-          const dbSizeInfo = document.getElementById('dbSizeInfo');
-          if (dbSizeInfo) {
-            dbSizeInfo.style.display = '';
-          }
+
+          document.getElementById('dbSizeInfo').style.display = '';
         }
       }
     } catch (error) {
