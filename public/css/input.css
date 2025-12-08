@@ -1608,6 +1608,7 @@ body.hydrating .main-container {
   }
 
   .top-users-action {
+    aspect-ratio: 1 / 1;
     border: none;
     background: var(--button-bg);
     padding: 6px;

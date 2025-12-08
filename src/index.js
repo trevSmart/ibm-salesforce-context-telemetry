@@ -11,9 +11,7 @@ const rateLimit = require('express-rate-limit');
 
 const isDevelopment = process.env.NODE_ENV !== 'production';
 
-// In dev we bypass rate limits to avoid "Too many requests" noise
 const createLimiter = (config) => rateLimit({
-  skip: () => isDevelopment,
   standardHeaders: true,
   legacyHeaders: false,
   ...config
@@ -22,7 +20,7 @@ const createLimiter = (config) => rateLimit({
 // Limit DELETE requests to /api/events to prevent abuse: max 5 deletes per hour per IP
 const deleteEventsLimiter = createLimiter({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 5, // max 5 requests per hour per IP
+  max: 50, // raised to allow higher admin throughput
   message: {
     status: 'error',
     message: 'Too many delete requests for events. Please try again later.'
@@ -33,7 +31,7 @@ const deleteEventsLimiter = createLimiter({
 // Limit POST requests to /api/teams to prevent admin abuse: max 10 creates per hour per IP
 const teamCreationLimiter = createLimiter({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 10, // max 10 requests per hour per IP
+  max: 50, // raised to allow higher admin throughput
   message: {
     status: 'error',
     message: 'Too many team creation requests. Please try again later.'
@@ -42,7 +40,7 @@ const teamCreationLimiter = createLimiter({
 // Limit POST requests to /api/orgs to prevent abuse: max 10 per hour per IP
 const createOrgsLimiter = createLimiter({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 10, // max 10 org creations/updates per hour
+  max: 50, // raised to allow higher admin throughput
   message: {
     status: 'error',
     message: 'Too many create/update requests for orgs. Please try again later.'
@@ -52,7 +50,7 @@ const createOrgsLimiter = createLimiter({
 // Limit team/org admin mutations to prevent abuse: max 50 requests per hour per IP
 const teamOrgLimiter = createLimiter({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 50, // max 50 requests per hour per IP
+  max: 200, // raised to allow higher admin throughput
   message: {
     status: 'error',
     message: 'Too many team/org admin requests. Please try again later.'
@@ -62,7 +60,7 @@ const teamOrgLimiter = createLimiter({
 // Limit user management (user creation) requests to prevent abuse: max 10 creates per hour per IP
 const userManagementLimiter = createLimiter({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 10, // max 10 requests per hour per IP
+  max: 100, // raised to allow higher admin throughput
   message: {
     status: 'error',
     message: 'Too many user creation requests. Please try again later.'
@@ -72,7 +70,7 @@ const userManagementLimiter = createLimiter({
 // Rate limit for telemetry users endpoint: max 20 requests per hour per IP
 const telemetryUsersLimiter = createLimiter({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 20, // max 20 requests per hour per IP
+  max: 200, // raised to allow higher throughput
   message: {
     status: 'error',
     message: 'Too many requests for telemetry users stats. Please try again later.'
@@ -82,7 +80,7 @@ const telemetryUsersLimiter = createLimiter({
 // Limit DELETE requests to /api/teams/:teamId/event-users/:userName to prevent abuse: max 5 deletes per hour per IP
 const deleteEventUserFromTeamLimiter = createLimiter({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 5, // max 5 requests per hour per IP
+  max: 50, // raised to allow higher admin throughput
   message: {
     status: 'error',
     message: 'Too many team user deletion requests. Please try again later.'
@@ -92,7 +90,7 @@ const deleteEventUserFromTeamLimiter = createLimiter({
 // Rate limit for telemetry ingestion: max 100 requests per 15 minutes per IP
 const telemetryLimiter = createLimiter({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // max 100 requests per 15 minutes per IP
+  max: 2000, // raised to allow higher ingestion throughput
   message: {
     status: 'error',
     message: 'Too many telemetry submissions. Please try again later.'
@@ -102,17 +100,17 @@ const telemetryLimiter = createLimiter({
 // Rate limit for login attempts: max 10 attempts per 15 minutes per IP
 const loginLimiter = createLimiter({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // max 10 attempts per 15 minutes per IP
+  max: 100, // raised to allow higher login throughput
   message: {
     status: 'error',
     message: 'Too many login attempts. Please try again later.'
   }
 });
 
-// Rate limit for general API GET requests: max 100 requests per 15 minutes per IP
+// Rate limit for general API GET requests: max 2000 requests per 10 minutes per IP
 const apiReadLimiter = createLimiter({
-  windowMs: 10 * 60 * 1000, // 15 minutes
-  max: 500, // max 500 requests per 10 minutes per IP
+  windowMs: 10 * 60 * 1000, // 10 minutes
+  max: 2000, // raised to allow higher read throughput
   message: {
     status: 'error',
     message: 'Too many API requests. Please try again later.'
@@ -122,7 +120,7 @@ const apiReadLimiter = createLimiter({
 // Rate limit for settings changes: max 10 requests per hour per IP
 const settingsLimiter = createLimiter({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 10, // max 10 requests per hour per IP
+  max: 100, // raised to allow higher admin throughput
   message: {
     status: 'error',
     message: 'Too many settings update requests. Please try again later.'

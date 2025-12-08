@@ -19,6 +19,8 @@
   // Crossfade transition duration in milliseconds
   const TRANSITION_DURATION_MS = 150;
 
+  const domParser = new DOMParser();
+  const pageCache = new Map();
   const loadedScripts = new Set(
     Array.from(document.querySelectorAll('script[src]')).map((script) => {
       try {
@@ -193,6 +195,17 @@
     }
   }
 
+  function primeInitialCache() {
+    if (pageCache.has(window.location.pathname)) {
+      return;
+    }
+    try {
+      pageCache.set(window.location.pathname, document.documentElement.outerHTML);
+    } catch (_e) {
+      // Swallow caching errors; navigation will still work without cache
+    }
+  }
+
   async function softNavigate(targetPath, { replace = false } = {}) {
     if (isNavigating) {
       return;
@@ -214,16 +227,25 @@
     isNavigating = true;
 
     try {
-      const response = await fetch(targetPath, {
-        headers: { 'X-Requested-With': 'soft-nav' },
-        credentials: 'include'
-      });
-      if (!response.ok) {
-        throw new Error(`Navigation failed with status ${response.status}`);
-      }
+      let doc;
+      let html;
 
-      const html = await response.text();
-      const doc = new DOMParser().parseFromString(html, 'text/html');
+      if (pageCache.has(targetPath)) {
+        html = pageCache.get(targetPath);
+        doc = domParser.parseFromString(html, 'text/html');
+      } else {
+        const response = await fetch(targetPath, {
+          headers: { 'X-Requested-With': 'soft-nav' },
+          credentials: 'include'
+        });
+        if (!response.ok) {
+          throw new Error(`Navigation failed with status ${response.status}`);
+        }
+
+        html = await response.text();
+        doc = domParser.parseFromString(html, 'text/html');
+        pageCache.set(targetPath, html);
+      }
       const nextContent = doc.querySelector('.container-content');
 
       if (!nextContent) {
@@ -325,6 +347,7 @@
   }
 
   function initNav() {
+    primeInitialCache();
     document.addEventListener('click', handleSoftNavClick);
     window.history.replaceState({ softNav: true }, '', window.location.pathname);
     window.addEventListener('popstate', () => {

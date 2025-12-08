@@ -2041,6 +2041,15 @@ async function getTopTeamsLastDays(orgTeamMappings = [], limit = 50, days = 3) {
     throw new Error('Database not initialized. Call init() first.');
   }
 
+  const mappingsFromRequest = Array.isArray(orgTeamMappings) ? orgTeamMappings : [];
+  const effectiveMappings = mappingsFromRequest.length > 0
+    ? mappingsFromRequest
+    : await getOrgTeamMappingsFromTeamsTable();
+
+  if (!effectiveMappings || effectiveMappings.length === 0) {
+    return [];
+  }
+
   const safeLimit = Math.min(Math.max(1, Number.isFinite(limit) ? Math.floor(limit) : 50), 500);
   const safeDays = Math.min(Math.max(1, Number.isFinite(days) ? Math.floor(days) : 3), 365);
   const lookbackModifier = `-${safeDays} days`;
@@ -2051,8 +2060,8 @@ async function getTopTeamsLastDays(orgTeamMappings = [], limit = 50, days = 3) {
   // Build lookups so multiple orgs that point to the same team name are grouped
   const orgToTeamKey = new Map(); // normalized org id -> normalized team key
   const teamAggregates = new Map(); // normalized team key -> aggregate info
-  if (Array.isArray(orgTeamMappings)) {
-    orgTeamMappings.forEach(mapping => {
+  if (Array.isArray(effectiveMappings)) {
+    effectiveMappings.forEach(mapping => {
       const isActive = mapping?.active !== false;
       const rawTeamName = String(mapping?.teamName || '').trim();
       const rawOrgId = normalizeOrgId(mapping?.orgIdentifier);
@@ -2182,6 +2191,68 @@ async function getTopTeamsLastDays(orgTeamMappings = [], limit = 50, days = 3) {
       return a.label.localeCompare(b.label);
     })
     .slice(0, safeLimit);
+}
+
+/**
+ * Build org -> team mappings from the teams/orgs tables as a fallback when
+ * no explicit mappings are provided by the client.
+ */
+async function getOrgTeamMappingsFromTeamsTable() {
+  if (!db) {
+    return [];
+  }
+
+  try {
+    if (dbType === 'sqlite') {
+      const rows = db.prepare(`
+        SELECT
+          o.server_id AS org_id,
+          COALESCE(o.company_name, o.alias, '') AS client_name,
+          t.name AS team_name,
+          t.color AS team_color
+        FROM orgs o
+        JOIN teams t ON t.id = o.team_id
+        WHERE o.server_id IS NOT NULL
+          AND TRIM(o.server_id) != ''
+      `).all();
+
+      return rows
+        .filter(row => row.org_id && row.team_name)
+        .map(row => ({
+          orgIdentifier: row.org_id,
+          clientName: row.client_name || '',
+          teamName: row.team_name,
+          color: row.team_color || '',
+          active: true
+        }));
+    } else if (dbType === 'postgresql') {
+      const { rows } = await db.query(`
+        SELECT
+          o.server_id AS org_id,
+          COALESCE(o.company_name, o.alias, '') AS client_name,
+          t.name AS team_name,
+          t.color AS team_color
+        FROM orgs o
+        JOIN teams t ON t.id = o.team_id
+        WHERE o.server_id IS NOT NULL
+          AND btrim(o.server_id) <> ''
+      `);
+
+      return rows
+        .filter(row => row.org_id && row.team_name)
+        .map(row => ({
+          orgIdentifier: row.org_id,
+          clientName: row.client_name || '',
+          teamName: row.team_name,
+          color: row.team_color || '',
+          active: true
+        }));
+    }
+  } catch (error) {
+    console.error('Error building org-team mappings from teams table:', error);
+  }
+
+  return [];
 }
 
 async function ensureTelemetryParentSessionColumn() {
