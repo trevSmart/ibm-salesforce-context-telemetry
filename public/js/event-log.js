@@ -2219,9 +2219,6 @@ if (window.__EVENT_LOG_LOADED__) {
         min: 0,
         max: yAxisMax,
         minInterval: 1,
-        name: 'Events',
-        nameGap: 22,
-        nameTextStyle: { color: axisColor },
         axisLabel: { color: axisColor },
         axisLine: { show: false },
         splitLine: { lineStyle: { color: splitLineColor } }
@@ -3963,6 +3960,7 @@ if (window.__EVENT_LOG_LOADED__) {
 
     renderableEvents.forEach(event => {
       const levelClass = getLevelClass(event.event);
+      const levelBadgeClass = getLevelBadgeClass(event.event);
       const description = formatDescription(event);
       const descriptionPretty = formatDescriptionPretty(event);
       const eventData = normalizeEventData(event.data);
@@ -4010,7 +4008,7 @@ if (window.__EVENT_LOG_LOADED__) {
 				</td>
 				${userCellHtml}
 				<td class="border-b border-gray-200 px-3 py-4 text-sm text-gray-500 whitespace-nowrap">
-					<span class="level-badge ${levelClass}">
+					<span class="${levelBadgeClass}">
 						${event.event.replace('_', ' ')}
 					</span>
 				</td>
@@ -4127,6 +4125,23 @@ if (window.__EVENT_LOG_LOADED__) {
       'custom': 'warning'
     };
     return levelMap[eventType] || 'info';
+  }
+
+  function getLevelBadgeClass(eventType) {
+    const baseClasses = 'inline-flex items-center rounded-md px-2 py-1 text-xs font-medium whitespace-nowrap';
+    const colorMap = {
+      'debug': 'bg-gray-100 text-gray-600',
+      'tool_call': 'bg-indigo-100 text-indigo-700',
+      'info': 'bg-blue-100 text-blue-700',
+      'session_start': 'bg-blue-100 text-blue-700',
+      'session_end': 'bg-gray-100 text-gray-600',
+      'tool_error': 'bg-red-100 text-red-700',
+      'error': 'bg-red-100 text-red-700',
+      'custom': 'bg-yellow-100 text-yellow-800',
+      'success': 'bg-green-100 text-green-700'
+    };
+    const fallbackClasses = 'bg-gray-100 text-gray-600';
+    return `${baseClasses} ${colorMap[eventType] || fallbackClasses}`;
   }
 
   function _getLevelIcon(eventType) {
