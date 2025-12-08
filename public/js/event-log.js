@@ -1447,6 +1447,21 @@ if (window.__EVENT_LOG_LOADED__) {
   let hoverPreviewState = null;
   let isHoverPreviewActive = false;
   let hoverTimeoutId = null;
+
+  function revealEventLogShell() {
+    const body = document.body;
+    if (body.classList.contains('hydrating')) {
+      body.classList.remove('hydrating');
+    }
+    document.body.style.visibility = 'visible';
+    const mainContainer = document.querySelector('.container');
+    if (mainContainer) {
+      mainContainer.style.visibility = 'visible';
+      requestAnimationFrame(() => {
+        mainContainer.style.opacity = '1';
+      });
+    }
+  }
   const SESSION_ACTIVITY_SLOT_MINUTES = 10;
   const _SESSION_ACTIVITY_MARGIN_MINUTES = 30;
   const SESSION_SERIES_COLORS = [
@@ -2061,7 +2076,7 @@ if (window.__EVENT_LOG_LOADED__) {
           // If this is the initial load and there are no events, show the page anyway
           if (isInitialChartLoad) {
             isInitialChartLoad = false;
-            document.body.style.visibility = 'visible';
+            revealEventLogShell();
           }
           return;
         }
@@ -2072,7 +2087,7 @@ if (window.__EVENT_LOG_LOADED__) {
         // If this is the initial load and there's an error, show the page anyway
         if (isInitialChartLoad) {
           isInitialChartLoad = false;
-          document.body.style.visibility = 'visible';
+          revealEventLogShell();
         }
       }
       return;
@@ -2091,7 +2106,7 @@ if (window.__EVENT_LOG_LOADED__) {
       // If this is the initial load and response is invalid, show the page anyway
         if (isInitialChartLoad) {
           isInitialChartLoad = false;
-          document.body.style.visibility = 'visible';
+          revealEventLogShell();
         }
         return;
       }
@@ -2101,11 +2116,7 @@ if (window.__EVENT_LOG_LOADED__) {
         // If this is the initial load and there are no events, show the page anyway
         if (isInitialChartLoad) {
           isInitialChartLoad = false;
-          const mainContainer = document.querySelector('.container');
-          if (mainContainer) {
-            mainContainer.style.visibility = 'visible';
-            mainContainer.style.opacity = '1';
-          }
+          revealEventLogShell();
         }
         return;
       }
@@ -2116,7 +2127,7 @@ if (window.__EVENT_LOG_LOADED__) {
       // If this is the initial load and there's an error, show the page anyway
       if (isInitialChartLoad) {
         isInitialChartLoad = false;
-        document.body.style.visibility = 'visible';
+        revealEventLogShell();
       }
     }
   }
@@ -2127,7 +2138,7 @@ if (window.__EVENT_LOG_LOADED__) {
       // If this is the initial load and there are no events, show the page anyway
       if (isInitialChartLoad) {
         isInitialChartLoad = false;
-        document.body.style.visibility = 'visible';
+        revealEventLogShell();
       }
       return;
     }
@@ -2137,11 +2148,7 @@ if (window.__EVENT_LOG_LOADED__) {
     // If this is the initial load and chart can't be initialized, show the page anyway
       if (isInitialChartLoad) {
         isInitialChartLoad = false;
-        const mainContainer = document.querySelector('.container');
-        if (mainContainer) {
-          mainContainer.style.visibility = 'visible';
-          mainContainer.style.opacity = '1';
-        }
+        revealEventLogShell();
       }
       return;
     }
@@ -6060,14 +6067,7 @@ if (window.__EVENT_LOG_LOADED__) {
           renderTime: timestamp
         });
         // Show the page once initial chart render is complete
-        const mainContainer = document.querySelector('.container');
-        if (mainContainer) {
-          mainContainer.style.visibility = 'visible';
-          // Use requestAnimationFrame to ensure the visibility change is applied before opacity transition
-          requestAnimationFrame(() => {
-            mainContainer.style.opacity = '1';
-          });
-        }
+        revealEventLogShell();
       }
     });
   }

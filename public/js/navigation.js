@@ -9,6 +9,9 @@
     '/teams': [{ src: '/js/teams.js', type: 'module' }]
   };
 
+  // Crossfade transition duration in milliseconds
+  const TRANSITION_DURATION_MS = 150;
+
   const loadedScripts = new Set(
     Array.from(document.querySelectorAll('script[src]')).map((script) => {
       try {
@@ -170,7 +173,6 @@
     }
 
     isNavigating = true;
-    document.body.classList.add('soft-nav-loading');
 
     try {
       const response = await fetch(targetPath, {
@@ -205,8 +207,23 @@
 
       // (not strictly necessary because we re-query each time)
 
-      // Sync body class and title for page-specific styles
-      document.body.className = doc.body.className || document.body.className;
+      // Prepare new content for crossfade: start invisible and position it
+      nextContent.style.opacity = '0';
+      nextContent.style.position = 'absolute';
+      nextContent.style.inset = '0';
+
+      // Insert new content after current content (both will be visible briefly)
+      container.parentNode.style.position = 'relative';
+      container.after(nextContent);
+
+      // Sync body class and title for page-specific styles (strip hydrating)
+      const nextBodyClasses = doc.body?.classList ? Array.from(doc.body.classList) : [];
+      const filteredBodyClasses = nextBodyClasses.filter((cls) => cls !== 'hydrating');
+      if (filteredBodyClasses.length > 0) {
+        document.body.className = filteredBodyClasses.join(' ');
+      } else if (document.body.classList.contains('hydrating')) {
+        document.body.classList.remove('hydrating');
+      }
       if (doc.title) {
         document.title = doc.title;
       }
@@ -257,7 +274,6 @@
       console.error('Soft navigation failed, falling back to full load:', error);
       window.location.href = targetPath;
     } finally {
-      document.body.classList.remove('soft-nav-loading');
       isNavigating = false;
     }
   }

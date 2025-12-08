@@ -23,7 +23,7 @@ const deleteEventsLimiter = rateLimit({
 
 
 // Limit POST requests to /api/teams to prevent admin abuse: max 10 creates per hour per IP
-const teamOrgLimiter = rateLimit({
+const teamCreationLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 10, // max 10 requests per hour per IP
   message: {
@@ -1275,7 +1275,7 @@ app.get('/api/teams/:id', auth.requireAuth, auth.requireRole('advanced'), apiRea
   }
 });
 
-app.post('/api/teams', auth.requireAuth, auth.requireRole('administrator'), teamOrgLimiter, (req, res, next) => {
+app.post('/api/teams', auth.requireAuth, auth.requireRole('administrator'), teamCreationLimiter, (req, res, next) => {
   upload.single('logo')(req, res, (err) => {
     if (err) {
       if (err instanceof multer.MulterError) {
