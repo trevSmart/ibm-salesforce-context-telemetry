@@ -21,6 +21,18 @@ const deleteEventsLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// Limit POST requests to /api/orgs to prevent abuse: max 10 per hour per IP
+const createOrgsLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 10, // max 10 org creations/updates per hour
+  message: {
+    status: 'error',
+    message: 'Too many create/update requests for orgs. Please try again later.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // Limit user management (user creation) requests to prevent abuse: max 10 creates per hour per IP
 const userManagementLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
@@ -1375,7 +1387,7 @@ app.get('/api/orgs', auth.requireAuth, auth.requireRole('advanced'), async (req,
   }
 });
 
-app.post('/api/orgs', auth.requireAuth, auth.requireRole('administrator'), teamOrgLimiter, async (req, res) => {
+app.post('/api/orgs', auth.requireAuth, auth.requireRole('administrator'), createOrgsLimiter, async (req, res) => {
   try {
     const { id, alias, color, team_id, company_name } = req.body;
 
