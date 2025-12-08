@@ -122,6 +122,15 @@
 						</div>
 						<div class="px-4 py-5 sm:p-6 text-left" style="display: flex; flex-direction: column; gap: 10px;">
 							<ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px;">
+								<li style="display: flex; justify-content: space-between; align-items: center;">
+									<span style="color: var(--text-secondary);">Status</span>
+									<span class="inline-flex items-center gap-x-1.5 rounded-full bg-green-100 px-2 py-1 text-xs font-semibold text-green-800">
+										<svg viewBox="0 0 6 6" aria-hidden="true" class="size-1.5 fill-green-500">
+											<circle r="3" cx="3" cy="3" />
+										</svg>
+										Server is running
+									</span>
+								</li>
 								<li style="display: flex; justify-content: space-between; align-items: baseline;">
 									<span style="color: var(--text-secondary);">Last updated</span>
 									<span id="serverStatsLastUpdated" class="font-semibold">Loading...</span>
@@ -158,12 +167,6 @@
 				</div>
 			</div>
 			<div class="dashboard-footer">
-				<span class="inline-flex items-center gap-x-1.5 rounded-full bg-green-100 px-2 py-1 text-xs font-medium">
-					<svg viewBox="0 0 6 6" aria-hidden="true" class="size-1.5 fill-green-500">
-						<circle r="3" cx="3" cy="3" />
-					</svg>
-					Server is running
-				</span> ·
 				<a href="/health">Health Check</a> ·
 				<a href="/api/events">API</a> ·
 				<a href="/schema">Schema</a>
