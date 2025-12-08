@@ -50,3 +50,8 @@ jobs:
             npm run update-admin-role -- "$ADMIN_USERNAME"
           }
 
+      - name: Generate test data
+        env:
+          DB_TYPE: sqlite
+          DB_PATH: ./src/data/telemetry.db
+        run: node src/scripts/generate-test-data.js

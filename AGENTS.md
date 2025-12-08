@@ -25,7 +25,7 @@ La UI està construïda amb Tailwind CSS amb una capa lleugera de personalitzaci
 	- Refresh button
 	- Notifications enabled toggle
 	- User dropdown menu with the following options:
-		- Username (non interactive)
+		- Username (non-interactive)
 		- Light/Dark theme toggle
 		- Open settings modal
 		- Logout
