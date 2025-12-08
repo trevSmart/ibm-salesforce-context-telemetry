@@ -4016,7 +4016,7 @@ if (window.__EVENT_LOG_LOADED__) {
 				</td>
 				<td class="hidden border-b border-gray-200 px-3 py-4 text-sm text-gray-500 md:table-cell log-client whitespace-nowrap">${escapeHtml(clientName)}</td>
 				<td class="hidden border-b border-gray-200 px-3 py-4 text-sm text-gray-500 lg:table-cell log-tool-name whitespace-nowrap">${toolName}</td>
-				<td class="border-b border-gray-200 px-3 py-4 text-sm text-gray-500 log-description whitespace-nowrap">${description}</td>
+				<td class="border-b border-gray-200 px-3 py-4 text-sm text-gray-500 log-description">${description}</td>
 				<td class="border-b border-gray-200 py-4 pr-4 pl-3 text-right text-sm font-medium actions-cell whitespace-nowrap sm:pr-8 lg:pr-8">
 					<button class="actions-btn text-indigo-600 hover:text-indigo-900" onclick="toggleActionsDropdown(event, ${event.id})" style="background: none; border: none; cursor: pointer; padding: 4px;">
 						<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
