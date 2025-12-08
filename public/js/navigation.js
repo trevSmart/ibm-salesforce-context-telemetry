@@ -8,7 +8,7 @@
     '/logs': [{ src: '/js/event-log.js' }],
     '/teams': [{ src: '/js/teams.js', type: 'module' }]
   };
-  
+
   // Crossfade transition duration in milliseconds
   const TRANSITION_DURATION_MS = 150;
 
@@ -206,8 +206,14 @@
       container.parentNode.style.position = 'relative';
       container.after(nextContent);
 
-      // Sync body class and title for page-specific styles
-      document.body.className = doc.body.className || document.body.className;
+      // Sync body class and title for page-specific styles (strip hydrating)
+      const nextBodyClasses = doc.body?.classList ? Array.from(doc.body.classList) : [];
+      const filteredBodyClasses = nextBodyClasses.filter((cls) => cls !== 'hydrating');
+      if (filteredBodyClasses.length > 0) {
+        document.body.className = filteredBodyClasses.join(' ');
+      } else if (document.body.classList.contains('hydrating')) {
+        document.body.classList.remove('hydrating');
+      }
       if (doc.title) {
         document.title = doc.title;
       }
