@@ -6,6 +6,7 @@ const TOP_USERS_LIMIT = 3;
 const TOP_TEAMS_LOOKBACK_DAYS = 30;
 const TOP_TEAMS_LIMIT = 5;
 const SERVER_VERSION_LABEL = 'v1.0.0';
+const REFRESH_ICON_ANIMATION_DURATION_MS = 700;
 let serverStatsLastFetchTime = null;
 let serverStatsUpdateIntervalId = null;
 let autoRefreshEnabledState = false;
@@ -1991,7 +1992,14 @@ async function refreshDashboard(event) {
     console.error('Error refreshing dashboard:', error);
   } finally {
     if (refreshIcon) {
+      // Smooth transition: replace infinite animation with a finishing one
       refreshIcon.classList.remove('rotating');
+      refreshIcon.classList.add('rotating-finish');
+
+      // Remove the finish class after animation completes
+      setTimeout(() => {
+        refreshIcon.classList.remove('rotating-finish');
+      }, REFRESH_ICON_ANIMATION_DURATION_MS);
     }
   }
 }
