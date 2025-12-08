@@ -9,11 +9,11 @@ if (window.__EVENT_LOG_LOADED__) {
   // Utility to escape HTML special characters for safe output in innerHTML
   function escapeHtml(unsafe) {
     return String(unsafe)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
   }
 
   const detectElectronEnvironment = () => {
@@ -3753,7 +3753,7 @@ if (window.__EVENT_LOG_LOADED__) {
 
       const hasEventsToShow = fetchedEvents.length > 0;
 
-    if (hasEventsToShow) {
+      if (hasEventsToShow) {
         displayEvents(fetchedEvents, append);
         hasMoreEvents = data.hasMore || false;
         currentOffset += fetchedEvents.length;
@@ -5835,18 +5835,14 @@ if (window.__EVENT_LOG_LOADED__) {
     }
   }
 
-  window.toggleUserFilterDropdown = function(event) {
-    event.stopPropagation();
+  // Show user filter dropdown (used by both click and hover)
+  function showUserFilterDropdown() {
     const dropdown = document.getElementById('userFilterDropdown');
     const chevron = document.getElementById('userFilterChevron');
     if (!dropdown || !chevron) return;
 
     const isVisible = !dropdown.classList.contains('hidden');
-    if (isVisible) {
-      dropdown.classList.add('hidden');
-      chevron.classList.remove('fa-sort-up');
-      chevron.classList.add('fa-sort-down');
-    } else {
+    if (!isVisible) {
       dropdown.classList.remove('hidden');
       chevron.classList.remove('fa-sort-down');
       chevron.classList.add('fa-sort-up');
@@ -5855,6 +5851,31 @@ if (window.__EVENT_LOG_LOADED__) {
       if (dropdownContent && dropdownContent.children.length === 0) {
         loadUsers();
       }
+    }
+  }
+
+  // Hide user filter dropdown
+  function hideUserFilterDropdown() {
+    const dropdown = document.getElementById('userFilterDropdown');
+    const chevron = document.getElementById('userFilterChevron');
+    if (!dropdown || !chevron) return;
+
+    dropdown.classList.add('hidden');
+    chevron.classList.remove('fa-sort-up');
+    chevron.classList.add('fa-sort-down');
+  }
+
+  window.toggleUserFilterDropdown = function(event) {
+    event.stopPropagation();
+    const dropdown = document.getElementById('userFilterDropdown');
+    const chevron = document.getElementById('userFilterChevron');
+    if (!dropdown || !chevron) return;
+
+    const isVisible = !dropdown.classList.contains('hidden');
+    if (isVisible) {
+      hideUserFilterDropdown();
+    } else {
+      showUserFilterDropdown();
     }
   };
 
@@ -5866,15 +5887,70 @@ if (window.__EVENT_LOG_LOADED__) {
 
     if (dropdown && !dropdown.classList.contains('hidden')) {
       if (!dropdownContainer && !dropdown.contains(event.target)) {
-        dropdown.classList.add('hidden');
-        const chevron = document.getElementById('userFilterChevron');
-        if (chevron) {
-          chevron.classList.remove('fa-sort-up');
-          chevron.classList.add('fa-sort-down');
-        }
+        hideUserFilterDropdown();
       }
     }
   });
+
+  // Setup hover functionality for user filter dropdown
+  (function setupUserFilterDropdownHover() {
+    const USER_FILTER_HIDE_DELAY_MS = 300;
+    let userFilterHideTimeout = null;
+
+    const container = document.querySelector('.user-filter-dropdown-container');
+    if (!container) {
+      return;
+    }
+
+    const dropdown = document.getElementById('userFilterDropdown');
+    if (!dropdown) {
+      return;
+    }
+
+    const cancelHide = () => {
+      if (userFilterHideTimeout) {
+        clearTimeout(userFilterHideTimeout);
+        userFilterHideTimeout = null;
+      }
+    };
+
+    const scheduleHide = () => {
+      cancelHide();
+      userFilterHideTimeout = setTimeout(() => {
+        hideUserFilterDropdown();
+        userFilterHideTimeout = null;
+      }, USER_FILTER_HIDE_DELAY_MS);
+    };
+
+    // Treat the button + dropdown as a single hover region
+    const isInsideDropdownRegion = (node) => {
+      if (!node) {
+        return false;
+      }
+      return container.contains(node) || dropdown.contains(node);
+    };
+
+    const handleMouseEnter = () => {
+      cancelHide();
+      showUserFilterDropdown();
+    };
+
+    const handleMouseLeave = (event) => {
+      const nextTarget = event?.relatedTarget;
+      if (nextTarget && isInsideDropdownRegion(nextTarget)) {
+        return;
+      }
+      scheduleHide();
+    };
+
+    // Add hover listeners to container
+    container.addEventListener('mouseenter', handleMouseEnter);
+    container.addEventListener('mouseleave', handleMouseLeave);
+
+    // Add hover listeners to dropdown itself
+    dropdown.addEventListener('mouseenter', handleMouseEnter);
+    dropdown.addEventListener('mouseleave', handleMouseLeave);
+  })();
 
   function setupTabs() {
     const sessionsTab = document.getElementById('sessionsTab');
