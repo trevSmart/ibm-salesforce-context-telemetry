@@ -82,6 +82,8 @@ npm run lint:fix          # Auto-fix ESLint issues
 npm run build:css         # Build Tailwind CSS
 npm run dev:css           # Watch mode for CSS
 
+Tailwind CSS documentation and reference are available via the Context7 MCP server using the `get-library-docs` tool with `context7CompatibleLibraryID: "/websites/tailwindcss_com-plus-ui-blocks-documentation"`.
+
 # User Management
 npm run create-user <username> <password> [role]
 npm run update-user-role <username> <role>
@@ -191,9 +193,9 @@ try {
   // Your code here
 } catch (error) {
   console.error('Error description:', error);
-  return res.status(500).json({ 
-    status: 'error', 
-    message: 'User-friendly error message' 
+  return res.status(500).json({
+    status: 'error',
+    message: 'User-friendly error message'
   });
 }
 ```
