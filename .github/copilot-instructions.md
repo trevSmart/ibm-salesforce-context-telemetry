@@ -229,7 +229,7 @@ try {
 1. Add route handler in `src/index.js` or relevant module
 2. Add authentication middleware if needed (e.g., `auth.requireAuth`)
 3. Validate inputs (use Ajv or manual validation)
-4. Update API specification in `docs/API_SPECIFICATION.md`
+4. Update API specification in `API_SPECIFICATION.md` (canonical version at root)
 5. Add examples to README.md if public-facing
 
 ### Adding a Database Column
