@@ -2,6 +2,8 @@
 
 This file provides guidance for GitHub Copilot when working on the IBM Salesforce Context Telemetry Server. For comprehensive agent instructions, also refer to [AGENTS.md](../AGENTS.md) in the repository root.
 
+**Mandatory**: Whenever you take a browser snapshot while coding, share a link to the image with the user.
+
 ## Project Overview
 
 The IBM Salesforce Context Telemetry Server is a Node.js/Express backend service that collects telemetry data from IBM Salesforce Context MCP server instances. It provides:

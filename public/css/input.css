@@ -401,7 +401,7 @@ body.teams-page #teamsContent {
 
   .main-container .top-nav {
     border-radius: 16px 16px 0 0;
-    margin: -32px -32px 24px -32px;
+    /* margin: -32px -32px 24px -32px; */
   }
 
   /* Event-log page specific main-container styles */
