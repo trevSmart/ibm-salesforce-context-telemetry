@@ -192,8 +192,16 @@
       // Keep nav, search, and container shell styling consistent across pages
       syncShellFromDocument(doc);
 
-      container.replaceWith(nextContent);
-      // Keep container reference updated for future navigations
+      // Match current padding so the overlayed content keeps the same inset during crossfade
+      const containerStyle = window.getComputedStyle(container);
+      ['paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft'].forEach((prop) => {
+        nextContent.style[prop] = containerStyle[prop];
+      });
+
+      // Prepare new content for crossfade: start invisible and position it
+      nextContent.style.opacity = '0';
+      nextContent.style.position = 'absolute';
+      nextContent.style.inset = '0';
 
       // (not strictly necessary because we re-query each time)
 
@@ -212,6 +220,29 @@
 
       updateActiveLink(targetPath);
       await ensurePageScripts(targetPath);
+
+      // Trigger reflow to ensure opacity:0 is applied before transition
+      void nextContent.offsetHeight;
+
+      // Start crossfade: fade out old, fade in new
+      container.style.transition = `opacity ${TRANSITION_DURATION_MS}ms ease-out`;
+      container.style.opacity = '0';
+      nextContent.style.transition = `opacity ${TRANSITION_DURATION_MS}ms ease-in`;
+      nextContent.style.opacity = '1';
+
+      // Wait for transition to complete
+      await new Promise((resolve) => setTimeout(resolve, TRANSITION_DURATION_MS));
+
+      // Remove old content and reset positioning on new content
+      container.remove();
+      nextContent.style.position = '';
+      nextContent.style.inset = '';
+      nextContent.style.transition = '';
+      nextContent.style.opacity = '';
+      nextContent.style.paddingTop = '';
+      nextContent.style.paddingRight = '';
+      nextContent.style.paddingBottom = '';
+      nextContent.style.paddingLeft = '';
 
       // Notify pages that a soft navigation completed so they can rehydrate
       window.dispatchEvent(new CustomEvent('softNav:pageMounted', { detail: { path: targetPath } }));
