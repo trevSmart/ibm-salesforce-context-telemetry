@@ -1619,7 +1619,7 @@ app.get('/api/export/logs', auth.requireAuth, auth.requireRole('advanced'), asyn
 });
 
 // Delete a single event by ID
-app.delete('/api/events/:id', auth.requireAuth, auth.requireRole('advanced'), async (req, res) => {
+app.delete('/api/events/:id', auth.requireAuth, auth.requireRole('advanced'), deleteEventsLimiter, async (req, res) => {
   try {
     const eventId = parseInt(req.params.id, 10);
     if (isNaN(eventId)) {
