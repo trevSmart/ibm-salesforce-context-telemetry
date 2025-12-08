@@ -7,6 +7,19 @@ const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const Ajv = require('ajv');
 const addFormats = require('ajv-formats');
+const rateLimit = require('express-rate-limit');
+
+// Limit DELETE requests to /api/events to prevent abuse: max 5 deletes per hour per IP
+const deleteEventsLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 5, // max 5 requests per hour per IP
+  message: {
+    status: 'error',
+    message: 'Too many delete requests for events. Please try again later.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 const fs = require('fs');
 const path = require('path');
 const db = require('./storage/database');
@@ -1641,7 +1654,7 @@ app.delete('/api/events/:id', auth.requireAuth, auth.requireRole('advanced'), as
 });
 
 // Delete all events from database
-app.delete('/api/events', auth.requireAuth, auth.requireRole('advanced'), async (req, res) => {
+app.delete('/api/events', auth.requireAuth, auth.requireRole('advanced'), deleteEventsLimiter, async (req, res) => {
   try {
     const { sessionId } = req.query;
 
