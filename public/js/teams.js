@@ -870,7 +870,7 @@ window.refreshTeams = async function refreshTeams(event) {
     event.preventDefault();
   }
   const button = event?.currentTarget;
-  const icon = button?.querySelector('svg');
+  const icon = button?.querySelector('.refresh-icon');
   if (icon) {
     icon.classList.add('rotating');
   }
