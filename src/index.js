@@ -80,7 +80,8 @@ app.set('trust proxy', 1);
 // Load and compile JSON schema for validation
 const schemaPath = path.join(__dirname, 'api', 'telemetry-schema.json');
 const schema = JSON.parse(fs.readFileSync(schemaPath, 'utf8'));
-const ajv = new Ajv({ allErrors: true, strict: false }); // strict: false allows additional properties in 'data'
+// Only enable allErrors in development/debug mode to prevent resource exhaustion in production
+const ajv = new Ajv({ allErrors: !!process.env.REST_DEBUG, strict: false }); // strict: false allows additional properties in 'data'
 addFormats(ajv); // Add support for date-time and other formats
 const validate = ajv.compile(schema);
 
