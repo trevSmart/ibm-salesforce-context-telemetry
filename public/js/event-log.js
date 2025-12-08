@@ -6057,6 +6057,128 @@ if (window.__EVENT_LOG_LOADED__) {
     });
   });
 
+  // Populate blueprint table with recent telemetry events
+  async function populateBlueprintTable() {
+    const tbody = document.getElementById('blueprintTableBody');
+    if (!tbody) return;
+
+    try {
+      // Fetch recent events (limit to 10 for the preview table)
+      const params = new URLSearchParams({
+        limit: '10',
+        orderBy: 'created_at',
+        order: 'DESC'
+      });
+
+      const response = await fetch(`/api/events?${params}`, {
+        credentials: 'include'
+      });
+      const validResponse = await handleApiResponse(response);
+      if (!validResponse) {
+        tbody.innerHTML = '<tr><td colspan="6" class="py-8 text-center text-sm text-gray-500 dark:text-gray-400">Failed to load events</td></tr>';
+        return;
+      }
+
+      const data = await validResponse.json();
+      const events = Array.isArray(data.events) ? data.events : [];
+
+      if (events.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="py-8 text-center text-sm text-gray-500 dark:text-gray-400">No events found</td></tr>';
+        return;
+      }
+
+      // Clear loading message
+      tbody.innerHTML = '';
+
+      // Populate table rows
+      events.forEach(event => {
+        const row = document.createElement('tr');
+        
+        // Parse event data
+        const eventData = normalizeEventData(event.data);
+        const userLabel = extractUserLabelFromEvent(event, eventData);
+        const toolName = (event.event === 'tool_call' || event.event === 'tool_error') && eventData.toolName
+          ? String(eventData.toolName)
+          : '—';
+        
+        // Determine status
+        const dataStatus = typeof eventData.status === 'string' ? eventData.status.toLowerCase() : null;
+        const isToolFailure = event.event === 'tool_call' && (
+          dataStatus === 'error' ||
+          dataStatus === 'failed' ||
+          eventData.success === false ||
+          Boolean(eventData.error)
+        );
+        const isError = event.event === 'tool_error' || event.event === 'error' || isToolFailure;
+        
+        // Status badge
+        let statusBadge = '';
+        if (isError) {
+          statusBadge = '<span class="inline-flex items-center rounded-md bg-red-50 px-2 py-1 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/20 dark:bg-red-400/10 dark:text-red-400 dark:ring-red-400/20">Error</span>';
+        } else if (event.event === 'session_start') {
+          statusBadge = '<span class="inline-flex items-center rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-600/20 dark:bg-blue-400/10 dark:text-blue-400 dark:ring-blue-400/20">Session</span>';
+        } else {
+          statusBadge = '<span class="inline-flex items-center rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20 dark:bg-green-400/10 dark:text-green-400 dark:ring-green-400/20">Success</span>';
+        }
+        
+        // Format timestamp
+        const timestamp = new Date(event.timestamp);
+        const timeStr = timestamp.toLocaleTimeString('en-US', { 
+          hour: '2-digit', 
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false 
+        });
+        
+        // Event type badge with color
+        let eventTypeBadge = '';
+        if (event.event === 'session_start') {
+          eventTypeBadge = '<span class="inline-flex items-center rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-600/20 dark:bg-blue-400/10 dark:text-blue-400 dark:ring-blue-400/20">session_start</span>';
+        } else if (event.event === 'tool_call') {
+          eventTypeBadge = '<span class="inline-flex items-center rounded-md bg-purple-50 px-2 py-1 text-xs font-medium text-purple-700 ring-1 ring-inset ring-purple-600/20 dark:bg-purple-400/10 dark:text-purple-400 dark:ring-purple-400/20">tool_call</span>';
+        } else if (event.event === 'tool_error') {
+          eventTypeBadge = '<span class="inline-flex items-center rounded-md bg-red-50 px-2 py-1 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/20 dark:bg-red-400/10 dark:text-red-400 dark:ring-red-400/20">tool_error</span>';
+        } else if (event.event === 'custom') {
+          eventTypeBadge = '<span class="inline-flex items-center rounded-md bg-yellow-50 px-2 py-1 text-xs font-medium text-yellow-700 ring-1 ring-inset ring-yellow-600/20 dark:bg-yellow-400/10 dark:text-yellow-400 dark:ring-yellow-400/20">custom</span>';
+        } else {
+          eventTypeBadge = `<span class="inline-flex items-center rounded-md bg-gray-50 px-2 py-1 text-xs font-medium text-gray-700 ring-1 ring-inset ring-gray-600/20 dark:bg-gray-400/10 dark:text-gray-400 dark:ring-gray-400/20">${escapeHtml(event.event)}</span>`;
+        }
+
+        row.innerHTML = `
+          <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 dark:text-white sm:pl-0">${escapeHtml(timeStr)}</td>
+          <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">${escapeHtml(userLabel || '—')}</td>
+          <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">${eventTypeBadge}</td>
+          <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">${escapeHtml(toolName)}</td>
+          <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">${statusBadge}</td>
+          <td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-0">
+            <button onclick="scrollToEvent('${event.id}')" class="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300">View<span class="sr-only">, Event ${event.id}</span></button>
+          </td>
+        `;
+        
+        tbody.appendChild(row);
+      });
+    } catch (error) {
+      console.error('Error populating blueprint table:', error);
+      tbody.innerHTML = '<tr><td colspan="6" class="py-8 text-center text-sm text-gray-500 dark:text-gray-400">Error loading events</td></tr>';
+    }
+  }
+
+  // Scroll to a specific event in the main logs table
+  function scrollToEvent(eventId) {
+    const eventRow = document.querySelector(`tr[data-event-id="${eventId}"]`);
+    if (eventRow) {
+      eventRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      // Highlight the row briefly
+      eventRow.classList.add('keyboard-selected');
+      setTimeout(() => {
+        eventRow.classList.remove('keyboard-selected');
+      }, 2000);
+    }
+  }
+
+  // Load blueprint table when page loads
+  populateBlueprintTable();
+
   // Expose handlers used by inline HTML attributes
   // Note: showUserMenu and handleLogout are now exposed by user-menu.js
   window.refreshLogs = refreshLogs;
@@ -6067,5 +6189,6 @@ if (window.__EVENT_LOG_LOADED__) {
   window.toggleMobileSidebar = toggleMobileSidebar;
   window.navigateToPreviousDay = navigateToPreviousDay;
   window.navigateToNextDay = navigateToNextDay;
+  window.scrollToEvent = scrollToEvent;
 
 } // end guard to avoid duplicate execution
