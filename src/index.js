@@ -93,18 +93,6 @@ const loginLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// Rate limit for state-changing user operations: max 20 requests per hour per IP
-const userManagementLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 20, // max 20 requests per hour per IP
-  message: {
-    status: 'error',
-    message: 'Too many user management requests. Please try again later.'
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
 // Rate limit for team/org operations: max 30 requests per hour per IP
 const teamOrgLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
@@ -112,6 +100,18 @@ const teamOrgLimiter = rateLimit({
   message: {
     status: 'error',
     message: 'Too many team/org management requests. Please try again later.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Rate limit for general API GET requests: max 100 requests per 15 minutes per IP
+const apiReadLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // max 100 requests per 15 minutes per IP
+  message: {
+    status: 'error',
+    message: 'Too many API requests. Please try again later.'
   },
   standardHeaders: true,
   legacyHeaders: false,
@@ -698,7 +698,7 @@ app.get('/api/auth/status', (req, res) => {
 });
 
 // User management API endpoints
-app.get('/api/users', auth.requireAuth, auth.requireRole('administrator'), async (req, res) => {
+app.get('/api/users', auth.requireAuth, auth.requireRole('administrator'), apiReadLimiter, async (req, res) => {
   try {
     const users = await db.getAllUsers();
     res.json({
@@ -939,7 +939,7 @@ app.post('/api/settings/org-team-mappings', auth.requireAuth, auth.requireRole('
 });
 
 // API endpoints for viewing telemetry data
-app.get('/api/events', auth.requireAuth, auth.requireRole('advanced'), async (req, res) => {
+app.get('/api/events', auth.requireAuth, auth.requireRole('advanced'), apiReadLimiter, async (req, res) => {
   try {
     const {
       limit = 50,
@@ -1002,7 +1002,7 @@ app.get('/api/events', auth.requireAuth, auth.requireRole('advanced'), async (re
   }
 });
 
-app.get('/api/events/:id', auth.requireAuth, auth.requireRole('advanced'), async (req, res) => {
+app.get('/api/events/:id', auth.requireAuth, auth.requireRole('advanced'), apiReadLimiter, async (req, res) => {
   try {
     const eventId = parseInt(req.params.id, 10);
     if (isNaN(eventId)) {
@@ -1059,7 +1059,7 @@ app.get('/api/stats', auth.requireAuth, async (req, res) => {
   }
 });
 
-app.get('/api/event-types', auth.requireAuth, auth.requireRole('advanced'), async (req, res) => {
+app.get('/api/event-types', auth.requireAuth, auth.requireRole('advanced'), apiReadLimiter, async (req, res) => {
   try {
     const { sessionId, userId } = req.query;
     // Handle multiple userId values (Express converts them to an array)
@@ -1084,7 +1084,7 @@ app.get('/api/event-types', auth.requireAuth, auth.requireRole('advanced'), asyn
   }
 });
 
-app.get('/api/sessions', auth.requireAuth, auth.requireRole('advanced'), async (req, res) => {
+app.get('/api/sessions', auth.requireAuth, auth.requireRole('advanced'), apiReadLimiter, async (req, res) => {
   try {
     const { userId } = req.query;
     // Handle multiple userId values (Express converts them to an array)
@@ -1184,7 +1184,7 @@ app.get('/api/top-teams-today', auth.requireAuth, async (req, res) => {
   }
 });
 
-app.get('/api/team-stats', auth.requireAuth, auth.requireRole('advanced'), async (_req, res) => {
+app.get('/api/team-stats', auth.requireAuth, auth.requireRole('advanced'), apiReadLimiter, async (_req, res) => {
   try {
     const mappingsJson = await db.getSetting('org_team_mappings');
     let mappings = [];
@@ -1210,7 +1210,7 @@ app.get('/api/team-stats', auth.requireAuth, auth.requireRole('advanced'), async
 });
 
 // Teams API endpoints
-app.get('/api/teams', auth.requireAuth, auth.requireRole('advanced'), async (req, res) => {
+app.get('/api/teams', auth.requireAuth, auth.requireRole('advanced'), apiReadLimiter, async (req, res) => {
   try {
     const teams = await db.getAllTeams();
     res.json({
@@ -1226,7 +1226,7 @@ app.get('/api/teams', auth.requireAuth, auth.requireRole('advanced'), async (req
   }
 });
 
-app.get('/api/teams/:id', auth.requireAuth, auth.requireRole('advanced'), async (req, res) => {
+app.get('/api/teams/:id', auth.requireAuth, auth.requireRole('advanced'), apiReadLimiter, async (req, res) => {
   try {
     const teamId = parseInt(req.params.id);
     if (isNaN(teamId)) {
@@ -1371,7 +1371,7 @@ app.delete('/api/teams/:id', auth.requireAuth, auth.requireRole('administrator')
 });
 
 // Orgs API endpoints
-app.get('/api/orgs', auth.requireAuth, auth.requireRole('advanced'), async (req, res) => {
+app.get('/api/orgs', auth.requireAuth, auth.requireRole('advanced'), apiReadLimiter, async (req, res) => {
   try {
     const orgs = await db.getAllOrgsWithTeams();
     res.json({
@@ -1519,7 +1519,7 @@ app.post('/api/users/:id/assign-team', auth.requireAuth, auth.requireRole('admin
 
 // Event user management endpoints
 // Get all unique event user names from telemetry data
-app.get('/api/event-users', auth.requireAuth, auth.requireRole('advanced'), async (req, res) => {
+app.get('/api/event-users', auth.requireAuth, auth.requireRole('advanced'), apiReadLimiter, async (req, res) => {
   try {
     const userNames = await db.getEventUserNames();
     res.json({
@@ -1621,7 +1621,7 @@ app.get('/api/telemetry-users', auth.requireAuth, auth.requireRole('advanced'), 
   }
 });
 
-app.get('/api/database-size', auth.requireAuth, auth.requireRole('advanced'), async (req, res) => {
+app.get('/api/database-size', auth.requireAuth, auth.requireRole('advanced'), apiReadLimiter, async (req, res) => {
   try {
     const sizeInfo = await db.getDatabaseSize();
     if (sizeInfo === null) {
@@ -1710,7 +1710,7 @@ app.get('/schema', auth.requireAuth, (_req, res) => {
 });
 
 // Export logs in JSON Lines (JSONL) format
-app.get('/api/export/logs', auth.requireAuth, auth.requireRole('advanced'), async (req, res) => {
+app.get('/api/export/logs', auth.requireAuth, auth.requireRole('advanced'), apiReadLimiter, async (req, res) => {
   try {
     const {
       startDate,
