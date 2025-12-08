@@ -4877,14 +4877,14 @@ body.event-log-page .container {
 }
 
 .teams-header {
-  padding: 24px 24px 0 24px;
+  padding: 0 20px 0 20px;
 }
 
 .teams-breadcrumbs {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  margin-bottom: 12px;
+  gap: 0;
+  margin-bottom: 0;
 }
 
 .teams-title {

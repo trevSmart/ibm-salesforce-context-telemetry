@@ -343,20 +343,7 @@ function renderTeamsList() {
 
   container.innerHTML = `
     <div class="px-6 py-6 sm:px-8">
-      <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p class="text-sm font-semibold text-indigo-600">Teams</p>
-          <h1 class="text-2xl font-semibold text-gray-900">Teams overview</h1>
-          <p class="mt-1 text-sm text-gray-500">Select a team to manage organizations and users.</p>
-        </div>
-        <button id="createTeamBtn" type="button" onclick="showCreateTeamModal()"
-          class="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
-          <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5">
-            <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5z" />
-          </svg>
-          New team
-        </button>
-      </div>
+
       <div id="teamsList" class="mt-6 grid grid-cols-1 gap-px overflow-hidden rounded-lg bg-gray-200 shadow-sm sm:grid-cols-2">
         <div class="bg-white p-6 text-center text-sm text-gray-500 sm:col-span-2">Loading teams...</div>
       </div>
@@ -368,13 +355,13 @@ function renderTeamsList() {
   if (teams.length === 0) {
     teamsList.innerHTML = `
       <div class="bg-white px-8 py-10 text-center sm:col-span-2">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true" class="mx-auto size-12 text-gray-400">
-          <path d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round" />
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1" stroke="currentColor" aria-hidden="true" class="mx-auto size-12 text-gray-400">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z" />
         </svg>
         <h3 class="mt-3 text-base font-semibold text-gray-900">No teams</h3>
         <p class="mt-2 text-sm text-gray-500">Get started by creating a new team.</p>
         <div class="mt-6">
-          <button type="button" class="inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600" onclick="showCreateTeamModal()">
+          <button type="button" class="inline-flex items-center gap-2 rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-gray-900 shadow-xs inset-ring inset-ring-gray-300 hover:bg-gray-50" onclick="showCreateTeamModal()">
             <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="mr-2 size-5">
               <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5z" />
             </svg>
@@ -960,7 +947,6 @@ async function loadTeams() {
 
 async function init() {
   try {
-    console.log('Initializing teams page...');
     const container = document.getElementById('teamsContent');
     if (!container) {
       console.error('teamsContent container not found');
@@ -968,7 +954,6 @@ async function init() {
       setTimeout(() => {
         const retryContainer = document.getElementById('teamsContent');
         if (retryContainer) {
-          console.log('Found container on retry, initializing...');
           loadTeams().then(() => renderTeamsList());
         } else {
           console.error('Container still not found after retry');
@@ -979,7 +964,6 @@ async function init() {
     }
     await loadTeams();
     renderTeamsList();
-    console.log('Teams page initialized successfully');
   } catch (error) {
     console.error('Error initializing teams page:', error);
     const container = document.getElementById('teamsContent');
@@ -1001,14 +985,11 @@ async function init() {
 }
 
 // Initialize when page loads
-console.log('teams.js loaded, readyState:', document.readyState);
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOMContentLoaded fired, calling init()');
     init();
   });
 } else {
-  console.log('DOM already ready, calling init() immediately');
   init();
 }
 

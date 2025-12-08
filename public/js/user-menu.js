@@ -76,16 +76,85 @@
   const USER_MENU_HIDE_DELAY_MS = 300;
   let userMenuHideTimeout = null;
   let cleanupHoverHandlers = null;
+  const supportsNativePopover = typeof HTMLElement !== 'undefined' &&
+    (typeof HTMLElement.prototype.showPopover === 'function' || typeof HTMLElement.prototype.togglePopover === 'function');
+
+  function prepareUserMenuElement(userMenu) {
+    if (!userMenu) {
+      return;
+    }
+    if (!supportsNativePopover && userMenu.hasAttribute('popover')) {
+      userMenu.removeAttribute('popover');
+    }
+  }
+
+  function setPopoverVisibility(userMenu, shouldOpen) {
+    if (!supportsNativePopover || !userMenu) {
+      return;
+    }
+
+    if (typeof userMenu.matches === 'function') {
+      try {
+        if (userMenu.matches(':popover-open') === shouldOpen) {
+          return;
+        }
+      } catch (_err) {
+        // Ignore if :popover-open is unsupported in the current browser.
+      }
+    }
+
+    if (typeof userMenu.togglePopover === 'function') {
+      try {
+        userMenu.togglePopover(shouldOpen);
+        return;
+      } catch (_err) {
+        // Ignore and fall back to show/hide specific methods.
+      }
+    }
+
+    const method = shouldOpen ? 'showPopover' : 'hidePopover';
+    if (typeof userMenu[method] === 'function') {
+      try {
+        userMenu[method]();
+      } catch (_err) {
+        // Swallow InvalidStateError (already in requested state).
+      }
+    }
+  }
+
+  function hideUserMenu() {
+    if (userMenuHideTimeout) {
+      clearTimeout(userMenuHideTimeout);
+      userMenuHideTimeout = null;
+    }
+
+    const userMenu = document.getElementById('userMenu');
+    if (!userMenu) {
+      return;
+    }
+
+    if (userMenu.classList.contains('show')) {
+      userMenu.classList.remove('show');
+    }
+
+    setPopoverVisibility(userMenu, false);
+  }
 
   function ensureUserMenuReady() {
-    const userMenu = document.getElementById('userMenu');
+    let userMenu = document.getElementById('userMenu');
     if (!userMenu) {
       return null;
     }
+
     if (userMenu.dataset.initialized !== 'true' && typeof window.renderUserMenu === 'function') {
       window.renderUserMenu();
-      return document.getElementById('userMenu');
+      userMenu = document.getElementById('userMenu');
+      if (!userMenu) {
+        return null;
+      }
     }
+
+    prepareUserMenuElement(userMenu);
     return userMenu;
   }
 
@@ -101,6 +170,7 @@
     // Only open the menu; do not toggle/close it from this handler
     if (!userMenu.classList.contains('show')) {
       userMenu.classList.add('show');
+      setPopoverVisibility(userMenu, true);
       // Load user info
       fetch('/api/auth/status', {
         credentials: 'include' // Ensure cookies are sent
@@ -139,7 +209,7 @@
 
     if (userMenu && userMenu.classList.contains('show')) {
       if (!userMenuContainer && !userMenu.contains(event.target)) {
-        userMenu.classList.remove('show');
+        hideUserMenu();
       }
     }
   });
@@ -170,8 +240,7 @@
     const scheduleHide = () => {
       cancelHide();
       userMenuHideTimeout = setTimeout(() => {
-        userMenu.classList.remove('show');
-        userMenuHideTimeout = null;
+        hideUserMenu();
       }, USER_MENU_HIDE_DELAY_MS);
     };
 
@@ -234,10 +303,7 @@
 
   async function handleLogout() {
     // Close menu
-    const userMenu = document.getElementById('userMenu');
-    if (userMenu) {
-      userMenu.classList.remove('show');
-    }
+    hideUserMenu();
 
     try {
       const response = await fetch('/logout', {
