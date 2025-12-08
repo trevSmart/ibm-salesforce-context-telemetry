@@ -1973,7 +1973,7 @@ async function refreshDashboard(event) {
   }
   // Rotate refresh icon
   const button = event?.target?.closest('.icon-btn') || event?.currentTarget;
-  const refreshIcon = button?.querySelector('.fa-refresh') || (event?.target?.classList?.contains('fa-refresh') ? event.target : null);
+  const refreshIcon = button?.querySelector('.fa-refresh, .refresh-icon') || (event?.target?.classList?.contains('fa-refresh') ? event.target : null);
   if (refreshIcon) {
     refreshIcon.classList.add('rotating');
   }
