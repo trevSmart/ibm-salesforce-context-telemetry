@@ -112,10 +112,10 @@
     color-scheme: dark;
   }
 
-  /* Prevent flash of unstyled content - hide body until theme is applied (event-log page) */
-  body.event-log-page {
-    visibility: hidden;
-  }
+/* Prevent flash of unstyled content - gated by hydrating class */
+body.hydrating {
+  visibility: hidden;
+}
 
   body {
     font-family: 'Manrope', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -404,12 +404,10 @@ body.teams-page #teamsContent {
     /* margin: -32px -32px 24px -32px; */
   }
 
-  /* Event-log page specific main-container styles */
+/* Event-log page specific main-container styles */
 body.event-log-page .main-container,
 body.event-log-page .container {
   backdrop-filter: blur(10px);
-    opacity: 0;
-    visibility: hidden;
     transition: opacity 0.1s ease-in-out;
   }
 
@@ -629,12 +627,12 @@ body.event-log-page .container {
     gap: 15px;
   }
 
-  /* Hide container initially only on pages with animations */
-  body.index-page .container,
-  body.event-log-page .container {
-    opacity: 0;
-    visibility: hidden;
-  }
+/* Hide container/main shell only while hydrating (initial render) */
+body.hydrating .container,
+body.hydrating .main-container {
+  opacity: 0;
+  visibility: hidden;
+}
 
   .container-content {
     padding: 0;
@@ -670,11 +668,8 @@ body.event-log-page .container {
     font-weight: 700;
   }
 
-  /* Soft navigation state (keeps chrome stable while swapping content) */
-  body.soft-nav-loading .container-content {
-    opacity: 0.35;
-    transition: opacity 0.2s ease;
-  }
+  /* Soft navigation with crossfade - no longer needs opacity reduction */
+  /* The navigation.js handles smooth crossfade transitions directly */
 
   .dashboard-header a {
     color: #3d4152;

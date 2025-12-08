@@ -2053,6 +2053,18 @@ let chart = null;
 let currentDays = 7;
 let isInitialChartLoad = true; // Track if this is the initial chart load
 
+function revealDashboardShell() {
+  const body = document.body;
+  if (body.classList.contains('hydrating')) {
+    body.classList.remove('hydrating');
+  }
+  const container = document.querySelector('.container');
+  if (container) {
+    container.style.visibility = 'visible';
+    container.style.opacity = '1';
+  }
+}
+
 // Function to calculate polynomial regression (degree 2 for curved trend)
 function calculatePolynomialRegression(dataPoints, degree = 2) {
   const n = dataPoints.length;
@@ -2480,11 +2492,7 @@ async function loadChartData(days = currentDays) {
     // If no data, show the page anyway
     if (data.length === 0 && isInitialChartLoad) {
       isInitialChartLoad = false;
-      const container = document.querySelector('.container');
-      if (container) {
-        container.style.visibility = 'visible';
-        container.style.opacity = '1';
-      }
+      revealDashboardShell();
       const chartEl = document.getElementById('eventsChart');
       if (chartEl) {
         chartEl.style.visibility = 'visible';
@@ -2957,13 +2965,7 @@ async function loadChartData(days = currentDays) {
       // Show the container if this is the initial load
       if (isInitialChartLoad) {
         isInitialChartLoad = false;
-        const container = document.querySelector('.container');
-        if (container) {
-          container.style.visibility = 'visible';
-          requestAnimationFrame(() => {
-            container.style.opacity = '1';
-          });
-        }
+        revealDashboardShell();
       }
     };
 
@@ -2974,11 +2976,7 @@ async function loadChartData(days = currentDays) {
     // If this is the initial load and there's an error, show the page anyway
     if (isInitialChartLoad) {
       isInitialChartLoad = false;
-      const container = document.querySelector('.container');
-      if (container) {
-        container.style.visibility = 'visible';
-        container.style.opacity = '1';
-      }
+      revealDashboardShell();
     }
   }
 }
