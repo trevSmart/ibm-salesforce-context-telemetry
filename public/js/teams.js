@@ -1,5 +1,6 @@
 // @ts-nocheck
 // Teams management page
+import { showToast } from './notifications.js';
 
 const REFRESH_ICON_ANIMATION_DURATION_MS = 700;
 let currentView = 'list'; // 'list' or 'detail'
@@ -9,6 +10,40 @@ let _allOrgs = [];
 let _allUsers = [];
 
 // Utility functions
+async function buildCsrfHeaders(includeJson = true) {
+  // Start with shared helper headers if available
+  const baseHeaders = (typeof window !== 'undefined' && window.getRequestHeaders)
+    ? window.getRequestHeaders(includeJson)
+    : (includeJson ? { 'Content-Type': 'application/json' } : {});
+
+  // If helper already provided token, return early
+  if (baseHeaders['X-CSRF-Token']) {
+    return baseHeaders;
+  }
+
+  // Try to fetch/store token using shared helper functions
+  try {
+    const token = (typeof window !== 'undefined' && window.getCsrfToken)
+      ? await window.getCsrfToken()
+      : null;
+    const fallbackToken = (!token && typeof window !== 'undefined' && window.getCsrfTokenFromCookie)
+      ? window.getCsrfTokenFromCookie()
+      : null;
+    const finalToken = token || fallbackToken;
+
+    if (finalToken) {
+      baseHeaders['X-CSRF-Token'] = finalToken;
+      if (typeof window !== 'undefined' && window.setCsrfToken) {
+        window.setCsrfToken(finalToken);
+      }
+    }
+  } catch (error) {
+    console.error('Failed to build CSRF headers:', error);
+  }
+
+  return baseHeaders;
+}
+
 function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text;
@@ -97,31 +132,6 @@ window.toggleTheme = toggleTheme;
 window.clearLocalData = clearLocalData;
 window.openSettingsModal = openSettingsModal;
 
-// Utility functions
-function showToast(message, type = 'info') {
-  const toast = document.createElement('div');
-  toast.className = `toast toast-${type}`;
-  toast.style.cssText = `
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    padding: 12px 20px;
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    z-index: 10000;
-    animation: slideIn 0.3s ease-out;
-  `;
-  toast.textContent = message;
-  document.body.appendChild(toast);
-
-  setTimeout(() => {
-    toast.style.animation = 'slideOut 0.3s ease-out';
-    setTimeout(() => toast.remove(), 300);
-  }, 3000);
-}
-
 // API functions
 async function fetchTeams() {
   try {
@@ -201,11 +211,10 @@ async function fetchEventUsers() {
 
 async function createTeam(name, color) {
   try {
+    const headers = await buildCsrfHeaders(true);
     const response = await fetch('/api/teams', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers,
       credentials: 'same-origin',
       body: JSON.stringify({ name, color })
     });
@@ -223,13 +232,44 @@ async function createTeam(name, color) {
   }
 }
 
+async function createTeamWithLogo(name, color, logoFile) {
+  try {
+    const headers = await buildCsrfHeaders(false);
+    const formData = new FormData();
+    formData.append('name', name);
+    if (color) {
+      formData.append('color', color);
+    }
+    if (logoFile) {
+      formData.append('logo', logoFile);
+    }
+
+    const response = await fetch('/api/teams', {
+      method: 'POST',
+      headers,
+      credentials: 'same-origin',
+      body: formData
+    });
+
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.message || `HTTP ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.team;
+  } catch (error) {
+    console.error('Error creating team:', error);
+    throw error;
+  }
+}
+
 async function updateTeam(teamId, updates) {
   try {
+    const headers = await buildCsrfHeaders(true);
     const response = await fetch(`/api/teams/${teamId}`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers,
       credentials: 'same-origin',
       body: JSON.stringify(updates)
     });
@@ -247,10 +287,49 @@ async function updateTeam(teamId, updates) {
   }
 }
 
+async function updateTeamWithLogo(teamId, updates, logoFile, removeLogo) {
+  try {
+    const headers = await buildCsrfHeaders(false);
+    const formData = new FormData();
+    if (updates.name !== undefined) {
+      formData.append('name', updates.name);
+    }
+    if (updates.color !== undefined) {
+      formData.append('color', updates.color || '');
+    }
+    if (logoFile) {
+      formData.append('logo', logoFile);
+    }
+    if (removeLogo) {
+      formData.append('remove_logo', 'true');
+    }
+
+    const response = await fetch(`/api/teams/${teamId}`, {
+      method: 'PUT',
+      headers,
+      credentials: 'same-origin',
+      body: formData
+    });
+
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.message || `HTTP ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.team;
+  } catch (error) {
+    console.error('Error updating team:', error);
+    throw error;
+  }
+}
+
 async function deleteTeam(teamId) {
   try {
+    const headers = await buildCsrfHeaders(false);
     const response = await fetch(`/api/teams/${teamId}`, {
       method: 'DELETE',
+      headers,
       credentials: 'same-origin'
     });
 
@@ -268,11 +347,10 @@ async function deleteTeam(teamId) {
 
 async function moveOrgToTeam(orgId, teamId) {
   try {
+    const headers = await buildCsrfHeaders(true);
     const response = await fetch(`/api/orgs/${encodeURIComponent(orgId)}/move`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers,
       credentials: 'same-origin',
       body: JSON.stringify({ team_id: teamId })
     });
@@ -291,11 +369,10 @@ async function moveOrgToTeam(orgId, teamId) {
 
 async function addEventUserToTeam(userName, teamId) {
   try {
+    const headers = await buildCsrfHeaders(true);
     const response = await fetch(`/api/teams/${teamId}/event-users`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers,
       credentials: 'same-origin',
       body: JSON.stringify({ user_name: userName })
     });
@@ -314,11 +391,10 @@ async function addEventUserToTeam(userName, teamId) {
 
 async function upsertOrg(orgId, orgData) {
   try {
+    const headers = await buildCsrfHeaders(true);
     const response = await fetch('/api/orgs', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers,
       credentials: 'same-origin',
       body: JSON.stringify({ id: orgId, ...orgData })
     });
@@ -342,9 +418,9 @@ function renderTeamsList() {
   if (!container) return;
 
   container.innerHTML = `
-    <div class="px-6 py-6 sm:px-8">
+    <div class="px-6 sm:px-8 teams-list-container">
 
-      <div id="teamsList" class="mt-6 grid grid-cols-1 gap-px overflow-hidden rounded-lg bg-gray-200 shadow-sm sm:grid-cols-2">
+      <div id="teamsList" class="grid grid-cols-1 gap-px overflow-hidden rounded-lg bg-gray-200 shadow-sm sm:grid-cols-2">
         <div class="bg-white p-6 text-center text-sm text-gray-500 sm:col-span-2">Loading teams...</div>
       </div>
     </div>
@@ -379,14 +455,23 @@ function renderTeamsList() {
     const accentColor = sanitizedColor || '#4f46e5';
     const accentBg = sanitizedColor ? (hexToRgba(sanitizedColor, 0.14) || 'rgba(79, 70, 229, 0.12)') : 'rgba(79, 70, 229, 0.12)';
 
+    // Get team initials for fallback avatar
+    const initials = team.name.split(' ').map(word => word[0]).join('').substring(0, 2).toUpperCase();
+
+    // Logo or avatar
+    const logoOrAvatar = team.has_logo
+      ? `<img src="/api/teams/${team.id}/logo" alt="${escapeHtml(team.name)} logo" class="size-12 object-contain" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+         <span class="inline-flex items-center justify-center rounded-lg text-sm font-semibold size-12" style="display: none; color: ${accentColor}; background-color: ${accentBg};">
+           ${escapeHtml(initials)}
+         </span>`
+      : `<span class="inline-flex items-center justify-center rounded-lg text-sm font-semibold size-12" style="color: ${accentColor}; background-color: ${accentBg};">
+           ${escapeHtml(initials)}
+         </span>`;
+
     return `
       <div class="group relative bg-white p-6 transition hover:bg-gray-50 focus-within:outline focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-indigo-600" role="button" tabindex="0" onclick="viewTeamDetail(${team.id})" onkeypress="if(event.key==='Enter'||event.key===' '){event.preventDefault();viewTeamDetail(${team.id});}">
         <div>
-          <span class="inline-flex rounded-lg p-3" style="color: ${accentColor}; background-color: ${accentBg};">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" class="size-6">
-              <path d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
-          </span>
+          ${logoOrAvatar}
         </div>
         <div class="mt-8">
           <h3 class="text-base font-semibold text-gray-900">
@@ -411,23 +496,18 @@ async function renderTeamDetail(teamId) {
 
   container.innerHTML = `
     <div style="padding: 24px;">
-      <div style="margin-bottom: 24px;">
-        <button id="backBtn" class="btn-secondary" style="padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); cursor: pointer; margin-bottom: 16px;">
-          <i class="fas fa-arrow-left" style="margin-right: 6px;"></i>Back to Teams
-        </button>
-        <div id="teamDetailHeader" style="display: flex; justify-content: space-between; align-items: start;">
-          <div>
-            <h1 id="teamDetailName" style="margin: 0 0 8px 0; font-size: 1.5rem; font-weight: 600;">Loading...</h1>
-            <div id="teamDetailMeta" style="color: var(--text-secondary); font-size: 0.9rem;"></div>
-          </div>
-          <div style="display: flex; gap: 8px;">
-            <button id="editTeamBtn" class="btn-secondary" style="padding: 8px 16px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); cursor: pointer;">
-              <i class="fas fa-pen" style="margin-right: 6px;"></i>Edit
-            </button>
-            <button id="deleteTeamBtn" class="btn-danger" style="padding: 8px 16px; border-radius: 6px; border: 1px solid var(--border-color); background: #dc3545; color: white; cursor: pointer;">
-              <i class="fas fa-trash" style="margin-right: 6px;"></i>Delete
-            </button>
-          </div>
+      <div id="teamDetailHeader" style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 24px;">
+        <div>
+          <h1 id="teamDetailName" style="margin: 0 0 8px 0; font-size: 1.5rem; font-weight: 600;">Loading...</h1>
+          <div id="teamDetailMeta" style="color: var(--text-secondary); font-size: 0.9rem;"></div>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button id="editTeamBtn" class="btn-secondary" style="padding: 8px 16px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); cursor: pointer;">
+            <i class="fas fa-pen" style="margin-right: 6px;"></i>Edit
+          </button>
+          <button id="deleteTeamBtn" class="btn-danger" style="padding: 8px 16px; border-radius: 6px; border: 1px solid var(--border-color); background: #dc3545; color: white; cursor: pointer;">
+            <i class="fas fa-trash" style="margin-right: 6px;"></i>Delete
+          </button>
         </div>
       </div>
       <div id="teamDetailContent">
@@ -435,12 +515,6 @@ async function renderTeamDetail(teamId) {
       </div>
     </div>
   `;
-
-  document.getElementById('backBtn')?.addEventListener('click', () => {
-    currentView = 'list';
-    _currentTeamId = null;
-    renderTeamsList();
-  });
 
   const team = await fetchTeam(teamId);
   if (!team) {
@@ -549,9 +623,10 @@ function showTeamFormModal(team = null) {
 
   const modal = document.createElement('div');
   modal.className = 'confirm-modal';
+  const logoPreviewUrl = team && team.has_logo ? `/api/teams/${team.id}/logo` : null;
   modal.innerHTML = `
     <h2 style="margin: 0 0 16px 0;">${isEdit ? 'Edit Team' : 'Create Team'}</h2>
-    <form id="teamForm">
+    <form id="teamForm" enctype="multipart/form-data">
       <div style="display: flex; flex-direction: column; gap: 12px;">
         <label>
           <div style="margin-bottom: 4px; font-weight: 500;">Team Name *</div>
@@ -562,6 +637,26 @@ function showTeamFormModal(team = null) {
           <div style="margin-bottom: 4px; font-weight: 500;">Color</div>
           <input type="text" id="teamColorInput" value="${team ? escapeHtml(team.color || '') : ''}" placeholder="#2195cf"
                  style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary);">
+        </label>
+        <label>
+          <div style="margin-bottom: 4px; font-weight: 500;">Logo</div>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            ${logoPreviewUrl ? `
+              <div style="display: flex; align-items: center; gap: 12px; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-secondary);">
+                <img id="logoPreview" src="${logoPreviewUrl}" alt="Current logo" style="width: 48px; height: 48px; object-fit: contain; border-radius: 4px; background: white;">
+                <div style="flex: 1;">
+                  <div style="font-size: 0.875rem; color: var(--text-secondary);">Current logo</div>
+                  <button type="button" id="removeLogoBtn" style="margin-top: 4px; padding: 4px 8px; font-size: 0.75rem; color: #dc3545; background: transparent; border: 1px solid #dc3545; border-radius: 4px; cursor: pointer;">Remove logo</button>
+                </div>
+              </div>
+            ` : ''}
+            <input type="file" id="teamLogoInput" accept="image/png,image/jpeg,image/jpg,image/webp"
+                   style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary);">
+            <div style="font-size: 0.75rem; color: var(--text-secondary);">PNG, JPEG, or WebP (max 500KB)</div>
+            <div id="logoPreviewNew" style="display: none; margin-top: 8px;">
+              <img id="logoPreviewImg" src="" alt="Logo preview" style="width: 48px; height: 48px; object-fit: contain; border-radius: 4px; background: white; border: 1px solid var(--border-color);">
+            </div>
+          </div>
         </label>
       </div>
       <div style="display: flex; gap: 8px; margin-top: 20px; justify-content: flex-end;">
@@ -577,6 +672,11 @@ function showTeamFormModal(team = null) {
 
   backdrop.appendChild(modal);
   document.body.appendChild(backdrop);
+
+  // Focus name input once modal is in the DOM
+  setTimeout(() => {
+    document.getElementById('teamNameInput')?.focus();
+  }, 0);
 
   // Trigger enter transition on next frame
   requestAnimationFrame(() => {
@@ -604,6 +704,64 @@ function showTeamFormModal(team = null) {
     if (e.target === backdrop) closeModal();
   });
 
+  // Handle logo file input preview
+  const logoInput = document.getElementById('teamLogoInput');
+  const logoPreviewNew = document.getElementById('logoPreviewNew');
+  const logoPreviewImg = document.getElementById('logoPreviewImg');
+  let removeLogo = false;
+
+  if (logoInput) {
+    logoInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        // Validate file size (500KB max)
+        if (file.size > 500 * 1024) {
+          showToast('Logo file is too large. Maximum size is 500KB.', 'error');
+          e.target.value = '';
+          return;
+        }
+
+        // Validate file type
+        const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+        if (!allowedTypes.includes(file.type)) {
+          showToast('Invalid file type. Only PNG, JPEG, and WebP images are allowed.', 'error');
+          e.target.value = '';
+          return;
+        }
+
+        // Show preview
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          logoPreviewImg.src = event.target.result;
+          logoPreviewNew.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+        removeLogo = false;
+      } else {
+        logoPreviewNew.style.display = 'none';
+      }
+    });
+  }
+
+  // Handle remove logo button
+  const removeLogoBtn = document.getElementById('removeLogoBtn');
+  if (removeLogoBtn) {
+    removeLogoBtn.addEventListener('click', () => {
+      if (confirm('Remove the current logo?')) {
+        removeLogo = true;
+        const logoPreview = document.getElementById('logoPreview');
+        const logoPreviewContainer = logoPreview?.closest('div');
+        if (logoPreviewContainer) {
+          logoPreviewContainer.style.display = 'none';
+        }
+        if (logoInput) {
+          logoInput.value = '';
+        }
+        logoPreviewNew.style.display = 'none';
+      }
+    });
+  }
+
   document.getElementById('teamForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const name = document.getElementById('teamNameInput').value.trim();
@@ -616,10 +774,10 @@ function showTeamFormModal(team = null) {
 
     try {
       if (isEdit) {
-        await updateTeam(team.id, { name, color });
+        await updateTeamWithLogo(team.id, { name, color }, logoInput?.files[0] || null, removeLogo);
         showToast('Team updated successfully', 'success');
       } else {
-        await createTeam(name, color);
+        await createTeamWithLogo(name, color, logoInput?.files[0] || null);
         showToast('Team created successfully', 'success');
       }
       closeModal();

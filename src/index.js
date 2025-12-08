@@ -131,6 +131,7 @@ const settingsLimiter = rateLimit({
 
 const fs = require('fs');
 const path = require('path');
+const multer = require('multer');
 const db = require('./storage/database');
 const logFormatter = require('./storage/log-formatter');
 const auth = require('./auth/auth');
@@ -176,6 +177,23 @@ app.use(cors()); // Allow requests from any origin
 app.use(cookieParser()); // Parse cookies
 app.use(express.json({ limit: '10mb' })); // Parse JSON request bodies with size limit
 app.use(express.urlencoded({ extended: true, limit: '10mb' })); // Parse URL-encoded bodies (for login form)
+
+// Configure multer for file uploads (team logos)
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 500 * 1024 // 500KB max
+  },
+  fileFilter: (req, file, cb) => {
+    // Only allow PNG, JPEG, and WebP images
+    const allowedMimes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+    if (allowedMimes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only PNG, JPEG, and WebP images are allowed.'), false);
+    }
+  }
+});
 
 // Add compression middleware for responses
 const compression = require('compression');
@@ -1257,7 +1275,32 @@ app.get('/api/teams/:id', auth.requireAuth, auth.requireRole('advanced'), apiRea
   }
 });
 
-app.post('/api/teams', auth.requireAuth, auth.requireRole('administrator'), teamOrgLimiter, async (req, res) => {
+app.post('/api/teams', auth.requireAuth, auth.requireRole('administrator'), teamOrgLimiter, (req, res, next) => {
+  upload.single('logo')(req, res, (err) => {
+    if (err) {
+      if (err instanceof multer.MulterError) {
+        if (err.code === 'LIMIT_FILE_SIZE') {
+          return res.status(400).json({
+            status: 'error',
+            message: 'Logo file is too large. Maximum size is 500KB.'
+          });
+        }
+        return res.status(400).json({
+          status: 'error',
+          message: err.message
+        });
+      }
+      if (err.message.includes('Invalid file type')) {
+        return res.status(400).json({
+          status: 'error',
+          message: err.message
+        });
+      }
+      return next(err);
+    }
+    next();
+  });
+}, async (req, res) => {
   try {
     const { name, color, logo_url } = req.body;
 
@@ -1268,7 +1311,14 @@ app.post('/api/teams', auth.requireAuth, auth.requireRole('administrator'), team
       });
     }
 
-    const team = await db.createTeam(name.trim(), color || null, logo_url || null);
+    let logoData = null;
+    let logoMime = null;
+    if (req.file) {
+      logoData = req.file.buffer;
+      logoMime = req.file.mimetype;
+    }
+
+    const team = await db.createTeam(name.trim(), color || null, logo_url || null, logoData, logoMime);
     res.status(201).json({
       status: 'ok',
       team
@@ -1288,7 +1338,32 @@ app.post('/api/teams', auth.requireAuth, auth.requireRole('administrator'), team
   }
 });
 
-app.put('/api/teams/:id', auth.requireAuth, auth.requireRole('administrator'), teamOrgLimiter, async (req, res) => {
+app.put('/api/teams/:id', auth.requireAuth, auth.requireRole('administrator'), teamOrgLimiter, (req, res, next) => {
+  upload.single('logo')(req, res, (err) => {
+    if (err) {
+      if (err instanceof multer.MulterError) {
+        if (err.code === 'LIMIT_FILE_SIZE') {
+          return res.status(400).json({
+            status: 'error',
+            message: 'Logo file is too large. Maximum size is 500KB.'
+          });
+        }
+        return res.status(400).json({
+          status: 'error',
+          message: err.message
+        });
+      }
+      if (err.message.includes('Invalid file type')) {
+        return res.status(400).json({
+          status: 'error',
+          message: err.message
+        });
+      }
+      return next(err);
+    }
+    next();
+  });
+}, async (req, res) => {
   try {
     const teamId = parseInt(req.params.id);
     if (isNaN(teamId)) {
@@ -1298,11 +1373,21 @@ app.put('/api/teams/:id', auth.requireAuth, auth.requireRole('administrator'), t
       });
     }
 
-    const { name, color, logo_url } = req.body;
+    const { name, color, logo_url, remove_logo } = req.body;
     const updates = {};
     if (name !== undefined) updates.name = name;
     if (color !== undefined) updates.color = color;
     if (logo_url !== undefined) updates.logo_url = logo_url;
+
+    // Handle logo file upload
+    if (req.file) {
+      updates.logo_data = req.file.buffer;
+      updates.logo_mime = req.file.mimetype;
+    } else if (remove_logo === 'true' || remove_logo === true) {
+      // Allow removing logo by setting to null
+      updates.logo_data = null;
+      updates.logo_mime = null;
+    }
 
     if (Object.keys(updates).length === 0) {
       return res.status(400).json({
@@ -1335,6 +1420,36 @@ app.put('/api/teams/:id', auth.requireAuth, auth.requireRole('administrator'), t
     res.status(500).json({
       status: 'error',
       message: 'Failed to update team'
+    });
+  }
+});
+
+app.get('/api/teams/:id/logo', auth.requireAuth, apiReadLimiter, async (req, res) => {
+  try {
+    const teamId = parseInt(req.params.id);
+    if (isNaN(teamId)) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Invalid team ID'
+      });
+    }
+
+    const logo = await db.getTeamLogo(teamId);
+    if (!logo) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Logo not found'
+      });
+    }
+
+    res.setHeader('Content-Type', logo.mime);
+    res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache for 1 hour
+    res.send(logo.data);
+  } catch (error) {
+    console.error('Error fetching team logo:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to fetch team logo'
     });
   }
 });

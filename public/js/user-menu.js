@@ -6,7 +6,7 @@
     const isDark = document.documentElement.classList.contains('dark');
     const themeLabel = isDark ? 'Light theme' : 'Dark theme';
     const baseButtonClasses = [
-      'group/item flex w-full items-center gap-3 px-4 py-2 text-sm',
+      'group/item user-menu-item flex w-full items-center gap-3 px-4 py-2 text-sm',
       'text-gray-700 hover:bg-gray-100 hover:text-gray-900 focus-visible:bg-gray-100 focus-visible:text-gray-900',
       'dark:text-gray-100 dark:hover:bg-white/10 dark:focus-visible:bg-white/10 dark:hover:text-white',
       'transition-colors cursor-pointer focus-visible:outline-none'
@@ -26,11 +26,11 @@
 
     return `
       <div class="py-1">
-        <div class="flex items-center gap-3 px-4 py-2 text-sm text-gray-500 dark:text-gray-300" id="userMenuUsername">
+        <div class="flex items-center gap-3 px-4 py-2 text-sm text-gray-500 dark:text-gray-300 cursor-default" id="userMenuUsername">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="size-5 shrink-0 text-gray-400 dark:text-gray-300">
             <path fill-rule="evenodd" d="M12 2.25a5.25 5.25 0 0 0-3.717 8.966 8.252 8.252 0 0 0-4.367 7.284.75.75 0 0 0 1.5 0 6.75 6.75 0 1 1 13.5 0 .75.75 0 0 0 1.5 0 8.252 8.252 0 0 0-4.366-7.284A5.25 5.25 0 0 0 12 2.25Zm0 1.5a3.75 3.75 0 1 1 0 7.5 3.75 3.75 0 0 1 0-7.5Z" clip-rule="evenodd"/>
           </svg>
-          <span class="font-semibold text-gray-900 dark:text-white">Loading user...</span>
+          <span class="font-thin text-gray-900 dark:text-white">Loading user...</span>
         </div>
       </div>
       <div class="py-1">

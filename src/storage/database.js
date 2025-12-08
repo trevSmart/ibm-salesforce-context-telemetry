@@ -3062,11 +3062,24 @@ async function ensureTeamsAndOrgsTables() {
           name TEXT NOT NULL UNIQUE,
           color TEXT,
           logo_url TEXT,
+          logo_data BLOB,
+          logo_mime TEXT,
           created_at TEXT DEFAULT CURRENT_TIMESTAMP,
           updated_at TEXT DEFAULT CURRENT_TIMESTAMP
         );
         CREATE INDEX IF NOT EXISTS idx_teams_name ON teams(name);
       `);
+
+      // Add logo_data and logo_mime columns if they don't exist
+      const teamsColumns = db.prepare('PRAGMA table_info(teams)').all();
+      const hasLogoData = teamsColumns.some(column => column.name === 'logo_data');
+      const hasLogoMime = teamsColumns.some(column => column.name === 'logo_mime');
+      if (!hasLogoData) {
+        db.exec('ALTER TABLE teams ADD COLUMN logo_data BLOB');
+      }
+      if (!hasLogoMime) {
+        db.exec('ALTER TABLE teams ADD COLUMN logo_mime TEXT');
+      }
 
       // Add team_id to orgs table if it doesn't exist
       const orgsColumns = db.prepare('PRAGMA table_info(orgs)').all();
@@ -3115,10 +3128,20 @@ async function ensureTeamsAndOrgsTables() {
           name TEXT NOT NULL UNIQUE,
           color TEXT,
           logo_url TEXT,
+          logo_data BYTEA,
+          logo_mime TEXT,
           created_at TIMESTAMPTZ DEFAULT NOW(),
           updated_at TIMESTAMPTZ DEFAULT NOW()
         );
         CREATE INDEX IF NOT EXISTS idx_teams_name ON teams(name);
+      `);
+
+      // Add logo_data and logo_mime columns if they don't exist
+      await db.query(`
+        ALTER TABLE teams
+        ADD COLUMN IF NOT EXISTS logo_data BYTEA;
+        ALTER TABLE teams
+        ADD COLUMN IF NOT EXISTS logo_mime TEXT;
       `);
 
       // Add team_id to orgs table if it doesn't exist
@@ -3183,6 +3206,7 @@ async function getAllTeams() {
           t.name,
           t.color,
           t.logo_url,
+          t.logo_mime,
           t.created_at,
           t.updated_at,
           COUNT(DISTINCT o.server_id) as org_count,
@@ -3199,6 +3223,7 @@ async function getAllTeams() {
         name: team.name,
         color: team.color || null,
         logo_url: team.logo_url || null,
+        has_logo: !!(team.logo_mime && team.logo_mime.trim() !== ''),
         created_at: team.created_at,
         updated_at: team.updated_at,
         org_count: parseInt(team.org_count) || 0,
@@ -3211,6 +3236,7 @@ async function getAllTeams() {
           t.name,
           t.color,
           t.logo_url,
+          t.logo_mime,
           t.created_at,
           t.updated_at,
           COUNT(DISTINCT o.server_id) as org_count,
@@ -3227,6 +3253,7 @@ async function getAllTeams() {
         name: team.name,
         color: team.color || null,
         logo_url: team.logo_url || null,
+        has_logo: !!(team.logo_mime && team.logo_mime.trim() !== ''),
         created_at: team.created_at,
         updated_at: team.updated_at,
         org_count: parseInt(team.org_count) || 0,
@@ -3257,6 +3284,7 @@ async function getTeamById(teamId) {
           name,
           color,
           logo_url,
+          logo_mime,
           created_at,
           updated_at
         FROM teams
@@ -3296,6 +3324,7 @@ async function getTeamById(teamId) {
         name: team.name,
         color: team.color || null,
         logo_url: team.logo_url || null,
+        has_logo: !!(team.logo_mime && team.logo_mime.trim() !== ''),
         created_at: team.created_at,
         updated_at: team.updated_at,
         orgs: orgs.map(org => ({
@@ -3319,6 +3348,7 @@ async function getTeamById(teamId) {
           name,
           color,
           logo_url,
+          logo_mime,
           created_at,
           updated_at
         FROM teams
@@ -3360,6 +3390,7 @@ async function getTeamById(teamId) {
         name: team.name,
         color: team.color || null,
         logo_url: team.logo_url || null,
+        has_logo: !!(team.logo_mime && team.logo_mime.trim() !== ''),
         created_at: team.created_at,
         updated_at: team.updated_at,
         orgs: orgsResult.rows.map(org => ({
@@ -3401,7 +3432,7 @@ async function addEventUserToTeam(teamId, userName) {
         VALUES (?, ?)
         ON CONFLICT(team_id, user_name) DO NOTHING
       `).run(teamId, userName);
-      
+
       return { status: 'ok', message: 'Event user added to team successfully' };
     } else if (dbType === 'postgresql') {
       await db.query(`
@@ -3409,7 +3440,7 @@ async function addEventUserToTeam(teamId, userName) {
         VALUES ($1, $2)
         ON CONFLICT (team_id, user_name) DO NOTHING
       `, [teamId, userName]);
-      
+
       return { status: 'ok', message: 'Event user added to team successfully' };
     }
   } catch (error) {
@@ -3435,14 +3466,14 @@ async function removeEventUserFromTeam(teamId, userName) {
         DELETE FROM team_event_users
         WHERE team_id = ? AND user_name = ?
       `).run(teamId, userName);
-      
+
       return { status: 'ok', message: 'Event user removed from team successfully' };
     } else if (dbType === 'postgresql') {
       await db.query(`
         DELETE FROM team_event_users
         WHERE team_id = $1 AND user_name = $2
       `, [teamId, userName]);
-      
+
       return { status: 'ok', message: 'Event user removed from team successfully' };
     }
   } catch (error) {
@@ -3506,9 +3537,11 @@ async function getEventUserNames(limit = 1000) {
  * @param {string} name - Team name (must be unique)
  * @param {string} color - Team color (hex or CSS color)
  * @param {string} logoUrl - Optional logo URL
+ * @param {Buffer} logoData - Optional logo binary data
+ * @param {string} logoMime - Optional logo MIME type
  * @returns {Promise<object>} Created team object
  */
-async function createTeam(name, color = null, logoUrl = null) {
+async function createTeam(name, color = null, logoUrl = null, logoData = null, logoMime = null) {
   if (!db) {
     throw new Error('Database not initialized. Call init() first.');
   }
@@ -3522,10 +3555,10 @@ async function createTeam(name, color = null, logoUrl = null) {
   try {
     if (dbType === 'sqlite') {
       const stmt = db.prepare(`
-        INSERT INTO teams (name, color, logo_url, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO teams (name, color, logo_url, logo_data, logo_mime, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
       `);
-      const result = stmt.run(name.trim(), color || null, logoUrl || null, now, now);
+      const result = stmt.run(name.trim(), color || null, logoUrl || null, logoData || null, logoMime || null, now, now);
       return {
         id: result.lastInsertRowid,
         name: name.trim(),
@@ -3536,10 +3569,10 @@ async function createTeam(name, color = null, logoUrl = null) {
       };
     } else if (dbType === 'postgresql') {
       const result = await db.query(`
-        INSERT INTO teams (name, color, logo_url, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5)
+        INSERT INTO teams (name, color, logo_url, logo_data, logo_mime, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
         RETURNING id, name, color, logo_url, created_at, updated_at
-      `, [name.trim(), color || null, logoUrl || null, now, now]);
+      `, [name.trim(), color || null, logoUrl || null, logoData || null, logoMime || null, now, now]);
       return result.rows[0];
     }
   } catch (error) {
@@ -3554,7 +3587,7 @@ async function createTeam(name, color = null, logoUrl = null) {
 /**
  * Update a team
  * @param {number} teamId - Team ID
- * @param {object} updates - Object with name, color, logo_url to update
+ * @param {object} updates - Object with name, color, logo_url, logo_data, logo_mime to update
  * @returns {Promise<boolean>} True if updated, false if not found
  */
 async function updateTeam(teamId, updates) {
@@ -3562,7 +3595,7 @@ async function updateTeam(teamId, updates) {
     throw new Error('Database not initialized. Call init() first.');
   }
 
-  const { name, color, logo_url } = updates || {};
+  const { name, color, logo_url, logo_data, logo_mime } = updates || {};
   const now = new Date().toISOString();
   const updatesList = [];
   const params = [];
@@ -3583,6 +3616,16 @@ async function updateTeam(teamId, updates) {
   if (logo_url !== undefined) {
     updatesList.push(dbType === 'sqlite' ? 'logo_url = ?' : 'logo_url = $' + (params.length + 1));
     params.push(logo_url || null);
+  }
+
+  if (logo_data !== undefined) {
+    updatesList.push(dbType === 'sqlite' ? 'logo_data = ?' : 'logo_data = $' + (params.length + 1));
+    params.push(logo_data || null);
+  }
+
+  if (logo_mime !== undefined) {
+    updatesList.push(dbType === 'sqlite' ? 'logo_mime = ?' : 'logo_mime = $' + (params.length + 1));
+    params.push(logo_mime || null);
   }
 
   if (updatesList.length === 0) {
@@ -3616,6 +3659,54 @@ async function updateTeam(teamId, updates) {
       throw new Error('Team name already exists');
     }
     console.error('Error updating team:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get team logo data
+ * @param {number} teamId - Team ID
+ * @returns {Promise<{data: Buffer, mime: string}|null>} Logo data and MIME type, or null if not found
+ */
+async function getTeamLogo(teamId) {
+  if (!db) {
+    throw new Error('Database not initialized. Call init() first.');
+  }
+
+  try {
+    if (dbType === 'sqlite') {
+      const team = db.prepare(`
+        SELECT logo_data, logo_mime
+        FROM teams
+        WHERE id = ? AND logo_data IS NOT NULL AND logo_mime IS NOT NULL
+      `).get(teamId);
+
+      if (!team || !team.logo_data || !team.logo_mime) {
+        return null;
+      }
+
+      return {
+        data: Buffer.from(team.logo_data),
+        mime: team.logo_mime
+      };
+    } else if (dbType === 'postgresql') {
+      const result = await db.query(`
+        SELECT logo_data, logo_mime
+        FROM teams
+        WHERE id = $1 AND logo_data IS NOT NULL AND logo_mime IS NOT NULL
+      `, [teamId]);
+
+      if (result.rows.length === 0 || !result.rows[0].logo_data || !result.rows[0].logo_mime) {
+        return null;
+      }
+
+      return {
+        data: result.rows[0].logo_data,
+        mime: result.rows[0].logo_mime
+      };
+    }
+  } catch (error) {
+    console.error('Error getting team logo:', error);
     throw error;
   }
 }
@@ -4185,6 +4276,7 @@ module.exports = {
   // Team management
   getAllTeams,
   getTeamById,
+  getTeamLogo,
   createTeam,
   updateTeam,
   deleteTeam,

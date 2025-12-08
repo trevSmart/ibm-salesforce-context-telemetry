@@ -78,7 +78,7 @@
 							<path d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" fill-rule="evenodd" />
 						</svg>
 					</button>
-					<el-menu id="userMenu" anchor="bottom end" popover class="origin-top-right divide-y divide-gray-100 rounded-md bg-white text-gray-900 shadow-lg ring-1 ring-black/5 transition transition-discrete dark:divide-white/10 dark:bg-zinc-900 dark:text-gray-50 [--anchor-gap:--spacing(2)] data-closed:scale-95 data-closed:transform data-closed:opacity-0 data-enter:duration-100 data-enter:ease-out data-leave:duration-75 data-leave:ease-in"></el-menu>
+					<el-menu id="userMenu" anchor="bottom end" popover class="origin-top-right divide-y divide-gray-100 rounded-md bg-white text-gray-900 shadow-lg ring-1 ring-black/5 transition transition-discrete dark:divide-white/10 dark:bg-zinc-900 dark:text-gray-50 font-light [--anchor-gap:--spacing(2)] data-closed:scale-95 data-closed:transform data-closed:opacity-0 data-enter:duration-100 data-enter:ease-out data-leave:duration-75 data-leave:ease-in"></el-menu>
 				</el-dropdown>
 			</div>
 		</nav>
@@ -107,9 +107,14 @@
 				</div>
 			</section>
 					<section>
-						<div class="px-4 py-5 sm:p-6" style="text-align: left;">
-							<h2 style="margin: 0 0 8px 0;">Top teams <span style="font-size: calc(1em - 2.6px);">(last 30 days)</span></h2>
-							<p style="margin: 0 0 12px 0;">Sorted by event volume across the last 30 days.</p>
+						<div class="px-4 py-5 sm:px-6">
+							<h3 class="text-base font-semibold text-gray-900">
+								Top teams
+								<span class="ml-1 text-sm font-normal text-gray-500">(last 30 days)</span>
+							</h3>
+							<p class="mt-1 text-sm text-gray-500">Sorted by event volume across the last 30 days.</p>
+						</div>
+						<div class="px-4 py-5 sm:p-6 text-left">
 							<ul id="topTeamsList" class="top-users-list">
 								<li class="top-users-empty">Loading top teams…</li>
 							</ul>
@@ -120,17 +125,25 @@
 			<div class="dashboard-row-bottom">
 				<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 24px; flex: 1;">
 					<section>
-						<div class="px-4 py-5 sm:p-6" style="text-align: left;">
-							<h2 style="margin: 0 0 8px 0;">Top users <span style="font-size: calc(1em - 2.6px);">(last 3 days)</span></h2>
-							<p style="margin: 0 0 12px 0;">Sorted by event volume across the last 3 days.</p>
+						<div class="px-4 py-5 sm:px-6">
+							<h3 class="text-base font-semibold text-gray-900">
+								Top users
+								<span class="ml-1 text-sm font-normal text-gray-500">(last 3 days)</span>
+							</h3>
+							<p class="mt-1 text-sm text-gray-500">Sorted by event volume across the last 3 days.</p>
+						</div>
+						<div class="px-4 py-5 sm:p-6 text-left">
 							<ul id="topUsersList" class="top-users-list">
 								<li class="top-users-empty">Loading top users…</li>
 							</ul>
 						</div>
 					</section>
 					<section class="overflow-hidden rounded-lg bg-white shadow-sm" id="serverStatsCard" style="text-align: left;">
-						<div class="px-4 py-5 sm:p-6" style="display: flex; flex-direction: column; gap: 10px;">
-							<h2 style="margin: 0;">Server Stats</h2>
+						<div class="px-4 py-5 sm:px-6">
+							<h3 class="text-base font-semibold text-gray-900">Server stats</h3>
+							<p class="mt-1 text-sm text-gray-500">Live telemetry server metrics.</p>
+						</div>
+						<div class="px-4 py-5 sm:p-6 text-left" style="display: flex; flex-direction: column; gap: 10px;">
 							<ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px;">
 								<li style="display: flex; justify-content: space-between; align-items: baseline;">
 									<span style="color: var(--text-secondary);">Last updated</span>
@@ -152,9 +165,11 @@
 						</div>
 					</section>
 					<section class="overflow-hidden rounded-lg bg-white shadow-sm">
-						<div class="px-4 py-5 sm:p-6" style="text-align: left;">
-							<h2 style="margin: 0 0 8px 0;">Proposal Tracker</h2>
-							<p style="margin: 0 0 12px 0;">Keep track of your pitches.</p>
+						<div class="px-4 py-5 sm:px-6">
+							<h3 class="text-base font-semibold text-gray-900">Proposal tracker</h3>
+							<p class="mt-1 text-sm text-gray-500">Keep track of your pitches.</p>
+						</div>
+						<div class="px-4 py-5 sm:p-6 text-left">
 							<ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px;">
 								<li><input type="checkbox" aria-label="Design project submitted" checked> Design Project · Last month</li>
 								<li><input type="checkbox" aria-label="Video project submitted"> Video Project · Last week</li>
@@ -166,7 +181,12 @@
 				</div>
 			</div>
 			<div class="dashboard-footer">
-				<span class="dashboard-status-ok">Server is running</span> ·
+				<span class="inline-flex items-center gap-x-1.5 rounded-full bg-green-100 px-2 py-1 text-xs font-medium">
+					<svg viewBox="0 0 6 6" aria-hidden="true" class="size-1.5 fill-green-500">
+						<circle r="3" cx="3" cy="3" />
+					</svg>
+					Server is running
+				</span> ·
 				<a href="/health">Health Check</a> ·
 				<a href="/api/events">API</a> ·
 				<a href="/schema">Schema</a>

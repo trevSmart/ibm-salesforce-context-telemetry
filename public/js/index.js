@@ -426,7 +426,7 @@ function updateServerStatsVisibility() {
   }
   const serverStatsCard = document.getElementById('serverStatsCard');
   if (serverStatsCard) {
-    serverStatsCard.style.display = showServerStats ? 'flex' : 'none';
+    serverStatsCard.style.display = showServerStats ? '' : 'none';
   }
 }
 
@@ -481,20 +481,29 @@ function clearLocalData() {
 
 function openConfirmModal({ title, message, confirmLabel = 'Confirm', cancelLabel = 'Cancel', destructive = false }) {
   return new Promise((resolve) => {
-    const existing = document.querySelector('.confirm-modal-backdrop');
+    const existing = document.querySelector('.confirm-dialog-backdrop');
     if (existing) {
       existing.remove();
     }
 
     const backdrop = document.createElement('div');
-    backdrop.className = 'confirm-modal-backdrop';
+    backdrop.className = 'confirm-modal-backdrop confirm-dialog-backdrop';
 
     const modal = document.createElement('div');
-    modal.className = 'confirm-modal';
+    modal.className = 'confirm-modal confirm-dialog';
     modal.innerHTML = `
-			<div class="confirm-modal-title">${escapeHtml(title || 'Confirm action')}</div>
-			<div class="confirm-modal-message">${escapeHtml(message || '')}</div>
-			<div class="confirm-modal-actions">
+			<div class="confirm-dialog-header">
+				<div class="confirm-dialog-icon ${destructive ? 'destructive' : ''}">
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" focusable="false">
+						<path d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" stroke-linecap="round" stroke-linejoin="round" />
+					</svg>
+				</div>
+				<div class="confirm-dialog-text">
+					<div class="confirm-modal-title">${escapeHtml(title || 'Confirm action')}</div>
+					<div class="confirm-modal-message">${escapeHtml(message || '')}</div>
+				</div>
+			</div>
+			<div class="confirm-dialog-actions">
 				<button type="button" class="confirm-modal-btn confirm-modal-btn-cancel">${escapeHtml(cancelLabel)}</button>
 				<button type="button" class="confirm-modal-btn ${destructive ? 'confirm-modal-btn-destructive' : 'confirm-modal-btn-confirm'}">${escapeHtml(confirmLabel)}</button>
 			</div>
@@ -532,6 +541,8 @@ function openConfirmModal({ title, message, confirmLabel = 'Confirm', cancelLabe
       'keydown',
       function handleKeydown(e) {
         if (e.key === 'Escape') {
+          e.stopImmediatePropagation();
+          e.preventDefault();
           document.removeEventListener('keydown', handleKeydown);
           if (document.body.contains(backdrop)) {
             animateAndResolve(false);

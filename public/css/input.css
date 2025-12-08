@@ -1496,12 +1496,30 @@ body.event-log-page .container {
     transition: opacity 0.15s ease-out, transform 0.15s ease-out, visibility 0s linear 0.15s;
   }
 
+  #userMenu:focus,
+  #userMenu:focus-visible {
+    outline: none;
+    box-shadow: none;
+  }
+
   #userMenu.show {
     opacity: 1;
     transform: translateY(0) scale(1);
     pointer-events: auto;
     visibility: visible;
     transition: opacity 0.15s ease-out, transform 0.15s ease-out;
+  }
+
+  .user-menu-item {
+    align-items: center;
+    gap: 12px;
+    line-height: 1.4;
+  }
+
+  #userMenu .user-menu-item svg {
+    display: block;
+    color: var(--text-secondary);
+    stroke: currentColor;
   }
 
   .top-users-list {
@@ -1764,14 +1782,14 @@ body.event-log-page .container {
     background: var(--brand-600);
     color: white;
     box-shadow: 0 3px 10px rgba(0, 0, 0, 0.18);
-    transform: translateY(-1px);
+    transform: none;
   }
 
   html.dark .icon-btn.auto-refresh-active:hover {
     background: var(--brand-700);
     color: white;
     box-shadow: 0 3px 12px rgba(0, 0, 0, 0.28);
-    transform: translateY(-1px);
+    transform: none;
   }
 
   .icon-btn.auto-refresh-active svg,
@@ -1881,14 +1899,14 @@ body.event-log-page .container {
     background: var(--brand-600);
     color: white;
     box-shadow: 0 3px 10px rgba(0, 0, 0, 0.18);
-    transform: translateY(-1px);
+    transform: none;
   }
 
   html.dark .icon-btn.notification-toggle.active:hover {
     background: var(--brand-700);
     color: white;
     box-shadow: 0 3px 12px rgba(0, 0, 0, 0.28);
-    transform: translateY(-1px);
+    transform: none;
   }
 
   html.dark .icon-btn {
@@ -1900,13 +1918,13 @@ body.event-log-page .container {
     background: var(--button-bg);
     color: var(--text-primary);
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
-    transform: translateY(-0.5px);
+    transform: none;
   }
 
   html.dark .icon-btn:hover:not(.delete-all-btn):not(.notification-toggle.active):not(.auto-refresh-active) {
     background: var(--button-bg);
     color: var(--text-primary);
-    transform: translateY(-0.5px);
+    transform: none;
   }
 
   .delete-all-btn {
@@ -3379,7 +3397,7 @@ body.event-log-page .container {
   }
 
   .pagination-btn:hover:not(:disabled) {
-    transform: translateY(-1px);
+    transform: none;
   }
 
   .pagination-btn:active:not(:disabled) {
@@ -4182,6 +4200,60 @@ body.event-log-page .container {
     transition:
       opacity 0.18s ease-out,
       transform 0.18s ease-out;
+  }
+
+  .confirm-modal.confirm-dialog {
+    max-width: 560px;
+    padding: 22px 22px 18px 22px;
+    border-radius: 16px;
+    box-shadow: 0 20px 45px rgba(15, 23, 42, 0.25);
+  }
+
+  .confirm-dialog-header {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+  }
+
+  .confirm-dialog-icon {
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    border-radius: 999px;
+    background: #fef2f2;
+    color: #dc2626;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: inset 0 0 0 1px rgba(220, 38, 38, 0.08);
+  }
+
+  .confirm-dialog-icon svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .confirm-dialog-icon.destructive {
+    background: #fef2f2;
+    color: #dc2626;
+  }
+
+  html.dark .confirm-dialog-icon {
+    background: rgba(248, 113, 113, 0.12);
+    box-shadow: inset 0 0 0 1px rgba(248, 113, 113, 0.18);
+  }
+
+  .confirm-dialog-text {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .confirm-dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 18px;
+    flex-wrap: wrap;
   }
 
   .confirm-modal.settings-modal {
@@ -5007,4 +5079,14 @@ html.dark .level-filters .level-filter-btn.level-error {
   background: rgba(248, 113, 113, 0.15);
   color: #fecdd3;
   box-shadow: inset 0 0 0 1px rgba(252, 165, 165, 0.28);
+}
+
+.teams-list-container {
+  max-width: 900px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+#teamsList > .group {
+  cursor: pointer;
 }
