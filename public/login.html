@@ -511,6 +511,9 @@
 		</div>
 	</div>
 
+	<!-- Load CSRF helper first -->
+	<script src="/js/csrf-helper.js"></script>
+	
 	<script>
 		const form = document.getElementById('loginForm');
 		const errorMessage = document.getElementById('errorMessage');
@@ -542,11 +545,14 @@
 			loginButton.disabled = true;
 
 			try {
+				// Use shared CSRF helper
+				const headers = window.getRequestHeaders ? window.getRequestHeaders(true) : {
+					'Content-Type': 'application/json'
+				};
+				
 				const response = await fetch('/login', {
 					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json'
-					},
+					headers: headers,
 					body: JSON.stringify({ username, password, rememberMe })
 				});
 
@@ -568,13 +574,22 @@
 			}
 		});
 
-		// Check if already logged in
+		// Wait for CSRF helper to load, then check if already logged in
 		(async () => {
 			try {
 				const response = await fetch('/api/auth/status');
 				const data = await response.json();
 				if (data.authenticated) {
 					window.location.href = '/';
+				}
+				// Store CSRF token (CSRF helper loaded first via script tag)
+				if (window.setCsrfToken && data.csrfToken) {
+					window.setCsrfToken(data.csrfToken);
+				} else if (window.getCsrfTokenFromCookie) {
+					const token = window.getCsrfTokenFromCookie();
+					if (token && window.setCsrfToken) {
+						window.setCsrfToken(token);
+					}
 				}
 			} catch (error) {
 				// Ignore errors

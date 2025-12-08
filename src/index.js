@@ -21,6 +21,30 @@ const deleteEventsLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// Limit POST requests to /api/orgs to prevent abuse: max 10 per hour per IP
+const createOrgsLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 10, // max 10 org creations/updates per hour
+  message: {
+    status: 'error',
+    message: 'Too many create/update requests for orgs. Please try again later.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Limit user management (user creation) requests to prevent abuse: max 10 creates per hour per IP
+const userManagementLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 10, // max 10 requests per hour per IP
+  message: {
+    status: 'error',
+    message: 'Too many user creation requests. Please try again later.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // Rate limit for telemetry users endpoint: max 20 requests per hour per IP
 const telemetryUsersLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
@@ -44,11 +68,73 @@ const deleteEventUserFromTeamLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
+
+// Rate limit for telemetry ingestion: max 100 requests per 15 minutes per IP
+const telemetryLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // max 100 requests per 15 minutes per IP
+  message: {
+    status: 'error',
+    message: 'Too many telemetry submissions. Please try again later.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Rate limit for login attempts: max 10 attempts per 15 minutes per IP
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // max 10 attempts per 15 minutes per IP
+  message: {
+    status: 'error',
+    message: 'Too many login attempts. Please try again later.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Rate limit for team/org operations: max 30 requests per hour per IP
+const teamOrgLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 30, // max 30 requests per hour per IP
+  message: {
+    status: 'error',
+    message: 'Too many team/org management requests. Please try again later.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Rate limit for general API GET requests: max 100 requests per 15 minutes per IP
+const apiReadLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // max 100 requests per 15 minutes per IP
+  message: {
+    status: 'error',
+    message: 'Too many API requests. Please try again later.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Rate limit for settings changes: max 10 requests per hour per IP
+const settingsLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 10, // max 10 requests per hour per IP
+  message: {
+    status: 'error',
+    message: 'Too many settings update requests. Please try again later.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 const fs = require('fs');
 const path = require('path');
 const db = require('./storage/database');
 const logFormatter = require('./storage/log-formatter');
 const auth = require('./auth/auth');
+const csrf = require('./auth/csrf');
 const { Cache } = require('./utils/performance');
 const app = express();
 const port = process.env.PORT || 3100;
@@ -208,6 +294,13 @@ app.use(async (req, res, next) => {
   next();
 });
 
+// CSRF Protection
+// Set CSRF token cookie for all requests
+app.use(csrf.setCsrfToken);
+
+// Apply CSRF validation to state-changing requests
+app.use(csrf.csrfProtection);
+
 // Serve static files from public directory with caching
 const LONG_CACHE_ASSETS = /\.(woff2?|ttf|svg|jpg|jpeg|png|gif|ico)$/;
 const SHORT_CACHE_ASSETS = /\.(css|js)$/;
@@ -267,7 +360,7 @@ app.use((req, res, next) => {
   next();
 });
 
-app.post('/telemetry', (req, res) => {
+app.post('/telemetry', telemetryLimiter, (req, res) => {
   try {
     const telemetryData = req.body;
 
@@ -447,7 +540,7 @@ app.get('/login', auth.requireGuest, (req, res) => {
   }
 });
 
-app.post('/login', auth.requireGuest, async (req, res) => {
+app.post('/login', auth.requireGuest, loginLimiter, async (req, res) => {
   try {
     // Support both JSON and form-urlencoded
     const username = req.body.username;
@@ -599,12 +692,13 @@ app.get('/api/auth/status', (req, res) => {
     username: req.session && req.session.username || null,
     role: isAuthenticated && req.session?.role
       ? auth.normalizeRole(req.session.role)
-      : null
+      : null,
+    csrfToken: csrf.getToken(req)
   });
 });
 
 // User management API endpoints
-app.get('/api/users', auth.requireAuth, auth.requireRole('administrator'), async (req, res) => {
+app.get('/api/users', auth.requireAuth, auth.requireRole('administrator'), apiReadLimiter, async (req, res) => {
   try {
     const users = await db.getAllUsers();
     res.json({
@@ -620,7 +714,7 @@ app.get('/api/users', auth.requireAuth, auth.requireRole('administrator'), async
   }
 });
 
-app.post('/api/users', auth.requireAuth, auth.requireRole('administrator'), async (req, res) => {
+app.post('/api/users', auth.requireAuth, auth.requireRole('administrator'), userManagementLimiter, async (req, res) => {
   try {
     const { username, password, role } = req.body;
 
@@ -667,7 +761,7 @@ app.post('/api/users', auth.requireAuth, auth.requireRole('administrator'), asyn
   }
 });
 
-app.delete('/api/users/:username', auth.requireAuth, auth.requireRole('administrator'), async (req, res) => {
+app.delete('/api/users/:username', auth.requireAuth, auth.requireRole('administrator'), userManagementLimiter, async (req, res) => {
   try {
     const { username } = req.params;
 
@@ -700,7 +794,7 @@ app.delete('/api/users/:username', auth.requireAuth, auth.requireRole('administr
   }
 });
 
-app.put('/api/users/:username/password', auth.requireAuth, auth.requireRole('administrator'), async (req, res) => {
+app.put('/api/users/:username/password', auth.requireAuth, auth.requireRole('administrator'), userManagementLimiter, async (req, res) => {
   try {
     const { username } = req.params;
     const { password } = req.body;
@@ -737,7 +831,7 @@ app.put('/api/users/:username/password', auth.requireAuth, auth.requireRole('adm
   }
 });
 
-app.put('/api/users/:username/role', auth.requireAuth, auth.requireRole('administrator'), async (req, res) => {
+app.put('/api/users/:username/role', auth.requireAuth, auth.requireRole('administrator'), userManagementLimiter, async (req, res) => {
   try {
     const { username } = req.params;
     const { role } = req.body;
@@ -808,7 +902,7 @@ app.get('/api/settings/org-team-mappings', auth.requireAuth, async (req, res) =>
   }
 });
 
-app.post('/api/settings/org-team-mappings', auth.requireAuth, auth.requireRole('administrator'), async (req, res) => {
+app.post('/api/settings/org-team-mappings', auth.requireAuth, auth.requireRole('administrator'), settingsLimiter, async (req, res) => {
   try {
     const { mappings } = req.body;
 
@@ -845,7 +939,7 @@ app.post('/api/settings/org-team-mappings', auth.requireAuth, auth.requireRole('
 });
 
 // API endpoints for viewing telemetry data
-app.get('/api/events', auth.requireAuth, auth.requireRole('advanced'), async (req, res) => {
+app.get('/api/events', auth.requireAuth, auth.requireRole('advanced'), apiReadLimiter, async (req, res) => {
   try {
     const {
       limit = 50,
@@ -908,7 +1002,7 @@ app.get('/api/events', auth.requireAuth, auth.requireRole('advanced'), async (re
   }
 });
 
-app.get('/api/events/:id', auth.requireAuth, auth.requireRole('advanced'), async (req, res) => {
+app.get('/api/events/:id', auth.requireAuth, auth.requireRole('advanced'), apiReadLimiter, async (req, res) => {
   try {
     const eventId = parseInt(req.params.id, 10);
     if (isNaN(eventId)) {
@@ -965,7 +1059,7 @@ app.get('/api/stats', auth.requireAuth, async (req, res) => {
   }
 });
 
-app.get('/api/event-types', auth.requireAuth, auth.requireRole('advanced'), async (req, res) => {
+app.get('/api/event-types', auth.requireAuth, auth.requireRole('advanced'), apiReadLimiter, async (req, res) => {
   try {
     const { sessionId, userId } = req.query;
     // Handle multiple userId values (Express converts them to an array)
@@ -990,7 +1084,7 @@ app.get('/api/event-types', auth.requireAuth, auth.requireRole('advanced'), asyn
   }
 });
 
-app.get('/api/sessions', auth.requireAuth, auth.requireRole('advanced'), async (req, res) => {
+app.get('/api/sessions', auth.requireAuth, auth.requireRole('advanced'), apiReadLimiter, async (req, res) => {
   try {
     const { userId } = req.query;
     // Handle multiple userId values (Express converts them to an array)
@@ -1090,7 +1184,7 @@ app.get('/api/top-teams-today', auth.requireAuth, async (req, res) => {
   }
 });
 
-app.get('/api/team-stats', auth.requireAuth, auth.requireRole('advanced'), async (_req, res) => {
+app.get('/api/team-stats', auth.requireAuth, auth.requireRole('advanced'), apiReadLimiter, async (_req, res) => {
   try {
     const mappingsJson = await db.getSetting('org_team_mappings');
     let mappings = [];
@@ -1116,7 +1210,7 @@ app.get('/api/team-stats', auth.requireAuth, auth.requireRole('advanced'), async
 });
 
 // Teams API endpoints
-app.get('/api/teams', auth.requireAuth, auth.requireRole('advanced'), async (req, res) => {
+app.get('/api/teams', auth.requireAuth, auth.requireRole('advanced'), apiReadLimiter, async (req, res) => {
   try {
     const teams = await db.getAllTeams();
     res.json({
@@ -1132,7 +1226,7 @@ app.get('/api/teams', auth.requireAuth, auth.requireRole('advanced'), async (req
   }
 });
 
-app.get('/api/teams/:id', auth.requireAuth, auth.requireRole('advanced'), async (req, res) => {
+app.get('/api/teams/:id', auth.requireAuth, auth.requireRole('advanced'), apiReadLimiter, async (req, res) => {
   try {
     const teamId = parseInt(req.params.id);
     if (isNaN(teamId)) {
@@ -1163,7 +1257,7 @@ app.get('/api/teams/:id', auth.requireAuth, auth.requireRole('advanced'), async 
   }
 });
 
-app.post('/api/teams', auth.requireAuth, auth.requireRole('administrator'), async (req, res) => {
+app.post('/api/teams', auth.requireAuth, auth.requireRole('administrator'), teamOrgLimiter, async (req, res) => {
   try {
     const { name, color, logo_url } = req.body;
 
@@ -1194,7 +1288,7 @@ app.post('/api/teams', auth.requireAuth, auth.requireRole('administrator'), asyn
   }
 });
 
-app.put('/api/teams/:id', auth.requireAuth, auth.requireRole('administrator'), async (req, res) => {
+app.put('/api/teams/:id', auth.requireAuth, auth.requireRole('administrator'), teamOrgLimiter, async (req, res) => {
   try {
     const teamId = parseInt(req.params.id);
     if (isNaN(teamId)) {
@@ -1245,7 +1339,7 @@ app.put('/api/teams/:id', auth.requireAuth, auth.requireRole('administrator'), a
   }
 });
 
-app.delete('/api/teams/:id', auth.requireAuth, auth.requireRole('administrator'), async (req, res) => {
+app.delete('/api/teams/:id', auth.requireAuth, auth.requireRole('administrator'), teamOrgLimiter, async (req, res) => {
   try {
     const teamId = parseInt(req.params.id);
     if (isNaN(teamId)) {
@@ -1277,7 +1371,7 @@ app.delete('/api/teams/:id', auth.requireAuth, auth.requireRole('administrator')
 });
 
 // Orgs API endpoints
-app.get('/api/orgs', auth.requireAuth, auth.requireRole('advanced'), async (req, res) => {
+app.get('/api/orgs', auth.requireAuth, auth.requireRole('advanced'), apiReadLimiter, async (req, res) => {
   try {
     const orgs = await db.getAllOrgsWithTeams();
     res.json({
@@ -1293,7 +1387,7 @@ app.get('/api/orgs', auth.requireAuth, auth.requireRole('advanced'), async (req,
   }
 });
 
-app.post('/api/orgs', auth.requireAuth, auth.requireRole('administrator'), async (req, res) => {
+app.post('/api/orgs', auth.requireAuth, auth.requireRole('administrator'), createOrgsLimiter, async (req, res) => {
   try {
     const { id, alias, color, team_id, company_name } = req.body;
 
@@ -1324,7 +1418,7 @@ app.post('/api/orgs', auth.requireAuth, auth.requireRole('administrator'), async
   }
 });
 
-app.put('/api/orgs/:id', auth.requireAuth, auth.requireRole('administrator'), async (req, res) => {
+app.put('/api/orgs/:id', auth.requireAuth, auth.requireRole('administrator'), teamOrgLimiter, async (req, res) => {
   try {
     const orgId = req.params.id;
     const { alias, color, team_id, company_name } = req.body;
@@ -1349,7 +1443,7 @@ app.put('/api/orgs/:id', auth.requireAuth, auth.requireRole('administrator'), as
   }
 });
 
-app.post('/api/orgs/:id/move', auth.requireAuth, auth.requireRole('administrator'), async (req, res) => {
+app.post('/api/orgs/:id/move', auth.requireAuth, auth.requireRole('administrator'), teamOrgLimiter, async (req, res) => {
   try {
     const orgId = req.params.id;
     const { team_id } = req.body;
@@ -1383,7 +1477,7 @@ app.post('/api/orgs/:id/move', auth.requireAuth, auth.requireRole('administrator
 });
 
 // User-team assignment endpoint
-app.post('/api/users/:id/assign-team', auth.requireAuth, auth.requireRole('administrator'), async (req, res) => {
+app.post('/api/users/:id/assign-team', auth.requireAuth, auth.requireRole('administrator'), teamOrgLimiter, async (req, res) => {
   try {
     const userId = parseInt(req.params.id);
     const { team_id } = req.body;
@@ -1425,7 +1519,7 @@ app.post('/api/users/:id/assign-team', auth.requireAuth, auth.requireRole('admin
 
 // Event user management endpoints
 // Get all unique event user names from telemetry data
-app.get('/api/event-users', auth.requireAuth, auth.requireRole('advanced'), async (req, res) => {
+app.get('/api/event-users', auth.requireAuth, auth.requireRole('advanced'), apiReadLimiter, async (req, res) => {
   try {
     const userNames = await db.getEventUserNames();
     res.json({
@@ -1442,7 +1536,7 @@ app.get('/api/event-users', auth.requireAuth, auth.requireRole('advanced'), asyn
 });
 
 // Add event user to team
-app.post('/api/teams/:teamId/event-users', auth.requireAuth, auth.requireRole('administrator'), async (req, res) => {
+app.post('/api/teams/:teamId/event-users', auth.requireAuth, auth.requireRole('administrator'), teamOrgLimiter, async (req, res) => {
   try {
     const teamId = parseInt(req.params.teamId);
     const { user_name } = req.body;
@@ -1527,7 +1621,7 @@ app.get('/api/telemetry-users', auth.requireAuth, auth.requireRole('advanced'), 
   }
 });
 
-app.get('/api/database-size', auth.requireAuth, auth.requireRole('advanced'), async (req, res) => {
+app.get('/api/database-size', auth.requireAuth, auth.requireRole('advanced'), apiReadLimiter, async (req, res) => {
   try {
     const sizeInfo = await db.getDatabaseSize();
     if (sizeInfo === null) {
@@ -1616,7 +1710,7 @@ app.get('/schema', auth.requireAuth, (_req, res) => {
 });
 
 // Export logs in JSON Lines (JSONL) format
-app.get('/api/export/logs', auth.requireAuth, auth.requireRole('advanced'), async (req, res) => {
+app.get('/api/export/logs', auth.requireAuth, auth.requireRole('advanced'), apiReadLimiter, async (req, res) => {
   try {
     const {
       startDate,

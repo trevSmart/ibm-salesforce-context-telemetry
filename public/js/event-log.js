@@ -52,6 +52,8 @@ if (window.__EVENT_LOG_LOADED__) {
         window.location.href = '/';
         return;
       }
+      // Store CSRF token
+      window.setCsrfToken(data.csrfToken);
     } catch (error) {
       console.error('Auth check failed:', error);
       window.location.href = '/login';
@@ -2816,15 +2818,6 @@ if (window.__EVENT_LOG_LOADED__) {
     const separatorHtml = '<span class="session-separator"><i class="fa-solid fa-circle"></i></span>';
     const userHtml = `<span class="session-user">${escapeHtml(userText)}</span>`;
     return { html: `${dateHtml}${separatorHtml}${userHtml}`, text: `${dateStr} • ${userText}` };
-  }
-
-  function escapeHtml(str) {
-    return String(str ?? '')
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
   }
 
   function renderSessionActivityLegend(seriesEntries, isAllSessionsView = false) {
