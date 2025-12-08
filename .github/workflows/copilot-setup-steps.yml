@@ -49,3 +49,4 @@ jobs:
             echo "User may already exist; ensuring administrator role"
             npm run update-admin-role -- "$ADMIN_USERNAME"
           }
+
