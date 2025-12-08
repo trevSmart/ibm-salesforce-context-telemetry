@@ -226,145 +226,145 @@
 						</div>
 						<div class="horizontal-resizer" id="horizontalResizer" aria-hidden="true"></div>
 
+							<!-- <div id="loadingMessage" class="loading">Loading events...</div> -->
+							<div id="errorMessage" class="error-message" style="display: none;"></div>
+							<div id="emptyState" class="empty-state" style="display: none;">
+								<div class="font-semibold mt-2.5">No events found</div>
+							</div>
+
 						<!-- Tailwind CSS Table Blueprint for Reference -->
 						<div class="px-4 sm:px-6 lg:px-8" style="background-color: #ffffff;">
 							<div style="max-height: 300px; overflow: auto;">
 								<table class="min-w-full divide-y divide-gray-300 dark:divide-white/10">
+									<thead>
+										<tr>
+											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:border-zinc-700 dark:bg-zinc-900/75 dark:text-white sm:pl-0 uppercase">Name</th>
+											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 px-3 py-3.5 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:border-zinc-700 dark:bg-zinc-900/75 dark:text-white uppercase">Title</th>
+											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 px-3 py-3.5 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:border-zinc-700 dark:bg-zinc-900/75 dark:text-white uppercase">Email</th>
+											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 px-3 py-3.5 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:border-zinc-700 dark:bg-zinc-900/75 dark:text-white uppercase">Role</th>
+											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 px-3 py-3.5 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:border-zinc-700 dark:bg-zinc-900/75 dark:text-white uppercase">Status</th>
+											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 py-3.5 pl-3 pr-4 backdrop-blur-sm backdrop-filter dark:border-zinc-700 dark:bg-zinc-900/75 sm:pr-0">
+												<span class="sr-only">Actions</span>
+											</th>
+										</tr>
+									</thead>
+									<tbody class="divide-y divide-gray-200 dark:divide-white/10">
+										<tr>
+											<td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 dark:text-white sm:pl-0">Lindsay Walton</td>
+											<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">Front-end Developer</td>
+											<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">lindsay.walton@example.com</td>
+											<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">Member</td>
+											<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
+												<span class="inline-flex items-center rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20 dark:bg-green-400/10 dark:text-green-400 dark:ring-green-400/20">Active</span>
+											</td>
+											<td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-0">
+												<a href="#" class="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300">Edit<span class="sr-only">, Lindsay Walton</span></a>
+											</td>
+										</tr>
+										<tr>
+											<td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 dark:text-white sm:pl-0">Courtney Henry</td>
+											<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">Designer</td>
+											<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">courtney.henry@example.com</td>
+											<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">Admin</td>
+											<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
+												<span class="inline-flex items-center rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20 dark:bg-green-400/10 dark:text-green-400 dark:ring-green-400/20">Active</span>
+											</td>
+											<td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-0">
+												<a href="#" class="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300">Edit<span class="sr-only">, Courtney Henry</span></a>
+											</td>
+										</tr>
+										<tr>
+											<td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 dark:text-white sm:pl-0">Tom Cook</td>
+											<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">Director of Product</td>
+											<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">tom.cook@example.com</td>
+											<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">Member</td>
+											<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
+												<span class="inline-flex items-center rounded-md bg-yellow-50 px-2 py-1 text-xs font-medium text-yellow-700 ring-1 ring-inset ring-yellow-600/20 dark:bg-yellow-400/10 dark:text-yellow-400 dark:ring-yellow-400/20">Pending</span>
+											</td>
+											<td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-0">
+												<a href="#" class="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300">Edit<span class="sr-only">, Tom Cook</span></a>
+											</td>
+										</tr>
+										<tr>
+											<td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 dark:text-white sm:pl-0">Whitney Francis</td>
+											<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">Copywriter</td>
+											<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">whitney.francis@example.com</td>
+											<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">Member</td>
+											<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
+												<span class="inline-flex items-center rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20 dark:bg-green-400/10 dark:text-green-400 dark:ring-green-400/20">Active</span>
+											</td>
+											<td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-0">
+												<a href="#" class="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300">Edit<span class="sr-only">, Whitney Francis</span></a>
+											</td>
+										</tr>
+										<tr>
+											<td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 dark:text-white sm:pl-0">Leonard Krasner</td>
+											<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">Senior Designer</td>
+											<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">leonard.krasner@example.com</td>
+											<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">Owner</td>
+											<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
+												<span class="inline-flex items-center rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20 dark:bg-green-400/10 dark:text-green-400 dark:ring-green-400/20">Active</span>
+											</td>
+											<td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-0">
+												<a href="#" class="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300">Edit<span class="sr-only">, Leonard Krasner</span></a>
+											</td>
+										</tr>
+										<tr>
+											<td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 dark:text-white sm:pl-0">Floyd Miles</td>
+											<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">Principal Designer</td>
+											<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">floyd.miles@example.com</td>
+											<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">Member</td>
+											<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
+												<span class="inline-flex items-center rounded-md bg-red-50 px-2 py-1 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/20 dark:bg-red-400/10 dark:text-red-400 dark:ring-red-400/20">Inactive</span>
+											</td>
+											<td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-0">
+												<a href="#" class="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300">Edit<span class="sr-only">, Floyd Miles</span></a>
+											</td>
+										</tr>
+									</tbody>
+								</table>
+							</div>
+						</div>
+
+						<div class="px-4 sm:px-6 lg:px-8" style="background-color: #ffffff;">
+							<div id="logsTableScroll" class="mt-8 flow-root" style="flex: 1; overflow-y: auto; min-height: 0;">
+								<div class="-mx-4 -my-2 sm:-mx-6 lg:-mx-8">
+									<div class="inline-block min-w-full py-2 align-middle">
+										<table class="logs-table min-w-full border-separate border-spacing-0" id="logsTable" style="display: none;">
 											<thead>
 												<tr>
-													<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:border-zinc-700 dark:bg-zinc-900/75 dark:text-white sm:pl-0 uppercase">Name</th>
-													<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 px-3 py-3.5 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:border-zinc-700 dark:bg-zinc-900/75 dark:text-white uppercase">Title</th>
-													<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 px-3 py-3.5 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:border-zinc-700 dark:bg-zinc-900/75 dark:text-white uppercase">Email</th>
-													<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 px-3 py-3.5 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:border-zinc-700 dark:bg-zinc-900/75 dark:text-white uppercase">Role</th>
-													<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 px-3 py-3.5 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:border-zinc-700 dark:bg-zinc-900/75 dark:text-white uppercase">Status</th>
-													<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 py-3.5 pl-3 pr-4 backdrop-blur-sm backdrop-filter dark:border-zinc-700 dark:bg-zinc-900/75 sm:pr-0">
+													<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 py-3.5 pr-3 pl-4 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter sm:pl-6 lg:pl-8" style="width: 40px;">
+														<span class="sr-only">Expand</span>
+													</th>
+													<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 py-3.5 pr-3 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter" style="width: 40px;">
+														<span class="sr-only">Status</span>
+													</th>
+													<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 py-3.5 pr-3 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter time-column" style="width: 110px;">
+														<div style="display: flex; align-items: center; gap: 8px;">
+															<span>Time</span>
+															<button class="icon-btn sort-btn" id="sortBtn" title="Toggle sort order" style="padding: 0; background: none; border: none;">
+																<img src="/resources/sort-desc" alt="Sort descending" id="sortIcon" style="width: 16px; height: 16px;">
+															</button>
+														</div>
+													</th>
+													<th scope="col" class="sticky top-0 z-10 hidden border-b border-gray-300 bg-white/75 px-3 py-3.5 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter sm:table-cell user-column" style="width: 180px;">User</th>
+													<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 px-3 py-3.5 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter" style="width: 130px;">Event</th>
+													<th scope="col" class="sticky top-0 z-10 hidden border-b border-gray-300 bg-white/75 px-3 py-3.5 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter md:table-cell" style="width: 200px;">Company3</th>
+													<th scope="col" class="sticky top-0 z-10 hidden border-b border-gray-300 bg-white/75 px-3 py-3.5 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter lg:table-cell" style="width: 150px;">Tool name</th>
+													<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 px-3 py-3.5 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter">Payload</th>
+													<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 py-3.5 pr-4 pl-3 backdrop-blur-sm backdrop-filter sm:pr-6 lg:pr-8" style="width: 50px;">
 														<span class="sr-only">Actions</span>
 													</th>
 												</tr>
 											</thead>
-											<tbody class="divide-y divide-gray-200 dark:divide-white/10">
-												<tr>
-													<td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 dark:text-white sm:pl-0">Lindsay Walton</td>
-													<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">Front-end Developer</td>
-													<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">lindsay.walton@example.com</td>
-													<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">Member</td>
-													<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
-														<span class="inline-flex items-center rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20 dark:bg-green-400/10 dark:text-green-400 dark:ring-green-400/20">Active</span>
-													</td>
-													<td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-0">
-														<a href="#" class="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300">Edit<span class="sr-only">, Lindsay Walton</span></a>
-													</td>
-												</tr>
-												<tr>
-													<td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 dark:text-white sm:pl-0">Courtney Henry</td>
-													<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">Designer</td>
-													<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">courtney.henry@example.com</td>
-													<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">Admin</td>
-													<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
-														<span class="inline-flex items-center rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20 dark:bg-green-400/10 dark:text-green-400 dark:ring-green-400/20">Active</span>
-													</td>
-													<td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-0">
-														<a href="#" class="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300">Edit<span class="sr-only">, Courtney Henry</span></a>
-													</td>
-												</tr>
-												<tr>
-													<td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 dark:text-white sm:pl-0">Tom Cook</td>
-													<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">Director of Product</td>
-													<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">tom.cook@example.com</td>
-													<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">Member</td>
-													<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
-														<span class="inline-flex items-center rounded-md bg-yellow-50 px-2 py-1 text-xs font-medium text-yellow-700 ring-1 ring-inset ring-yellow-600/20 dark:bg-yellow-400/10 dark:text-yellow-400 dark:ring-yellow-400/20">Pending</span>
-													</td>
-													<td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-0">
-														<a href="#" class="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300">Edit<span class="sr-only">, Tom Cook</span></a>
-													</td>
-												</tr>
-												<tr>
-													<td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 dark:text-white sm:pl-0">Whitney Francis</td>
-													<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">Copywriter</td>
-													<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">whitney.francis@example.com</td>
-													<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">Member</td>
-													<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
-														<span class="inline-flex items-center rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20 dark:bg-green-400/10 dark:text-green-400 dark:ring-green-400/20">Active</span>
-													</td>
-													<td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-0">
-														<a href="#" class="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300">Edit<span class="sr-only">, Whitney Francis</span></a>
-													</td>
-												</tr>
-												<tr>
-													<td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 dark:text-white sm:pl-0">Leonard Krasner</td>
-													<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">Senior Designer</td>
-													<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">leonard.krasner@example.com</td>
-													<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">Owner</td>
-													<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
-														<span class="inline-flex items-center rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20 dark:bg-green-400/10 dark:text-green-400 dark:ring-green-400/20">Active</span>
-													</td>
-													<td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-0">
-														<a href="#" class="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300">Edit<span class="sr-only">, Leonard Krasner</span></a>
-													</td>
-												</tr>
-												<tr>
-													<td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 dark:text-white sm:pl-0">Floyd Miles</td>
-													<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">Principal Designer</td>
-													<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">floyd.miles@example.com</td>
-													<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">Member</td>
-													<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
-														<span class="inline-flex items-center rounded-md bg-red-50 px-2 py-1 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/20 dark:bg-red-400/10 dark:text-red-400 dark:ring-red-400/20">Inactive</span>
-													</td>
-													<td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-0">
-														<a href="#" class="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300">Edit<span class="sr-only">, Floyd Miles</span></a>
-													</td>
-												</tr>
+											<tbody id="logsBody">
 											</tbody>
 										</table>
-							</div>
-						</div>
-
-						<div style="display: none;">
-							<div class="logs-table-container" id="logsTableContainer">
-								<!-- <div id="loadingMessage" class="loading">Loading events...</div> -->
-								<div id="errorMessage" class="error-message" style="display: none;"></div>
-								<div id="emptyState" class="empty-state" style="display: none;">
-									<div class="font-semibold mt-2.5">No events found</div>
-								</div>
-								<div id="logsTableScroll" class="mt-8 flow-root" style="flex: 1; overflow-y: auto; min-height: 0;">
-									<div class="-mx-4 -my-2 sm:-mx-6 lg:-mx-8">
-										<div class="inline-block min-w-full py-2 align-middle">
-											<table class="logs-table min-w-full border-separate border-spacing-0" id="logsTable" style="display: none;">
-												<thead>
-													<tr>
-														<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 py-3.5 pr-3 pl-4 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter sm:pl-6 lg:pl-8" style="width: 40px;">
-															<span class="sr-only">Expand</span>
-														</th>
-														<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 py-3.5 pr-3 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter" style="width: 40px;">
-															<span class="sr-only">Status</span>
-														</th>
-														<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 py-3.5 pr-3 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter time-column" style="width: 110px;">
-															<div style="display: flex; align-items: center; gap: 8px;">
-																<span>Time</span>
-																<button class="icon-btn sort-btn" id="sortBtn" title="Toggle sort order" style="padding: 0; background: none; border: none;">
-																	<img src="/resources/sort-desc" alt="Sort descending" id="sortIcon" style="width: 16px; height: 16px;">
-																</button>
-															</div>
-														</th>
-														<th scope="col" class="sticky top-0 z-10 hidden border-b border-gray-300 bg-white/75 px-3 py-3.5 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter sm:table-cell user-column" style="width: 180px;">User</th>
-														<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 px-3 py-3.5 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter" style="width: 130px;">Event</th>
-														<th scope="col" class="sticky top-0 z-10 hidden border-b border-gray-300 bg-white/75 px-3 py-3.5 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter md:table-cell" style="width: 200px;">Company3</th>
-														<th scope="col" class="sticky top-0 z-10 hidden border-b border-gray-300 bg-white/75 px-3 py-3.5 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter lg:table-cell" style="width: 150px;">Tool name</th>
-														<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 px-3 py-3.5 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter">Payload</th>
-														<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 py-3.5 pr-4 pl-3 backdrop-blur-sm backdrop-filter sm:pr-6 lg:pr-8" style="width: 50px;">
-															<span class="sr-only">Actions</span>
-														</th>
-													</tr>
-												</thead>
-												<tbody id="logsBody">
-												</tbody>
-											</table>
-										</div>
 									</div>
 								</div>
 							</div>
 						</div>
+
 
 					</div>
 				</div>
