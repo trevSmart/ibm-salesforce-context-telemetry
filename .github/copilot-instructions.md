@@ -32,12 +32,21 @@ The IBM Salesforce Context Telemetry Server is a Node.js/Express backend service
 │   ├── index.html            # Main dashboard
 │   ├── event-log.html        # Event log viewer
 │   ├── login.html            # Login page
+│   ├── teams.html            # Team management page
+│   ├── health.html           # Health status page
 │   ├── css/                  # Stylesheets (Tailwind CSS)
 │   └── js/                   # Frontend JavaScript
-├── docs/                     # Documentation
+├── docs/                     # Documentation (additional copies)
+├── AGENTS.md                 # Agent instructions (canonical - at root)
+├── API_SPECIFICATION.md      # API docs (canonical - at root)
+├── INTEGRATION.md            # Integration guide (canonical - at root)
+├── README.md                 # Main readme (root only)
 └── .github/
+    ├── copilot-instructions.md  # This file
     └── workflows/            # GitHub Actions workflows
 ```
+
+**Note**: Some documentation files exist in both root and `docs/` directories. The root-level versions are canonical and should be updated first. The `docs/` directory contains additional documentation and some duplicate files for organizational purposes.
 
 ## Key Technologies
 
@@ -311,13 +320,22 @@ cp .env.example .env
 
 ## Documentation
 
-- **README.md**: User-facing documentation
-- **AGENTS.md**: Comprehensive agent instructions
-- **docs/SETUP.md**: Deployment guide
-- **docs/INTEGRATION.md**: Integration guide for MCP servers
-- **docs/API_SPECIFICATION.md**: Complete API documentation
+### Root-Level Documentation (Canonical)
+- **README.md**: User-facing documentation (root only)
+- **AGENTS.md**: Comprehensive agent instructions (canonical version at root)
+- **API_SPECIFICATION.md**: Complete API documentation (canonical version at root)
+- **INTEGRATION.md**: Integration guide for MCP servers (canonical version at root)
+- **SETUP.md**: Quick setup reference (canonical version at root)
+- **PERFORMANCE.md**: Performance considerations (root only)
+
+### docs/ Directory (Additional Documentation)
+- **docs/SETUP.md**: Detailed deployment guide
 - **docs/DATABASE.md**: Database configuration details
 - **docs/RENDER_DEPLOYMENT.md**: Render-specific deployment guide
+- **docs/DATABASE_EXPIRATION.md**: Data expiration policies
+- **docs/LOG_FORMATS.md**: Standard log formats
+
+**Important**: When updating documentation, always update the root-level canonical files first. Some files exist in both locations for organizational purposes, but the root versions are authoritative.
 
 ## Related Projects
 
