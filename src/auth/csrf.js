@@ -35,8 +35,34 @@ function csrfProtection(req, res, next) {
   // Get expected token from cookie
   const cookieToken = req.cookies['csrf-token'];
 
-  // Validate token
-  if (!token || !cookieToken || token !== cookieToken) {
+  // Validate token exists
+  if (!token || !cookieToken) {
+    return res.status(403).json({
+      status: 'error',
+      message: 'Invalid CSRF token'
+    });
+  }
+
+  // Use timing-safe comparison to prevent timing attacks
+  try {
+    const tokenBuffer = Buffer.from(token);
+    const cookieBuffer = Buffer.from(cookieToken);
+    
+    // Buffers must be same length for timingSafeEqual
+    if (tokenBuffer.length !== cookieBuffer.length) {
+      return res.status(403).json({
+        status: 'error',
+        message: 'Invalid CSRF token'
+      });
+    }
+    
+    if (!crypto.timingSafeEqual(tokenBuffer, cookieBuffer)) {
+      return res.status(403).json({
+        status: 'error',
+        message: 'Invalid CSRF token'
+      });
+    }
+  } catch (_error) {
     return res.status(403).json({
       status: 'error',
       message: 'Invalid CSRF token'
@@ -67,7 +93,7 @@ function setCsrfToken(req, res, next) {
  * Get CSRF token from request
  */
 function getToken(req) {
-  return req.cookies['csrf-token'] || generateToken();
+  return req.cookies['csrf-token'] || null;
 }
 
 module.exports = {
