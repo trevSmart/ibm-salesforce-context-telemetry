@@ -8,6 +8,9 @@
     '/logs': [{ src: '/js/event-log.js' }],
     '/teams': [{ src: '/js/teams.js', type: 'module' }]
   };
+  
+  // Crossfade transition duration in milliseconds
+  const TRANSITION_DURATION_MS = 150;
 
   const loadedScripts = new Set(
     Array.from(document.querySelectorAll('script[src]')).map((script) => {
@@ -223,13 +226,13 @@
       void nextContent.offsetHeight;
 
       // Start crossfade: fade out old, fade in new
-      container.style.transition = 'opacity 150ms ease-out';
+      container.style.transition = `opacity ${TRANSITION_DURATION_MS}ms ease-out`;
       container.style.opacity = '0';
-      nextContent.style.transition = 'opacity 150ms ease-in';
+      nextContent.style.transition = `opacity ${TRANSITION_DURATION_MS}ms ease-in`;
       nextContent.style.opacity = '1';
 
       // Wait for transition to complete
-      await new Promise((resolve) => setTimeout(resolve, 150));
+      await new Promise((resolve) => setTimeout(resolve, TRANSITION_DURATION_MS));
 
       // Remove old content and reset positioning on new content
       container.remove();
