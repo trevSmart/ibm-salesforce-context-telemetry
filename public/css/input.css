@@ -800,13 +800,13 @@ body.hydrating .main-container {
     min-height: 350px;
     display: flex;
     align-items: stretch;
-    padding: 0.7rem 1.5rem 0.5rem !important;
+    padding: 1rem 1.5rem 0.5rem !important;
     position: relative;
   }
 
   @media (max-width: 640px) {
     .dashboard-chart-card .chart-body {
-      padding: 0 1rem 0.5rem !important;
+      padding: 1rem 1rem 0.5rem !important;
     }
   }
 
@@ -1540,19 +1540,24 @@ body.hydrating .main-container {
     border-bottom: 1px solid var(--border-color);
   }
 
+  /* Tighter spacing for top teams card */
+  #topTeamsList .top-users-item {
+    gap: 6px;
+  }
+
   .top-users-item:last-child {
     border-bottom: none;
   }
 
   .top-users-avatar {
-    width: 32px;
+    width: 40px;
     aspect-ratio: 1 / 1;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     color: var(--text-primary);
     font-weight: 700;
-    font-size: 12px;
+    font-size: 14px;
     border-radius: 50%;
     background: #d8ebff;
   }
