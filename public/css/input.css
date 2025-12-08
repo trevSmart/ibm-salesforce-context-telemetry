@@ -2995,6 +2995,11 @@ body.event-log-page .container {
     background: #19181a;
   }
 
+  /* Dark mode sticky header support */
+  html.dark .logs-table th {
+    @apply dark:bg-zinc-900/75 dark:text-gray-50 dark:border-zinc-700;
+  }
+
   .logs-table tbody {
     display: table-row-group;
   }
@@ -3027,7 +3032,7 @@ body.event-log-page .container {
 
   html.dark .logs-table td {
     color: var(--text-secondary);
-    border-bottom: 4px solid #19181a;
+    border-bottom: 1px solid #27272a;
   }
 
   .logs-table td.log-user {
