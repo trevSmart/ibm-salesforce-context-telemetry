@@ -14,75 +14,7 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
-// Global functions needed by HTML
-function showUserMenu(e) {
-  if (e) {
-    e.stopPropagation();
-  }
-  const userMenu = document.getElementById('userMenu');
-  if (!userMenu) {
-    return;
-  }
-
-  if (!userMenu.classList.contains('show')) {
-    userMenu.classList.add('show');
-    fetch('/api/auth/status', {
-      credentials: 'include'
-    })
-      .then(response => response.json())
-      .then(data => {
-        const usernameElement = document.getElementById('userMenuUsername');
-        if (usernameElement) {
-          if (data.authenticated && data.username) {
-            usernameElement.innerHTML = '<i class="fa-regular fa-user user-menu-icon"></i>' + escapeHtml(data.username);
-          } else {
-            usernameElement.innerHTML = '<i class="fa-regular fa-user user-menu-icon"></i>Not authenticated';
-          }
-        }
-      })
-      .catch(() => {
-        const usernameElement = document.getElementById('userMenuUsername');
-        if (usernameElement) {
-          usernameElement.innerHTML = '<i class="fa-regular fa-user user-menu-icon"></i>Error loading user';
-        }
-      });
-  }
-}
-
-// Close user menu when clicking outside
-document.addEventListener('click', function (event) {
-  const userMenu = document.getElementById('userMenu');
-  const userMenuContainer = event.target.closest('.user-menu-container');
-
-  if (userMenu && userMenu.classList.contains('show')) {
-    if (!userMenuContainer && !userMenu.contains(event.target)) {
-      userMenu.classList.remove('show');
-    }
-  }
-});
-
-async function handleLogout() {
-  const userMenu = document.getElementById('userMenu');
-  if (userMenu) {
-    userMenu.classList.remove('show');
-  }
-
-  try {
-    const response = await fetch('/logout', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      credentials: 'include'
-    });
-    if (response.ok) {
-      window.location.href = '/login';
-    }
-  } catch (error) {
-    console.error('Logout error:', error);
-    window.location.href = '/login';
-  }
-}
+// User menu functions (showUserMenu, handleLogout) are now in user-menu.js
 
 function toggleTheme() {
   const isDark = document.documentElement.classList.contains('dark');
@@ -128,8 +60,7 @@ async function openSettingsModal() {
 }
 
 // Make functions available globally
-window.showUserMenu = showUserMenu;
-window.handleLogout = handleLogout;
+// Note: showUserMenu and handleLogout are now exposed by user-menu.js
 window.toggleTheme = toggleTheme;
 window.clearLocalData = clearLocalData;
 window.openSettingsModal = openSettingsModal;
