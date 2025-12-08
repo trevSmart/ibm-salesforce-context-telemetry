@@ -241,8 +241,20 @@ app.use(express.static(path.join(__dirname, '..', 'public'), {
 // Fallback for CSS files - return empty CSS if file doesn't exist (prevents HTML 404)
 app.use((req, res, next) => {
   if (req.path.endsWith('.css') && !res.headersSent) {
-    const cssPath = path.join(__dirname, '..', 'public', req.path);
-    if (!fs.existsSync(cssPath)) {
+    const publicRoot = path.resolve(__dirname, '..', 'public');
+    let cssPath;
+    try {
+      cssPath = path.resolve(publicRoot, '.' + req.path); // Prepend '.' to ensure relative join
+      // Optional: follow symlinks. If the file doesn't exist, realpathSync will throw
+      if (fs.existsSync(cssPath)) {
+        cssPath = fs.realpathSync(cssPath);
+      }
+    } catch (e) {
+      // If any error occurs, treat as not found
+      cssPath = '';
+    }
+    // Check containment in the public directory
+    if (!cssPath || !cssPath.startsWith(publicRoot + path.sep)) {
       // Return empty CSS with correct MIME type instead of HTML 404
       res.type('text/css');
       return res.status(200).send('/* CSS file not found */');
