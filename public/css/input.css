@@ -7,6 +7,7 @@
   transition: transform 200ms ease-in-out;
   transform: translateX(0);
 }
+
 .sr-only.peer:checked + div .toggle-knob {
   transform: translateX(20px);
 }
@@ -112,10 +113,10 @@
     color-scheme: dark;
   }
 
-/* Prevent flash of unstyled content - gated by hydrating class */
-body.hydrating {
-  visibility: hidden;
-}
+  /* Prevent flash of unstyled content - gated by hydrating class */
+  body.hydrating {
+    visibility: hidden;
+  }
 
   body {
     font-family: 'Manrope', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -166,9 +167,9 @@ body.hydrating {
     display: flex;
     align-items: center;
     gap: 24px;
-    padding: 55px 32px 0;
+    padding: 0;
     border-radius: 0;
-    margin: -40px -32px 24px -32px;
+    margin: 0;
   }
 
   .top-nav-logo {
@@ -368,18 +369,18 @@ body.hydrating {
     justify-content: center;
   }
 
-/* Teams page body centering (match dashboard) */
-body.teams-page {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
+  /* Teams page body centering (match dashboard) */
+  body.teams-page {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
 
-body.teams-page #teamsContent {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-}
+  body.teams-page #teamsContent {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+  }
 
   .main-container {
     position: relative;
@@ -392,11 +393,13 @@ body.teams-page #teamsContent {
     overflow: hidden;
     display: flex;
     flex-direction: column;
-  width: calc(100vw - 58px);
-  max-width: none;
-  height: calc(100vh - 50px);
-  min-height: calc(100vh - 50px);
-    padding: 32px 32px 24px 32px;
+    min-width: 780px;
+    max-width: none;
+    width: calc(100vw - 58px);
+    height: calc(100vh - 50px);
+    min-height: calc(100vh - 50px);
+    padding: 6px 30px;
+    gap: 5px;
   }
 
   .main-container .top-nav {
@@ -404,10 +407,10 @@ body.teams-page #teamsContent {
     /* margin: -32px -32px 24px -32px; */
   }
 
-/* Event-log page specific main-container styles */
-body.event-log-page .main-container,
-body.event-log-page .container {
-  backdrop-filter: blur(10px);
+  /* Event-log page specific main-container styles */
+  body.event-log-page .main-container,
+  body.event-log-page .container {
+    backdrop-filter: blur(10px);
     transition: opacity 0.1s ease-in-out;
   }
 
@@ -617,28 +620,26 @@ body.event-log-page .container {
     min-height: 89vh;
     background: #e8ebec;
     backdrop-filter: blur(10px);
-    padding: 25px 32px 20px;
     border-radius: 23px;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
     transition: opacity 0.1s ease-in-out;
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    gap: 15px;
   }
 
-/* Hide container/main shell only while hydrating (initial render) */
-body.hydrating .container,
-body.hydrating .main-container {
-  opacity: 0;
-  visibility: hidden;
-}
+  /* Hide container/main shell only while hydrating (initial render) */
+  body.hydrating .container,
+  body.hydrating .main-container {
+    opacity: 0;
+    visibility: hidden;
+  }
 
   .container-content {
     padding: 0;
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 22px;
     min-height: 0;
     height: 100%;
     flex: 1 1 auto;
@@ -651,7 +652,7 @@ body.hydrating .main-container {
 
 
   .dashboard-footer {
-    margin-top: 34px;
+    flex: 4 0 0;
     padding: 18px 0 0px 0;
     font-size: 13px;
     font-weight: 400;
@@ -712,14 +713,14 @@ body.hydrating .main-container {
   }
 
   .dashboard-row-top {
-    flex: 63 0 0;
+    flex: 60 0 0;
     display: flex;
     flex-direction: column;
     min-height: 0;
   }
 
   .dashboard-row-bottom {
-    flex: 37 0 0;
+    flex: 38 0 0;
     display: flex;
     flex-direction: column;
     min-height: 0;
@@ -800,7 +801,7 @@ body.hydrating .main-container {
     min-height: 350px;
     display: flex;
     align-items: stretch;
-    padding: 1rem 1.5rem 0.5rem !important;
+    padding: 1.9rem 1.5rem 0.5rem !important;
     position: relative;
   }
 
@@ -829,7 +830,7 @@ body.hydrating .main-container {
   .chart-legend-overlay {
     position: absolute;
     left: 50%;
-    bottom: 30px;
+    bottom: 18px;
     transform: translate(-50%, 9px);
     display: inline-flex;
     gap: 16px;
@@ -1542,7 +1543,7 @@ body.hydrating .main-container {
 
   /* Tighter spacing for top teams card */
   #topTeamsList .top-users-item {
-    gap: 6px;
+    gap: 10px;
   }
 
   .top-users-item:last-child {
@@ -1560,6 +1561,9 @@ body.hydrating .main-container {
     font-size: 14px;
     border-radius: 50%;
     background: #d8ebff;
+    letter-spacing: 0.03em;
+    order: solid 1px #4169e108;
+    box-shadow: 0 1px 2px 0px #ededed;
   }
 
   .top-users-avatar--team {
@@ -1586,7 +1590,7 @@ body.hydrating .main-container {
   }
 
   .top-users-name {
-    font-size: 12px;
+    font-size: 14px;
     font-weight: 700;
     color: var(--text-primary);
     overflow: hidden;
@@ -1597,11 +1601,12 @@ body.hydrating .main-container {
   .top-users-badge {
     background: #dc2626;
     color: #ffffff;
-    font-size: 9px;
+    font-size: 9.1px;
     padding: 2px 6px;
     border-radius: 999px;
-    font-weight: 700;
+    font-weight: 300;
     white-space: nowrap;
+    letter-spacing: 0.02em;
   }
 
   .top-users-role {
@@ -3643,7 +3648,8 @@ body.hydrating .main-container {
     .container-content {
       padding: 0;
     }
-/*
+
+    /*
     body.index-page h1 {
       font-size: 1.25rem;
     } */
@@ -4661,6 +4667,7 @@ body.hydrating .main-container {
     from {
       transform: rotate(0deg);
     }
+
     to {
       transform: rotate(360deg);
     }
@@ -4988,7 +4995,8 @@ html.dark .level-filters .level-filter-btn .level-count {
 }
 
 .level-filters .level-filter-btn.level-info {
-  background: #eff6ff; /* blue badge */
+  background: #eff6ff;
+  /* blue badge */
   color: #1d4ed8;
   box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.3);
   overflow: hidden;
@@ -5001,7 +5009,8 @@ html.dark .level-filters .level-filter-btn.level-info {
 }
 
 .level-filters .level-filter-btn.level-debug {
-  background: #ecfdf3; /* green badge */
+  background: #ecfdf3;
+  /* green badge */
   color: #15803d;
   box-shadow: inset 0 0 0 1px rgba(74, 222, 128, 0.32);
 }
@@ -5013,7 +5022,8 @@ html.dark .level-filters .level-filter-btn.level-debug {
 }
 
 .level-filters .level-filter-btn.level-warning {
-  background: #fffbeb; /* yellow badge */
+  background: #fffbeb;
+  /* yellow badge */
   color: #92400e;
   box-shadow: inset 0 0 0 1px rgba(234, 179, 8, 0.32);
 }
@@ -5025,7 +5035,8 @@ html.dark .level-filters .level-filter-btn.level-warning {
 }
 
 .level-filters .level-filter-btn.level-error {
-  background: #fef2f2; /* red badge */
+  background: #fef2f2;
+  /* red badge */
   color: #b91c1c;
   box-shadow: inset 0 0 0 1px rgba(248, 113, 113, 0.32);
 }
@@ -5044,4 +5055,12 @@ html.dark .level-filters .level-filter-btn.level-error {
 
 #teamsList > .group {
   cursor: pointer;
+}
+
+.bg-white19 {
+  background-color: #ffffff30;
+}
+
+.shadow-xs {
+  --tw-shadow: 0 1px 3px 0 rgb(0 0 0 / 0%), 0 1px 2px -1px var(--tw-shadow-color, rgb(0 0 0 / 0.1));
 }

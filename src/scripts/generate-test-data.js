@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 /**
  * Script to generate realistic test data for telemetry server
  *
