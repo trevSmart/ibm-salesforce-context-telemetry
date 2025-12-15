@@ -906,9 +906,7 @@ async function openSettingsModal() {
 
 						const response = await fetch('/api/users', {
 							method: 'POST',
-							headers: {
-								'Content-Type': 'application/json'
-							},
+							headers: window.getRequestHeaders(),
 							credentials: 'include',
 							body: JSON.stringify({ username, password, role })
 						});
@@ -948,9 +946,7 @@ async function openSettingsModal() {
 
 						const response = await fetch(`/api/users/${encodeURIComponent(username)}/password`, {
 							method: 'PUT',
-							headers: {
-								'Content-Type': 'application/json'
-							},
+							headers: window.getRequestHeaders(),
 							credentials: 'include',
 							body: JSON.stringify({ password })
 						});
@@ -993,9 +989,7 @@ async function openSettingsModal() {
 
 						const response = await fetch(`/api/users/${encodeURIComponent(username)}/role`, {
 							method: 'PUT',
-							headers: {
-								'Content-Type': 'application/json'
-							},
+							headers: window.getRequestHeaders(),
 							credentials: 'include',
 							body: JSON.stringify({ role })
 						});
@@ -1026,6 +1020,7 @@ async function openSettingsModal() {
 				try {
 					const response = await fetch(`/api/users/${encodeURIComponent(username)}`, {
 						method: 'DELETE',
+						headers: window.getRequestHeaders(false), // No Content-Type for DELETE
 						credentials: 'include'
 					});
 					const data = await response.json();

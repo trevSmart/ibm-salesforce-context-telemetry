@@ -502,9 +502,7 @@ if (window.__EVENT_LOG_LOADED__) {
 
               const response = await fetch('/api/users', {
                 method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json'
-                },
+                headers: window.getRequestHeaders(),
                 credentials: 'include',
                 body: JSON.stringify({ username, password, role })
               });
@@ -544,9 +542,7 @@ if (window.__EVENT_LOG_LOADED__) {
 
               const response = await fetch(`/api/users/${encodeURIComponent(username)}/password`, {
                 method: 'PUT',
-                headers: {
-                  'Content-Type': 'application/json'
-                },
+                headers: window.getRequestHeaders(),
                 credentials: 'include',
                 body: JSON.stringify({ password })
               });
@@ -622,6 +618,7 @@ if (window.__EVENT_LOG_LOADED__) {
           try {
             const response = await fetch(`/api/users/${encodeURIComponent(username)}`, {
               method: 'DELETE',
+              headers: window.getRequestHeaders(false), // No Content-Type for DELETE
               credentials: 'include'
             });
             const data = await response.json();
