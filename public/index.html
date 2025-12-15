@@ -12,10 +12,9 @@
 	<link rel="preconnect" href="https://rsms.me">
 	<link rel="preconnect" href="https://cdn.jsdelivr.net">
 
-		<!-- Load Inter font asynchronously to prevent render blocking -->
-		<link rel="preconnect" href="https://fonts.googleapis.com">
-		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-		<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+	<!-- Preload critical font for better LCP -->
+	<link rel="preload" href="https://rsms.me/inter/inter.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+	<noscript><link rel="stylesheet" href="https://rsms.me/inter/inter.css"></noscript>
 
 	<!-- Load main CSS synchronously as it's critical for layout -->
 	<link href="/css/output.css" rel="stylesheet">
@@ -27,43 +26,50 @@
 	<noscript><link rel="stylesheet" href="/vendor/fontawesome/css/v4-shims.min.css"></noscript>
 	<script src="/js/polyfills.js" defer></script>
 	<script src="https://cdn.jsdelivr.net/npm/@tailwindplus/elements@1" type="module" defer></script>
-		<script>
-			// Apply theme immediately before page render to prevent flash
-			(function () {
-				const savedTheme = localStorage.getItem('theme');
-				const systemTheme = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-				const theme = savedTheme || systemTheme;
-				if (theme === 'dark') {
-					document.documentElement.classList.add('dark');
+	<script>
+		// Apply theme immediately before page render to prevent flash
+		(function () {
+			const savedTheme = localStorage.getItem('theme');
+			const systemTheme = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+			const theme = savedTheme || systemTheme;
+			if (theme === 'dark') {
+				document.documentElement.classList.add('dark');
+			}
+			// Don't make container visible here - wait for chart to render
+			// The container will be made visible when chart animation completes
+			// Fallback: if chart doesn't load within 5 seconds, show page anyway
+			setTimeout(() => {
+				const container = document.querySelector('.container');
+				if (container) {
+					const computedStyle = window.getComputedStyle(container);
+					if (computedStyle.visibility === 'hidden' || computedStyle.opacity === '0') {
+						container.style.visibility = 'visible';
+						requestAnimationFrame(() => {
+							container.style.opacity = '1';
+						});
+					}
 				}
-				// Container is now visible by default for better LCP
-				// Only chart area is hidden during hydration
-			})();
-		</script>
+			}, 5000);
+		})();
+	</script>
 </head>
 
 <body class="index-page hydrating">
 	<div class="container main-container">
 		<div id="global-header-placeholder"></div>
+		<script src="/js/header.js"></script>
 		<script>
-			// Defer header initialization to prevent render blocking
-			window.addEventListener('DOMContentLoaded', () => {
-				const script = document.createElement('script');
-				script.src = '/js/header.js';
-				script.onload = () => {
-					initGlobalHeader({
-						activePage: '/',
-						refreshButton: {
-							onClick: 'refreshDashboard(event)',
-							ariaLabel: 'Refresh dashboard',
-							title: 'Refresh dashboard'
-						},
-						secondaryButton: {
-							type: 'settings'
-						}
-					});
-				};
-				document.head.appendChild(script);
+			// Initialize header for dashboard page
+			initGlobalHeader({
+				activePage: '/',
+				refreshButton: {
+					onClick: 'refreshDashboard(event)',
+					ariaLabel: 'Refresh dashboard',
+					title: 'Refresh dashboard'
+				},
+				secondaryButton: {
+					type: 'settings'
+				}
 			});
 		</script>
 		<div class="container-content">
@@ -157,11 +163,11 @@
 							</ul>
 						</div> -->
 						<div>
-							<dl class="mt-5 grid grid-cols-1 divide-gray-200 overflow-hidden rounded-lg bg-white shadow-sm md:grid-cols-3 md:divide-x md:divide-y-0">
-							  <div class="px-4 py-5 sm:p-6">
-								<dt class="text-base font-normal text-gray-900">Total Subscribers</dt>
+							<dl class="grid grid-cols-1 divide-gray-200 divide-y overflow-hidden">
+							  <div class="px-4 py-2">
+								<dt class="top-users-name">Total Subscribers</dt>
 								<dd class="mt-1 flex items-baseline justify-between md:block lg:flex">
-								  <div class="flex items-baseline text-2xl font-semibold text-indigo-600">
+								  <div class="flex items-baseline font-semibold text-indigo-600">
 									71,897
 									<span class="ml-2 text-sm font-medium text-gray-500">from 70,946</span>
 								  </div>
@@ -175,10 +181,10 @@
 								  </div>
 								</dd>
 							  </div>
-							  <div class="px-4 py-5 sm:p-6">
-								<dt class="text-base font-normal text-gray-900">Avg. Open Rate</dt>
+							  <div class="px-4 py-2">
+								<dt class="top-users-name">Avg. Open Rate</dt>
 								<dd class="mt-1 flex items-baseline justify-between md:block lg:flex">
-								  <div class="flex items-baseline text-2xl font-semibold text-indigo-600">
+								  <div class="flex items-baseline font-semibold text-indigo-600">
 									58.16%
 									<span class="ml-2 text-sm font-medium text-gray-500">from 56.14%</span>
 								  </div>
@@ -192,10 +198,10 @@
 								  </div>
 								</dd>
 							  </div>
-							  <div class="px-4 py-5 sm:p-6">
-								<dt class="text-base font-normal text-gray-900">Avg. Click Rate</dt>
+							  <div class="px-4 py-2">
+								<dt class="top-users-name">Avg. Click Rate</dt>
 								<dd class="mt-1 flex items-baseline justify-between md:block lg:flex">
-								  <div class="flex items-baseline text-2xl font-semibold text-indigo-600">
+								  <div class="flex items-baseline font-semibold text-indigo-600">
 									24.57%
 									<span class="ml-2 text-sm font-medium text-gray-500">from 28.62%</span>
 								  </div>
@@ -209,7 +215,7 @@
 								  </div>
 								</dd>
 							  </div>
-							</dl>
+							</>
 						  </div>
 
 					</section>
@@ -238,16 +244,17 @@
 	</div>
 
 	<script>
-		// Load ECharts after DOM content loaded to prioritize initial render
-		window.addEventListener('DOMContentLoaded', () => {
+		// Load ECharts asynchronously to avoid blocking initial render
+		(function () {
 			const script = document.createElement('script');
 			script.src = '/vendor/echarts/echarts.min.js';
+			script.async = true;
 			script.onload = function () {
 				// Dispatch event when ECharts is loaded
 				window.dispatchEvent(new CustomEvent('echartsLoaded'));
 			};
 			document.head.appendChild(script);
-		});
+		})();
 	</script>
 	<script src="/js/navigation.js" defer></script>
 	<script src="/js/user-menu.js" defer></script>

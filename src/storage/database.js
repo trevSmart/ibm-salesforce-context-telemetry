@@ -19,35 +19,35 @@ let dbType = process.env.DB_TYPE || 'sqlite';
 let preparedStatements = {}; // Cache for prepared statements
 
 function normalizeRole(role) {
-  const value = typeof role === 'string' ? role.toLowerCase() : '';
-  return VALID_ROLES.includes(value) ? value : 'basic';
+	const value = typeof role === 'string' ? role.toLowerCase() : '';
+	return VALID_ROLES.includes(value) ? value : 'basic';
 }
 
 /**
  * Initialize database connection
  */
 async function init() {
-  if (dbType === 'sqlite') {
-    const Database = require('better-sqlite3');
-    const dbPath = process.env.DB_PATH || path.join(__dirname, '..', 'data', 'telemetry.db');
+	if (dbType === 'sqlite') {
+		const Database = require('better-sqlite3');
+		const dbPath = process.env.DB_PATH || path.join(__dirname, '..', 'data', 'telemetry.db');
 
-    // Ensure data directory exists
-    const dataDir = path.dirname(dbPath);
-    if (!fs.existsSync(dataDir)) {
-      fs.mkdirSync(dataDir, { recursive: true });
-    }
+		// Ensure data directory exists
+		const dataDir = path.dirname(dbPath);
+		if (!fs.existsSync(dataDir)) {
+			fs.mkdirSync(dataDir, { recursive: true });
+		}
 
-    db = new Database(dbPath);
+		db = new Database(dbPath);
 
-    // Performance optimizations for SQLite
-    db.pragma('journal_mode = WAL'); // Write-Ahead Logging for better concurrency
-    db.pragma('synchronous = NORMAL'); // Faster writes with good safety
-    db.pragma('cache_size = -64000'); // 64MB cache
-    db.pragma('temp_store = MEMORY'); // Use memory for temporary tables
-    db.pragma('mmap_size = 30000000000'); // Use memory-mapped I/O
+		// Performance optimizations for SQLite
+		db.pragma('journal_mode = WAL'); // Write-Ahead Logging for better concurrency
+		db.pragma('synchronous = NORMAL'); // Faster writes with good safety
+		db.pragma('cache_size = -64000'); // 64MB cache
+		db.pragma('temp_store = MEMORY'); // Use memory for temporary tables
+		db.pragma('mmap_size = 30000000000'); // Use memory-mapped I/O
 
-    // Create tables if they don't exist
-    db.exec(`
+		// Create tables if they don't exist
+		db.exec(`
 			CREATE TABLE IF NOT EXISTS telemetry_events (
 				id INTEGER PRIMARY KEY AUTOINCREMENT,
 				event TEXT NOT NULL,
@@ -95,32 +95,28 @@ async function init() {
 			CREATE INDEX IF NOT EXISTS idx_username ON users(username);
 			CREATE INDEX IF NOT EXISTS idx_event_created_at ON telemetry_events(event, created_at);
 			CREATE INDEX IF NOT EXISTS idx_user_created_at ON telemetry_events(user_id, created_at);
-			-- Performance indexes for dashboard queries
-			CREATE INDEX IF NOT EXISTS idx_timestamp_event ON telemetry_events(timestamp, event);
-			CREATE INDEX IF NOT EXISTS idx_created_at_org_id ON telemetry_events(created_at, org_id);
-			CREATE INDEX IF NOT EXISTS idx_org_id ON telemetry_events(org_id);
 		`);
 
-    console.log(`SQLite database initialized at: ${dbPath}`);
-  } else if (dbType === 'postgresql') {
-    const { Pool } = require('pg');
+		console.log(`SQLite database initialized at: ${dbPath}`);
+	} else if (dbType === 'postgresql') {
+		const { Pool } = require('pg');
 
-    const pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
-      ssl: process.env.DATABASE_SSL === 'true' ? { rejectUnauthorized: false } : false,
-      // Connection pool optimization
-      max: 20, // Maximum pool size
-      min: 2, // Minimum pool size
-      idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
-      connectionTimeoutMillis: 10000, // Timeout connection attempts after 10 seconds
-      maxUses: 7500 // Close connections after 7500 uses
-    });
+		const pool = new Pool({
+			connectionString: process.env.DATABASE_URL,
+			ssl: process.env.DATABASE_SSL === 'true' ? { rejectUnauthorized: false } : false,
+			// Connection pool optimization
+			max: 20, // Maximum pool size
+			min: 2, // Minimum pool size
+			idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
+			connectionTimeoutMillis: 10000, // Timeout connection attempts after 10 seconds
+			maxUses: 7500 // Close connections after 7500 uses
+		});
 
-    // Test connection
-    await pool.query('SELECT NOW()');
+		// Test connection
+		await pool.query('SELECT NOW()');
 
-    // Create tables if they don't exist
-    await pool.query(`
+		// Create tables if they don't exist
+		await pool.query(`
 			CREATE TABLE IF NOT EXISTS telemetry_events (
 				id SERIAL PRIMARY KEY,
 				event TEXT NOT NULL,
@@ -168,24 +164,20 @@ async function init() {
 			CREATE INDEX IF NOT EXISTS idx_username ON users(username);
 			CREATE INDEX IF NOT EXISTS idx_event_created_at ON telemetry_events(event, created_at);
 			CREATE INDEX IF NOT EXISTS idx_user_created_at ON telemetry_events(user_id, created_at);
-			-- Performance indexes for dashboard queries
-			CREATE INDEX IF NOT EXISTS idx_timestamp_event ON telemetry_events(timestamp, event);
-			CREATE INDEX IF NOT EXISTS idx_created_at_org_id ON telemetry_events(created_at, org_id);
-			CREATE INDEX IF NOT EXISTS idx_org_id ON telemetry_events(org_id);
 		`);
 
-    db = pool;
-    console.log('PostgreSQL database initialized');
-  } else {
-    throw new Error(`Unsupported database type: ${dbType}`);
-  }
+		db = pool;
+		console.log('PostgreSQL database initialized');
+	} else {
+		throw new Error(`Unsupported database type: ${dbType}`);
+	}
 
-  await ensureUserRoleColumn();
-  await ensureTelemetryParentSessionColumn();
-  await ensureDenormalizedColumns();
-  await ensureEventStatsTables();
-  await ensureTeamsAndOrgsTables();
-  await ensureRememberTokensTable();
+	await ensureUserRoleColumn();
+	await ensureTelemetryParentSessionColumn();
+	await ensureDenormalizedColumns();
+	await ensureEventStatsTables();
+	await ensureTeamsAndOrgsTables();
+	await ensureRememberTokensTable();
 }
 
 /**
@@ -195,20 +187,20 @@ async function init() {
  * @returns {string|null}
  */
 function getNormalizedSessionId(eventData = {}) {
-  const directId = eventData.sessionId || eventData.session_id;
-  if (directId) {
-    return directId;
-  }
+	const directId = eventData.sessionId || eventData.session_id;
+	if (directId) {
+		return directId;
+	}
 
-  if (typeof eventData.session === 'string') {
-    return eventData.session;
-  }
+	if (typeof eventData.session === 'string') {
+		return eventData.session;
+	}
 
-  if (eventData.session && typeof eventData.session === 'object') {
-    return eventData.session.id || eventData.session.sessionId || eventData.session.session_id || null;
-  }
+	if (eventData.session && typeof eventData.session === 'object') {
+		return eventData.session.id || eventData.session.sessionId || eventData.session.session_id || null;
+	}
 
-  const dataSession =
+	const dataSession =
 		eventData.data?.sessionId ||
 		eventData.data?.session_id ||
 		(typeof eventData.data?.session === 'string' ? eventData.data.session : null) ||
@@ -218,7 +210,7 @@ function getNormalizedSessionId(eventData = {}) {
 				eventData.data.session.session_id
 		  : null);
 
-  return dataSession || null;
+	return dataSession || null;
 }
 
 /**
@@ -229,85 +221,85 @@ function getNormalizedSessionId(eventData = {}) {
  * @returns {string|null}
  */
 function sanitizeUserIdentifier(value) {
-  if (value === undefined || value === null) {
-    return null;
-  }
-  if (typeof value === 'string') {
-    const trimmed = value.trim();
-    return trimmed === '' ? null : trimmed;
-  }
-  const stringValue = String(value);
-  return stringValue === '' ? null : stringValue;
+	if (value === undefined || value === null) {
+		return null;
+	}
+	if (typeof value === 'string') {
+		const trimmed = value.trim();
+		return trimmed === '' ? null : trimmed;
+	}
+	const stringValue = String(value);
+	return stringValue === '' ? null : stringValue;
 }
 
 function extractUserDisplayName(data = {}) {
-  if (!data || typeof data !== 'object') {
-    return null;
-  }
+	if (!data || typeof data !== 'object') {
+		return null;
+	}
 
-  const displayName =
+	const displayName =
 		(typeof data.userName === 'string' && data.userName.trim() !== '' && data.userName.trim()) ||
 		(typeof data.user_name === 'string' && data.user_name.trim() !== '' && data.user_name.trim()) ||
 		(typeof data.user === 'object' && typeof data.user?.name === 'string' && data.user.name.trim() !== '' && data.user.name.trim()) ||
 		null;
 
-  return displayName;
+	return displayName;
 }
 
 function getNormalizedUserId(eventData = {}) {
-  // Try direct fields first
-  const directId = sanitizeUserIdentifier(eventData.userId || eventData.user_id);
-  if (directId) {
-    return directId;
-  }
+	// Try direct fields first
+	const directId = sanitizeUserIdentifier(eventData.userId || eventData.user_id);
+	if (directId) {
+		return directId;
+	}
 
-  // Try nested in data object (for userId/user_id)
-  const dataUserId = sanitizeUserIdentifier(
-    eventData.data?.userId ||
+	// Try nested in data object (for userId/user_id)
+	const dataUserId = sanitizeUserIdentifier(
+		eventData.data?.userId ||
 		eventData.data?.user_id ||
 		eventData.data?.user?.id ||
 		eventData.data?.user?.userId ||
 		eventData.data?.user?.user_id ||
 		null
-  );
-  if (dataUserId) {
-    return dataUserId;
-  }
+	);
+	if (dataUserId) {
+		return dataUserId;
+	}
 
-  // Try user name from data field (same logic as in getSessions for display)
-  // This is what appears in the session buttons
-  const userName = sanitizeUserIdentifier(
-    eventData.data?.userName ||
+	// Try user name from data field (same logic as in getSessions for display)
+	// This is what appears in the session buttons
+	const userName = sanitizeUserIdentifier(
+		eventData.data?.userName ||
 		eventData.data?.user_name ||
 		(eventData.data?.user && eventData.data.user.name) ||
 		null
-  );
+	);
 
-  return userName || null;
+	return userName || null;
 }
 
 function buildUserLabel(userId, rawData) {
-  let parsedData = null;
-  if (rawData) {
-    try {
-      parsedData = typeof rawData === 'string' ? JSON.parse(rawData) : rawData;
-    } catch (_error) {
-      parsedData = null;
-    }
-  }
+	let parsedData = null;
+	if (rawData) {
+		try {
+			parsedData = typeof rawData === 'string' ? JSON.parse(rawData) : rawData;
+		} catch (_error) {
+			parsedData = null;
+		}
+	}
 
-  const displayName = extractUserDisplayName(parsedData || {});
-  if (displayName) {
-    return displayName;
-  }
+	const displayName = extractUserDisplayName(parsedData || {});
+	if (displayName) {
+		return displayName;
+	}
 
-  const normalizedFromData = getNormalizedUserId({ data: parsedData });
-  if (normalizedFromData) {
-    return normalizedFromData;
-  }
+	const normalizedFromData = getNormalizedUserId({ data: parsedData });
+	if (normalizedFromData) {
+		return normalizedFromData;
+	}
 
-  const sanitizedUserId = sanitizeUserIdentifier(userId);
-  return sanitizedUserId || 'Unknown user';
+	const sanitizedUserId = sanitizeUserIdentifier(userId);
+	return sanitizedUserId || 'Unknown user';
 }
 
 /**
@@ -317,29 +309,29 @@ function buildUserLabel(userId, rawData) {
  * @returns {string|null} Company name or null if not found
  */
 function extractCompanyName(eventData = {}) {
-  if (!eventData || !eventData.data) {
-    return null;
-  }
+	if (!eventData || !eventData.data) {
+		return null;
+	}
 
-  const data = eventData.data;
+	const data = eventData.data;
 
-  // New format: data.state.org.companyDetails.Name
-  if (data.state && data.state.org && data.state.org.companyDetails) {
-    const companyName = data.state.org.companyDetails.Name;
-    if (typeof companyName === 'string' && companyName.trim() !== '') {
-      return companyName.trim();
-    }
-  }
+	// New format: data.state.org.companyDetails.Name
+	if (data.state && data.state.org && data.state.org.companyDetails) {
+		const companyName = data.state.org.companyDetails.Name;
+		if (typeof companyName === 'string' && companyName.trim() !== '') {
+			return companyName.trim();
+		}
+	}
 
-  // Legacy format: data.companyDetails.Name
-  if (data.companyDetails && typeof data.companyDetails.Name === 'string') {
-    const companyName = data.companyDetails.Name.trim();
-    if (companyName !== '') {
-      return companyName;
-    }
-  }
+	// Legacy format: data.companyDetails.Name
+	if (data.companyDetails && typeof data.companyDetails.Name === 'string') {
+		const companyName = data.companyDetails.Name.trim();
+		if (companyName !== '') {
+			return companyName;
+		}
+	}
 
-  return null;
+	return null;
 }
 
 /**
@@ -349,29 +341,29 @@ function extractCompanyName(eventData = {}) {
  * @returns {string|null} Org ID or null if not found
  */
 function extractOrgId(eventData = {}) {
-  if (!eventData || !eventData.data) {
-    return null;
-  }
+	if (!eventData || !eventData.data) {
+		return null;
+	}
 
-  const data = eventData.data;
+	const data = eventData.data;
 
-  // New format: data.state.org.id
-  if (data.state && data.state.org && data.state.org.id) {
-    const orgId = data.state.org.id;
-    if (typeof orgId === 'string' && orgId.trim() !== '') {
-      return orgId.trim();
-    }
-  }
+	// New format: data.state.org.id
+	if (data.state && data.state.org && data.state.org.id) {
+		const orgId = data.state.org.id;
+		if (typeof orgId === 'string' && orgId.trim() !== '') {
+			return orgId.trim();
+		}
+	}
 
-  // Legacy format: data.orgId
-  if (data.orgId && typeof data.orgId === 'string') {
-    const orgId = data.orgId.trim();
-    if (orgId !== '') {
-      return orgId;
-    }
-  }
+	// Legacy format: data.orgId
+	if (data.orgId && typeof data.orgId === 'string') {
+		const orgId = data.orgId.trim();
+		if (orgId !== '') {
+			return orgId;
+		}
+	}
 
-  return null;
+	return null;
 }
 
 /**
@@ -380,29 +372,29 @@ function extractOrgId(eventData = {}) {
  * @returns {string|null} Tool name or null if not found
  */
 function extractToolName(eventData = {}) {
-  if (!eventData || !eventData.data) {
-    return null;
-  }
+	if (!eventData || !eventData.data) {
+		return null;
+	}
 
-  const data = eventData.data;
+	const data = eventData.data;
 
-  // Try data.toolName first (most common)
-  if (data.toolName && typeof data.toolName === 'string') {
-    const toolName = data.toolName.trim();
-    if (toolName !== '') {
-      return toolName;
-    }
-  }
+	// Try data.toolName first (most common)
+	if (data.toolName && typeof data.toolName === 'string') {
+		const toolName = data.toolName.trim();
+		if (toolName !== '') {
+			return toolName;
+		}
+	}
 
-  // Try data.tool as fallback
-  if (data.tool && typeof data.tool === 'string') {
-    const toolName = data.tool.trim();
-    if (toolName !== '') {
-      return toolName;
-    }
-  }
+	// Try data.tool as fallback
+	if (data.tool && typeof data.tool === 'string') {
+		const toolName = data.tool.trim();
+		if (toolName !== '') {
+			return toolName;
+		}
+	}
 
-  return null;
+	return null;
 }
 
 /**
@@ -412,34 +404,34 @@ function extractToolName(eventData = {}) {
  * @returns {Promise<void>}
  */
 async function upsertOrgCompanyName(serverId, companyName) {
-  if (!db || !serverId || !companyName) {
-    return;
-  }
+	if (!db || !serverId || !companyName) {
+		return;
+	}
 
-  try {
-    const now = new Date().toISOString();
-    if (dbType === 'sqlite') {
-      const stmt = db.prepare(`
+	try {
+		const now = new Date().toISOString();
+		if (dbType === 'sqlite') {
+			const stmt = db.prepare(`
 				INSERT INTO orgs (server_id, company_name, updated_at, created_at)
 				VALUES (?, ?, ?, ?)
 				ON CONFLICT(server_id) DO UPDATE SET
 					company_name = excluded.company_name,
 					updated_at = excluded.updated_at
 			`);
-      stmt.run(serverId, companyName, now, now);
-    } else if (dbType === 'postgresql') {
-      await db.query(`
+			stmt.run(serverId, companyName, now, now);
+		} else if (dbType === 'postgresql') {
+			await db.query(`
 				INSERT INTO orgs (server_id, company_name, updated_at, created_at)
 				VALUES ($1, $2, $3, $4)
 				ON CONFLICT (server_id) DO UPDATE SET
 					company_name = EXCLUDED.company_name,
 					updated_at = EXCLUDED.updated_at
 			`, [serverId, companyName, now, now]);
-    }
-  } catch (error) {
-    // Log error but don't fail the event storage
-    console.error('Error upserting org company name:', error);
-  }
+		}
+	} catch (error) {
+		// Log error but don't fail the event storage
+		console.error('Error upserting org company name:', error);
+	}
 }
 
 /**
@@ -460,87 +452,87 @@ async function upsertOrgCompanyName(serverId, companyName) {
  * @returns {Promise<string|null>}
  */
 async function computeParentSessionId(eventData, normalizedSessionId, normalizedUserId) {
-  if (!normalizedSessionId || !db) {
-    return null;
-  }
+	if (!normalizedSessionId || !db) {
+		return null;
+	}
 
-  const eventType = eventData.event;
-  const serverId = eventData.serverId || null;
+	const eventType = eventData.event;
+	const serverId = eventData.serverId || null;
 
-  // For non-start events, try to inherit an existing parent_session_id
-  if (eventType !== 'session_start') {
-    if (dbType === 'sqlite') {
-      const existing = db.prepare(`
+	// For non-start events, try to inherit an existing parent_session_id
+	if (eventType !== 'session_start') {
+		if (dbType === 'sqlite') {
+			const existing = db.prepare(`
 				SELECT parent_session_id
 				FROM telemetry_events
 				WHERE session_id = ? AND parent_session_id IS NOT NULL
 				ORDER BY timestamp DESC
 				LIMIT 1
 			`).get(normalizedSessionId);
-      if (existing && existing.parent_session_id) {
-        return existing.parent_session_id;
-      }
-    } else if (dbType === 'postgresql') {
-      const result = await db.query(
-        `SELECT parent_session_id
+			if (existing && existing.parent_session_id) {
+				return existing.parent_session_id;
+			}
+		} else if (dbType === 'postgresql') {
+			const result = await db.query(
+				`SELECT parent_session_id
 				 FROM telemetry_events
 				 WHERE session_id = $1 AND parent_session_id IS NOT NULL
 				 ORDER BY timestamp DESC
 				 LIMIT 1`,
-        [normalizedSessionId]
-      );
-      if (result.rows.length > 0 && result.rows[0].parent_session_id) {
-        return result.rows[0].parent_session_id;
-      }
-    }
+				[normalizedSessionId]
+			);
+			if (result.rows.length > 0 && result.rows[0].parent_session_id) {
+				return result.rows[0].parent_session_id;
+			}
+		}
 
-    // If we could not find a parent yet, try to base it on any START SESSION
-    // event with this session_id
-    if (dbType === 'sqlite') {
-      const startRow = db.prepare(`
+		// If we could not find a parent yet, try to base it on any START SESSION
+		// event with this session_id
+		if (dbType === 'sqlite') {
+			const startRow = db.prepare(`
 				SELECT parent_session_id, session_id
 				FROM telemetry_events
 				WHERE session_id = ? AND event = 'session_start'
 				ORDER BY timestamp ASC
 				LIMIT 1
 			`).get(normalizedSessionId);
-      if (startRow) {
-        return startRow.parent_session_id || startRow.session_id || normalizedSessionId;
-      }
-    } else if (dbType === 'postgresql') {
-      const result = await db.query(
-        `SELECT parent_session_id, session_id
+			if (startRow) {
+				return startRow.parent_session_id || startRow.session_id || normalizedSessionId;
+			}
+		} else if (dbType === 'postgresql') {
+			const result = await db.query(
+				`SELECT parent_session_id, session_id
 				 FROM telemetry_events
 				 WHERE session_id = $1 AND event = 'session_start'
 				 ORDER BY timestamp ASC
 				 LIMIT 1`,
-        [normalizedSessionId]
-      );
-      if (result.rows.length > 0) {
-        const row = result.rows[0];
-        return row.parent_session_id || row.session_id || normalizedSessionId;
-      }
-    }
+				[normalizedSessionId]
+			);
+			if (result.rows.length > 0) {
+				const row = result.rows[0];
+				return row.parent_session_id || row.session_id || normalizedSessionId;
+			}
+		}
 
-    // Fallback: treat the physical sessionId as the logical parent
-    return normalizedSessionId;
-  }
+		// Fallback: treat the physical sessionId as the logical parent
+		return normalizedSessionId;
+	}
 
-  // From here, we are dealing with a session_start event
-  // If we don't have user or org information, we cannot safely merge sessions
-  if (!normalizedUserId || !serverId) {
-    return normalizedSessionId;
-  }
+	// From here, we are dealing with a session_start event
+	// If we don't have user or org information, we cannot safely merge sessions
+	if (!normalizedUserId || !serverId) {
+		return normalizedSessionId;
+	}
 
-  const currentTs = eventData.timestamp ? new Date(eventData.timestamp) : new Date();
-  if (Number.isNaN(currentTs.getTime())) {
-    return normalizedSessionId;
-  }
+	const currentTs = eventData.timestamp ? new Date(eventData.timestamp) : new Date();
+	if (Number.isNaN(currentTs.getTime())) {
+		return normalizedSessionId;
+	}
 
-  const THREE_HOURS_MS = 3 * 60 * 60 * 1000;
+	const THREE_HOURS_MS = 3 * 60 * 60 * 1000;
 
-  if (dbType === 'sqlite') {
-    const lastStart = db.prepare(`
+	if (dbType === 'sqlite') {
+		const lastStart = db.prepare(`
 			SELECT timestamp, parent_session_id, session_id
 			FROM telemetry_events
 			WHERE event = 'session_start'
@@ -550,52 +542,52 @@ async function computeParentSessionId(eventData, normalizedSessionId, normalized
 			LIMIT 1
 		`).get(serverId, normalizedUserId);
 
-    if (!lastStart) {
-      return normalizedSessionId;
-    }
+		if (!lastStart) {
+			return normalizedSessionId;
+		}
 
-    const lastTs = new Date(lastStart.timestamp);
-    if (Number.isNaN(lastTs.getTime())) {
-      return normalizedSessionId;
-    }
+		const lastTs = new Date(lastStart.timestamp);
+		if (Number.isNaN(lastTs.getTime())) {
+			return normalizedSessionId;
+		}
 
-    const diffMs = currentTs - lastTs;
-    if (diffMs <= THREE_HOURS_MS) {
-      // Same logical session as the previous START SESSION
-      return lastStart.parent_session_id || lastStart.session_id || normalizedSessionId;
-    }
+		const diffMs = currentTs - lastTs;
+		if (diffMs <= THREE_HOURS_MS) {
+			// Same logical session as the previous START SESSION
+			return lastStart.parent_session_id || lastStart.session_id || normalizedSessionId;
+		}
 
-    return normalizedSessionId;
-  }
+		return normalizedSessionId;
+	}
 
-  // PostgreSQL implementation
-  const result = await db.query(
-    `SELECT timestamp, parent_session_id, session_id
+	// PostgreSQL implementation
+	const result = await db.query(
+		`SELECT timestamp, parent_session_id, session_id
 		 FROM telemetry_events
 		 WHERE event = 'session_start'
 		   AND server_id = $1
 		   AND user_id = $2
 		 ORDER BY timestamp DESC
 		 LIMIT 1`,
-    [serverId, normalizedUserId]
-  );
+		[serverId, normalizedUserId]
+	);
 
-  if (result.rows.length === 0) {
-    return normalizedSessionId;
-  }
+	if (result.rows.length === 0) {
+		return normalizedSessionId;
+	}
 
-  const row = result.rows[0];
-  const lastTs = new Date(row.timestamp);
-  if (Number.isNaN(lastTs.getTime())) {
-    return normalizedSessionId;
-  }
+	const row = result.rows[0];
+	const lastTs = new Date(row.timestamp);
+	if (Number.isNaN(lastTs.getTime())) {
+		return normalizedSessionId;
+	}
 
-  const diffMs = currentTs - lastTs;
-  if (diffMs <= THREE_HOURS_MS) {
-    return row.parent_session_id || row.session_id || normalizedSessionId;
-  }
+	const diffMs = currentTs - lastTs;
+	if (diffMs <= THREE_HOURS_MS) {
+		return row.parent_session_id || row.session_id || normalizedSessionId;
+	}
 
-  return normalizedSessionId;
+	return normalizedSessionId;
 }
 
 /**
@@ -605,93 +597,93 @@ async function computeParentSessionId(eventData, normalizedSessionId, normalized
  * @returns {Promise<void>}
  */
 async function storeEvent(eventData, receivedAt) {
-  if (!db) {
-    throw new Error('Database not initialized. Call init() first.');
-  }
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
 
-  try {
-    const normalizedSessionId = getNormalizedSessionId(eventData);
-    const normalizedUserId = getNormalizedUserId(eventData);
-    const allowMissingUser = eventData?.allowMissingUser === true;
+	try {
+		const normalizedSessionId = getNormalizedSessionId(eventData);
+		const normalizedUserId = getNormalizedUserId(eventData);
+		const allowMissingUser = eventData?.allowMissingUser === true;
 
-    if (!normalizedUserId && !allowMissingUser) {
-      console.warn('Dropping telemetry event without username/userId');
-      return false;
-    }
+		if (!normalizedUserId && !allowMissingUser) {
+			console.warn('Dropping telemetry event without username/userId');
+			return false;
+		}
 
-    const parentSessionId = await computeParentSessionId(
-      eventData,
-      normalizedSessionId,
-      normalizedUserId
-    );
+		const parentSessionId = await computeParentSessionId(
+			eventData,
+			normalizedSessionId,
+			normalizedUserId
+		);
 
-    // Extract denormalized fields for faster queries
-    const orgId = extractOrgId(eventData);
-    const userName = extractUserDisplayName(eventData.data || {});
-    const toolName = extractToolName(eventData);
+		// Extract denormalized fields for faster queries
+		const orgId = extractOrgId(eventData);
+		const userName = extractUserDisplayName(eventData.data || {});
+		const toolName = extractToolName(eventData);
 
-    if (dbType === 'sqlite') {
-      const stmt = getPreparedStatement('insertEvent', `
+		if (dbType === 'sqlite') {
+			const stmt = getPreparedStatement('insertEvent', `
 				INSERT INTO telemetry_events
 				(event, timestamp, server_id, version, session_id, parent_session_id, user_id, data, received_at, org_id, user_name, tool_name)
 				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 			`);
 
-      stmt.run(
-        eventData.event,
-        eventData.timestamp,
-        eventData.serverId || null,
-        eventData.version || null,
-        normalizedSessionId || null,
-        parentSessionId || null,
-        normalizedUserId || null,
-        JSON.stringify(eventData.data || {}),
-        receivedAt,
-        orgId,
-        userName,
-        toolName
-      );
-    } else if (dbType === 'postgresql') {
-      await db.query(
-        `INSERT INTO telemetry_events
+			stmt.run(
+				eventData.event,
+				eventData.timestamp,
+				eventData.serverId || null,
+				eventData.version || null,
+				normalizedSessionId || null,
+				parentSessionId || null,
+				normalizedUserId || null,
+				JSON.stringify(eventData.data || {}),
+				receivedAt,
+				orgId,
+				userName,
+				toolName
+			);
+		} else if (dbType === 'postgresql') {
+			await db.query(
+				`INSERT INTO telemetry_events
 				(event, timestamp, server_id, version, session_id, parent_session_id, user_id, data, received_at, org_id, user_name, tool_name)
 				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
-        [
-          eventData.event,
-          eventData.timestamp,
-          eventData.serverId || null,
-          eventData.version || null,
-          normalizedSessionId || null,
-          parentSessionId || null,
-          normalizedUserId || null,
-          eventData.data || {},
-          receivedAt,
-          orgId,
-          userName,
-          toolName
-        ]
-      );
-    }
+				[
+					eventData.event,
+					eventData.timestamp,
+					eventData.serverId || null,
+					eventData.version || null,
+					normalizedSessionId || null,
+					parentSessionId || null,
+					normalizedUserId || null,
+					eventData.data || {},
+					receivedAt,
+					orgId,
+					userName,
+					toolName
+				]
+			);
+		}
 
-    // Extract and store company name if available
-    if (eventData.serverId) {
-      const companyName = extractCompanyName(eventData);
-      if (companyName) {
-        // Don't await to avoid blocking event storage
-        upsertOrgCompanyName(eventData.serverId, companyName).catch(err => {
-          console.error('Error storing company name:', err);
-        });
-      }
-    }
+		// Extract and store company name if available
+		if (eventData.serverId) {
+			const companyName = extractCompanyName(eventData);
+			if (companyName) {
+				// Don't await to avoid blocking event storage
+				upsertOrgCompanyName(eventData.serverId, companyName).catch(err => {
+					console.error('Error storing company name:', err);
+				});
+			}
+		}
 
-    // Update aggregated counters so UI lists stay accurate without pagination
-    await updateAggregatedStatsForEvent(normalizedUserId, orgId, eventData.timestamp, userName);
+		// Update aggregated counters so UI lists stay accurate without pagination
+		await updateAggregatedStatsForEvent(normalizedUserId, orgId, eventData.timestamp, userName);
 
-    return true;
-  } catch (error) {
-    // Re-throw to allow caller to handle
-    throw new Error(`Failed to store telemetry event: ${error.message}`);
-  }
+		return true;
+	} catch (error) {
+		// Re-throw to allow caller to handle
+		throw new Error(`Failed to store telemetry event: ${error.message}`);
+	}
 }
 
 /**
@@ -700,58 +692,58 @@ async function storeEvent(eventData, receivedAt) {
  * @returns {object} Statistics
  */
 async function getStats(options = {}) {
-  if (!db) {
-    throw new Error('Database not initialized. Call init() first.');
-  }
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
 
-  const { startDate, endDate, eventType } = options;
+	const { startDate, endDate, eventType } = options;
 
-  if (dbType === 'sqlite') {
-    // Use prepared statement for common case (no filters)
-    if (!startDate && !endDate && !eventType) {
-      const stmt = getPreparedStatement('getStatsTotal', 'SELECT COUNT(*) as total FROM telemetry_events');
-      return { total: stmt.get().total };
-    }
+	if (dbType === 'sqlite') {
+		// Use prepared statement for common case (no filters)
+		if (!startDate && !endDate && !eventType) {
+			const stmt = getPreparedStatement('getStatsTotal', 'SELECT COUNT(*) as total FROM telemetry_events');
+			return { total: stmt.get().total };
+		}
 
-    let query = 'SELECT COUNT(*) as total FROM telemetry_events WHERE 1=1';
-    const params = [];
+		let query = 'SELECT COUNT(*) as total FROM telemetry_events WHERE 1=1';
+		const params = [];
 
-    if (startDate) {
-      query += ' AND created_at >= ?';
-      params.push(startDate);
-    }
-    if (endDate) {
-      query += ' AND created_at <= ?';
-      params.push(endDate);
-    }
-    if (eventType) {
-      query += ' AND event = ?';
-      params.push(eventType);
-    }
+		if (startDate) {
+			query += ' AND created_at >= ?';
+			params.push(startDate);
+		}
+		if (endDate) {
+			query += ' AND created_at <= ?';
+			params.push(endDate);
+		}
+		if (eventType) {
+			query += ' AND event = ?';
+			params.push(eventType);
+		}
 
-    const result = db.prepare(query).get(...params);
-    return { total: result.total };
-  } else if (dbType === 'postgresql') {
-    let query = 'SELECT COUNT(*) as total FROM telemetry_events WHERE 1=1';
-    const params = [];
-    let paramIndex = 1;
+		const result = db.prepare(query).get(...params);
+		return { total: result.total };
+	} else if (dbType === 'postgresql') {
+		let query = 'SELECT COUNT(*) as total FROM telemetry_events WHERE 1=1';
+		const params = [];
+		let paramIndex = 1;
 
-    if (startDate) {
-      query += ` AND created_at >= $${paramIndex++}`;
-      params.push(startDate);
-    }
-    if (endDate) {
-      query += ` AND created_at <= $${paramIndex++}`;
-      params.push(endDate);
-    }
-    if (eventType) {
-      query += ` AND event = $${paramIndex++}`;
-      params.push(eventType);
-    }
+		if (startDate) {
+			query += ` AND created_at >= $${paramIndex++}`;
+			params.push(startDate);
+		}
+		if (endDate) {
+			query += ` AND created_at <= $${paramIndex++}`;
+			params.push(endDate);
+		}
+		if (eventType) {
+			query += ` AND event = $${paramIndex++}`;
+			params.push(eventType);
+		}
 
-    const result = await db.query(query, params);
-    return { total: parseInt(result.rows[0].total) };
-  }
+		const result = await db.query(query, params);
+		return { total: parseInt(result.rows[0].total) };
+	}
 }
 
 /**
@@ -760,100 +752,100 @@ async function getStats(options = {}) {
  * @returns {object} Events and pagination info
  */
 async function getEvents(options = {}) {
-  if (!db) {
-    throw new Error('Database not initialized. Call init() first.');
-  }
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
 
-  const {
-    limit = 50,
-    offset = 0,
-    eventTypes,
-    serverId,
-    sessionId,
-    startDate,
-    endDate,
-    orderBy = 'created_at',
-    order = 'DESC'
-  } = options;
+	const {
+		limit = 50,
+		offset = 0,
+		eventTypes,
+		serverId,
+		sessionId,
+		startDate,
+		endDate,
+		orderBy = 'created_at',
+		order = 'DESC'
+	} = options;
 
-  let whereClause = 'WHERE 1=1';
-  const params = [];
-  let paramIndex = 1;
+	let whereClause = 'WHERE 1=1';
+	const params = [];
+	let paramIndex = 1;
 
-  if (eventTypes && Array.isArray(eventTypes) && eventTypes.length > 0) {
-    if (eventTypes.length === 1) {
-      whereClause += dbType === 'sqlite' ? ' AND event = ?' : ` AND event = $${paramIndex++}`;
-      params.push(eventTypes[0]);
-    } else {
-      const placeholders = eventTypes.map(() => {
-        return dbType === 'sqlite' ? '?' : `$${paramIndex++}`;
-      }).join(', ');
-      whereClause += ` AND event IN (${placeholders})`;
-      params.push(...eventTypes);
-    }
-  }
-  if (serverId) {
-    whereClause += dbType === 'sqlite' ? ' AND server_id = ?' : ` AND server_id = $${paramIndex++}`;
-    params.push(serverId);
-  }
-  if (sessionId) {
-    // Filter by logical session: parent_session_id when set, otherwise raw session_id
-    if (dbType === 'sqlite') {
-      whereClause += ' AND (parent_session_id = ? OR (parent_session_id IS NULL AND session_id = ?))';
-    } else {
-      whereClause += ` AND (parent_session_id = $${paramIndex} OR (parent_session_id IS NULL AND session_id = $${paramIndex + 1}))`;
-    }
-    params.push(sessionId, sessionId);
-    paramIndex += dbType === 'sqlite' ? 0 : 2;
-  }
-  if (startDate) {
-    whereClause += dbType === 'sqlite' ? ' AND created_at >= ?' : ` AND created_at >= $${paramIndex++}`;
-    params.push(startDate);
-  }
-  if (endDate) {
-    whereClause += dbType === 'sqlite' ? ' AND created_at <= ?' : ` AND created_at <= $${paramIndex++}`;
-    params.push(endDate);
-  }
-  if (options.userIds && Array.isArray(options.userIds) && options.userIds.length > 0) {
-    const placeholders = options.userIds.map(() => {
-      return dbType === 'sqlite' ? '?' : `$${paramIndex++}`;
-    }).join(', ');
-    whereClause += ` AND user_id IN (${placeholders})`;
-    params.push(...options.userIds);
-  }
+	if (eventTypes && Array.isArray(eventTypes) && eventTypes.length > 0) {
+		if (eventTypes.length === 1) {
+			whereClause += dbType === 'sqlite' ? ' AND event = ?' : ` AND event = $${paramIndex++}`;
+			params.push(eventTypes[0]);
+		} else {
+			const placeholders = eventTypes.map(() => {
+				return dbType === 'sqlite' ? '?' : `$${paramIndex++}`;
+			}).join(', ');
+			whereClause += ` AND event IN (${placeholders})`;
+			params.push(...eventTypes);
+		}
+	}
+	if (serverId) {
+		whereClause += dbType === 'sqlite' ? ' AND server_id = ?' : ` AND server_id = $${paramIndex++}`;
+		params.push(serverId);
+	}
+	if (sessionId) {
+		// Filter by logical session: parent_session_id when set, otherwise raw session_id
+		if (dbType === 'sqlite') {
+			whereClause += ' AND (parent_session_id = ? OR (parent_session_id IS NULL AND session_id = ?))';
+		} else {
+			whereClause += ` AND (parent_session_id = $${paramIndex} OR (parent_session_id IS NULL AND session_id = $${paramIndex + 1}))`;
+		}
+		params.push(sessionId, sessionId);
+		paramIndex += dbType === 'sqlite' ? 0 : 2;
+	}
+	if (startDate) {
+		whereClause += dbType === 'sqlite' ? ' AND created_at >= ?' : ` AND created_at >= $${paramIndex++}`;
+		params.push(startDate);
+	}
+	if (endDate) {
+		whereClause += dbType === 'sqlite' ? ' AND created_at <= ?' : ` AND created_at <= $${paramIndex++}`;
+		params.push(endDate);
+	}
+	if (options.userIds && Array.isArray(options.userIds) && options.userIds.length > 0) {
+		const placeholders = options.userIds.map(() => {
+			return dbType === 'sqlite' ? '?' : `$${paramIndex++}`;
+		}).join(', ');
+		whereClause += ` AND user_id IN (${placeholders})`;
+		params.push(...options.userIds);
+	}
 
-  // Get total count (optimize by skipping if not needed)
-  let total = 0;
-  // Only compute total if it's a reasonable query (not too expensive)
-  // We compute total when:
-  // 1. offset === 0: First page, total is useful for pagination UI
-  // 2. limit <= MAX_LIMIT_FOR_TOTAL_COMPUTATION: Small result set, COUNT is fast
-  const shouldComputeTotal = offset === 0 || limit <= MAX_LIMIT_FOR_TOTAL_COMPUTATION;
+	// Get total count (optimize by skipping if not needed)
+	let total = 0;
+	// Only compute total if it's a reasonable query (not too expensive)
+	// We compute total when:
+	// 1. offset === 0: First page, total is useful for pagination UI
+	// 2. limit <= MAX_LIMIT_FOR_TOTAL_COMPUTATION: Small result set, COUNT is fast
+	const shouldComputeTotal = offset === 0 || limit <= MAX_LIMIT_FOR_TOTAL_COMPUTATION;
 
-  if (shouldComputeTotal) {
-    let countQuery = `SELECT COUNT(*) as total FROM telemetry_events ${whereClause}`;
-    if (dbType === 'sqlite') {
-      total = db.prepare(countQuery).get(...params).total;
-    } else {
-      const countResult = await db.query(countQuery, params);
-      total = parseInt(countResult.rows[0].total);
-    }
-  }
+	if (shouldComputeTotal) {
+		let countQuery = `SELECT COUNT(*) as total FROM telemetry_events ${whereClause}`;
+		if (dbType === 'sqlite') {
+			total = db.prepare(countQuery).get(...params).total;
+		} else {
+			const countResult = await db.query(countQuery, params);
+			total = parseInt(countResult.rows[0].total);
+		}
+	}
 
-  // Get events
-  const validOrderBy = ['id', 'event', 'timestamp', 'created_at', 'server_id'];
-  const validOrder = ['ASC', 'DESC'];
-  // Only select orderBy and order values from predefined lists without using user data directly
-  let safeOrderBy = 'created_at';
-  if (validOrderBy.includes(orderBy)) {
-    safeOrderBy = orderBy;
-  }
-  let safeOrder = 'DESC';
-  if (typeof order === 'string' && validOrder.includes(order.toUpperCase())) {
-    safeOrder = order.toUpperCase();
-  }
+	// Get events
+	const validOrderBy = ['id', 'event', 'timestamp', 'created_at', 'server_id'];
+	const validOrder = ['ASC', 'DESC'];
+	// Only select orderBy and order values from predefined lists without using user data directly
+	let safeOrderBy = 'created_at';
+	if (validOrderBy.includes(orderBy)) {
+		safeOrderBy = orderBy;
+	}
+	let safeOrder = 'DESC';
+	if (typeof order === 'string' && validOrder.includes(order.toUpperCase())) {
+		safeOrder = order.toUpperCase();
+	}
 
-  let eventsQuery = `
+	let eventsQuery = `
 		SELECT id, event, timestamp, server_id, version, session_id, user_id, data, received_at, created_at
 		FROM telemetry_events
 		${whereClause}
@@ -862,28 +854,28 @@ async function getEvents(options = {}) {
 		OFFSET ${dbType === 'sqlite' ? '?' : `$${paramIndex++}`}
 	`;
 
-  const queryParams = [...params, limit, offset];
-  let events;
+	const queryParams = [...params, limit, offset];
+	let events;
 
-  if (dbType === 'sqlite') {
-    events = db.prepare(eventsQuery).all(...queryParams);
-    // Parse JSON data for SQLite
-    events = events.map(event => ({
-      ...event,
-      data: JSON.parse(event.data)
-    }));
-  } else {
-    const result = await db.query(eventsQuery, queryParams);
-    events = result.rows;
-  }
+	if (dbType === 'sqlite') {
+		events = db.prepare(eventsQuery).all(...queryParams);
+		// Parse JSON data for SQLite
+		events = events.map(event => ({
+			...event,
+			data: JSON.parse(event.data)
+		}));
+	} else {
+		const result = await db.query(eventsQuery, queryParams);
+		events = result.rows;
+	}
 
-  return {
-    events,
-    total,
-    limit,
-    offset,
-    hasMore: offset + limit < total
-  };
+	return {
+		events,
+		total,
+		limit,
+		offset,
+		hasMore: offset + limit < total
+	};
 }
 
 /**
@@ -892,26 +884,26 @@ async function getEvents(options = {}) {
  * @returns {Object|null} Event object or null if not found
  */
 async function getEventById(id) {
-  if (!db) {
-    throw new Error('Database not initialized. Call init() first.');
-  }
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
 
-  if (dbType === 'sqlite') {
-    const event = db.prepare('SELECT id, event, timestamp, server_id, version, session_id, user_id, data, received_at, created_at FROM telemetry_events WHERE id = ?').get(id);
-    if (!event) {
-      return null;
-    }
-    return {
-      ...event,
-      data: JSON.parse(event.data)
-    };
-  } else {
-    const result = await db.query('SELECT id, event, timestamp, server_id, version, session_id, user_id, data, received_at, created_at FROM telemetry_events WHERE id = $1', [id]);
-    if (result.rows.length === 0) {
-      return null;
-    }
-    return result.rows[0];
-  }
+	if (dbType === 'sqlite') {
+		const event = db.prepare('SELECT id, event, timestamp, server_id, version, session_id, user_id, data, received_at, created_at FROM telemetry_events WHERE id = ?').get(id);
+		if (!event) {
+			return null;
+		}
+		return {
+			...event,
+			data: JSON.parse(event.data)
+		};
+	} else {
+		const result = await db.query('SELECT id, event, timestamp, server_id, version, session_id, user_id, data, received_at, created_at FROM telemetry_events WHERE id = $1', [id]);
+		if (result.rows.length === 0) {
+			return null;
+		}
+		return result.rows[0];
+	}
 }
 
 /**
@@ -919,69 +911,69 @@ async function getEventById(id) {
  * @returns {Array} Statistics by event type
  */
 async function getEventTypeStats(options = {}) {
-  const { sessionId, userIds } = options || {};
-  if (!db) {
-    throw new Error('Database not initialized. Call init() first.');
-  }
+	const { sessionId, userIds } = options || {};
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
 
-  if (dbType === 'sqlite') {
-    let query = `
+	if (dbType === 'sqlite') {
+		let query = `
 			SELECT event, COUNT(*) as count
 			FROM telemetry_events
 		`;
-    const params = [];
-    const conditions = [];
-    if (sessionId) {
-      // Logical session filter
-      conditions.push('(parent_session_id = ? OR (parent_session_id IS NULL AND session_id = ?))');
-      params.push(sessionId, sessionId);
-    }
-    if (userIds && Array.isArray(userIds) && userIds.length > 0) {
-      const placeholders = userIds.map(() => '?').join(', ');
-      conditions.push(`user_id IN (${placeholders})`);
-      params.push(...userIds);
-    }
-    if (conditions.length > 0) {
-      query += ' WHERE ' + conditions.join(' AND ');
-    }
-    query += `
+		const params = [];
+		const conditions = [];
+		if (sessionId) {
+			// Logical session filter
+			conditions.push('(parent_session_id = ? OR (parent_session_id IS NULL AND session_id = ?))');
+			params.push(sessionId, sessionId);
+		}
+		if (userIds && Array.isArray(userIds) && userIds.length > 0) {
+			const placeholders = userIds.map(() => '?').join(', ');
+			conditions.push(`user_id IN (${placeholders})`);
+			params.push(...userIds);
+		}
+		if (conditions.length > 0) {
+			query += ' WHERE ' + conditions.join(' AND ');
+		}
+		query += `
 			GROUP BY event
 			ORDER BY count DESC
 		`;
-    const stmt = db.prepare(query);
-    const result = params.length ? stmt.all(...params) : stmt.all();
-    return result;
-  } else {
-    let query = `
+		const stmt = db.prepare(query);
+		const result = params.length ? stmt.all(...params) : stmt.all();
+		return result;
+	} else {
+		let query = `
 			SELECT event, COUNT(*) as count
 			FROM telemetry_events
 		`;
-    const params = [];
-    const conditions = [];
-    let paramIndex = 1;
-    if (sessionId) {
-      conditions.push(`(parent_session_id = $${paramIndex} OR (parent_session_id IS NULL AND session_id = $${paramIndex + 1}))`);
-      params.push(sessionId, sessionId);
-      paramIndex += 2;
-    }
-    if (userIds && Array.isArray(userIds) && userIds.length > 0) {
-      const placeholders = userIds.map(() => `$${paramIndex++}`).join(', ');
-      conditions.push(`user_id IN (${placeholders})`);
-      params.push(...userIds);
-    }
-    if (conditions.length > 0) {
-      query += ' WHERE ' + conditions.join(' AND ');
-    }
-    query += `
+		const params = [];
+		const conditions = [];
+		let paramIndex = 1;
+		if (sessionId) {
+			conditions.push(`(parent_session_id = $${paramIndex} OR (parent_session_id IS NULL AND session_id = $${paramIndex + 1}))`);
+			params.push(sessionId, sessionId);
+			paramIndex += 2;
+		}
+		if (userIds && Array.isArray(userIds) && userIds.length > 0) {
+			const placeholders = userIds.map(() => `$${paramIndex++}`).join(', ');
+			conditions.push(`user_id IN (${placeholders})`);
+			params.push(...userIds);
+		}
+		if (conditions.length > 0) {
+			query += ' WHERE ' + conditions.join(' AND ');
+		}
+		query += `
 			GROUP BY event
 			ORDER BY count DESC
 		`;
-    const result = await db.query(query, params);
-    return result.rows.map(row => ({
-      event: row.event,
-      count: parseInt(row.count)
-    }));
-  }
+		const result = await db.query(query, params);
+		return result.rows.map(row => ({
+			event: row.event,
+			count: parseInt(row.count)
+		}));
+	}
 }
 
 /**
@@ -990,22 +982,22 @@ async function getEventTypeStats(options = {}) {
  * @returns {Array} Sessions with count and latest timestamp
  */
 async function getSessions(options = {}) {
-  const { userIds } = options || {};
-  if (!db) {
-    throw new Error('Database not initialized. Call init() first.');
-  }
+	const { userIds } = options || {};
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
 
-  if (dbType === 'sqlite') {
-    // Group by logical session: parent_session_id when available, otherwise session_id
-    // Use optimized query with CTEs and aggregations instead of correlated subqueries
-    let whereClause = 'WHERE session_id IS NOT NULL OR parent_session_id IS NOT NULL';
-    const params = [];
-    if (userIds && Array.isArray(userIds) && userIds.length > 0) {
-      const placeholders = userIds.map(() => '?').join(', ');
-      whereClause += ` AND user_id IN (${placeholders})`;
-      params.push(...userIds);
-    }
-    const result = db.prepare(`
+	if (dbType === 'sqlite') {
+		// Group by logical session: parent_session_id when available, otherwise session_id
+		// Use optimized query with CTEs and aggregations instead of correlated subqueries
+		let whereClause = 'WHERE session_id IS NOT NULL OR parent_session_id IS NOT NULL';
+		const params = [];
+		if (userIds && Array.isArray(userIds) && userIds.length > 0) {
+			const placeholders = userIds.map(() => '?').join(', ');
+			whereClause += ` AND user_id IN (${placeholders})`;
+			params.push(...userIds);
+		}
+		const result = db.prepare(`
 			WITH session_aggregates AS (
 				SELECT
 					COALESCE(parent_session_id, session_id) AS logical_session_id,
@@ -1035,50 +1027,50 @@ async function getSessions(options = {}) {
 			FROM session_aggregates sa
 			ORDER BY sa.last_event DESC
 		`).all(...params);
-    return result.map(row => {
-      let user_name = null;
-      if (row.session_start_data) {
-        try {
-          const data = JSON.parse(row.session_start_data);
-          // Try multiple paths: userName (camelCase), user_name (snake_case), or data.user.name (nested)
-          if (data) {
-            user_name = data.userName || data.user_name || (data.user && data.user.name) || null;
-          }
-        } catch (_e) {
-          // If parsing fails, ignore and use user_id
-        }
-      }
+		return result.map(row => {
+			let user_name = null;
+			if (row.session_start_data) {
+				try {
+					const data = JSON.parse(row.session_start_data);
+					// Try multiple paths: userName (camelCase), user_name (snake_case), or data.user.name (nested)
+					if (data) {
+						user_name = data.userName || data.user_name || (data.user && data.user.name) || null;
+					}
+				} catch (_e) {
+					// If parsing fails, ignore and use user_id
+				}
+			}
 
-      // Determine if session is active
-      const hasStart = parseInt(row.has_start) > 0;
-      const hasEnd = parseInt(row.has_end) > 0;
-      const lastEvent = new Date(row.last_event);
-      const now = new Date();
-      const hoursSinceLastEvent = (now - lastEvent) / (1000 * 60 * 60);
-      const isActive = hasStart && !hasEnd && hoursSinceLastEvent < 2;
+			// Determine if session is active
+			const hasStart = parseInt(row.has_start) > 0;
+			const hasEnd = parseInt(row.has_end) > 0;
+			const lastEvent = new Date(row.last_event);
+			const now = new Date();
+			const hoursSinceLastEvent = (now - lastEvent) / (1000 * 60 * 60);
+			const isActive = hasStart && !hasEnd && hoursSinceLastEvent < 2;
 
-      return {
-        session_id: row.logical_session_id,
-        count: parseInt(row.count),
-        first_event: row.first_event,
-        last_event: row.last_event,
-        user_id: row.user_id,
-        user_name: user_name,
-        is_active: isActive
-      };
-    });
-  } else {
-    let whereClause = 'WHERE session_id IS NOT NULL OR parent_session_id IS NOT NULL';
-    const params = [];
-    let paramIndex = 1;
-    if (userIds && Array.isArray(userIds) && userIds.length > 0) {
-      const placeholders = userIds.map(() => `$${paramIndex++}`).join(', ');
-      whereClause += ` AND user_id IN (${placeholders})`;
-      params.push(...userIds);
-    }
+			return {
+				session_id: row.logical_session_id,
+				count: parseInt(row.count),
+				first_event: row.first_event,
+				last_event: row.last_event,
+				user_id: row.user_id,
+				user_name: user_name,
+				is_active: isActive
+			};
+		});
+	} else {
+		let whereClause = 'WHERE session_id IS NOT NULL OR parent_session_id IS NOT NULL';
+		const params = [];
+		let paramIndex = 1;
+		if (userIds && Array.isArray(userIds) && userIds.length > 0) {
+			const placeholders = userIds.map(() => `$${paramIndex++}`).join(', ');
+			whereClause += ` AND user_id IN (${placeholders})`;
+			params.push(...userIds);
+		}
 
-    // Use optimized query with CTEs and aggregations instead of correlated subqueries
-    const result = await db.query(`
+		// Use optimized query with CTEs and aggregations instead of correlated subqueries
+		const result = await db.query(`
 			WITH session_aggregates AS (
 				SELECT
 					COALESCE(parent_session_id, session_id) AS logical_session_id,
@@ -1108,41 +1100,41 @@ async function getSessions(options = {}) {
 			FROM session_aggregates sa
 			ORDER BY sa.last_event DESC
 		`, params);
-    return result.rows.map(row => {
-      let user_name = null;
-      if (row.session_start_data) {
-        try {
-          const data = typeof row.session_start_data === 'string'
-            ? JSON.parse(row.session_start_data)
-            : row.session_start_data;
-          // Try multiple paths: userName (camelCase), user_name (snake_case), or data.user.name (nested)
-          if (data) {
-            user_name = data.userName || data.user_name || (data.user && data.user.name) || null;
-          }
-        } catch (_e) {
-          // If parsing fails, ignore and use user_id
-        }
-      }
+		return result.rows.map(row => {
+			let user_name = null;
+			if (row.session_start_data) {
+				try {
+					const data = typeof row.session_start_data === 'string'
+						? JSON.parse(row.session_start_data)
+						: row.session_start_data;
+					// Try multiple paths: userName (camelCase), user_name (snake_case), or data.user.name (nested)
+					if (data) {
+						user_name = data.userName || data.user_name || (data.user && data.user.name) || null;
+					}
+				} catch (_e) {
+					// If parsing fails, ignore and use user_id
+				}
+			}
 
-      // Determine if session is active
-      const hasStart = parseInt(row.has_start) > 0;
-      const hasEnd = parseInt(row.has_end) > 0;
-      const lastEvent = new Date(row.last_event);
-      const now = new Date();
-      const hoursSinceLastEvent = (now - lastEvent) / (1000 * 60 * 60);
-      const isActive = hasStart && !hasEnd && hoursSinceLastEvent < 2;
+			// Determine if session is active
+			const hasStart = parseInt(row.has_start) > 0;
+			const hasEnd = parseInt(row.has_end) > 0;
+			const lastEvent = new Date(row.last_event);
+			const now = new Date();
+			const hoursSinceLastEvent = (now - lastEvent) / (1000 * 60 * 60);
+			const isActive = hasStart && !hasEnd && hoursSinceLastEvent < 2;
 
-      return {
-        session_id: row.logical_session_id,
-        count: parseInt(row.count),
-        first_event: row.first_event,
-        last_event: row.last_event,
-        user_id: row.user_id,
-        user_name: user_name,
-        is_active: isActive
-      };
-    });
-  }
+			return {
+				session_id: row.logical_session_id,
+				count: parseInt(row.count),
+				first_event: row.first_event,
+				last_event: row.last_event,
+				user_id: row.user_id,
+				user_name: user_name,
+				is_active: isActive
+			};
+		});
+	}
 }
 
 /**
@@ -1151,40 +1143,40 @@ async function getSessions(options = {}) {
  * @returns {Promise<boolean>} True if event was deleted, false if not found
  */
 async function deleteEvent(id) {
-  if (!db) {
-    throw new Error('Database not initialized. Call init() first.');
-  }
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
 
-  let eventInfo = null;
-  if (dbType === 'sqlite') {
-    eventInfo = db.prepare('SELECT user_id, org_id FROM telemetry_events WHERE id = ?').get(id);
-  } else if (dbType === 'postgresql') {
-    const result = await db.query('SELECT user_id, org_id FROM telemetry_events WHERE id = $1', [id]);
-    eventInfo = result.rows[0];
-  }
+	let eventInfo = null;
+	if (dbType === 'sqlite') {
+		eventInfo = db.prepare('SELECT user_id, org_id FROM telemetry_events WHERE id = ?').get(id);
+	} else if (dbType === 'postgresql') {
+		const result = await db.query('SELECT user_id, org_id FROM telemetry_events WHERE id = $1', [id]);
+		eventInfo = result.rows[0];
+	}
 
-  if (dbType === 'sqlite') {
-    const stmt = db.prepare('DELETE FROM telemetry_events WHERE id = ?');
-    const result = stmt.run(id);
-    const deleted = result.changes > 0;
-    if (deleted && eventInfo) {
-      await Promise.all([
-        eventInfo?.user_id ? recomputeUserEventStats([eventInfo.user_id]) : Promise.resolve(),
-        eventInfo?.org_id ? recomputeOrgEventStats([eventInfo.org_id]) : Promise.resolve()
-      ]);
-    }
-    return deleted;
-  } else if (dbType === 'postgresql') {
-    const result = await db.query('DELETE FROM telemetry_events WHERE id = $1', [id]);
-    const deleted = result.rowCount > 0;
-    if (deleted && eventInfo) {
-      await Promise.all([
-        eventInfo?.user_id ? recomputeUserEventStats([eventInfo.user_id]) : Promise.resolve(),
-        eventInfo?.org_id ? recomputeOrgEventStats([eventInfo.org_id]) : Promise.resolve()
-      ]);
-    }
-    return deleted;
-  }
+	if (dbType === 'sqlite') {
+		const stmt = db.prepare('DELETE FROM telemetry_events WHERE id = ?');
+		const result = stmt.run(id);
+		const deleted = result.changes > 0;
+		if (deleted && eventInfo) {
+			await Promise.all([
+				eventInfo?.user_id ? recomputeUserEventStats([eventInfo.user_id]) : Promise.resolve(),
+				eventInfo?.org_id ? recomputeOrgEventStats([eventInfo.org_id]) : Promise.resolve()
+			]);
+		}
+		return deleted;
+	} else if (dbType === 'postgresql') {
+		const result = await db.query('DELETE FROM telemetry_events WHERE id = $1', [id]);
+		const deleted = result.rowCount > 0;
+		if (deleted && eventInfo) {
+			await Promise.all([
+				eventInfo?.user_id ? recomputeUserEventStats([eventInfo.user_id]) : Promise.resolve(),
+				eventInfo?.org_id ? recomputeOrgEventStats([eventInfo.org_id]) : Promise.resolve()
+			]);
+		}
+		return deleted;
+	}
 }
 
 /**
@@ -1192,24 +1184,24 @@ async function deleteEvent(id) {
  * @returns {Promise<number>} Number of deleted events
  */
 async function deleteAllEvents() {
-  if (!db) {
-    throw new Error('Database not initialized. Call init() first.');
-  }
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
 
-  if (dbType === 'sqlite') {
-    const stmt = db.prepare('DELETE FROM telemetry_events');
-    const result = stmt.run();
-    if (result.changes > 0) {
-      await resetEventStatsTables();
-    }
-    return result.changes;
-  } else if (dbType === 'postgresql') {
-    const result = await db.query('DELETE FROM telemetry_events');
-    if (result.rowCount > 0) {
-      await resetEventStatsTables();
-    }
-    return result.rowCount;
-  }
+	if (dbType === 'sqlite') {
+		const stmt = db.prepare('DELETE FROM telemetry_events');
+		const result = stmt.run();
+		if (result.changes > 0) {
+			await resetEventStatsTables();
+		}
+		return result.changes;
+	} else if (dbType === 'postgresql') {
+		const result = await db.query('DELETE FROM telemetry_events');
+		if (result.rowCount > 0) {
+			await resetEventStatsTables();
+		}
+		return result.rowCount;
+	}
 }
 
 /**
@@ -1218,46 +1210,46 @@ async function deleteAllEvents() {
  * @returns {Promise<number>} Number of deleted events
  */
 async function deleteEventsBySession(sessionId) {
-  if (!db) {
-    throw new Error('Database not initialized. Call init() first.');
-  }
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
 
-  if (!sessionId) {
-    throw new Error('Session ID is required to delete events by session');
-  }
+	if (!sessionId) {
+		throw new Error('Session ID is required to delete events by session');
+	}
 
-  let impactedUsers = [];
-  let impactedOrgs = [];
-  if (dbType === 'sqlite') {
-    const rows = db.prepare('SELECT DISTINCT user_id, org_id FROM telemetry_events WHERE session_id = ?').all(sessionId);
-    impactedUsers = rows.map(row => row.user_id).filter(Boolean);
-    impactedOrgs = rows.map(row => row.org_id).filter(Boolean);
-  } else if (dbType === 'postgresql') {
-    const result = await db.query('SELECT DISTINCT user_id, org_id FROM telemetry_events WHERE session_id = $1', [sessionId]);
-    impactedUsers = result.rows.map(row => row.user_id).filter(Boolean);
-    impactedOrgs = result.rows.map(row => row.org_id).filter(Boolean);
-  }
+	let impactedUsers = [];
+	let impactedOrgs = [];
+	if (dbType === 'sqlite') {
+		const rows = db.prepare('SELECT DISTINCT user_id, org_id FROM telemetry_events WHERE session_id = ?').all(sessionId);
+		impactedUsers = rows.map(row => row.user_id).filter(Boolean);
+		impactedOrgs = rows.map(row => row.org_id).filter(Boolean);
+	} else if (dbType === 'postgresql') {
+		const result = await db.query('SELECT DISTINCT user_id, org_id FROM telemetry_events WHERE session_id = $1', [sessionId]);
+		impactedUsers = result.rows.map(row => row.user_id).filter(Boolean);
+		impactedOrgs = result.rows.map(row => row.org_id).filter(Boolean);
+	}
 
-  if (dbType === 'sqlite') {
-    const stmt = db.prepare('DELETE FROM telemetry_events WHERE session_id = ?');
-    const result = stmt.run(sessionId);
-    if (result.changes > 0) {
-      await Promise.all([
-        impactedUsers.length ? recomputeUserEventStats(impactedUsers) : Promise.resolve(),
-        impactedOrgs.length ? recomputeOrgEventStats(impactedOrgs) : Promise.resolve()
-      ]);
-    }
-    return result.changes;
-  } else if (dbType === 'postgresql') {
-    const result = await db.query('DELETE FROM telemetry_events WHERE session_id = $1', [sessionId]);
-    if (result.rowCount > 0) {
-      await Promise.all([
-        impactedUsers.length ? recomputeUserEventStats(impactedUsers) : Promise.resolve(),
-        impactedOrgs.length ? recomputeOrgEventStats(impactedOrgs) : Promise.resolve()
-      ]);
-    }
-    return result.rowCount;
-  }
+	if (dbType === 'sqlite') {
+		const stmt = db.prepare('DELETE FROM telemetry_events WHERE session_id = ?');
+		const result = stmt.run(sessionId);
+		if (result.changes > 0) {
+			await Promise.all([
+				impactedUsers.length ? recomputeUserEventStats(impactedUsers) : Promise.resolve(),
+				impactedOrgs.length ? recomputeOrgEventStats(impactedOrgs) : Promise.resolve()
+			]);
+		}
+		return result.changes;
+	} else if (dbType === 'postgresql') {
+		const result = await db.query('DELETE FROM telemetry_events WHERE session_id = $1', [sessionId]);
+		if (result.rowCount > 0) {
+			await Promise.all([
+				impactedUsers.length ? recomputeUserEventStats(impactedUsers) : Promise.resolve(),
+				impactedOrgs.length ? recomputeOrgEventStats(impactedOrgs) : Promise.resolve()
+			]);
+		}
+		return result.rowCount;
+	}
 }
 
 /**
@@ -1266,20 +1258,20 @@ async function deleteEventsBySession(sessionId) {
  * @returns {Array} Array of {date, count} objects
  */
 async function getDailyStats(days = 30) {
-  if (!db) {
-    throw new Error('Database not initialized. Call init() first.');
-  }
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
 
-  // Always include today's data by building the range backwards from today (UTC)
-  const rangeDays = Math.max(1, Number.isFinite(days) ? Math.floor(days) : 30);
-  const now = new Date();
-  const startDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-  startDate.setUTCDate(startDate.getUTCDate() - (rangeDays - 1));
-  const startDateISO = startDate.toISOString();
+	// Always include today's data by building the range backwards from today (UTC)
+	const rangeDays = Math.max(1, Number.isFinite(days) ? Math.floor(days) : 30);
+	const now = new Date();
+	const startDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+	startDate.setUTCDate(startDate.getUTCDate() - (rangeDays - 1));
+	const startDateISO = startDate.toISOString();
 
-  if (dbType === 'sqlite') {
-    // SQLite: use DATE() function to group by date using the event timestamp (UTC)
-    const stmt = getPreparedStatement('getDailyStats', `
+	if (dbType === 'sqlite') {
+		// SQLite: use DATE() function to group by date using the event timestamp (UTC)
+		const stmt = getPreparedStatement('getDailyStats', `
 			SELECT
 				date(timestamp, 'utc') as date,
 				COUNT(*) as count
@@ -1288,34 +1280,34 @@ async function getDailyStats(days = 30) {
 			GROUP BY date(timestamp, 'utc')
 			ORDER BY date ASC
 		`);
-    const result = stmt.all(startDateISO);
+		const result = stmt.all(startDateISO);
 
-    // Fill in missing days with 0 counts
-    const dateMap = new Map();
-    result.forEach(row => {
-      // SQLite DATE() returns string in 'YYYY-MM-DD' format
-      // Normalize to ensure consistent format
-      let dateStr = String(row.date);
-      // Remove time portion if present, keep only date part
-      dateStr = dateStr.split('T')[0].split(' ')[0];
-      dateMap.set(dateStr, parseInt(row.count));
-    });
+		// Fill in missing days with 0 counts
+		const dateMap = new Map();
+		result.forEach(row => {
+			// SQLite DATE() returns string in 'YYYY-MM-DD' format
+			// Normalize to ensure consistent format
+			let dateStr = String(row.date);
+			// Remove time portion if present, keep only date part
+			dateStr = dateStr.split('T')[0].split(' ')[0];
+			dateMap.set(dateStr, parseInt(row.count));
+		});
 
-    const filledResults = [];
-    for (let i = 0; i < rangeDays; i++) {
-      const date = new Date(startDate);
-      date.setUTCDate(date.getUTCDate() + i);
-      const dateStr = date.toISOString().split('T')[0];
-      filledResults.push({
-        date: dateStr,
-        count: dateMap.get(dateStr) || 0
-      });
-    }
+		const filledResults = [];
+		for (let i = 0; i < rangeDays; i++) {
+			const date = new Date(startDate);
+			date.setUTCDate(date.getUTCDate() + i);
+			const dateStr = date.toISOString().split('T')[0];
+			filledResults.push({
+				date: dateStr,
+				count: dateMap.get(dateStr) || 0
+			});
+		}
 
-    return filledResults;
-  } else {
-    // PostgreSQL: use DATE with UTC timezone to group by date using the event timestamp
-    const result = await db.query(`
+		return filledResults;
+	} else {
+		// PostgreSQL: use DATE with UTC timezone to group by date using the event timestamp
+		const result = await db.query(`
 			SELECT
 				DATE(timestamp AT TIME ZONE 'UTC') as date,
 				COUNT(*) as count
@@ -1325,29 +1317,29 @@ async function getDailyStats(days = 30) {
 			ORDER BY date ASC
 		`, [startDateISO]);
 
-    // Fill in missing days with 0 counts
-    const dateMap = new Map();
-    result.rows.forEach(row => {
-      // Handle both Date objects and string dates from PostgreSQL
-      const dateValue = row.date instanceof Date
-        ? row.date.toISOString().split('T')[0]
-        : row.date.split('T')[0];
-      dateMap.set(dateValue, parseInt(row.count));
-    });
+		// Fill in missing days with 0 counts
+		const dateMap = new Map();
+		result.rows.forEach(row => {
+			// Handle both Date objects and string dates from PostgreSQL
+			const dateValue = row.date instanceof Date
+				? row.date.toISOString().split('T')[0]
+				: row.date.split('T')[0];
+			dateMap.set(dateValue, parseInt(row.count));
+		});
 
-    const filledResults = [];
-    for (let i = 0; i < rangeDays; i++) {
-      const date = new Date(startDate);
-      date.setUTCDate(date.getUTCDate() + i);
-      const dateStr = date.toISOString().split('T')[0];
-      filledResults.push({
-        date: dateStr,
-        count: dateMap.get(dateStr) || 0
-      });
-    }
+		const filledResults = [];
+		for (let i = 0; i < rangeDays; i++) {
+			const date = new Date(startDate);
+			date.setUTCDate(date.getUTCDate() + i);
+			const dateStr = date.toISOString().split('T')[0];
+			filledResults.push({
+				date: dateStr,
+				count: dateMap.get(dateStr) || 0
+			});
+		}
 
-    return filledResults;
-  }
+		return filledResults;
+	}
 }
 
 /**
@@ -1357,62 +1349,89 @@ async function getDailyStats(days = 30) {
  * @returns {Array} Array of {date, startSessionsWithoutEnd, toolEvents} objects
  */
 async function getDailyStatsByEventType(days = 30) {
-  if (!db) {
-    throw new Error('Database not initialized. Call init() first.');
-  }
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
 
-  // Always include today's data by building the range backwards from today (UTC)
-  const rangeDays = Math.max(1, Number.isFinite(days) ? Math.floor(days) : 30);
-  const now = new Date();
-  const startDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-  startDate.setUTCDate(startDate.getUTCDate() - (rangeDays - 1));
-  const startDateISO = startDate.toISOString();
+	// Always include today's data by building the range backwards from today (UTC)
+	const rangeDays = Math.max(1, Number.isFinite(days) ? Math.floor(days) : 30);
+	const now = new Date();
+	const startDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+	startDate.setUTCDate(startDate.getUTCDate() - (rangeDays - 1));
+	const startDateISO = startDate.toISOString();
 
-  if (dbType === 'sqlite') {
-    // Single optimized query with conditional aggregation
-    const stats = db.prepare(`
+	if (dbType === 'sqlite') {
+		// Get all session_start events
+		const sessionStarts = db.prepare(`
 			SELECT
 				date(timestamp, 'utc') as date,
-				COUNT(CASE WHEN event = 'session_start' THEN 1 END) as start_sessions,
-				COUNT(CASE WHEN event IN ('tool_call', 'tool_error') THEN 1 END) as tool_events,
-				COUNT(CASE WHEN event = 'tool_error' THEN 1 END) as error_events
+				session_id,
+				id
 			FROM telemetry_events
-			WHERE timestamp >= ?
-			GROUP BY date(timestamp, 'utc')
-			ORDER BY date
+			WHERE timestamp >= ? AND event = 'session_start'
 		`).all(startDateISO);
 
-    const startSessionsMap = new Map();
-    const toolEventsMap = new Map();
-    const errorEventsMap = new Map();
+		// Count all session_starts by date (regardless of whether they have an end)
+		const startSessionsMap = new Map();
+		sessionStarts.forEach(row => {
+			let dateStr = String(row.date);
+			dateStr = dateStr.split('T')[0].split(' ')[0];
+			startSessionsMap.set(dateStr, (startSessionsMap.get(dateStr) || 0) + 1);
+		});
 
-    stats.forEach(row => {
-      let dateStr = String(row.date);
-      dateStr = dateStr.split('T')[0].split(' ')[0];
-      startSessionsMap.set(dateStr, parseInt(row.start_sessions) || 0);
-      toolEventsMap.set(dateStr, parseInt(row.tool_events) || 0);
-      errorEventsMap.set(dateStr, parseInt(row.error_events) || 0);
-    });
+		// Get tool events (tool_call and tool_error)
+		const toolEvents = db.prepare(`
+			SELECT
+				date(timestamp, 'utc') as date,
+				COUNT(*) as count
+			FROM telemetry_events
+			WHERE timestamp >= ? AND event IN ('tool_call', 'tool_error')
+			GROUP BY date(timestamp, 'utc')
+		`).all(startDateISO);
 
-    // Fill in missing days with 0 counts
-    const filledResults = [];
-    for (let i = 0; i < rangeDays; i++) {
-      const date = new Date(startDate);
-      date.setUTCDate(date.getUTCDate() + i);
-      const dateStr = date.toISOString().split('T')[0];
-      filledResults.push({
-        date: dateStr,
-        startSessionsWithoutEnd: startSessionsMap.get(dateStr) || 0,
-        toolEvents: toolEventsMap.get(dateStr) || 0,
-        errorEvents: errorEventsMap.get(dateStr) || 0
-      });
-    }
+		const toolEventsMap = new Map();
+		toolEvents.forEach(row => {
+			let dateStr = String(row.date);
+			dateStr = dateStr.split('T')[0].split(' ')[0];
+			toolEventsMap.set(dateStr, parseInt(row.count));
+		});
 
-    return filledResults;
-  } else {
-    // PostgreSQL
-    // Get all session_start events
-    const sessionStartsResult = await db.query(`
+		// Get error events (tool_error only)
+		const errorEvents = db.prepare(`
+			SELECT
+				date(timestamp, 'utc') as date,
+				COUNT(*) as count
+			FROM telemetry_events
+			WHERE timestamp >= ? AND event = 'tool_error'
+			GROUP BY date(timestamp, 'utc')
+		`).all(startDateISO);
+
+		const errorEventsMap = new Map();
+		errorEvents.forEach(row => {
+			let dateStr = String(row.date);
+			dateStr = dateStr.split('T')[0].split(' ')[0];
+			errorEventsMap.set(dateStr, parseInt(row.count));
+		});
+
+		// Fill in missing days with 0 counts
+		const filledResults = [];
+		for (let i = 0; i < rangeDays; i++) {
+			const date = new Date(startDate);
+			date.setUTCDate(date.getUTCDate() + i);
+			const dateStr = date.toISOString().split('T')[0];
+			filledResults.push({
+				date: dateStr,
+				startSessionsWithoutEnd: startSessionsMap.get(dateStr) || 0,
+				toolEvents: toolEventsMap.get(dateStr) || 0,
+				errorEvents: errorEventsMap.get(dateStr) || 0
+			});
+		}
+
+		return filledResults;
+	} else {
+		// PostgreSQL
+		// Get all session_start events
+		const sessionStartsResult = await db.query(`
 			SELECT
 				DATE(timestamp AT TIME ZONE 'UTC') as date,
 				session_id,
@@ -1421,17 +1440,17 @@ async function getDailyStatsByEventType(days = 30) {
 			WHERE timestamp >= $1 AND event = 'session_start'
 		`, [startDateISO]);
 
-    // Count all session_starts by date (regardless of whether they have an end)
-    const startSessionsMap = new Map();
-    sessionStartsResult.rows.forEach(row => {
-      const dateValue = row.date instanceof Date
-        ? row.date.toISOString().split('T')[0]
-        : row.date.split('T')[0];
-      startSessionsMap.set(dateValue, (startSessionsMap.get(dateValue) || 0) + 1);
-    });
+		// Count all session_starts by date (regardless of whether they have an end)
+		const startSessionsMap = new Map();
+		sessionStartsResult.rows.forEach(row => {
+			const dateValue = row.date instanceof Date
+				? row.date.toISOString().split('T')[0]
+				: row.date.split('T')[0];
+			startSessionsMap.set(dateValue, (startSessionsMap.get(dateValue) || 0) + 1);
+		});
 
-    // Get tool events (tool_call and tool_error)
-    const toolEventsResult = await db.query(`
+		// Get tool events (tool_call and tool_error)
+		const toolEventsResult = await db.query(`
 			SELECT
 				DATE(timestamp AT TIME ZONE 'UTC') as date,
 				COUNT(*) as count
@@ -1440,16 +1459,16 @@ async function getDailyStatsByEventType(days = 30) {
 			GROUP BY DATE(timestamp AT TIME ZONE 'UTC')
 		`, [startDateISO]);
 
-    const toolEventsMap = new Map();
-    toolEventsResult.rows.forEach(row => {
-      const dateValue = row.date instanceof Date
-        ? row.date.toISOString().split('T')[0]
-        : row.date.split('T')[0];
-      toolEventsMap.set(dateValue, parseInt(row.count));
-    });
+		const toolEventsMap = new Map();
+		toolEventsResult.rows.forEach(row => {
+			const dateValue = row.date instanceof Date
+				? row.date.toISOString().split('T')[0]
+				: row.date.split('T')[0];
+			toolEventsMap.set(dateValue, parseInt(row.count));
+		});
 
-    // Get error events (tool_error only)
-    const errorEventsResult = await db.query(`
+		// Get error events (tool_error only)
+		const errorEventsResult = await db.query(`
 			SELECT
 				DATE(timestamp AT TIME ZONE 'UTC') as date,
 				COUNT(*) as count
@@ -1458,30 +1477,30 @@ async function getDailyStatsByEventType(days = 30) {
 			GROUP BY DATE(timestamp AT TIME ZONE 'UTC')
 		`, [startDateISO]);
 
-    const errorEventsMap = new Map();
-    errorEventsResult.rows.forEach(row => {
-      const dateValue = row.date instanceof Date
-        ? row.date.toISOString().split('T')[0]
-        : row.date.split('T')[0];
-      errorEventsMap.set(dateValue, parseInt(row.count));
-    });
+		const errorEventsMap = new Map();
+		errorEventsResult.rows.forEach(row => {
+			const dateValue = row.date instanceof Date
+				? row.date.toISOString().split('T')[0]
+				: row.date.split('T')[0];
+			errorEventsMap.set(dateValue, parseInt(row.count));
+		});
 
-    // Fill in missing days with 0 counts
-    const filledResults = [];
-    for (let i = 0; i < rangeDays; i++) {
-      const date = new Date(startDate);
-      date.setUTCDate(date.getUTCDate() + i);
-      const dateStr = date.toISOString().split('T')[0];
-      filledResults.push({
-        date: dateStr,
-        startSessionsWithoutEnd: startSessionsMap.get(dateStr) || 0,
-        toolEvents: toolEventsMap.get(dateStr) || 0,
-        errorEvents: errorEventsMap.get(dateStr) || 0
-      });
-    }
+		// Fill in missing days with 0 counts
+		const filledResults = [];
+		for (let i = 0; i < rangeDays; i++) {
+			const date = new Date(startDate);
+			date.setUTCDate(date.getUTCDate() + i);
+			const dateStr = date.toISOString().split('T')[0];
+			filledResults.push({
+				date: dateStr,
+				startSessionsWithoutEnd: startSessionsMap.get(dateStr) || 0,
+				toolEvents: toolEventsMap.get(dateStr) || 0,
+				errorEvents: errorEventsMap.get(dateStr) || 0
+			});
+		}
 
-    return filledResults;
-  }
+		return filledResults;
+	}
 }
 
 /**
@@ -1489,44 +1508,44 @@ async function getDailyStatsByEventType(days = 30) {
  * @returns {Promise<{size: number, maxSize: number|null}|null>} Database size info, or null if not available
  */
 async function getDatabaseSize() {
-  if (!db) {
-    throw new Error('Database not initialized. Call init() first.');
-  }
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
 
-  try {
-    let size = null;
-    if (dbType === 'sqlite') {
-      // SQLite: get file size
-      const dbPath = process.env.DB_PATH || path.join(__dirname, '..', 'data', 'telemetry.db');
-      if (fs.existsSync(dbPath)) {
-        const stats = fs.statSync(dbPath);
-        size = stats.size;
-      }
-    } else if (dbType === 'postgresql') {
-      // PostgreSQL: use pg_database_size function
-      const result = await db.query(
-        'SELECT pg_database_size(current_database()) as size'
-      );
-      size = result.rows[0]?.size || null;
-    }
+	try {
+		let size = null;
+		if (dbType === 'sqlite') {
+			// SQLite: get file size
+			const dbPath = process.env.DB_PATH || path.join(__dirname, '..', 'data', 'telemetry.db');
+			if (fs.existsSync(dbPath)) {
+				const stats = fs.statSync(dbPath);
+				size = stats.size;
+			}
+		} else if (dbType === 'postgresql') {
+			// PostgreSQL: use pg_database_size function
+			const result = await db.query(
+				'SELECT pg_database_size(current_database()) as size'
+			);
+			size = result.rows[0]?.size || null;
+		}
 
-    if (size === null) {
-      return null;
-    }
+		if (size === null) {
+			return null;
+		}
 
-    // Get max size from environment variable (in bytes) if set, otherwise use default
-    const maxSize = process.env.DB_MAX_SIZE
-      ? parseInt(process.env.DB_MAX_SIZE)
-      : DEFAULT_MAX_DB_SIZE;
+		// Get max size from environment variable (in bytes) if set, otherwise use default
+		const maxSize = process.env.DB_MAX_SIZE
+			? parseInt(process.env.DB_MAX_SIZE)
+			: DEFAULT_MAX_DB_SIZE;
 
-    return {
-      size: size,
-      maxSize: maxSize
-    };
-  } catch (error) {
-    console.error('Error getting database size:', error);
-    return null;
-  }
+		return {
+			size: size,
+			maxSize: maxSize
+		};
+	} catch (error) {
+		console.error('Error getting database size:', error);
+		return null;
+	}
 }
 
 /**
@@ -1536,38 +1555,38 @@ async function getDatabaseSize() {
  * @returns {object} Prepared statement
  */
 function getPreparedStatement(key, sql) {
-  if (dbType !== 'sqlite') {
-    return null;
-  }
+	if (dbType !== 'sqlite') {
+		return null;
+	}
 
-  if (!preparedStatements[key]) {
-    preparedStatements[key] = db.prepare(sql);
-  }
+	if (!preparedStatements[key]) {
+		preparedStatements[key] = db.prepare(sql);
+	}
 
-  return preparedStatements[key];
+	return preparedStatements[key];
 }
 
 /**
  * Close database connection
  */
 async function close() {
-  if (db) {
-    if (dbType === 'sqlite') {
-      // Finalize all prepared statements before clearing the cache
-      for (const stmt of Object.values(preparedStatements)) {
-        try {
-          stmt.finalize();
-        } catch (err) {
-          console.error('Error finalizing prepared statement:', err);
-        }
-      }
-      preparedStatements = {};
-      db.close();
-    } else if (dbType === 'postgresql') {
-      await db.end();
-    }
-    db = null;
-  }
+	if (db) {
+		if (dbType === 'sqlite') {
+			// Finalize all prepared statements before clearing the cache
+			for (const stmt of Object.values(preparedStatements)) {
+				try {
+					stmt.finalize();
+				} catch (err) {
+					console.error('Error finalizing prepared statement:', err);
+				}
+			}
+			preparedStatements = {};
+			db.close();
+		} else if (dbType === 'postgresql') {
+			await db.end();
+		}
+		db = null;
+	}
 }
 
 /**
@@ -1580,21 +1599,21 @@ async function close() {
  * @returns {Promise<object|null>} User object or null if not found
  */
 async function getUserByUsername(username) {
-  if (!db) {
-    throw new Error('Database not initialized. Call init() first.');
-  }
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
 
-  if (dbType === 'sqlite') {
-    const stmt = getPreparedStatement('getUserByUsername', 'SELECT id, username, password_hash, role, created_at, last_login FROM users WHERE username = ?');
-    const user = stmt.get(username);
-    return user || null;
-  } else if (dbType === 'postgresql') {
-    const result = await db.query(
-      'SELECT id, username, password_hash, role, created_at, last_login FROM users WHERE username = $1',
-      [username]
-    );
-    return result.rows[0] || null;
-  }
+	if (dbType === 'sqlite') {
+		const stmt = getPreparedStatement('getUserByUsername', 'SELECT id, username, password_hash, role, created_at, last_login FROM users WHERE username = ?');
+		const user = stmt.get(username);
+		return user || null;
+	} else if (dbType === 'postgresql') {
+		const result = await db.query(
+			'SELECT id, username, password_hash, role, created_at, last_login FROM users WHERE username = $1',
+			[username]
+		);
+		return result.rows[0] || null;
+	}
 }
 
 /**
@@ -1604,29 +1623,29 @@ async function getUserByUsername(username) {
  * @returns {Promise<object>} Created user object
  */
 async function createUser(username, passwordHash, role = 'basic') {
-  if (!db) {
-    throw new Error('Database not initialized. Call init() first.');
-  }
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
 
-  const normalized = normalizeRole(role);
+	const normalized = normalizeRole(role);
 
-  if (dbType === 'sqlite') {
-    const stmt = db.prepare('INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)');
-    const result = stmt.run(username, passwordHash, normalized);
-    return {
-      id: result.lastInsertRowid,
-      username,
-      password_hash: passwordHash,
-      role: normalized,
-      created_at: new Date().toISOString()
-    };
-  } else if (dbType === 'postgresql') {
-    const result = await db.query(
-      'INSERT INTO users (username, password_hash, role) VALUES ($1, $2, $3) RETURNING id, username, password_hash, role, created_at',
-      [username, passwordHash, normalized]
-    );
-    return result.rows[0];
-  }
+	if (dbType === 'sqlite') {
+		const stmt = db.prepare('INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)');
+		const result = stmt.run(username, passwordHash, normalized);
+		return {
+			id: result.lastInsertRowid,
+			username,
+			password_hash: passwordHash,
+			role: normalized,
+			created_at: new Date().toISOString()
+		};
+	} else if (dbType === 'postgresql') {
+		const result = await db.query(
+			'INSERT INTO users (username, password_hash, role) VALUES ($1, $2, $3) RETURNING id, username, password_hash, role, created_at',
+			[username, passwordHash, normalized]
+		);
+		return result.rows[0];
+	}
 }
 
 /**
@@ -1635,17 +1654,17 @@ async function createUser(username, passwordHash, role = 'basic') {
  * @returns {Promise<void>}
  */
 async function updateLastLogin(username) {
-  if (!db) {
-    throw new Error('Database not initialized. Call init() first.');
-  }
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
 
-  const now = new Date().toISOString();
-  if (dbType === 'sqlite') {
-    const stmt = db.prepare('UPDATE users SET last_login = ? WHERE username = ?');
-    stmt.run(now, username);
-  } else if (dbType === 'postgresql') {
-    await db.query('UPDATE users SET last_login = $1 WHERE username = $2', [now, username]);
-  }
+	const now = new Date().toISOString();
+	if (dbType === 'sqlite') {
+		const stmt = db.prepare('UPDATE users SET last_login = ? WHERE username = ?');
+		stmt.run(now, username);
+	} else if (dbType === 'postgresql') {
+		await db.query('UPDATE users SET last_login = $1 WHERE username = $2', [now, username]);
+	}
 }
 
 /**
@@ -1654,21 +1673,21 @@ async function updateLastLogin(username) {
  * @returns {Promise<object|null>} User object or null
  */
 async function getUserById(userId) {
-  if (!db) {
-    throw new Error('Database not initialized. Call init() first.');
-  }
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
 
-  if (dbType === 'sqlite') {
-    const stmt = db.prepare('SELECT id, username, password_hash, role, created_at, last_login FROM users WHERE id = ?');
-    const user = stmt.get(userId);
-    return user || null;
-  } else if (dbType === 'postgresql') {
-    const result = await db.query(
-      'SELECT id, username, password_hash, role, created_at, last_login FROM users WHERE id = $1',
-      [userId]
-    );
-    return result.rows[0] || null;
-  }
+	if (dbType === 'sqlite') {
+		const stmt = db.prepare('SELECT id, username, password_hash, role, created_at, last_login FROM users WHERE id = ?');
+		const user = stmt.get(userId);
+		return user || null;
+	} else if (dbType === 'postgresql') {
+		const result = await db.query(
+			'SELECT id, username, password_hash, role, created_at, last_login FROM users WHERE id = $1',
+			[userId]
+		);
+		return result.rows[0] || null;
+	}
 }
 
 /**
@@ -1676,17 +1695,17 @@ async function getUserById(userId) {
  * @returns {Promise<Array>} Array of user objects (without password hashes)
  */
 async function getAllUsers() {
-  if (!db) {
-    throw new Error('Database not initialized. Call init() first.');
-  }
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
 
-  if (dbType === 'sqlite') {
-    const stmt = db.prepare('SELECT id, username, role, created_at, last_login FROM users ORDER BY username');
-    return stmt.all();
-  } else if (dbType === 'postgresql') {
-    const result = await db.query('SELECT id, username, role, created_at, last_login FROM users ORDER BY username');
-    return result.rows;
-  }
+	if (dbType === 'sqlite') {
+		const stmt = db.prepare('SELECT id, username, role, created_at, last_login FROM users ORDER BY username');
+		return stmt.all();
+	} else if (dbType === 'postgresql') {
+		const result = await db.query('SELECT id, username, role, created_at, last_login FROM users ORDER BY username');
+		return result.rows;
+	}
 }
 
 /**
@@ -1695,18 +1714,18 @@ async function getAllUsers() {
  * @returns {Promise<boolean>} True if user was deleted, false if not found
  */
 async function deleteUser(username) {
-  if (!db) {
-    throw new Error('Database not initialized. Call init() first.');
-  }
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
 
-  if (dbType === 'sqlite') {
-    const stmt = db.prepare('DELETE FROM users WHERE username = ?');
-    const result = stmt.run(username);
-    return result.changes > 0;
-  } else if (dbType === 'postgresql') {
-    const result = await db.query('DELETE FROM users WHERE username = $1', [username]);
-    return result.rowCount > 0;
-  }
+	if (dbType === 'sqlite') {
+		const stmt = db.prepare('DELETE FROM users WHERE username = ?');
+		const result = stmt.run(username);
+		return result.changes > 0;
+	} else if (dbType === 'postgresql') {
+		const result = await db.query('DELETE FROM users WHERE username = $1', [username]);
+		return result.rowCount > 0;
+	}
 }
 
 /**
@@ -1716,18 +1735,18 @@ async function deleteUser(username) {
  * @returns {Promise<boolean>} True if password was updated, false if user not found
  */
 async function updateUserPassword(username, passwordHash) {
-  if (!db) {
-    throw new Error('Database not initialized. Call init() first.');
-  }
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
 
-  if (dbType === 'sqlite') {
-    const stmt = db.prepare('UPDATE users SET password_hash = ? WHERE username = ?');
-    const result = stmt.run(passwordHash, username);
-    return result.changes > 0;
-  } else if (dbType === 'postgresql') {
-    const result = await db.query('UPDATE users SET password_hash = $1 WHERE username = $2', [passwordHash, username]);
-    return result.rowCount > 0;
-  }
+	if (dbType === 'sqlite') {
+		const stmt = db.prepare('UPDATE users SET password_hash = ? WHERE username = ?');
+		const result = stmt.run(passwordHash, username);
+		return result.changes > 0;
+	} else if (dbType === 'postgresql') {
+		const result = await db.query('UPDATE users SET password_hash = $1 WHERE username = $2', [passwordHash, username]);
+		return result.rowCount > 0;
+	}
 }
 
 /**
@@ -1737,22 +1756,22 @@ async function updateUserPassword(username, passwordHash) {
  * @returns {Promise<boolean>} True if updated, false otherwise
  */
 async function updateUserRole(username, role) {
-  if (!db) {
-    throw new Error('Database not initialized. Call init() first.');
-  }
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
 
-  const normalized = normalizeRole(role);
+	const normalized = normalizeRole(role);
 
-  if (dbType === 'sqlite') {
-    const stmt = db.prepare('UPDATE users SET role = ? WHERE username = ?');
-    const result = stmt.run(normalized, username);
-    return result.changes > 0;
-  } else if (dbType === 'postgresql') {
-    const result = await db.query('UPDATE users SET role = $1 WHERE username = $2', [normalized, username]);
-    return result.rowCount > 0;
-  }
+	if (dbType === 'sqlite') {
+		const stmt = db.prepare('UPDATE users SET role = ? WHERE username = ?');
+		const result = stmt.run(normalized, username);
+		return result.changes > 0;
+	} else if (dbType === 'postgresql') {
+		const result = await db.query('UPDATE users SET role = $1 WHERE username = $2', [normalized, username]);
+		return result.rowCount > 0;
+	}
 
-  return false;
+	return false;
 }
 
 /**
@@ -1761,23 +1780,23 @@ async function updateUserRole(username, role) {
  * @returns {Promise<string|null>} Company name or null if not found
  */
 async function getOrgCompanyName(serverId) {
-  if (!db || !serverId) {
-    return null;
-  }
+	if (!db || !serverId) {
+		return null;
+	}
 
-  try {
-    if (dbType === 'sqlite') {
-      const stmt = db.prepare('SELECT company_name FROM orgs WHERE server_id = ?');
-      const result = stmt.get(serverId);
-      return result ? result.company_name : null;
-    } else if (dbType === 'postgresql') {
-      const result = await db.query('SELECT company_name FROM orgs WHERE server_id = $1', [serverId]);
-      return result.rows.length > 0 ? result.rows[0].company_name : null;
-    }
-  } catch (error) {
-    console.error('Error getting org company name:', error);
-    return null;
-  }
+	try {
+		if (dbType === 'sqlite') {
+			const stmt = db.prepare('SELECT company_name FROM orgs WHERE server_id = ?');
+			const result = stmt.get(serverId);
+			return result ? result.company_name : null;
+		} else if (dbType === 'postgresql') {
+			const result = await db.query('SELECT company_name FROM orgs WHERE server_id = $1', [serverId]);
+			return result.rows.length > 0 ? result.rows[0].company_name : null;
+		}
+	} catch (error) {
+		console.error('Error getting org company name:', error);
+		return null;
+	}
 }
 
 /**
@@ -1785,22 +1804,22 @@ async function getOrgCompanyName(serverId) {
  * @returns {Promise<Array>} Array of org objects with server_id and company_name
  */
 async function getAllOrgs() {
-  if (!db) {
-    throw new Error('Database not initialized. Call init() first.');
-  }
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
 
-  try {
-    if (dbType === 'sqlite') {
-      const stmt = db.prepare('SELECT server_id, company_name, created_at, updated_at FROM orgs ORDER BY updated_at DESC');
-      return stmt.all();
-    } else if (dbType === 'postgresql') {
-      const result = await db.query('SELECT server_id, company_name, created_at, updated_at FROM orgs ORDER BY updated_at DESC');
-      return result.rows;
-    }
-  } catch (error) {
-    console.error('Error getting all orgs:', error);
-    return [];
-  }
+	try {
+		if (dbType === 'sqlite') {
+			const stmt = db.prepare('SELECT server_id, company_name, created_at, updated_at FROM orgs ORDER BY updated_at DESC');
+			return stmt.all();
+		} else if (dbType === 'postgresql') {
+			const result = await db.query('SELECT server_id, company_name, created_at, updated_at FROM orgs ORDER BY updated_at DESC');
+			return result.rows;
+		}
+	} catch (error) {
+		console.error('Error getting all orgs:', error);
+		return [];
+	}
 }
 
 /**
@@ -1810,24 +1829,24 @@ async function getAllOrgs() {
  * @returns {Promise<boolean>} True if updated, false otherwise
  */
 async function updateEventData(id, data) {
-  if (!db) {
-    throw new Error('Database not initialized. Call init() first.');
-  }
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
 
-  try {
-    if (dbType === 'sqlite') {
-      const stmt = db.prepare('UPDATE telemetry_events SET data = ? WHERE id = ?');
-      const result = stmt.run(JSON.stringify(data), id);
-      return result.changes > 0;
-    } else if (dbType === 'postgresql') {
-      const result = await db.query('UPDATE telemetry_events SET data = $1 WHERE id = $2', [data, id]);
-      return result.rowCount > 0;
-    }
-    return false;
-  } catch (error) {
-    console.error('Error updating event data:', error);
-    return false;
-  }
+	try {
+		if (dbType === 'sqlite') {
+			const stmt = db.prepare('UPDATE telemetry_events SET data = ? WHERE id = ?');
+			const result = stmt.run(JSON.stringify(data), id);
+			return result.changes > 0;
+		} else if (dbType === 'postgresql') {
+			const result = await db.query('UPDATE telemetry_events SET data = $1 WHERE id = $2', [data, id]);
+			return result.rowCount > 0;
+		}
+		return false;
+	} catch (error) {
+		console.error('Error updating event data:', error);
+		return false;
+	}
 }
 
 /**
@@ -1836,62 +1855,62 @@ async function updateEventData(id, data) {
  * @returns {Array<{id: string, label: string}>} Sorted array of unique users
  */
 async function getUniqueUserIds() {
-  if (!db) {
-    throw new Error('Database not initialized. Call init() first.');
-  }
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
 
-  let rows;
-  if (dbType === 'sqlite') {
-    rows = db.prepare(`
+	let rows;
+	if (dbType === 'sqlite') {
+		rows = db.prepare(`
 			SELECT user_id, data
 			FROM telemetry_events
 			WHERE user_id IS NOT NULL OR (data IS NOT NULL AND data != '')
 		`).all();
-  } else {
-    const result = await db.query(`
+	} else {
+		const result = await db.query(`
 			SELECT user_id, data
 			FROM telemetry_events
 			WHERE user_id IS NOT NULL OR data IS NOT NULL
 		`);
-    rows = result.rows;
-  }
+		rows = result.rows;
+	}
 
-  const userMap = new Map();
+	const userMap = new Map();
 
-  rows.forEach(row => {
-    let parsedData = null;
-    if (row.data) {
-      try {
-        parsedData = typeof row.data === 'string' ? JSON.parse(row.data) : row.data;
-      } catch (_error) {
-        parsedData = null;
-      }
-    }
+	rows.forEach(row => {
+		let parsedData = null;
+		if (row.data) {
+			try {
+				parsedData = typeof row.data === 'string' ? JSON.parse(row.data) : row.data;
+			} catch (_error) {
+				parsedData = null;
+			}
+		}
 
-    const normalizedId = getNormalizedUserId({
-      userId: row.user_id,
-      data: parsedData
-    });
+		const normalizedId = getNormalizedUserId({
+			userId: row.user_id,
+			data: parsedData
+		});
 
-    if (!normalizedId) {
-      return;
-    }
+		if (!normalizedId) {
+			return;
+		}
 
-    const displayName = extractUserDisplayName(parsedData);
-    const label = displayName && displayName.toLowerCase() !== normalizedId.toLowerCase()
-      ? `${displayName} (${normalizedId})`
-      : normalizedId;
+		const displayName = extractUserDisplayName(parsedData);
+		const label = displayName && displayName.toLowerCase() !== normalizedId.toLowerCase()
+			? `${displayName} (${normalizedId})`
+			: normalizedId;
 
-    const existing = userMap.get(normalizedId);
-    if (!existing || (existing.label === normalizedId && label !== normalizedId)) {
-      userMap.set(normalizedId, {
-        id: normalizedId,
-        label
-      });
-    }
-  });
+		const existing = userMap.get(normalizedId);
+		if (!existing || (existing.label === normalizedId && label !== normalizedId)) {
+			userMap.set(normalizedId, {
+				id: normalizedId,
+				label
+			});
+		}
+	});
 
-  return Array.from(userMap.values()).sort((a, b) => a.label.localeCompare(b.label));
+	return Array.from(userMap.values()).sort((a, b) => a.label.localeCompare(b.label));
 }
 
 /**
@@ -1899,30 +1918,30 @@ async function getUniqueUserIds() {
  * Used for session store configuration
  */
 function getPostgresPool() {
-  if (dbType === 'postgresql' && db) {
-    return db;
-  }
-  return null;
+	if (dbType === 'postgresql' && db) {
+		return db;
+	}
+	return null;
 }
 
 async function ensureUserRoleColumn() {
-  if (!db) {
-    return;
-  }
+	if (!db) {
+		return;
+	}
 
-  try {
-    if (dbType === 'sqlite') {
-      const columns = db.prepare('PRAGMA table_info(users)').all();
-      const hasRoleColumn = columns.some(column => column.name === 'role');
-      if (!hasRoleColumn) {
-        db.exec('ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT \'basic\'');
-      }
-    } else if (dbType === 'postgresql') {
-      await db.query('ALTER TABLE IF EXISTS users ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT \'basic\'');
-    }
-  } catch (error) {
-    console.error('Error ensuring user role column:', error);
-  }
+	try {
+		if (dbType === 'sqlite') {
+			const columns = db.prepare('PRAGMA table_info(users)').all();
+			const hasRoleColumn = columns.some(column => column.name === 'role');
+			if (!hasRoleColumn) {
+				db.exec('ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT \'basic\'');
+			}
+		} else if (dbType === 'postgresql') {
+			await db.query('ALTER TABLE IF EXISTS users ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT \'basic\'');
+		}
+	} catch (error) {
+		console.error('Error ensuring user role column:', error);
+	}
 }
 
 /**
@@ -1932,17 +1951,17 @@ async function ensureUserRoleColumn() {
  * @returns {Promise<Array<{id: string, label: string, eventCount: number}>>}
  */
 async function getTopUsersLastDays(limit = 50, days = 3) {
-  if (!db) {
-    throw new Error('Database not initialized. Call init() first.');
-  }
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
 
-  const safeLimit = Math.min(Math.max(1, Number.isFinite(limit) ? Math.floor(limit) : 50), 500);
-  const safeDays = Math.min(Math.max(1, Number.isFinite(days) ? Math.floor(days) : 3), 365);
-  const lookbackModifier = `-${safeDays} days`;
-  const results = [];
+	const safeLimit = Math.min(Math.max(1, Number.isFinite(limit) ? Math.floor(limit) : 50), 500);
+	const safeDays = Math.min(Math.max(1, Number.isFinite(days) ? Math.floor(days) : 3), 365);
+	const lookbackModifier = `-${safeDays} days`;
+	const results = [];
 
-  if (dbType === 'sqlite') {
-    const aggregated = db.prepare(`
+	if (dbType === 'sqlite') {
+		const aggregated = db.prepare(`
 			SELECT user_id, COUNT(*) as event_count
 			FROM telemetry_events
 			WHERE created_at >= datetime('now', 'localtime', ?)
@@ -1953,8 +1972,8 @@ async function getTopUsersLastDays(limit = 50, days = 3) {
 			LIMIT ?
 		`).all(lookbackModifier, safeLimit);
 
-    aggregated.forEach(row => {
-      const latest = db.prepare(`
+		aggregated.forEach(row => {
+			const latest = db.prepare(`
 				SELECT data
 				FROM telemetry_events
 				WHERE user_id = ?
@@ -1963,15 +1982,15 @@ async function getTopUsersLastDays(limit = 50, days = 3) {
 				LIMIT 1
 			`).get(row.user_id, lookbackModifier);
 
-      results.push({
-        id: row.user_id,
-        label: buildUserLabel(row.user_id, latest?.data),
-        eventCount: Number(row.event_count) || 0
-      });
-    });
-  } else if (dbType === 'postgresql') {
-    const aggregated = await db.query(
-      `
+			results.push({
+				id: row.user_id,
+				label: buildUserLabel(row.user_id, latest?.data),
+				eventCount: Number(row.event_count) || 0
+			});
+		});
+	} else if (dbType === 'postgresql') {
+		const aggregated = await db.query(
+			`
 				WITH aggregated AS (
 					SELECT user_id, COUNT(*) AS event_count
 					FROM telemetry_events
@@ -1995,19 +2014,19 @@ async function getTopUsersLastDays(limit = 50, days = 3) {
 				FROM aggregated a
 				ORDER BY a.event_count DESC, a.user_id ASC
 			`,
-      [safeLimit, String(safeDays)]
-    );
+			[safeLimit, String(safeDays)]
+		);
 
-    aggregated.rows.forEach(row => {
-      results.push({
-        id: row.user_id,
-        label: buildUserLabel(row.user_id, row.data),
-        eventCount: Number(row.event_count) || 0
-      });
-    });
-  }
+		aggregated.rows.forEach(row => {
+			results.push({
+				id: row.user_id,
+				label: buildUserLabel(row.user_id, row.data),
+				eventCount: Number(row.event_count) || 0
+			});
+		});
+	}
 
-  return results;
+	return results;
 }
 
 /**
@@ -2018,90 +2037,90 @@ async function getTopUsersLastDays(limit = 50, days = 3) {
  * @returns {Promise<Array>} Array of {id, label, eventCount, clientName, color} objects
  */
 async function getTopTeamsLastDays(orgTeamMappings = [], limit = 50, days = 3) {
-  if (!db) {
-    throw new Error('Database not initialized. Call init() first.');
-  }
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
 
-  const mappingsFromRequest = Array.isArray(orgTeamMappings) ? orgTeamMappings : [];
-  const effectiveMappings = mappingsFromRequest.length > 0
-    ? mappingsFromRequest
-    : await getOrgTeamMappingsFromTeamsTable();
+	const mappingsFromRequest = Array.isArray(orgTeamMappings) ? orgTeamMappings : [];
+	const effectiveMappings = mappingsFromRequest.length > 0
+		? mappingsFromRequest
+		: await getOrgTeamMappingsFromTeamsTable();
 
-  if (!effectiveMappings || effectiveMappings.length === 0) {
-    return [];
-  }
+	if (!effectiveMappings || effectiveMappings.length === 0) {
+		return [];
+	}
 
-  const safeLimit = Math.min(Math.max(1, Number.isFinite(limit) ? Math.floor(limit) : 50), 500);
-  const safeDays = Math.min(Math.max(1, Number.isFinite(days) ? Math.floor(days) : 3), 365);
-  const lookbackModifier = `-${safeDays} days`;
+	const safeLimit = Math.min(Math.max(1, Number.isFinite(limit) ? Math.floor(limit) : 50), 500);
+	const safeDays = Math.min(Math.max(1, Number.isFinite(days) ? Math.floor(days) : 3), 365);
+	const lookbackModifier = `-${safeDays} days`;
 
-  const normalizeOrgId = (orgId) => String(orgId || '').trim().toLowerCase();
-  const normalizeTeamKey = (teamName) => String(teamName || '').trim().toLowerCase();
+	const normalizeOrgId = (orgId) => String(orgId || '').trim().toLowerCase();
+	const normalizeTeamKey = (teamName) => String(teamName || '').trim().toLowerCase();
 
-  // Build lookups so multiple orgs that point to the same team name are grouped
-  const orgToTeamKey = new Map(); // normalized org id -> normalized team key
-  const teamAggregates = new Map(); // normalized team key -> aggregate info
-  if (Array.isArray(effectiveMappings)) {
-    effectiveMappings.forEach(mapping => {
-      const isActive = mapping?.active !== false;
-      const rawTeamName = String(mapping?.teamName || '').trim();
-      const rawOrgId = normalizeOrgId(mapping?.orgIdentifier);
-      if (!isActive || !rawTeamName || !rawOrgId) {
-        return;
-      }
+	// Build lookups so multiple orgs that point to the same team name are grouped
+	const orgToTeamKey = new Map(); // normalized org id -> normalized team key
+	const teamAggregates = new Map(); // normalized team key -> aggregate info
+	if (Array.isArray(effectiveMappings)) {
+		effectiveMappings.forEach(mapping => {
+			const isActive = mapping?.active !== false;
+			const rawTeamName = String(mapping?.teamName || '').trim();
+			const rawOrgId = normalizeOrgId(mapping?.orgIdentifier);
+			if (!isActive || !rawTeamName || !rawOrgId) {
+				return;
+			}
 
-      const teamKey = normalizeTeamKey(rawTeamName);
-      if (!teamAggregates.has(teamKey)) {
-        teamAggregates.set(teamKey, {
-          key: teamKey,
-          teamName: rawTeamName,
-          color: String(mapping?.color || '').trim(),
-          teamId: mapping?.teamId || null,
-          hasLogo: Boolean(mapping?.hasLogo),
-          logoUrl: String(mapping?.logoUrl || '').trim(),
-          clients: new Set(),
-          orgIds: new Set(),
-          eventCount: 0
-        });
-      }
+			const teamKey = normalizeTeamKey(rawTeamName);
+			if (!teamAggregates.has(teamKey)) {
+				teamAggregates.set(teamKey, {
+					key: teamKey,
+					teamName: rawTeamName,
+					color: String(mapping?.color || '').trim(),
+					teamId: mapping?.teamId || null,
+					hasLogo: Boolean(mapping?.hasLogo),
+					logoUrl: String(mapping?.logoUrl || '').trim(),
+					clients: new Set(),
+					orgIds: new Set(),
+					eventCount: 0
+				});
+			}
 
-      const entry = teamAggregates.get(teamKey);
-      entry.orgIds.add(rawOrgId);
-      orgToTeamKey.set(rawOrgId, teamKey);
+			const entry = teamAggregates.get(teamKey);
+			entry.orgIds.add(rawOrgId);
+			orgToTeamKey.set(rawOrgId, teamKey);
 
-      if (!entry.teamId && mapping?.teamId) {
-        entry.teamId = mapping.teamId;
-      }
-      const mappingHasLogo = Boolean(mapping?.hasLogo);
-      if (mappingHasLogo && !entry.hasLogo) {
-        entry.hasLogo = true;
-      }
-      if (mapping?.logoUrl && !entry.logoUrl) {
-        entry.logoUrl = String(mapping.logoUrl).trim();
-      }
+			if (!entry.teamId && mapping?.teamId) {
+				entry.teamId = mapping.teamId;
+			}
+			const mappingHasLogo = Boolean(mapping?.hasLogo);
+			if (mappingHasLogo && !entry.hasLogo) {
+				entry.hasLogo = true;
+			}
+			if (mapping?.logoUrl && !entry.logoUrl) {
+				entry.logoUrl = String(mapping.logoUrl).trim();
+			}
 
-      const clientName = String(mapping?.clientName || '').trim();
-      if (clientName) {
-        entry.clients.add(clientName);
-      }
+			const clientName = String(mapping?.clientName || '').trim();
+			if (clientName) {
+				entry.clients.add(clientName);
+			}
 
-      if (!entry.color && mapping?.color) {
-        entry.color = String(mapping.color).trim();
-      }
-    });
-  }
+			if (!entry.color && mapping?.color) {
+				entry.color = String(mapping.color).trim();
+			}
+		});
+	}
 
-  // If there are no active mappings we can return early and avoid a full scan
-  if (teamAggregates.size === 0 || orgToTeamKey.size === 0) {
-    return [];
-  }
+	// If there are no active mappings we can return early and avoid a full scan
+	if (teamAggregates.size === 0 || orgToTeamKey.size === 0) {
+		return [];
+	}
 
-  const results = [];
-  const orgIdCounts = new Map();
+	const results = [];
+	const orgIdCounts = new Map();
 
-  if (dbType === 'sqlite') {
-    // Use denormalized org_id column for faster queries
-    const aggregated = db.prepare(`
+	if (dbType === 'sqlite') {
+		// Use denormalized org_id column for faster queries
+		const aggregated = db.prepare(`
 			SELECT org_id, COUNT(*) as event_count
 			FROM telemetry_events
 			WHERE created_at >= datetime('now', 'localtime', ?)
@@ -2111,16 +2130,16 @@ async function getTopTeamsLastDays(orgTeamMappings = [], limit = 50, days = 3) {
 			ORDER BY event_count DESC, org_id ASC
 		`).all(lookbackModifier);
 
-    aggregated.forEach(row => {
-      const orgId = row.org_id;
-      if (orgId) {
-        orgIdCounts.set(orgId, parseInt(row.event_count) || 0);
-      }
-    });
-  } else if (dbType === 'postgresql') {
-    // Use denormalized org_id column for faster queries
-    const aggregated = await db.query(
-      `
+		aggregated.forEach(row => {
+			const orgId = row.org_id;
+			if (orgId) {
+				orgIdCounts.set(orgId, parseInt(row.event_count) || 0);
+			}
+		});
+	} else if (dbType === 'postgresql') {
+		// Use denormalized org_id column for faster queries
+		const aggregated = await db.query(
+			`
 				SELECT org_id, COUNT(*) AS event_count
 				FROM telemetry_events
 				WHERE created_at >= (NOW() - ($1 || ' days')::interval)
@@ -2129,66 +2148,66 @@ async function getTopTeamsLastDays(orgTeamMappings = [], limit = 50, days = 3) {
 				GROUP BY org_id
 				ORDER BY event_count DESC, org_id ASC
 			`,
-      [String(safeDays)]
-    );
+			[String(safeDays)]
+		);
 
-    aggregated.rows.forEach(row => {
-      const orgId = row.org_id;
-      if (orgId) {
-        orgIdCounts.set(orgId, parseInt(row.event_count) || 0);
-      }
-    });
-  }
+		aggregated.rows.forEach(row => {
+			const orgId = row.org_id;
+			if (orgId) {
+				orgIdCounts.set(orgId, parseInt(row.event_count) || 0);
+			}
+		});
+	}
 
-  // Convert to array and sort by count
-  const sortedOrgs = Array.from(orgIdCounts.entries())
-    .map(([orgId, count]) => ({ orgId, count }))
-    .sort((a, b) => {
-      if (b.count !== a.count) {
-        return b.count - a.count;
-      }
-      return a.orgId.localeCompare(b.orgId);
-    });
+	// Convert to array and sort by count
+	const sortedOrgs = Array.from(orgIdCounts.entries())
+		.map(([orgId, count]) => ({ orgId, count }))
+		.sort((a, b) => {
+			if (b.count !== a.count) {
+				return b.count - a.count;
+			}
+			return a.orgId.localeCompare(b.orgId);
+		});
 
-  // Map to team info and add to results
-  sortedOrgs.forEach(({ orgId, count }) => {
-    const normalizedOrgId = normalizeOrgId(orgId);
-    const teamKey = orgToTeamKey.get(normalizedOrgId);
-    if (!teamKey) {
-      return;
-    }
-    const teamEntry = teamAggregates.get(teamKey);
-    if (teamEntry) {
-      teamEntry.eventCount += count;
-    }
-  });
+	// Map to team info and add to results
+	sortedOrgs.forEach(({ orgId, count }) => {
+		const normalizedOrgId = normalizeOrgId(orgId);
+		const teamKey = orgToTeamKey.get(normalizedOrgId);
+		if (!teamKey) {
+			return;
+		}
+		const teamEntry = teamAggregates.get(teamKey);
+		if (teamEntry) {
+			teamEntry.eventCount += count;
+		}
+	});
 
-  // Convert aggregates to sorted array and apply limit
-  Array.from(teamAggregates.values()).forEach(teamEntry => {
-    if (teamEntry.eventCount <= 0) {
-      return;
-    }
-    const clients = Array.from(teamEntry.clients);
-    results.push({
-      id: teamEntry.key,
-      label: teamEntry.teamName,
-      clientName: clients.join(' · '),
-      color: teamEntry.color,
-      eventCount: teamEntry.eventCount,
-      teamId: teamEntry.teamId,
-      hasLogo: Boolean(teamEntry.hasLogo),
-      logoUrl: teamEntry.logoUrl || ''
-    });
-  });
+	// Convert aggregates to sorted array and apply limit
+	Array.from(teamAggregates.values()).forEach(teamEntry => {
+		if (teamEntry.eventCount <= 0) {
+			return;
+		}
+		const clients = Array.from(teamEntry.clients);
+		results.push({
+			id: teamEntry.key,
+			label: teamEntry.teamName,
+			clientName: clients.join(' · '),
+			color: teamEntry.color,
+			eventCount: teamEntry.eventCount,
+			teamId: teamEntry.teamId,
+			hasLogo: Boolean(teamEntry.hasLogo),
+			logoUrl: teamEntry.logoUrl || ''
+		});
+	});
 
-  return results
-    .sort((a, b) => {
-      if (b.eventCount !== a.eventCount) {
-        return b.eventCount - a.eventCount;
-      }
-      return a.label.localeCompare(b.label);
-    })
-    .slice(0, safeLimit);
+	return results
+		.sort((a, b) => {
+			if (b.eventCount !== a.eventCount) {
+				return b.eventCount - a.eventCount;
+			}
+			return a.label.localeCompare(b.label);
+		})
+		.slice(0, safeLimit);
 }
 
 /**
@@ -2196,13 +2215,13 @@ async function getTopTeamsLastDays(orgTeamMappings = [], limit = 50, days = 3) {
  * no explicit mappings are provided by the client.
  */
 async function getOrgTeamMappingsFromTeamsTable() {
-  if (!db) {
-    return [];
-  }
+	if (!db) {
+		return [];
+	}
 
-  try {
-    if (dbType === 'sqlite') {
-      const rows = db.prepare(`
+	try {
+		if (dbType === 'sqlite') {
+			const rows = db.prepare(`
         SELECT
           o.server_id AS org_id,
           COALESCE(o.company_name, o.alias, '') AS client_name,
@@ -2216,20 +2235,20 @@ async function getOrgTeamMappingsFromTeamsTable() {
           AND TRIM(o.server_id) != ''
       `).all();
 
-      return rows
-        .filter(row => row.org_id && row.team_name)
-        .map(row => ({
-          orgIdentifier: row.org_id,
-          clientName: row.client_name || '',
-          teamId: row.team_id || null,
-          teamName: row.team_name,
-          color: row.team_color || '',
-          hasLogo: Boolean(row.team_logo_mime && String(row.team_logo_mime).trim() !== ''),
-          logoUrl: row.team_id && row.team_logo_mime ? `/api/teams/${row.team_id}/logo` : '',
-          active: true
-        }));
-    } else if (dbType === 'postgresql') {
-      const { rows } = await db.query(`
+			return rows
+				.filter(row => row.org_id && row.team_name)
+				.map(row => ({
+					orgIdentifier: row.org_id,
+					clientName: row.client_name || '',
+					teamId: row.team_id || null,
+					teamName: row.team_name,
+					color: row.team_color || '',
+					hasLogo: Boolean(row.team_logo_mime && String(row.team_logo_mime).trim() !== ''),
+					logoUrl: row.team_id && row.team_logo_mime ? `/api/teams/${row.team_id}/logo` : '',
+					active: true
+				}));
+		} else if (dbType === 'postgresql') {
+			const { rows } = await db.query(`
         SELECT
           o.server_id AS org_id,
           COALESCE(o.company_name, o.alias, '') AS client_name,
@@ -2243,46 +2262,46 @@ async function getOrgTeamMappingsFromTeamsTable() {
           AND btrim(o.server_id) <> ''
       `);
 
-      return rows
-        .filter(row => row.org_id && row.team_name)
-        .map(row => ({
-          orgIdentifier: row.org_id,
-          clientName: row.client_name || '',
-          teamId: row.team_id || null,
-          teamName: row.team_name,
-          color: row.team_color || '',
-          hasLogo: Boolean(row.team_logo_mime && String(row.team_logo_mime).trim() !== ''),
-          logoUrl: row.team_id && row.team_logo_mime ? `/api/teams/${row.team_id}/logo` : '',
-          active: true
-        }));
-    }
-  } catch (error) {
-    console.error('Error building org-team mappings from teams table:', error);
-  }
+			return rows
+				.filter(row => row.org_id && row.team_name)
+				.map(row => ({
+					orgIdentifier: row.org_id,
+					clientName: row.client_name || '',
+					teamId: row.team_id || null,
+					teamName: row.team_name,
+					color: row.team_color || '',
+					hasLogo: Boolean(row.team_logo_mime && String(row.team_logo_mime).trim() !== ''),
+					logoUrl: row.team_id && row.team_logo_mime ? `/api/teams/${row.team_id}/logo` : '',
+					active: true
+				}));
+		}
+	} catch (error) {
+		console.error('Error building org-team mappings from teams table:', error);
+	}
 
-  return [];
+	return [];
 }
 
 async function ensureTelemetryParentSessionColumn() {
-  if (!db) {
-    return;
-  }
+	if (!db) {
+		return;
+	}
 
-  try {
-    if (dbType === 'sqlite') {
-      const columns = db.prepare('PRAGMA table_info(telemetry_events)').all();
-      const hasParentColumn = columns.some(column => column.name === 'parent_session_id');
-      if (!hasParentColumn) {
-        db.exec('ALTER TABLE telemetry_events ADD COLUMN parent_session_id TEXT');
-        db.exec('CREATE INDEX IF NOT EXISTS idx_parent_session_id ON telemetry_events(parent_session_id)');
-      }
-    } else if (dbType === 'postgresql') {
-      await db.query('ALTER TABLE IF EXISTS telemetry_events ADD COLUMN IF NOT EXISTS parent_session_id TEXT');
-      await db.query('CREATE INDEX IF NOT EXISTS idx_parent_session_id ON telemetry_events(parent_session_id)');
-    }
-  } catch (error) {
-    console.error('Error ensuring telemetry parent_session_id column:', error);
-  }
+	try {
+		if (dbType === 'sqlite') {
+			const columns = db.prepare('PRAGMA table_info(telemetry_events)').all();
+			const hasParentColumn = columns.some(column => column.name === 'parent_session_id');
+			if (!hasParentColumn) {
+				db.exec('ALTER TABLE telemetry_events ADD COLUMN parent_session_id TEXT');
+				db.exec('CREATE INDEX IF NOT EXISTS idx_parent_session_id ON telemetry_events(parent_session_id)');
+			}
+		} else if (dbType === 'postgresql') {
+			await db.query('ALTER TABLE IF EXISTS telemetry_events ADD COLUMN IF NOT EXISTS parent_session_id TEXT');
+			await db.query('CREATE INDEX IF NOT EXISTS idx_parent_session_id ON telemetry_events(parent_session_id)');
+		}
+	} catch (error) {
+		console.error('Error ensuring telemetry parent_session_id column:', error);
+	}
 }
 
 /**
@@ -2290,62 +2309,62 @@ async function ensureTelemetryParentSessionColumn() {
  * Adds org_id, user_name, and tool_name columns for faster queries
  */
 async function ensureDenormalizedColumns() {
-  if (!db) {
-    return;
-  }
+	if (!db) {
+		return;
+	}
 
-  try {
-    if (dbType === 'sqlite') {
-      const columns = db.prepare('PRAGMA table_info(telemetry_events)').all();
-      const columnNames = columns.map(col => col.name);
+	try {
+		if (dbType === 'sqlite') {
+			const columns = db.prepare('PRAGMA table_info(telemetry_events)').all();
+			const columnNames = columns.map(col => col.name);
 
-      // Add org_id column if it doesn't exist
-      if (!columnNames.includes('org_id')) {
-        db.exec('ALTER TABLE telemetry_events ADD COLUMN org_id TEXT');
-        console.log('Added org_id column to telemetry_events');
-      }
+			// Add org_id column if it doesn't exist
+			if (!columnNames.includes('org_id')) {
+				db.exec('ALTER TABLE telemetry_events ADD COLUMN org_id TEXT');
+				console.log('Added org_id column to telemetry_events');
+			}
 
-      // Add user_name column if it doesn't exist
-      if (!columnNames.includes('user_name')) {
-        db.exec('ALTER TABLE telemetry_events ADD COLUMN user_name TEXT');
-        console.log('Added user_name column to telemetry_events');
-      }
+			// Add user_name column if it doesn't exist
+			if (!columnNames.includes('user_name')) {
+				db.exec('ALTER TABLE telemetry_events ADD COLUMN user_name TEXT');
+				console.log('Added user_name column to telemetry_events');
+			}
 
-      // Add tool_name column if it doesn't exist
-      if (!columnNames.includes('tool_name')) {
-        db.exec('ALTER TABLE telemetry_events ADD COLUMN tool_name TEXT');
-        console.log('Added tool_name column to telemetry_events');
-      }
+			// Add tool_name column if it doesn't exist
+			if (!columnNames.includes('tool_name')) {
+				db.exec('ALTER TABLE telemetry_events ADD COLUMN tool_name TEXT');
+				console.log('Added tool_name column to telemetry_events');
+			}
 
-      // Create indexes for denormalized columns (if they don't exist)
-      db.exec('CREATE INDEX IF NOT EXISTS idx_user_name_created_at ON telemetry_events(user_name, created_at)');
-      db.exec('CREATE INDEX IF NOT EXISTS idx_org_id_created_at ON telemetry_events(org_id, created_at)');
-      db.exec('CREATE INDEX IF NOT EXISTS idx_tool_name_created_at ON telemetry_events(tool_name, created_at)');
-      db.exec('CREATE INDEX IF NOT EXISTS idx_user_name_tool_name_created_at ON telemetry_events(user_name, tool_name, created_at)');
-      db.exec('CREATE INDEX IF NOT EXISTS idx_org_id_tool_name_created_at ON telemetry_events(org_id, tool_name, created_at)');
-    } else if (dbType === 'postgresql') {
-      // PostgreSQL supports IF NOT EXISTS in ALTER TABLE
-      await db.query('ALTER TABLE IF EXISTS telemetry_events ADD COLUMN IF NOT EXISTS org_id TEXT');
-      await db.query('ALTER TABLE IF EXISTS telemetry_events ADD COLUMN IF NOT EXISTS user_name TEXT');
-      await db.query('ALTER TABLE IF EXISTS telemetry_events ADD COLUMN IF NOT EXISTS tool_name TEXT');
-      console.log('Ensured denormalized columns (org_id, user_name, tool_name) in telemetry_events');
+			// Create indexes for denormalized columns (if they don't exist)
+			db.exec('CREATE INDEX IF NOT EXISTS idx_user_name_created_at ON telemetry_events(user_name, created_at)');
+			db.exec('CREATE INDEX IF NOT EXISTS idx_org_id_created_at ON telemetry_events(org_id, created_at)');
+			db.exec('CREATE INDEX IF NOT EXISTS idx_tool_name_created_at ON telemetry_events(tool_name, created_at)');
+			db.exec('CREATE INDEX IF NOT EXISTS idx_user_name_tool_name_created_at ON telemetry_events(user_name, tool_name, created_at)');
+			db.exec('CREATE INDEX IF NOT EXISTS idx_org_id_tool_name_created_at ON telemetry_events(org_id, tool_name, created_at)');
+		} else if (dbType === 'postgresql') {
+			// PostgreSQL supports IF NOT EXISTS in ALTER TABLE
+			await db.query('ALTER TABLE IF EXISTS telemetry_events ADD COLUMN IF NOT EXISTS org_id TEXT');
+			await db.query('ALTER TABLE IF EXISTS telemetry_events ADD COLUMN IF NOT EXISTS user_name TEXT');
+			await db.query('ALTER TABLE IF EXISTS telemetry_events ADD COLUMN IF NOT EXISTS tool_name TEXT');
+			console.log('Ensured denormalized columns (org_id, user_name, tool_name) in telemetry_events');
 
-      // Create indexes for denormalized columns (if they don't exist)
-      await db.query('CREATE INDEX IF NOT EXISTS idx_user_name_created_at ON telemetry_events(user_name, created_at)');
-      await db.query('CREATE INDEX IF NOT EXISTS idx_org_id_created_at ON telemetry_events(org_id, created_at)');
-      await db.query('CREATE INDEX IF NOT EXISTS idx_tool_name_created_at ON telemetry_events(tool_name, created_at)');
-      await db.query('CREATE INDEX IF NOT EXISTS idx_user_name_tool_name_created_at ON telemetry_events(user_name, tool_name, created_at)');
-      await db.query('CREATE INDEX IF NOT EXISTS idx_org_id_tool_name_created_at ON telemetry_events(org_id, tool_name, created_at)');
+			// Create indexes for denormalized columns (if they don't exist)
+			await db.query('CREATE INDEX IF NOT EXISTS idx_user_name_created_at ON telemetry_events(user_name, created_at)');
+			await db.query('CREATE INDEX IF NOT EXISTS idx_org_id_created_at ON telemetry_events(org_id, created_at)');
+			await db.query('CREATE INDEX IF NOT EXISTS idx_tool_name_created_at ON telemetry_events(tool_name, created_at)');
+			await db.query('CREATE INDEX IF NOT EXISTS idx_user_name_tool_name_created_at ON telemetry_events(user_name, tool_name, created_at)');
+			await db.query('CREATE INDEX IF NOT EXISTS idx_org_id_tool_name_created_at ON telemetry_events(org_id, tool_name, created_at)');
 
-      // GIN index for JSONB queries (PostgreSQL only)
-      await db.query('CREATE INDEX IF NOT EXISTS idx_data_gin ON telemetry_events USING GIN (data)');
-    }
+			// GIN index for JSONB queries (PostgreSQL only)
+			await db.query('CREATE INDEX IF NOT EXISTS idx_data_gin ON telemetry_events USING GIN (data)');
+		}
 
-    // Populate existing data if columns were just added
-    await populateDenormalizedColumns();
-  } catch (error) {
-    console.error('Error ensuring denormalized columns:', error);
-  }
+		// Populate existing data if columns were just added
+		await populateDenormalizedColumns();
+	} catch (error) {
+		console.error('Error ensuring denormalized columns:', error);
+	}
 }
 
 /**
@@ -2353,16 +2372,16 @@ async function ensureDenormalizedColumns() {
  * This is called after adding the columns to backfill existing data
  */
 async function populateDenormalizedColumns() {
-  if (!db) {
-    return;
-  }
+	if (!db) {
+		return;
+	}
 
-  try {
-    // Check if we need to populate (only if there are records with NULL values in new columns)
-    let needsPopulation = false;
+	try {
+		// Check if we need to populate (only if there are records with NULL values in new columns)
+		let needsPopulation = false;
 
-    if (dbType === 'sqlite') {
-      const result = db.prepare(`
+		if (dbType === 'sqlite') {
+			const result = db.prepare(`
         SELECT COUNT(*) as count
         FROM telemetry_events
         WHERE (org_id IS NULL OR user_name IS NULL OR tool_name IS NULL)
@@ -2370,32 +2389,32 @@ async function populateDenormalizedColumns() {
           AND data != ''
         LIMIT 1
       `).get();
-      needsPopulation = result && result.count > 0;
-    } else if (dbType === 'postgresql') {
-      const result = await db.query(`
+			needsPopulation = result && result.count > 0;
+		} else if (dbType === 'postgresql') {
+			const result = await db.query(`
         SELECT COUNT(*) as count
         FROM telemetry_events
         WHERE (org_id IS NULL OR user_name IS NULL OR tool_name IS NULL)
           AND data IS NOT NULL
         LIMIT 1
       `);
-      needsPopulation = result.rows.length > 0 && parseInt(result.rows[0].count) > 0;
-    }
+			needsPopulation = result.rows.length > 0 && parseInt(result.rows[0].count) > 0;
+		}
 
-    if (!needsPopulation) {
-      return; // No data to populate
-    }
+		if (!needsPopulation) {
+			return; // No data to populate
+		}
 
-    console.log('Populating denormalized columns from existing data...');
+		console.log('Populating denormalized columns from existing data...');
 
-    if (dbType === 'sqlite') {
-      // For SQLite, we'll update in batches to avoid locking
-      const batchSize = 1000;
-      let offset = 0;
-      let hasMore = true;
+		if (dbType === 'sqlite') {
+			// For SQLite, we'll update in batches to avoid locking
+			const batchSize = 1000;
+			let offset = 0;
+			let hasMore = true;
 
-      while (hasMore) {
-        const rows = db.prepare(`
+			while (hasMore) {
+				const rows = db.prepare(`
           SELECT id, data
           FROM telemetry_events
           WHERE (org_id IS NULL OR user_name IS NULL OR tool_name IS NULL)
@@ -2404,39 +2423,39 @@ async function populateDenormalizedColumns() {
           LIMIT ? OFFSET ?
         `).all(batchSize, offset);
 
-        if (rows.length === 0) {
-          hasMore = false;
-          break;
-        }
+				if (rows.length === 0) {
+					hasMore = false;
+					break;
+				}
 
-        const updateStmt = db.prepare(`
+				const updateStmt = db.prepare(`
           UPDATE telemetry_events
           SET org_id = ?, user_name = ?, tool_name = ?
           WHERE id = ?
         `);
 
-        for (const row of rows) {
-          try {
-            const data = typeof row.data === 'string' ? JSON.parse(row.data) : row.data;
-            const orgId = extractOrgId({ data });
-            const userName = extractUserDisplayName(data);
-            const toolName = extractToolName({ data });
+				for (const row of rows) {
+					try {
+						const data = typeof row.data === 'string' ? JSON.parse(row.data) : row.data;
+						const orgId = extractOrgId({ data });
+						const userName = extractUserDisplayName(data);
+						const toolName = extractToolName({ data });
 
-            updateStmt.run(orgId, userName, toolName, row.id);
-          } catch (error) {
-            // Skip invalid JSON
-            console.warn(`Error parsing data for event ${row.id}:`, error.message);
-          }
-        }
+						updateStmt.run(orgId, userName, toolName, row.id);
+					} catch (error) {
+						// Skip invalid JSON
+						console.warn(`Error parsing data for event ${row.id}:`, error.message);
+					}
+				}
 
-        offset += batchSize;
-        if (rows.length < batchSize) {
-          hasMore = false;
-        }
-      }
-    } else if (dbType === 'postgresql') {
-      // For PostgreSQL, use a single UPDATE with JSON extraction
-      await db.query(`
+				offset += batchSize;
+				if (rows.length < batchSize) {
+					hasMore = false;
+				}
+			}
+		} else if (dbType === 'postgresql') {
+			// For PostgreSQL, use a single UPDATE with JSON extraction
+			await db.query(`
         UPDATE telemetry_events
         SET
           org_id = COALESCE(
@@ -2455,12 +2474,12 @@ async function populateDenormalizedColumns() {
         WHERE (org_id IS NULL OR user_name IS NULL OR tool_name IS NULL)
           AND data IS NOT NULL
       `);
-    }
+		}
 
-    console.log('Finished populating denormalized columns');
-  } catch (error) {
-    console.error('Error populating denormalized columns:', error);
-  }
+		console.log('Finished populating denormalized columns');
+	} catch (error) {
+		console.error('Error populating denormalized columns:', error);
+	}
 }
 
 /**
@@ -2469,13 +2488,13 @@ async function populateDenormalizedColumns() {
  * - org_event_stats: aggregated counters per org_id (for team calculations)
  */
 async function ensureEventStatsTables() {
-  if (!db) {
-    return;
-  }
+	if (!db) {
+		return;
+	}
 
-  try {
-    if (dbType === 'sqlite') {
-      db.exec(`
+	try {
+		if (dbType === 'sqlite') {
+			db.exec(`
         CREATE TABLE IF NOT EXISTS user_event_stats (
           user_id TEXT PRIMARY KEY,
           event_count INTEGER NOT NULL DEFAULT 0,
@@ -2490,8 +2509,8 @@ async function ensureEventStatsTables() {
         );
         CREATE INDEX IF NOT EXISTS idx_org_event_stats_last_event ON org_event_stats(last_event);
       `);
-    } else if (dbType === 'postgresql') {
-      await db.query(`
+		} else if (dbType === 'postgresql') {
+			await db.query(`
         CREATE TABLE IF NOT EXISTS user_event_stats (
           user_id TEXT PRIMARY KEY,
           event_count INTEGER NOT NULL DEFAULT 0,
@@ -2506,55 +2525,55 @@ async function ensureEventStatsTables() {
         );
         CREATE INDEX IF NOT EXISTS idx_org_event_stats_last_event ON org_event_stats(last_event);
       `);
-    }
+		}
 
-    await backfillEventStatsIfEmpty();
-  } catch (error) {
-    console.error('Error ensuring event stats tables:', error);
-  }
+		await backfillEventStatsIfEmpty();
+	} catch (error) {
+		console.error('Error ensuring event stats tables:', error);
+	}
 }
 
 /**
  * Convert any timestamp-ish input to ISO string for consistent ordering
  */
 function normalizeStatsTimestamp(value) {
-  if (!value) {
-    return null;
-  }
-  if (value instanceof Date) {
-    return value.toISOString();
-  }
-  try {
-    const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? null : date.toISOString();
-  } catch (_error) {
-    return null;
-  }
+	if (!value) {
+		return null;
+	}
+	if (value instanceof Date) {
+		return value.toISOString();
+	}
+	try {
+		const date = new Date(value);
+		return Number.isNaN(date.getTime()) ? null : date.toISOString();
+	} catch (_error) {
+		return null;
+	}
 }
 
 /**
  * Backfill stats tables once so we start from the real totals
  */
 async function backfillEventStatsIfEmpty() {
-  if (!db) {
-    return;
-  }
+	if (!db) {
+		return;
+	}
 
-  try {
-    const hasUserStats = dbType === 'sqlite'
-      ? (db.prepare('SELECT COUNT(*) as count FROM user_event_stats').get()?.count || 0) > 0
-      : (await db.query('SELECT COUNT(*) as count FROM user_event_stats')).rows.some(row => parseInt(row.count) > 0);
-    const hasOrgStats = dbType === 'sqlite'
-      ? (db.prepare('SELECT COUNT(*) as count FROM org_event_stats').get()?.count || 0) > 0
-      : (await db.query('SELECT COUNT(*) as count FROM org_event_stats')).rows.some(row => parseInt(row.count) > 0);
+	try {
+		const hasUserStats = dbType === 'sqlite'
+			? (db.prepare('SELECT COUNT(*) as count FROM user_event_stats').get()?.count || 0) > 0
+			: (await db.query('SELECT COUNT(*) as count FROM user_event_stats')).rows.some(row => parseInt(row.count) > 0);
+		const hasOrgStats = dbType === 'sqlite'
+			? (db.prepare('SELECT COUNT(*) as count FROM org_event_stats').get()?.count || 0) > 0
+			: (await db.query('SELECT COUNT(*) as count FROM org_event_stats')).rows.some(row => parseInt(row.count) > 0);
 
-    if (hasUserStats && hasOrgStats) {
-      return;
-    }
+		if (hasUserStats && hasOrgStats) {
+			return;
+		}
 
-    if (dbType === 'sqlite') {
-      if (!hasUserStats) {
-        const aggregatedUsers = db.prepare(`
+		if (dbType === 'sqlite') {
+			if (!hasUserStats) {
+				const aggregatedUsers = db.prepare(`
           SELECT
             user_id,
             COUNT(*) AS event_count,
@@ -2574,7 +2593,7 @@ async function backfillEventStatsIfEmpty() {
           GROUP BY user_id
         `).all();
 
-        const insertUserStat = db.prepare(`
+				const insertUserStat = db.prepare(`
           INSERT INTO user_event_stats (user_id, event_count, last_event, display_name)
           VALUES (?, ?, ?, ?)
           ON CONFLICT(user_id) DO UPDATE SET
@@ -2583,13 +2602,13 @@ async function backfillEventStatsIfEmpty() {
             display_name = COALESCE(excluded.display_name, user_event_stats.display_name)
         `);
 
-        aggregatedUsers.forEach(row => {
-          insertUserStat.run(row.user_id, row.event_count, row.last_event, row.display_name || null);
-        });
-      }
+				aggregatedUsers.forEach(row => {
+					insertUserStat.run(row.user_id, row.event_count, row.last_event, row.display_name || null);
+				});
+			}
 
-      if (!hasOrgStats) {
-        const aggregatedOrgs = db.prepare(`
+			if (!hasOrgStats) {
+				const aggregatedOrgs = db.prepare(`
           SELECT
             org_id,
             COUNT(*) AS event_count,
@@ -2600,7 +2619,7 @@ async function backfillEventStatsIfEmpty() {
           GROUP BY org_id
         `).all();
 
-        const insertOrgStat = db.prepare(`
+				const insertOrgStat = db.prepare(`
           INSERT INTO org_event_stats (org_id, event_count, last_event)
           VALUES (?, ?, ?)
           ON CONFLICT(org_id) DO UPDATE SET
@@ -2608,13 +2627,13 @@ async function backfillEventStatsIfEmpty() {
             last_event = excluded.last_event
         `);
 
-        aggregatedOrgs.forEach(row => {
-          insertOrgStat.run(row.org_id, row.event_count, row.last_event);
-        });
-      }
-    } else if (dbType === 'postgresql') {
-      if (!hasUserStats) {
-        await db.query(`
+				aggregatedOrgs.forEach(row => {
+					insertOrgStat.run(row.org_id, row.event_count, row.last_event);
+				});
+			}
+		} else if (dbType === 'postgresql') {
+			if (!hasUserStats) {
+				await db.query(`
           INSERT INTO user_event_stats (user_id, event_count, last_event, display_name)
           SELECT
             user_id,
@@ -2638,10 +2657,10 @@ async function backfillEventStatsIfEmpty() {
             last_event = EXCLUDED.last_event,
             display_name = COALESCE(EXCLUDED.display_name, user_event_stats.display_name)
         `);
-      }
+			}
 
-      if (!hasOrgStats) {
-        await db.query(`
+			if (!hasOrgStats) {
+				await db.query(`
           INSERT INTO org_event_stats (org_id, event_count, last_event)
           SELECT
             org_id,
@@ -2655,21 +2674,21 @@ async function backfillEventStatsIfEmpty() {
             event_count = EXCLUDED.event_count,
             last_event = EXCLUDED.last_event
         `);
-      }
-    }
-  } catch (error) {
-    console.error('Error backfilling event stats tables:', error);
-  }
+			}
+		}
+	} catch (error) {
+		console.error('Error backfilling event stats tables:', error);
+	}
 }
 
 async function upsertUserEventStats(userId, eventTimestamp, displayName = null) {
-  if (!db || !userId) {
-    return;
-  }
-  const normalizedTimestamp = normalizeStatsTimestamp(eventTimestamp) || new Date().toISOString();
+	if (!db || !userId) {
+		return;
+	}
+	const normalizedTimestamp = normalizeStatsTimestamp(eventTimestamp) || new Date().toISOString();
 
-  if (dbType === 'sqlite') {
-    const stmt = getPreparedStatement('upsertUserEventStats', `
+	if (dbType === 'sqlite') {
+		const stmt = getPreparedStatement('upsertUserEventStats', `
       INSERT INTO user_event_stats (user_id, event_count, last_event, display_name)
       VALUES (?, 1, ?, ?)
       ON CONFLICT(user_id) DO UPDATE SET
@@ -2682,10 +2701,10 @@ async function upsertUserEventStats(userId, eventTimestamp, displayName = null) 
         END,
         display_name = COALESCE(excluded.display_name, user_event_stats.display_name)
     `);
-    stmt.run(userId, normalizedTimestamp, displayName || null);
-  } else if (dbType === 'postgresql') {
-    await db.query(
-      `
+		stmt.run(userId, normalizedTimestamp, displayName || null);
+	} else if (dbType === 'postgresql') {
+		await db.query(
+			`
         INSERT INTO user_event_stats (user_id, event_count, last_event, display_name)
         VALUES ($1, 1, $2, $3)
         ON CONFLICT (user_id) DO UPDATE SET
@@ -2698,19 +2717,19 @@ async function upsertUserEventStats(userId, eventTimestamp, displayName = null) 
           END,
           display_name = COALESCE(EXCLUDED.display_name, user_event_stats.display_name)
       `,
-      [userId, normalizedTimestamp, displayName || null]
-    );
-  }
+			[userId, normalizedTimestamp, displayName || null]
+		);
+	}
 }
 
 async function upsertOrgEventStats(orgId, eventTimestamp) {
-  if (!db || !orgId) {
-    return;
-  }
-  const normalizedTimestamp = normalizeStatsTimestamp(eventTimestamp) || new Date().toISOString();
+	if (!db || !orgId) {
+		return;
+	}
+	const normalizedTimestamp = normalizeStatsTimestamp(eventTimestamp) || new Date().toISOString();
 
-  if (dbType === 'sqlite') {
-    const stmt = getPreparedStatement('upsertOrgEventStats', `
+	if (dbType === 'sqlite') {
+		const stmt = getPreparedStatement('upsertOrgEventStats', `
       INSERT INTO org_event_stats (org_id, event_count, last_event)
       VALUES (?, 1, ?)
       ON CONFLICT(org_id) DO UPDATE SET
@@ -2722,10 +2741,10 @@ async function upsertOrgEventStats(orgId, eventTimestamp) {
           ELSE org_event_stats.last_event
         END
     `);
-    stmt.run(orgId, normalizedTimestamp);
-  } else if (dbType === 'postgresql') {
-    await db.query(
-      `
+		stmt.run(orgId, normalizedTimestamp);
+	} else if (dbType === 'postgresql') {
+		await db.query(
+			`
         INSERT INTO org_event_stats (org_id, event_count, last_event)
         VALUES ($1, 1, $2)
         ON CONFLICT (org_id) DO UPDATE SET
@@ -2737,35 +2756,35 @@ async function upsertOrgEventStats(orgId, eventTimestamp) {
             ELSE org_event_stats.last_event
           END
       `,
-      [orgId, normalizedTimestamp]
-    );
-  }
+			[orgId, normalizedTimestamp]
+		);
+	}
 }
 
 async function updateAggregatedStatsForEvent(userId, orgId, eventTimestamp, displayName = null) {
-  const tasks = [];
-  if (userId) {
-    tasks.push(upsertUserEventStats(userId, eventTimestamp, displayName));
-  }
-  if (orgId) {
-    tasks.push(upsertOrgEventStats(orgId, eventTimestamp));
-  }
-  if (tasks.length > 0) {
-    await Promise.all(tasks);
-  }
+	const tasks = [];
+	if (userId) {
+		tasks.push(upsertUserEventStats(userId, eventTimestamp, displayName));
+	}
+	if (orgId) {
+		tasks.push(upsertOrgEventStats(orgId, eventTimestamp));
+	}
+	if (tasks.length > 0) {
+		await Promise.all(tasks);
+	}
 }
 
 async function recomputeUserEventStats(userIds = []) {
-  if (!db) {
-    return;
-  }
-  const uniqueIds = Array.from(new Set((userIds || []).filter(id => typeof id === 'string' && id.trim() !== '')));
-  if (uniqueIds.length === 0) {
-    return;
-  }
+	if (!db) {
+		return;
+	}
+	const uniqueIds = Array.from(new Set((userIds || []).filter(id => typeof id === 'string' && id.trim() !== '')));
+	if (uniqueIds.length === 0) {
+		return;
+	}
 
-  if (dbType === 'sqlite') {
-    const statsStmt = db.prepare(`
+	if (dbType === 'sqlite') {
+		const statsStmt = db.prepare(`
       SELECT
         COUNT(*) AS event_count,
         MAX(timestamp) AS last_event,
@@ -2781,7 +2800,7 @@ async function recomputeUserEventStats(userIds = []) {
       FROM telemetry_events
       WHERE user_id = ?
     `);
-    const upsertStmt = db.prepare(`
+		const upsertStmt = db.prepare(`
       INSERT INTO user_event_stats (user_id, event_count, last_event, display_name)
       VALUES (?, ?, ?, ?)
       ON CONFLICT(user_id) DO UPDATE SET
@@ -2789,21 +2808,21 @@ async function recomputeUserEventStats(userIds = []) {
         last_event = excluded.last_event,
         display_name = COALESCE(excluded.display_name, user_event_stats.display_name)
     `);
-    const deleteStmt = db.prepare('DELETE FROM user_event_stats WHERE user_id = ?');
+		const deleteStmt = db.prepare('DELETE FROM user_event_stats WHERE user_id = ?');
 
-    uniqueIds.forEach(userId => {
-      const stats = statsStmt.get(userId, userId);
-      const count = parseInt(stats?.event_count) || 0;
-      if (count === 0) {
-        deleteStmt.run(userId);
-        return;
-      }
-      upsertStmt.run(userId, count, stats.last_event || null, stats.display_name || null);
-    });
-  } else if (dbType === 'postgresql') {
-    for (const userId of uniqueIds) {
-      const { rows } = await db.query(
-        `
+		uniqueIds.forEach(userId => {
+			const stats = statsStmt.get(userId, userId);
+			const count = parseInt(stats?.event_count) || 0;
+			if (count === 0) {
+				deleteStmt.run(userId);
+				return;
+			}
+			upsertStmt.run(userId, count, stats.last_event || null, stats.display_name || null);
+		});
+	} else if (dbType === 'postgresql') {
+		for (const userId of uniqueIds) {
+			const { rows } = await db.query(
+				`
           SELECT
             COUNT(*) AS event_count,
             MAX(timestamp) AS last_event,
@@ -2819,16 +2838,16 @@ async function recomputeUserEventStats(userIds = []) {
           FROM telemetry_events
           WHERE user_id = $1
         `,
-        [userId]
-      );
-      const stats = rows[0] || {};
-      const count = parseInt(stats.event_count) || 0;
-      if (count === 0) {
-        await db.query('DELETE FROM user_event_stats WHERE user_id = $1', [userId]);
-        continue;
-      }
-      await db.query(
-        `
+				[userId]
+			);
+			const stats = rows[0] || {};
+			const count = parseInt(stats.event_count) || 0;
+			if (count === 0) {
+				await db.query('DELETE FROM user_event_stats WHERE user_id = $1', [userId]);
+				continue;
+			}
+			await db.query(
+				`
           INSERT INTO user_event_stats (user_id, event_count, last_event, display_name)
           VALUES ($1, $2, $3, $4)
           ON CONFLICT (user_id) DO UPDATE SET
@@ -2836,98 +2855,98 @@ async function recomputeUserEventStats(userIds = []) {
             last_event = EXCLUDED.last_event,
             display_name = COALESCE(EXCLUDED.display_name, user_event_stats.display_name)
         `,
-        [userId, count, stats.last_event || null, stats.display_name || null]
-      );
-    }
-  }
+				[userId, count, stats.last_event || null, stats.display_name || null]
+			);
+		}
+	}
 }
 
 async function recomputeOrgEventStats(orgIds = []) {
-  if (!db) {
-    return;
-  }
-  const uniqueIds = Array.from(new Set((orgIds || []).filter(id => typeof id === 'string' && id.trim() !== '')));
-  if (uniqueIds.length === 0) {
-    return;
-  }
+	if (!db) {
+		return;
+	}
+	const uniqueIds = Array.from(new Set((orgIds || []).filter(id => typeof id === 'string' && id.trim() !== '')));
+	if (uniqueIds.length === 0) {
+		return;
+	}
 
-  if (dbType === 'sqlite') {
-    const statsStmt = db.prepare(`
+	if (dbType === 'sqlite') {
+		const statsStmt = db.prepare(`
       SELECT
         COUNT(*) AS event_count,
         MAX(timestamp) AS last_event
       FROM telemetry_events
       WHERE org_id = ?
     `);
-    const upsertStmt = db.prepare(`
+		const upsertStmt = db.prepare(`
       INSERT INTO org_event_stats (org_id, event_count, last_event)
       VALUES (?, ?, ?)
       ON CONFLICT(org_id) DO UPDATE SET
         event_count = excluded.event_count,
         last_event = excluded.last_event
     `);
-    const deleteStmt = db.prepare('DELETE FROM org_event_stats WHERE org_id = ?');
+		const deleteStmt = db.prepare('DELETE FROM org_event_stats WHERE org_id = ?');
 
-    uniqueIds.forEach(orgId => {
-      const stats = statsStmt.get(orgId);
-      const count = parseInt(stats?.event_count) || 0;
-      if (count === 0) {
-        deleteStmt.run(orgId);
-        return;
-      }
-      upsertStmt.run(orgId, count, stats.last_event || null);
-    });
-  } else if (dbType === 'postgresql') {
-    for (const orgId of uniqueIds) {
-      const { rows } = await db.query(
-        `
+		uniqueIds.forEach(orgId => {
+			const stats = statsStmt.get(orgId);
+			const count = parseInt(stats?.event_count) || 0;
+			if (count === 0) {
+				deleteStmt.run(orgId);
+				return;
+			}
+			upsertStmt.run(orgId, count, stats.last_event || null);
+		});
+	} else if (dbType === 'postgresql') {
+		for (const orgId of uniqueIds) {
+			const { rows } = await db.query(
+				`
           SELECT
             COUNT(*) AS event_count,
             MAX(timestamp) AS last_event
           FROM telemetry_events
           WHERE org_id = $1
         `,
-        [orgId]
-      );
-      const stats = rows[0] || {};
-      const count = parseInt(stats.event_count) || 0;
-      if (count === 0) {
-        await db.query('DELETE FROM org_event_stats WHERE org_id = $1', [orgId]);
-        continue;
-      }
-      await db.query(
-        `
+				[orgId]
+			);
+			const stats = rows[0] || {};
+			const count = parseInt(stats.event_count) || 0;
+			if (count === 0) {
+				await db.query('DELETE FROM org_event_stats WHERE org_id = $1', [orgId]);
+				continue;
+			}
+			await db.query(
+				`
           INSERT INTO org_event_stats (org_id, event_count, last_event)
           VALUES ($1, $2, $3)
           ON CONFLICT (org_id) DO UPDATE SET
             event_count = EXCLUDED.event_count,
             last_event = EXCLUDED.last_event
         `,
-        [orgId, count, stats.last_event || null]
-      );
-    }
-  }
+				[orgId, count, stats.last_event || null]
+			);
+		}
+	}
 }
 
 async function resetEventStatsTables() {
-  if (!db) {
-    return;
-  }
-  if (dbType === 'sqlite') {
-    db.exec('DELETE FROM user_event_stats; DELETE FROM org_event_stats;');
-  } else if (dbType === 'postgresql') {
-    await db.query('DELETE FROM user_event_stats;');
-    await db.query('DELETE FROM org_event_stats;');
-  }
+	if (!db) {
+		return;
+	}
+	if (dbType === 'sqlite') {
+		db.exec('DELETE FROM user_event_stats; DELETE FROM org_event_stats;');
+	} else if (dbType === 'postgresql') {
+		await db.query('DELETE FROM user_event_stats;');
+		await db.query('DELETE FROM org_event_stats;');
+	}
 }
 
 async function getUserEventStats() {
-  if (!db) {
-    throw new Error('Database not initialized. Call init() first.');
-  }
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
 
-  if (dbType === 'sqlite') {
-    const rows = db.prepare(`
+	if (dbType === 'sqlite') {
+		const rows = db.prepare(`
       SELECT user_id, display_name, event_count, last_event
       FROM user_event_stats
       ORDER BY
@@ -2935,15 +2954,15 @@ async function getUserEventStats() {
         last_event DESC,
         user_id ASC
     `).all();
-    return rows.map(row => ({
-      id: row.user_id,
-      label: (row.display_name || row.user_id || '').trim() || row.user_id || '',
-      eventCount: Number(row.event_count) || 0,
-      lastEvent: row.last_event || null
-    })).filter(entry => entry.id);
-  }
+		return rows.map(row => ({
+			id: row.user_id,
+			label: (row.display_name || row.user_id || '').trim() || row.user_id || '',
+			eventCount: Number(row.event_count) || 0,
+			lastEvent: row.last_event || null
+		})).filter(entry => entry.id);
+	}
 
-  const { rows } = await db.query(`
+	const { rows } = await db.query(`
     SELECT user_id, display_name, event_count, last_event
     FROM user_event_stats
     ORDER BY
@@ -2951,44 +2970,44 @@ async function getUserEventStats() {
       last_event DESC,
       user_id ASC
   `);
-  return rows.map(row => ({
-    id: row.user_id,
-    label: (row.display_name || row.user_id || '').trim() || row.user_id || '',
-    eventCount: Number(row.event_count) || 0,
-    lastEvent: row.last_event || null
-  })).filter(entry => entry.id);
+	return rows.map(row => ({
+		id: row.user_id,
+		label: (row.display_name || row.user_id || '').trim() || row.user_id || '',
+		eventCount: Number(row.event_count) || 0,
+		lastEvent: row.last_event || null
+	})).filter(entry => entry.id);
 }
 
 async function getOrgStatsMap() {
-  if (!db) {
-    throw new Error('Database not initialized. Call init() first.');
-  }
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
 
-  const statsMap = new Map();
-  if (dbType === 'sqlite') {
-    const rows = db.prepare('SELECT org_id, event_count, last_event FROM org_event_stats').all();
-    rows.forEach(row => {
-      if (row.org_id) {
-        statsMap.set(row.org_id.trim().toLowerCase(), {
-          orgId: row.org_id,
-          eventCount: Number(row.event_count) || 0,
-          lastEvent: row.last_event || null
-        });
-      }
-    });
-  } else {
-    const { rows } = await db.query('SELECT org_id, event_count, last_event FROM org_event_stats');
-    rows.forEach(row => {
-      if (row.org_id) {
-        statsMap.set(String(row.org_id).trim().toLowerCase(), {
-          orgId: row.org_id,
-          eventCount: Number(row.event_count) || 0,
-          lastEvent: row.last_event || null
-        });
-      }
-    });
-  }
-  return statsMap;
+	const statsMap = new Map();
+	if (dbType === 'sqlite') {
+		const rows = db.prepare('SELECT org_id, event_count, last_event FROM org_event_stats').all();
+		rows.forEach(row => {
+			if (row.org_id) {
+				statsMap.set(row.org_id.trim().toLowerCase(), {
+					orgId: row.org_id,
+					eventCount: Number(row.event_count) || 0,
+					lastEvent: row.last_event || null
+				});
+			}
+		});
+	} else {
+		const { rows } = await db.query('SELECT org_id, event_count, last_event FROM org_event_stats');
+		rows.forEach(row => {
+			if (row.org_id) {
+				statsMap.set(String(row.org_id).trim().toLowerCase(), {
+					orgId: row.org_id,
+					eventCount: Number(row.event_count) || 0,
+					lastEvent: row.last_event || null
+				});
+			}
+		});
+	}
+	return statsMap;
 }
 
 /**
@@ -2996,96 +3015,96 @@ async function getOrgStatsMap() {
  * Only active mappings contribute to event counts.
  */
 async function getTeamStats(orgTeamMappings = []) {
-  const normalizeTeamKey = (value) => String(value || '').trim().toLowerCase();
-  const normalizeOrgId = (value) => String(value || '').trim().toLowerCase();
+	const normalizeTeamKey = (value) => String(value || '').trim().toLowerCase();
+	const normalizeOrgId = (value) => String(value || '').trim().toLowerCase();
 
-  const mappingsFromRequest = Array.isArray(orgTeamMappings) ? orgTeamMappings : [];
-  const effectiveMappings = mappingsFromRequest.length > 0
-    ? mappingsFromRequest
-    : await getOrgTeamMappingsFromTeamsTable();
+	const mappingsFromRequest = Array.isArray(orgTeamMappings) ? orgTeamMappings : [];
+	const effectiveMappings = mappingsFromRequest.length > 0
+		? mappingsFromRequest
+		: await getOrgTeamMappingsFromTeamsTable();
 
-  if (!effectiveMappings || effectiveMappings.length === 0) {
-    return [];
-  }
+	if (!effectiveMappings || effectiveMappings.length === 0) {
+		return [];
+	}
 
-  const orgStats = await getOrgStatsMap();
-  const teamsMap = new Map();
+	const orgStats = await getOrgStatsMap();
+	const teamsMap = new Map();
 
-  if (Array.isArray(effectiveMappings)) {
-    effectiveMappings.forEach(mapping => {
-      const rawTeamName = String(mapping?.teamName || '').trim();
-      const rawOrgId = normalizeOrgId(mapping?.orgIdentifier);
-      const clientName = String(mapping?.clientName || '').trim();
-      const color = String(mapping?.color || '').trim();
-      const isActive = mapping?.active !== false;
+	if (Array.isArray(effectiveMappings)) {
+		effectiveMappings.forEach(mapping => {
+			const rawTeamName = String(mapping?.teamName || '').trim();
+			const rawOrgId = normalizeOrgId(mapping?.orgIdentifier);
+			const clientName = String(mapping?.clientName || '').trim();
+			const color = String(mapping?.color || '').trim();
+			const isActive = mapping?.active !== false;
 
-      if (!rawTeamName || !rawOrgId) {
-        return;
-      }
+			if (!rawTeamName || !rawOrgId) {
+				return;
+			}
 
-      const teamKey = normalizeTeamKey(rawTeamName);
-      if (!teamsMap.has(teamKey)) {
-        teamsMap.set(teamKey, {
-          key: teamKey,
-          teamName: rawTeamName,
-          color: color,
-          teamId: mapping?.teamId || null,
-          hasLogo: Boolean(mapping?.hasLogo),
-          logoUrl: String(mapping?.logoUrl || '').trim(),
-          clients: new Set(),
-          orgs: new Set(),
-          activeCount: 0,
-          inactiveCount: 0,
-          eventCount: 0
-        });
-      }
+			const teamKey = normalizeTeamKey(rawTeamName);
+			if (!teamsMap.has(teamKey)) {
+				teamsMap.set(teamKey, {
+					key: teamKey,
+					teamName: rawTeamName,
+					color: color,
+					teamId: mapping?.teamId || null,
+					hasLogo: Boolean(mapping?.hasLogo),
+					logoUrl: String(mapping?.logoUrl || '').trim(),
+					clients: new Set(),
+					orgs: new Set(),
+					activeCount: 0,
+					inactiveCount: 0,
+					eventCount: 0
+				});
+			}
 
-      const entry = teamsMap.get(teamKey);
-      entry.orgs.add(rawOrgId);
-      if (clientName) {
-        entry.clients.add(clientName);
-      }
-      if (!entry.color && color) {
-        entry.color = color;
-      }
-      if (!entry.teamId && mapping?.teamId) {
-        entry.teamId = mapping.teamId;
-      }
-      if (mapping?.hasLogo && !entry.hasLogo) {
-        entry.hasLogo = true;
-      }
-      if (mapping?.logoUrl && !entry.logoUrl) {
-        entry.logoUrl = String(mapping.logoUrl).trim();
-      }
-      if (isActive) {
-        entry.activeCount += 1;
-      } else {
-        entry.inactiveCount += 1;
-      }
-    });
-  }
+			const entry = teamsMap.get(teamKey);
+			entry.orgs.add(rawOrgId);
+			if (clientName) {
+				entry.clients.add(clientName);
+			}
+			if (!entry.color && color) {
+				entry.color = color;
+			}
+			if (!entry.teamId && mapping?.teamId) {
+				entry.teamId = mapping.teamId;
+			}
+			if (mapping?.hasLogo && !entry.hasLogo) {
+				entry.hasLogo = true;
+			}
+			if (mapping?.logoUrl && !entry.logoUrl) {
+				entry.logoUrl = String(mapping.logoUrl).trim();
+			}
+			if (isActive) {
+				entry.activeCount += 1;
+			} else {
+				entry.inactiveCount += 1;
+			}
+		});
+	}
 
-  // Apply event counts based on org stats and only active mappings
-  orgStats.forEach((stats, orgKey) => {
-    effectiveMappings
-      .filter(mapping => mapping?.active !== false && normalizeOrgId(mapping?.orgIdentifier) === orgKey)
-      .forEach(mapping => {
-        const teamKey = normalizeTeamKey(mapping.teamName);
-        const entry = teamsMap.get(teamKey);
-        if (entry) {
-          entry.eventCount += stats.eventCount;
-        }
-      });
-  });
+	// Apply event counts based on org stats and only active mappings
+	orgStats.forEach((stats, orgKey) => {
+		effectiveMappings
+			.filter(mapping => mapping?.active !== false && normalizeOrgId(mapping?.orgIdentifier) === orgKey)
+			.forEach(mapping => {
+				const teamKey = normalizeTeamKey(mapping.teamName);
+				const entry = teamsMap.get(teamKey);
+				if (entry) {
+					entry.eventCount += stats.eventCount;
+				}
+			});
+	});
 
-  return Array.from(teamsMap.values())
-    .map(entry => ({
-      ...entry,
-      clients: Array.from(entry.clients),
-      orgs: Array.from(entry.orgs),
-      totalMappings: entry.activeCount + entry.inactiveCount
-    }))
-    .sort((a, b) => a.teamName.localeCompare(b.teamName));
+	return Array.from(teamsMap.values())
+		.map(entry => ({
+			...entry,
+			clients: Array.from(entry.clients),
+			orgs: Array.from(entry.orgs),
+			totalMappings: entry.activeCount + entry.inactiveCount
+		}))
+		.sort((a, b) => a.teamName.localeCompare(b.teamName));
 }
 
 /**
@@ -3094,23 +3113,23 @@ async function getTeamStats(orgTeamMappings = []) {
  * @returns {string|null} - The setting value or null if not found
  */
 async function getSetting(key) {
-  if (!db) {
-    return null;
-  }
+	if (!db) {
+		return null;
+	}
 
-  try {
-    if (dbType === 'sqlite') {
-      const stmt = db.prepare('SELECT value FROM settings WHERE key = ?');
-      const row = stmt.get(key);
-      return row ? row.value : null;
-    } else if (dbType === 'postgresql') {
-      const result = await db.query('SELECT value FROM settings WHERE key = $1', [key]);
-      return result.rows.length > 0 ? result.rows[0].value : null;
-    }
-  } catch (error) {
-    console.error(`Error getting setting ${key}:`, error);
-    return null;
-  }
+	try {
+		if (dbType === 'sqlite') {
+			const stmt = db.prepare('SELECT value FROM settings WHERE key = ?');
+			const row = stmt.get(key);
+			return row ? row.value : null;
+		} else if (dbType === 'postgresql') {
+			const result = await db.query('SELECT value FROM settings WHERE key = $1', [key]);
+			return result.rows.length > 0 ? result.rows[0].value : null;
+		}
+	} catch (error) {
+		console.error(`Error getting setting ${key}:`, error);
+		return null;
+	}
 }
 
 /**
@@ -3119,28 +3138,28 @@ async function getSetting(key) {
  * @param {string} value - The setting value
  */
 async function saveSetting(key, value) {
-  if (!db) {
-    return;
-  }
+	if (!db) {
+		return;
+	}
 
-  try {
-    if (dbType === 'sqlite') {
-      const stmt = db.prepare(`
+	try {
+		if (dbType === 'sqlite') {
+			const stmt = db.prepare(`
         INSERT OR REPLACE INTO settings (key, value, updated_at)
         VALUES (?, ?, datetime('now'))
       `);
-      stmt.run(key, value);
-    } else if (dbType === 'postgresql') {
-      await db.query(`
+			stmt.run(key, value);
+		} else if (dbType === 'postgresql') {
+			await db.query(`
         INSERT INTO settings (key, value, updated_at)
         VALUES ($1, $2, NOW())
         ON CONFLICT (key)
         DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()
       `, [key, value]);
-    }
-  } catch (error) {
-    console.error(`Error saving setting ${key}:`, error);
-  }
+		}
+	} catch (error) {
+		console.error(`Error saving setting ${key}:`, error);
+	}
 }
 
 /**
@@ -3149,14 +3168,14 @@ async function saveSetting(key, value) {
  * Adds team_id column to orgs and users tables
  */
 async function ensureTeamsAndOrgsTables() {
-  if (!db) {
-    return;
-  }
+	if (!db) {
+		return;
+	}
 
-  try {
-    if (dbType === 'sqlite') {
-      // Create teams table
-      db.exec(`
+	try {
+		if (dbType === 'sqlite') {
+			// Create teams table
+			db.exec(`
         CREATE TABLE IF NOT EXISTS teams (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           name TEXT NOT NULL UNIQUE,
@@ -3170,46 +3189,46 @@ async function ensureTeamsAndOrgsTables() {
         CREATE INDEX IF NOT EXISTS idx_teams_name ON teams(name);
       `);
 
-      // Add logo_data and logo_mime columns if they don't exist
-      const teamsColumns = db.prepare('PRAGMA table_info(teams)').all();
-      const hasLogoData = teamsColumns.some(column => column.name === 'logo_data');
-      const hasLogoMime = teamsColumns.some(column => column.name === 'logo_mime');
-      if (!hasLogoData) {
-        db.exec('ALTER TABLE teams ADD COLUMN logo_data BLOB');
-      }
-      if (!hasLogoMime) {
-        db.exec('ALTER TABLE teams ADD COLUMN logo_mime TEXT');
-      }
+			// Add logo_data and logo_mime columns if they don't exist
+			const teamsColumns = db.prepare('PRAGMA table_info(teams)').all();
+			const hasLogoData = teamsColumns.some(column => column.name === 'logo_data');
+			const hasLogoMime = teamsColumns.some(column => column.name === 'logo_mime');
+			if (!hasLogoData) {
+				db.exec('ALTER TABLE teams ADD COLUMN logo_data BLOB');
+			}
+			if (!hasLogoMime) {
+				db.exec('ALTER TABLE teams ADD COLUMN logo_mime TEXT');
+			}
 
-      // Add team_id to orgs table if it doesn't exist
-      const orgsColumns = db.prepare('PRAGMA table_info(orgs)').all();
-      const hasTeamIdInOrgs = orgsColumns.some(column => column.name === 'team_id');
-      if (!hasTeamIdInOrgs) {
-        db.exec('ALTER TABLE orgs ADD COLUMN team_id INTEGER REFERENCES teams(id)');
-        db.exec('CREATE INDEX IF NOT EXISTS idx_orgs_team_id ON orgs(team_id)');
-      }
+			// Add team_id to orgs table if it doesn't exist
+			const orgsColumns = db.prepare('PRAGMA table_info(orgs)').all();
+			const hasTeamIdInOrgs = orgsColumns.some(column => column.name === 'team_id');
+			if (!hasTeamIdInOrgs) {
+				db.exec('ALTER TABLE orgs ADD COLUMN team_id INTEGER REFERENCES teams(id)');
+				db.exec('CREATE INDEX IF NOT EXISTS idx_orgs_team_id ON orgs(team_id)');
+			}
 
-      // Add alias and color to orgs table if they don't exist
-      const hasAliasInOrgs = orgsColumns.some(column => column.name === 'alias');
-      if (!hasAliasInOrgs) {
-        db.exec('ALTER TABLE orgs ADD COLUMN alias TEXT');
-        db.exec('CREATE INDEX IF NOT EXISTS idx_orgs_alias ON orgs(alias)');
-      }
-      const hasColorInOrgs = orgsColumns.some(column => column.name === 'color');
-      if (!hasColorInOrgs) {
-        db.exec('ALTER TABLE orgs ADD COLUMN color TEXT');
-      }
+			// Add alias and color to orgs table if they don't exist
+			const hasAliasInOrgs = orgsColumns.some(column => column.name === 'alias');
+			if (!hasAliasInOrgs) {
+				db.exec('ALTER TABLE orgs ADD COLUMN alias TEXT');
+				db.exec('CREATE INDEX IF NOT EXISTS idx_orgs_alias ON orgs(alias)');
+			}
+			const hasColorInOrgs = orgsColumns.some(column => column.name === 'color');
+			if (!hasColorInOrgs) {
+				db.exec('ALTER TABLE orgs ADD COLUMN color TEXT');
+			}
 
-      // Add team_id to users table if it doesn't exist (for application users)
-      const usersColumns = db.prepare('PRAGMA table_info(users)').all();
-      const hasTeamIdInUsers = usersColumns.some(column => column.name === 'team_id');
-      if (!hasTeamIdInUsers) {
-        db.exec('ALTER TABLE users ADD COLUMN team_id INTEGER REFERENCES teams(id)');
-        db.exec('CREATE INDEX IF NOT EXISTS idx_users_team_id ON users(team_id)');
-      }
+			// Add team_id to users table if it doesn't exist (for application users)
+			const usersColumns = db.prepare('PRAGMA table_info(users)').all();
+			const hasTeamIdInUsers = usersColumns.some(column => column.name === 'team_id');
+			if (!hasTeamIdInUsers) {
+				db.exec('ALTER TABLE users ADD COLUMN team_id INTEGER REFERENCES teams(id)');
+				db.exec('CREATE INDEX IF NOT EXISTS idx_users_team_id ON users(team_id)');
+			}
 
-      // Create team_event_users table for mapping event log users to teams
-      db.exec(`
+			// Create team_event_users table for mapping event log users to teams
+			db.exec(`
         CREATE TABLE IF NOT EXISTS team_event_users (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           team_id INTEGER NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
@@ -3220,9 +3239,9 @@ async function ensureTeamsAndOrgsTables() {
         CREATE INDEX IF NOT EXISTS idx_team_event_users_team_id ON team_event_users(team_id);
         CREATE INDEX IF NOT EXISTS idx_team_event_users_user_name ON team_event_users(user_name);
       `);
-    } else if (dbType === 'postgresql') {
-      // Create teams table
-      await db.query(`
+		} else if (dbType === 'postgresql') {
+			// Create teams table
+			await db.query(`
         CREATE TABLE IF NOT EXISTS teams (
           id SERIAL PRIMARY KEY,
           name TEXT NOT NULL UNIQUE,
@@ -3236,23 +3255,23 @@ async function ensureTeamsAndOrgsTables() {
         CREATE INDEX IF NOT EXISTS idx_teams_name ON teams(name);
       `);
 
-      // Add logo_data and logo_mime columns if they don't exist
-      await db.query(`
+			// Add logo_data and logo_mime columns if they don't exist
+			await db.query(`
         ALTER TABLE teams
         ADD COLUMN IF NOT EXISTS logo_data BYTEA;
         ALTER TABLE teams
         ADD COLUMN IF NOT EXISTS logo_mime TEXT;
       `);
 
-      // Add team_id to orgs table if it doesn't exist
-      await db.query(`
+			// Add team_id to orgs table if it doesn't exist
+			await db.query(`
         ALTER TABLE IF EXISTS orgs
         ADD COLUMN IF NOT EXISTS team_id INTEGER REFERENCES teams(id);
         CREATE INDEX IF NOT EXISTS idx_orgs_team_id ON orgs(team_id);
       `);
 
-      // Add alias and color to orgs table if they don't exist
-      await db.query(`
+			// Add alias and color to orgs table if they don't exist
+			await db.query(`
         ALTER TABLE IF EXISTS orgs
         ADD COLUMN IF NOT EXISTS alias TEXT;
         CREATE INDEX IF NOT EXISTS idx_orgs_alias ON orgs(alias);
@@ -3260,15 +3279,15 @@ async function ensureTeamsAndOrgsTables() {
         ADD COLUMN IF NOT EXISTS color TEXT;
       `);
 
-      // Add team_id to users table if it doesn't exist (for application users)
-      await db.query(`
+			// Add team_id to users table if it doesn't exist (for application users)
+			await db.query(`
         ALTER TABLE IF EXISTS users
         ADD COLUMN IF NOT EXISTS team_id INTEGER REFERENCES teams(id);
         CREATE INDEX IF NOT EXISTS idx_users_team_id ON users(team_id);
       `);
 
-      // Create team_event_users table for mapping event log users to teams
-      await db.query(`
+			// Create team_event_users table for mapping event log users to teams
+			await db.query(`
         CREATE TABLE IF NOT EXISTS team_event_users (
           id SERIAL PRIMARY KEY,
           team_id INTEGER NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
@@ -3279,10 +3298,10 @@ async function ensureTeamsAndOrgsTables() {
         CREATE INDEX IF NOT EXISTS idx_team_event_users_team_id ON team_event_users(team_id);
         CREATE INDEX IF NOT EXISTS idx_team_event_users_user_name ON team_event_users(user_name);
       `);
-    }
-  } catch (error) {
-    console.error('Error ensuring teams and orgs tables:', error);
-  }
+		}
+	} catch (error) {
+		console.error('Error ensuring teams and orgs tables:', error);
+	}
 }
 
 /**
@@ -3294,13 +3313,13 @@ async function ensureTeamsAndOrgsTables() {
  * @returns {Promise<Array>} Array of team objects with orgs and users count
  */
 async function getAllTeams() {
-  if (!db) {
-    throw new Error('Database not initialized. Call init() first.');
-  }
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
 
-  try {
-    if (dbType === 'sqlite') {
-      const teams = db.prepare(`
+	try {
+		if (dbType === 'sqlite') {
+			const teams = db.prepare(`
         SELECT
           t.id,
           t.name,
@@ -3318,19 +3337,19 @@ async function getAllTeams() {
         ORDER BY t.name ASC
       `).all();
 
-      return teams.map(team => ({
-        id: team.id,
-        name: team.name,
-        color: team.color || null,
-        logo_url: team.logo_url || null,
-        has_logo: !!(team.logo_mime && team.logo_mime.trim() !== ''),
-        created_at: team.created_at,
-        updated_at: team.updated_at,
-        org_count: parseInt(team.org_count) || 0,
-        user_count: parseInt(team.user_count) || 0
-      }));
-    } else if (dbType === 'postgresql') {
-      const result = await db.query(`
+			return teams.map(team => ({
+				id: team.id,
+				name: team.name,
+				color: team.color || null,
+				logo_url: team.logo_url || null,
+				has_logo: !!(team.logo_mime && team.logo_mime.trim() !== ''),
+				created_at: team.created_at,
+				updated_at: team.updated_at,
+				org_count: parseInt(team.org_count) || 0,
+				user_count: parseInt(team.user_count) || 0
+			}));
+		} else if (dbType === 'postgresql') {
+			const result = await db.query(`
         SELECT
           t.id,
           t.name,
@@ -3348,22 +3367,22 @@ async function getAllTeams() {
         ORDER BY t.name ASC
       `);
 
-      return result.rows.map(team => ({
-        id: team.id,
-        name: team.name,
-        color: team.color || null,
-        logo_url: team.logo_url || null,
-        has_logo: !!(team.logo_mime && team.logo_mime.trim() !== ''),
-        created_at: team.created_at,
-        updated_at: team.updated_at,
-        org_count: parseInt(team.org_count) || 0,
-        user_count: parseInt(team.user_count) || 0
-      }));
-    }
-  } catch (error) {
-    console.error('Error getting all teams:', error);
-    throw error;
-  }
+			return result.rows.map(team => ({
+				id: team.id,
+				name: team.name,
+				color: team.color || null,
+				logo_url: team.logo_url || null,
+				has_logo: !!(team.logo_mime && team.logo_mime.trim() !== ''),
+				created_at: team.created_at,
+				updated_at: team.updated_at,
+				org_count: parseInt(team.org_count) || 0,
+				user_count: parseInt(team.user_count) || 0
+			}));
+		}
+	} catch (error) {
+		console.error('Error getting all teams:', error);
+		throw error;
+	}
 }
 
 /**
@@ -3372,13 +3391,13 @@ async function getAllTeams() {
  * @returns {Promise<object|null>} Team object with orgs and users, or null if not found
  */
 async function getTeamById(teamId) {
-  if (!db) {
-    throw new Error('Database not initialized. Call init() first.');
-  }
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
 
-  try {
-    if (dbType === 'sqlite') {
-      const team = db.prepare(`
+	try {
+		if (dbType === 'sqlite') {
+			const team = db.prepare(`
         SELECT
           id,
           name,
@@ -3391,11 +3410,11 @@ async function getTeamById(teamId) {
         WHERE id = ?
       `).get(teamId);
 
-      if (!team) {
-        return null;
-      }
+			if (!team) {
+				return null;
+			}
 
-      const orgs = db.prepare(`
+			const orgs = db.prepare(`
         SELECT
           server_id,
           company_name,
@@ -3409,8 +3428,8 @@ async function getTeamById(teamId) {
         ORDER BY alias ASC, server_id ASC
       `).all(teamId);
 
-      // Get event log users assigned to this team
-      const eventUsers = db.prepare(`
+			// Get event log users assigned to this team
+			const eventUsers = db.prepare(`
         SELECT
           user_name,
           created_at
@@ -3419,30 +3438,30 @@ async function getTeamById(teamId) {
         ORDER BY user_name ASC
       `).all(teamId);
 
-      return {
-        id: team.id,
-        name: team.name,
-        color: team.color || null,
-        logo_url: team.logo_url || null,
-        has_logo: !!(team.logo_mime && team.logo_mime.trim() !== ''),
-        created_at: team.created_at,
-        updated_at: team.updated_at,
-        orgs: orgs.map(org => ({
-          id: org.server_id,
-          alias: org.alias || null,
-          color: org.color || null,
-          company_name: org.company_name || null,
-          team_id: org.team_id || null,
-          created_at: org.created_at,
-          updated_at: org.updated_at
-        })),
-        users: eventUsers.map(user => ({
-          user_name: user.user_name,
-          created_at: user.created_at
-        }))
-      };
-    } else if (dbType === 'postgresql') {
-      const teamResult = await db.query(`
+			return {
+				id: team.id,
+				name: team.name,
+				color: team.color || null,
+				logo_url: team.logo_url || null,
+				has_logo: !!(team.logo_mime && team.logo_mime.trim() !== ''),
+				created_at: team.created_at,
+				updated_at: team.updated_at,
+				orgs: orgs.map(org => ({
+					id: org.server_id,
+					alias: org.alias || null,
+					color: org.color || null,
+					company_name: org.company_name || null,
+					team_id: org.team_id || null,
+					created_at: org.created_at,
+					updated_at: org.updated_at
+				})),
+				users: eventUsers.map(user => ({
+					user_name: user.user_name,
+					created_at: user.created_at
+				}))
+			};
+		} else if (dbType === 'postgresql') {
+			const teamResult = await db.query(`
         SELECT
           id,
           name,
@@ -3455,13 +3474,13 @@ async function getTeamById(teamId) {
         WHERE id = $1
       `, [teamId]);
 
-      if (teamResult.rows.length === 0) {
-        return null;
-      }
+			if (teamResult.rows.length === 0) {
+				return null;
+			}
 
-      const team = teamResult.rows[0];
+			const team = teamResult.rows[0];
 
-      const orgsResult = await db.query(`
+			const orgsResult = await db.query(`
         SELECT
           server_id,
           company_name,
@@ -3475,8 +3494,8 @@ async function getTeamById(teamId) {
         ORDER BY alias ASC, server_id ASC
       `, [teamId]);
 
-      // Get event log users assigned to this team
-      const eventUsersResult = await db.query(`
+			// Get event log users assigned to this team
+			const eventUsersResult = await db.query(`
         SELECT
           user_name,
           created_at
@@ -3485,33 +3504,33 @@ async function getTeamById(teamId) {
         ORDER BY user_name ASC
       `, [teamId]);
 
-      return {
-        id: team.id,
-        name: team.name,
-        color: team.color || null,
-        logo_url: team.logo_url || null,
-        has_logo: !!(team.logo_mime && team.logo_mime.trim() !== ''),
-        created_at: team.created_at,
-        updated_at: team.updated_at,
-        orgs: orgsResult.rows.map(org => ({
-          id: org.server_id,
-          alias: org.alias || null,
-          color: org.color || null,
-          company_name: org.company_name || null,
-          team_id: org.team_id || null,
-          created_at: org.created_at,
-          updated_at: org.updated_at
-        })),
-        users: eventUsersResult.rows.map(user => ({
-          user_name: user.user_name,
-          created_at: user.created_at
-        }))
-      };
-    }
-  } catch (error) {
-    console.error('Error getting team by ID:', error);
-    throw error;
-  }
+			return {
+				id: team.id,
+				name: team.name,
+				color: team.color || null,
+				logo_url: team.logo_url || null,
+				has_logo: !!(team.logo_mime && team.logo_mime.trim() !== ''),
+				created_at: team.created_at,
+				updated_at: team.updated_at,
+				orgs: orgsResult.rows.map(org => ({
+					id: org.server_id,
+					alias: org.alias || null,
+					color: org.color || null,
+					company_name: org.company_name || null,
+					team_id: org.team_id || null,
+					created_at: org.created_at,
+					updated_at: org.updated_at
+				})),
+				users: eventUsersResult.rows.map(user => ({
+					user_name: user.user_name,
+					created_at: user.created_at
+				}))
+			};
+		}
+	} catch (error) {
+		console.error('Error getting team by ID:', error);
+		throw error;
+	}
 }
 
 /**
@@ -3521,32 +3540,32 @@ async function getTeamById(teamId) {
  * @returns {Promise<object>} Result object
  */
 async function addEventUserToTeam(teamId, userName) {
-  if (!db) {
-    throw new Error('Database not initialized. Call init() first.');
-  }
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
 
-  try {
-    if (dbType === 'sqlite') {
-      db.prepare(`
+	try {
+		if (dbType === 'sqlite') {
+			db.prepare(`
         INSERT INTO team_event_users (team_id, user_name)
         VALUES (?, ?)
         ON CONFLICT(team_id, user_name) DO NOTHING
       `).run(teamId, userName);
 
-      return { status: 'ok', message: 'Event user added to team successfully' };
-    } else if (dbType === 'postgresql') {
-      await db.query(`
+			return { status: 'ok', message: 'Event user added to team successfully' };
+		} else if (dbType === 'postgresql') {
+			await db.query(`
         INSERT INTO team_event_users (team_id, user_name)
         VALUES ($1, $2)
         ON CONFLICT (team_id, user_name) DO NOTHING
       `, [teamId, userName]);
 
-      return { status: 'ok', message: 'Event user added to team successfully' };
-    }
-  } catch (error) {
-    console.error('Error adding event user to team:', error);
-    throw error;
-  }
+			return { status: 'ok', message: 'Event user added to team successfully' };
+		}
+	} catch (error) {
+		console.error('Error adding event user to team:', error);
+		throw error;
+	}
 }
 
 /**
@@ -3556,30 +3575,30 @@ async function addEventUserToTeam(teamId, userName) {
  * @returns {Promise<object>} Result object
  */
 async function removeEventUserFromTeam(teamId, userName) {
-  if (!db) {
-    throw new Error('Database not initialized. Call init() first.');
-  }
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
 
-  try {
-    if (dbType === 'sqlite') {
-      db.prepare(`
+	try {
+		if (dbType === 'sqlite') {
+			db.prepare(`
         DELETE FROM team_event_users
         WHERE team_id = ? AND user_name = ?
       `).run(teamId, userName);
 
-      return { status: 'ok', message: 'Event user removed from team successfully' };
-    } else if (dbType === 'postgresql') {
-      await db.query(`
+			return { status: 'ok', message: 'Event user removed from team successfully' };
+		} else if (dbType === 'postgresql') {
+			await db.query(`
         DELETE FROM team_event_users
         WHERE team_id = $1 AND user_name = $2
       `, [teamId, userName]);
 
-      return { status: 'ok', message: 'Event user removed from team successfully' };
-    }
-  } catch (error) {
-    console.error('Error removing event user from team:', error);
-    throw error;
-  }
+			return { status: 'ok', message: 'Event user removed from team successfully' };
+		}
+	} catch (error) {
+		console.error('Error removing event user from team:', error);
+		throw error;
+	}
 }
 
 /**
@@ -3588,13 +3607,13 @@ async function removeEventUserFromTeam(teamId, userName) {
  * @returns {Promise<Array>} Array of user names
  */
 async function getEventUserNames(limit = 1000) {
-  if (!db) {
-    throw new Error('Database not initialized. Call init() first.');
-  }
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
 
-  try {
-    if (dbType === 'sqlite') {
-      const users = db.prepare(`
+	try {
+		if (dbType === 'sqlite') {
+			const users = db.prepare(`
         SELECT DISTINCT user_label
         FROM (
           SELECT COALESCE(
@@ -3608,9 +3627,9 @@ async function getEventUserNames(limit = 1000) {
         LIMIT ?
       `).all(limit);
 
-      return users.map(u => u.user_label);
-    } else if (dbType === 'postgresql') {
-      const result = await db.query(`
+			return users.map(u => u.user_label);
+		} else if (dbType === 'postgresql') {
+			const result = await db.query(`
         SELECT DISTINCT user_label
         FROM (
           SELECT COALESCE(
@@ -3624,12 +3643,12 @@ async function getEventUserNames(limit = 1000) {
         LIMIT $1
       `, [limit]);
 
-      return result.rows.map(u => u.user_label);
-    }
-  } catch (error) {
-    console.error('Error getting event user names:', error);
-    throw error;
-  }
+			return result.rows.map(u => u.user_label);
+		}
+	} catch (error) {
+		console.error('Error getting event user names:', error);
+		throw error;
+	}
 }
 
 /**
@@ -3642,46 +3661,46 @@ async function getEventUserNames(limit = 1000) {
  * @returns {Promise<object>} Created team object
  */
 async function createTeam(name, color = null, logoUrl = null, logoData = null, logoMime = null) {
-  if (!db) {
-    throw new Error('Database not initialized. Call init() first.');
-  }
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
 
-  if (!name || typeof name !== 'string' || name.trim() === '') {
-    throw new Error('Team name is required');
-  }
+	if (!name || typeof name !== 'string' || name.trim() === '') {
+		throw new Error('Team name is required');
+	}
 
-  const now = new Date().toISOString();
+	const now = new Date().toISOString();
 
-  try {
-    if (dbType === 'sqlite') {
-      const stmt = db.prepare(`
+	try {
+		if (dbType === 'sqlite') {
+			const stmt = db.prepare(`
         INSERT INTO teams (name, color, logo_url, logo_data, logo_mime, created_at, updated_at)
         VALUES (?, ?, ?, ?, ?, ?, ?)
       `);
-      const result = stmt.run(name.trim(), color || null, logoUrl || null, logoData || null, logoMime || null, now, now);
-      return {
-        id: result.lastInsertRowid,
-        name: name.trim(),
-        color: color || null,
-        logo_url: logoUrl || null,
-        created_at: now,
-        updated_at: now
-      };
-    } else if (dbType === 'postgresql') {
-      const result = await db.query(`
+			const result = stmt.run(name.trim(), color || null, logoUrl || null, logoData || null, logoMime || null, now, now);
+			return {
+				id: result.lastInsertRowid,
+				name: name.trim(),
+				color: color || null,
+				logo_url: logoUrl || null,
+				created_at: now,
+				updated_at: now
+			};
+		} else if (dbType === 'postgresql') {
+			const result = await db.query(`
         INSERT INTO teams (name, color, logo_url, logo_data, logo_mime, created_at, updated_at)
         VALUES ($1, $2, $3, $4, $5, $6, $7)
         RETURNING id, name, color, logo_url, created_at, updated_at
       `, [name.trim(), color || null, logoUrl || null, logoData || null, logoMime || null, now, now]);
-      return result.rows[0];
-    }
-  } catch (error) {
-    if (error.message.includes('UNIQUE constraint') || error.message.includes('duplicate key')) {
-      throw new Error('Team name already exists');
-    }
-    console.error('Error creating team:', error);
-    throw error;
-  }
+			return result.rows[0];
+		}
+	} catch (error) {
+		if (error.message.includes('UNIQUE constraint') || error.message.includes('duplicate key')) {
+			throw new Error('Team name already exists');
+		}
+		console.error('Error creating team:', error);
+		throw error;
+	}
 }
 
 /**
@@ -3691,76 +3710,76 @@ async function createTeam(name, color = null, logoUrl = null, logoData = null, l
  * @returns {Promise<boolean>} True if updated, false if not found
  */
 async function updateTeam(teamId, updates) {
-  if (!db) {
-    throw new Error('Database not initialized. Call init() first.');
-  }
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
 
-  const { name, color, logo_url, logo_data, logo_mime } = updates || {};
-  const now = new Date().toISOString();
-  const updatesList = [];
-  const params = [];
+	const { name, color, logo_url, logo_data, logo_mime } = updates || {};
+	const now = new Date().toISOString();
+	const updatesList = [];
+	const params = [];
 
-  if (name !== undefined) {
-    if (typeof name !== 'string' || name.trim() === '') {
-      throw new Error('Team name cannot be empty');
-    }
-    updatesList.push(dbType === 'sqlite' ? 'name = ?' : 'name = $' + (params.length + 1));
-    params.push(name.trim());
-  }
+	if (name !== undefined) {
+		if (typeof name !== 'string' || name.trim() === '') {
+			throw new Error('Team name cannot be empty');
+		}
+		updatesList.push(dbType === 'sqlite' ? 'name = ?' : 'name = $' + (params.length + 1));
+		params.push(name.trim());
+	}
 
-  if (color !== undefined) {
-    updatesList.push(dbType === 'sqlite' ? 'color = ?' : 'color = $' + (params.length + 1));
-    params.push(color || null);
-  }
+	if (color !== undefined) {
+		updatesList.push(dbType === 'sqlite' ? 'color = ?' : 'color = $' + (params.length + 1));
+		params.push(color || null);
+	}
 
-  if (logo_url !== undefined) {
-    updatesList.push(dbType === 'sqlite' ? 'logo_url = ?' : 'logo_url = $' + (params.length + 1));
-    params.push(logo_url || null);
-  }
+	if (logo_url !== undefined) {
+		updatesList.push(dbType === 'sqlite' ? 'logo_url = ?' : 'logo_url = $' + (params.length + 1));
+		params.push(logo_url || null);
+	}
 
-  if (logo_data !== undefined) {
-    updatesList.push(dbType === 'sqlite' ? 'logo_data = ?' : 'logo_data = $' + (params.length + 1));
-    params.push(logo_data || null);
-  }
+	if (logo_data !== undefined) {
+		updatesList.push(dbType === 'sqlite' ? 'logo_data = ?' : 'logo_data = $' + (params.length + 1));
+		params.push(logo_data || null);
+	}
 
-  if (logo_mime !== undefined) {
-    updatesList.push(dbType === 'sqlite' ? 'logo_mime = ?' : 'logo_mime = $' + (params.length + 1));
-    params.push(logo_mime || null);
-  }
+	if (logo_mime !== undefined) {
+		updatesList.push(dbType === 'sqlite' ? 'logo_mime = ?' : 'logo_mime = $' + (params.length + 1));
+		params.push(logo_mime || null);
+	}
 
-  if (updatesList.length === 0) {
-    return false;
-  }
+	if (updatesList.length === 0) {
+		return false;
+	}
 
-  updatesList.push(dbType === 'sqlite' ? 'updated_at = ?' : 'updated_at = $' + (params.length + 1));
-  params.push(now);
+	updatesList.push(dbType === 'sqlite' ? 'updated_at = ?' : 'updated_at = $' + (params.length + 1));
+	params.push(now);
 
-  params.push(teamId);
+	params.push(teamId);
 
-  try {
-    if (dbType === 'sqlite') {
-      const stmt = db.prepare(`
+	try {
+		if (dbType === 'sqlite') {
+			const stmt = db.prepare(`
         UPDATE teams
         SET ${updatesList.join(', ')}
         WHERE id = ?
       `);
-      const result = stmt.run(...params);
-      return result.changes > 0;
-    } else if (dbType === 'postgresql') {
-      const result = await db.query(`
+			const result = stmt.run(...params);
+			return result.changes > 0;
+		} else if (dbType === 'postgresql') {
+			const result = await db.query(`
         UPDATE teams
         SET ${updatesList.join(', ')}
         WHERE id = $${params.length}
       `, params);
-      return result.rowCount > 0;
-    }
-  } catch (error) {
-    if (error.message.includes('UNIQUE constraint') || error.message.includes('duplicate key')) {
-      throw new Error('Team name already exists');
-    }
-    console.error('Error updating team:', error);
-    throw error;
-  }
+			return result.rowCount > 0;
+		}
+	} catch (error) {
+		if (error.message.includes('UNIQUE constraint') || error.message.includes('duplicate key')) {
+			throw new Error('Team name already exists');
+		}
+		console.error('Error updating team:', error);
+		throw error;
+	}
 }
 
 /**
@@ -3769,46 +3788,46 @@ async function updateTeam(teamId, updates) {
  * @returns {Promise<{data: Buffer, mime: string}|null>} Logo data and MIME type, or null if not found
  */
 async function getTeamLogo(teamId) {
-  if (!db) {
-    throw new Error('Database not initialized. Call init() first.');
-  }
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
 
-  try {
-    if (dbType === 'sqlite') {
-      const team = db.prepare(`
+	try {
+		if (dbType === 'sqlite') {
+			const team = db.prepare(`
         SELECT logo_data, logo_mime
         FROM teams
         WHERE id = ? AND logo_data IS NOT NULL AND logo_mime IS NOT NULL
       `).get(teamId);
 
-      if (!team || !team.logo_data || !team.logo_mime) {
-        return null;
-      }
+			if (!team || !team.logo_data || !team.logo_mime) {
+				return null;
+			}
 
-      return {
-        data: Buffer.from(team.logo_data),
-        mime: team.logo_mime
-      };
-    } else if (dbType === 'postgresql') {
-      const result = await db.query(`
+			return {
+				data: Buffer.from(team.logo_data),
+				mime: team.logo_mime
+			};
+		} else if (dbType === 'postgresql') {
+			const result = await db.query(`
         SELECT logo_data, logo_mime
         FROM teams
         WHERE id = $1 AND logo_data IS NOT NULL AND logo_mime IS NOT NULL
       `, [teamId]);
 
-      if (result.rows.length === 0 || !result.rows[0].logo_data || !result.rows[0].logo_mime) {
-        return null;
-      }
+			if (result.rows.length === 0 || !result.rows[0].logo_data || !result.rows[0].logo_mime) {
+				return null;
+			}
 
-      return {
-        data: result.rows[0].logo_data,
-        mime: result.rows[0].logo_mime
-      };
-    }
-  } catch (error) {
-    console.error('Error getting team logo:', error);
-    throw error;
-  }
+			return {
+				data: result.rows[0].logo_data,
+				mime: result.rows[0].logo_mime
+			};
+		}
+	} catch (error) {
+		console.error('Error getting team logo:', error);
+		throw error;
+	}
 }
 
 /**
@@ -3817,31 +3836,31 @@ async function getTeamLogo(teamId) {
  * @returns {Promise<boolean>} True if deleted, false if not found
  */
 async function deleteTeam(teamId) {
-  if (!db) {
-    throw new Error('Database not initialized. Call init() first.');
-  }
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
 
-  try {
-    if (dbType === 'sqlite') {
-      // First, unassign orgs and users from this team
-      db.prepare('UPDATE orgs SET team_id = NULL WHERE team_id = ?').run(teamId);
-      db.prepare('UPDATE users SET team_id = NULL WHERE team_id = ?').run(teamId);
+	try {
+		if (dbType === 'sqlite') {
+			// First, unassign orgs and users from this team
+			db.prepare('UPDATE orgs SET team_id = NULL WHERE team_id = ?').run(teamId);
+			db.prepare('UPDATE users SET team_id = NULL WHERE team_id = ?').run(teamId);
 
-      const stmt = db.prepare('DELETE FROM teams WHERE id = ?');
-      const result = stmt.run(teamId);
-      return result.changes > 0;
-    } else if (dbType === 'postgresql') {
-      // First, unassign orgs and users from this team
-      await db.query('UPDATE orgs SET team_id = NULL WHERE team_id = $1', [teamId]);
-      await db.query('UPDATE users SET team_id = NULL WHERE team_id = $1', [teamId]);
+			const stmt = db.prepare('DELETE FROM teams WHERE id = ?');
+			const result = stmt.run(teamId);
+			return result.changes > 0;
+		} else if (dbType === 'postgresql') {
+			// First, unassign orgs and users from this team
+			await db.query('UPDATE orgs SET team_id = NULL WHERE team_id = $1', [teamId]);
+			await db.query('UPDATE users SET team_id = NULL WHERE team_id = $1', [teamId]);
 
-      const result = await db.query('DELETE FROM teams WHERE id = $1', [teamId]);
-      return result.rowCount > 0;
-    }
-  } catch (error) {
-    console.error('Error deleting team:', error);
-    throw error;
-  }
+			const result = await db.query('DELETE FROM teams WHERE id = $1', [teamId]);
+			return result.rowCount > 0;
+		}
+	} catch (error) {
+		console.error('Error deleting team:', error);
+		throw error;
+	}
 }
 
 /**
@@ -3853,13 +3872,13 @@ async function deleteTeam(teamId) {
  * @returns {Promise<Array>} Array of org objects with team info
  */
 async function getAllOrgsWithTeams() {
-  if (!db) {
-    throw new Error('Database not initialized. Call init() first.');
-  }
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
 
-  try {
-    if (dbType === 'sqlite') {
-      const orgs = db.prepare(`
+	try {
+		if (dbType === 'sqlite') {
+			const orgs = db.prepare(`
         SELECT
           o.server_id,
           o.company_name,
@@ -3875,19 +3894,19 @@ async function getAllOrgsWithTeams() {
         ORDER BY o.alias ASC, o.server_id ASC
       `).all();
 
-      return orgs.map(org => ({
-        id: org.server_id,
-        alias: org.alias || null,
-        color: org.color || null,
-        company_name: org.company_name || null,
-        team_id: org.team_id || null,
-        team_name: org.team_name || null,
-        team_color: org.team_color || null,
-        created_at: org.created_at,
-        updated_at: org.updated_at
-      }));
-    } else if (dbType === 'postgresql') {
-      const result = await db.query(`
+			return orgs.map(org => ({
+				id: org.server_id,
+				alias: org.alias || null,
+				color: org.color || null,
+				company_name: org.company_name || null,
+				team_id: org.team_id || null,
+				team_name: org.team_name || null,
+				team_color: org.team_color || null,
+				created_at: org.created_at,
+				updated_at: org.updated_at
+			}));
+		} else if (dbType === 'postgresql') {
+			const result = await db.query(`
         SELECT
           o.server_id,
           o.company_name,
@@ -3903,22 +3922,22 @@ async function getAllOrgsWithTeams() {
         ORDER BY o.alias ASC, o.server_id ASC
       `);
 
-      return result.rows.map(org => ({
-        id: org.server_id,
-        alias: org.alias || null,
-        color: org.color || null,
-        company_name: org.company_name || null,
-        team_id: org.team_id || null,
-        team_name: org.team_name || null,
-        team_color: org.team_color || null,
-        created_at: org.created_at,
-        updated_at: org.updated_at
-      }));
-    }
-  } catch (error) {
-    console.error('Error getting all orgs with teams:', error);
-    throw error;
-  }
+			return result.rows.map(org => ({
+				id: org.server_id,
+				alias: org.alias || null,
+				color: org.color || null,
+				company_name: org.company_name || null,
+				team_id: org.team_id || null,
+				team_name: org.team_name || null,
+				team_color: org.team_color || null,
+				created_at: org.created_at,
+				updated_at: org.updated_at
+			}));
+		}
+	} catch (error) {
+		console.error('Error getting all orgs with teams:', error);
+		throw error;
+	}
 }
 
 /**
@@ -3928,71 +3947,71 @@ async function getAllOrgsWithTeams() {
  * @returns {Promise<object>} Created or updated org object
  */
 async function upsertOrg(orgId, orgData = {}) {
-  if (!db) {
-    throw new Error('Database not initialized. Call init() first.');
-  }
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
 
-  if (!orgId || typeof orgId !== 'string' || orgId.trim() === '') {
-    throw new Error('Org ID is required');
-  }
+	if (!orgId || typeof orgId !== 'string' || orgId.trim() === '') {
+		throw new Error('Org ID is required');
+	}
 
-  const { alias, color, team_id, company_name } = orgData;
-  const now = new Date().toISOString();
+	const { alias, color, team_id, company_name } = orgData;
+	const now = new Date().toISOString();
 
-  try {
-    if (dbType === 'sqlite') {
-      // Check if org exists
-      const existing = db.prepare('SELECT server_id FROM orgs WHERE server_id = ?').get(orgId);
+	try {
+		if (dbType === 'sqlite') {
+			// Check if org exists
+			const existing = db.prepare('SELECT server_id FROM orgs WHERE server_id = ?').get(orgId);
 
-      if (existing) {
-        // Update existing org
-        const updates = [];
-        const params = [];
+			if (existing) {
+				// Update existing org
+				const updates = [];
+				const params = [];
 
-        if (alias !== undefined) {
-          updates.push('alias = ?');
-          params.push(alias || null);
-        }
-        if (color !== undefined) {
-          updates.push('color = ?');
-          params.push(color || null);
-        }
-        if (team_id !== undefined) {
-          updates.push('team_id = ?');
-          params.push(team_id || null);
-        }
-        if (company_name !== undefined) {
-          updates.push('company_name = ?');
-          params.push(company_name || null);
-        }
+				if (alias !== undefined) {
+					updates.push('alias = ?');
+					params.push(alias || null);
+				}
+				if (color !== undefined) {
+					updates.push('color = ?');
+					params.push(color || null);
+				}
+				if (team_id !== undefined) {
+					updates.push('team_id = ?');
+					params.push(team_id || null);
+				}
+				if (company_name !== undefined) {
+					updates.push('company_name = ?');
+					params.push(company_name || null);
+				}
 
-        if (updates.length > 0) {
-          updates.push('updated_at = ?');
-          params.push(now);
-          params.push(orgId);
+				if (updates.length > 0) {
+					updates.push('updated_at = ?');
+					params.push(now);
+					params.push(orgId);
 
-          db.prepare(`
+					db.prepare(`
             UPDATE orgs
             SET ${updates.join(', ')}
             WHERE server_id = ?
           `).run(...params);
-        }
-      } else {
-        // Create new org
-        db.prepare(`
+				}
+			} else {
+				// Create new org
+				db.prepare(`
           INSERT INTO orgs (server_id, alias, color, team_id, company_name, created_at, updated_at)
           VALUES (?, ?, ?, ?, ?, ?, ?)
         `).run(orgId, alias || null, color || null, team_id || null, company_name || null, now, now);
-      }
+			}
 
-      // Return the org
-      return db.prepare(`
+			// Return the org
+			return db.prepare(`
         SELECT server_id, alias, color, team_id, company_name, created_at, updated_at
         FROM orgs
         WHERE server_id = ?
       `).get(orgId);
-    } else if (dbType === 'postgresql') {
-      const result = await db.query(`
+		} else if (dbType === 'postgresql') {
+			const result = await db.query(`
         INSERT INTO orgs (server_id, alias, color, team_id, company_name, created_at, updated_at)
         VALUES ($1, $2, $3, $4, $5, $6, $7)
         ON CONFLICT (server_id) DO UPDATE SET
@@ -4004,12 +4023,12 @@ async function upsertOrg(orgId, orgData = {}) {
         RETURNING server_id, alias, color, team_id, company_name, created_at, updated_at
       `, [orgId, alias || null, color || null, team_id || null, company_name || null, now, now]);
 
-      return result.rows[0];
-    }
-  } catch (error) {
-    console.error('Error upserting org:', error);
-    throw error;
-  }
+			return result.rows[0];
+		}
+	} catch (error) {
+		console.error('Error upserting org:', error);
+		throw error;
+	}
 }
 
 /**
@@ -4019,27 +4038,27 @@ async function upsertOrg(orgId, orgData = {}) {
  * @returns {Promise<boolean>} True if moved, false if org not found
  */
 async function moveOrgToTeam(orgId, teamId) {
-  if (!db) {
-    throw new Error('Database not initialized. Call init() first.');
-  }
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
 
-  try {
-    if (dbType === 'sqlite') {
-      const stmt = db.prepare('UPDATE orgs SET team_id = ?, updated_at = ? WHERE server_id = ?');
-      const now = new Date().toISOString();
-      const result = stmt.run(teamId || null, now, orgId);
-      return result.changes > 0;
-    } else if (dbType === 'postgresql') {
-      const result = await db.query(
-        'UPDATE orgs SET team_id = $1, updated_at = NOW() WHERE server_id = $2',
-        [teamId || null, orgId]
-      );
-      return result.rowCount > 0;
-    }
-  } catch (error) {
-    console.error('Error moving org to team:', error);
-    throw error;
-  }
+	try {
+		if (dbType === 'sqlite') {
+			const stmt = db.prepare('UPDATE orgs SET team_id = ?, updated_at = ? WHERE server_id = ?');
+			const now = new Date().toISOString();
+			const result = stmt.run(teamId || null, now, orgId);
+			return result.changes > 0;
+		} else if (dbType === 'postgresql') {
+			const result = await db.query(
+				'UPDATE orgs SET team_id = $1, updated_at = NOW() WHERE server_id = $2',
+				[teamId || null, orgId]
+			);
+			return result.rowCount > 0;
+		}
+	} catch (error) {
+		console.error('Error moving org to team:', error);
+		throw error;
+	}
 }
 
 /**
@@ -4049,36 +4068,36 @@ async function moveOrgToTeam(orgId, teamId) {
  * @returns {Promise<boolean>} True if assigned, false if user not found
  */
 async function assignUserToTeam(userId, teamId) {
-  if (!db) {
-    throw new Error('Database not initialized. Call init() first.');
-  }
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
 
-  try {
-    if (dbType === 'sqlite') {
-      const stmt = db.prepare('UPDATE users SET team_id = ? WHERE id = ?');
-      const result = stmt.run(teamId || null, userId);
-      return result.changes > 0;
-    } else if (dbType === 'postgresql') {
-      const result = await db.query('UPDATE users SET team_id = $1 WHERE id = $2', [teamId || null, userId]);
-      return result.rowCount > 0;
-    }
-  } catch (error) {
-    console.error('Error assigning user to team:', error);
-    throw error;
-  }
+	try {
+		if (dbType === 'sqlite') {
+			const stmt = db.prepare('UPDATE users SET team_id = ? WHERE id = ?');
+			const result = stmt.run(teamId || null, userId);
+			return result.changes > 0;
+		} else if (dbType === 'postgresql') {
+			const result = await db.query('UPDATE users SET team_id = $1 WHERE id = $2', [teamId || null, userId]);
+			return result.rowCount > 0;
+		}
+	} catch (error) {
+		console.error('Error assigning user to team:', error);
+		throw error;
+	}
 }
 
 /**
  * Ensure remember_tokens table exists
  */
 async function ensureRememberTokensTable() {
-  if (!db) {
-    return;
-  }
+	if (!db) {
+		return;
+	}
 
-  try {
-    if (dbType === 'sqlite') {
-      db.exec(`
+	try {
+		if (dbType === 'sqlite') {
+			db.exec(`
         CREATE TABLE IF NOT EXISTS remember_tokens (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           user_id INTEGER NOT NULL,
@@ -4095,8 +4114,8 @@ async function ensureRememberTokensTable() {
         CREATE INDEX IF NOT EXISTS idx_remember_user_id ON remember_tokens(user_id);
         CREATE INDEX IF NOT EXISTS idx_remember_expires_at ON remember_tokens(expires_at);
       `);
-    } else if (dbType === 'postgresql') {
-      await db.query(`
+		} else if (dbType === 'postgresql') {
+			await db.query(`
         CREATE TABLE IF NOT EXISTS remember_tokens (
           id SERIAL PRIMARY KEY,
           user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -4112,10 +4131,10 @@ async function ensureRememberTokensTable() {
         CREATE INDEX IF NOT EXISTS idx_remember_user_id ON remember_tokens(user_id);
         CREATE INDEX IF NOT EXISTS idx_remember_expires_at ON remember_tokens(expires_at);
       `);
-    }
-  } catch (error) {
-    console.error('Error ensuring remember_tokens table:', error);
-  }
+		}
+	} catch (error) {
+		console.error('Error ensuring remember_tokens table:', error);
+	}
 }
 
 /**
@@ -4127,37 +4146,37 @@ async function ensureRememberTokensTable() {
  * @returns {Promise<{token: string, id: number}>} - Returns the plain token and token ID
  */
 async function createRememberToken(userId, expiresAt, userAgent = null, ipAddress = null) {
-  if (!db) {
-    throw new Error('Database not initialized. Call init() first.');
-  }
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
 
-  const crypto = require('crypto');
-  // Generate a random token (32 bytes = 64 hex characters)
-  const token = crypto.randomBytes(32).toString('hex');
-  // Hash the token before storing
-  const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+	const crypto = require('crypto');
+	// Generate a random token (32 bytes = 64 hex characters)
+	const token = crypto.randomBytes(32).toString('hex');
+	// Hash the token before storing
+	const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
 
-  try {
-    if (dbType === 'sqlite') {
-      const stmt = db.prepare(`
+	try {
+		if (dbType === 'sqlite') {
+			const stmt = db.prepare(`
         INSERT INTO remember_tokens (user_id, token_hash, expires_at, user_agent, ip_address)
         VALUES (?, ?, ?, ?, ?)
       `);
-      const result = stmt.run(userId, tokenHash, expiresAt, userAgent, ipAddress);
-      return { token, id: result.lastInsertRowid };
-    } else if (dbType === 'postgresql') {
-      const result = await db.query(
-        `INSERT INTO remember_tokens (user_id, token_hash, expires_at, user_agent, ip_address)
+			const result = stmt.run(userId, tokenHash, expiresAt, userAgent, ipAddress);
+			return { token, id: result.lastInsertRowid };
+		} else if (dbType === 'postgresql') {
+			const result = await db.query(
+				`INSERT INTO remember_tokens (user_id, token_hash, expires_at, user_agent, ip_address)
          VALUES ($1, $2, $3, $4, $5)
          RETURNING id`,
-        [userId, tokenHash, expiresAt, userAgent, ipAddress]
-      );
-      return { token, id: result.rows[0].id };
-    }
-  } catch (error) {
-    console.error('Error creating remember token:', error);
-    throw error;
-  }
+				[userId, tokenHash, expiresAt, userAgent, ipAddress]
+			);
+			return { token, id: result.rows[0].id };
+		}
+	} catch (error) {
+		console.error('Error creating remember token:', error);
+		throw error;
+	}
 }
 
 /**
@@ -4166,42 +4185,42 @@ async function createRememberToken(userId, expiresAt, userAgent = null, ipAddres
  * @returns {Promise<{userId: number, tokenId: number} | null>} - Returns user ID and token ID if valid, null otherwise
  */
 async function validateRememberToken(token) {
-  if (!db) {
-    throw new Error('Database not initialized. Call init() first.');
-  }
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
 
-  const crypto = require('crypto');
-  const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
-  const now = new Date().toISOString();
+	const crypto = require('crypto');
+	const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+	const now = new Date().toISOString();
 
-  try {
-    if (dbType === 'sqlite') {
-      const stmt = db.prepare(`
+	try {
+		if (dbType === 'sqlite') {
+			const stmt = db.prepare(`
         SELECT id, user_id
         FROM remember_tokens
         WHERE token_hash = ?
           AND expires_at > ?
           AND revoked_at IS NULL
       `);
-      const row = stmt.get(tokenHash, now);
-      return row ? { userId: row.user_id, tokenId: row.id } : null;
-    } else if (dbType === 'postgresql') {
-      const result = await db.query(
-        `SELECT id, user_id
+			const row = stmt.get(tokenHash, now);
+			return row ? { userId: row.user_id, tokenId: row.id } : null;
+		} else if (dbType === 'postgresql') {
+			const result = await db.query(
+				`SELECT id, user_id
          FROM remember_tokens
          WHERE token_hash = $1
            AND expires_at > NOW()
            AND revoked_at IS NULL`,
-        [tokenHash]
-      );
-      return result.rows.length > 0
-        ? { userId: result.rows[0].user_id, tokenId: result.rows[0].id }
-        : null;
-    }
-  } catch (error) {
-    console.error('Error validating remember token:', error);
-    return null;
-  }
+				[tokenHash]
+			);
+			return result.rows.length > 0
+				? { userId: result.rows[0].user_id, tokenId: result.rows[0].id }
+				: null;
+		}
+	} catch (error) {
+		console.error('Error validating remember token:', error);
+		return null;
+	}
 }
 
 /**
@@ -4210,23 +4229,23 @@ async function validateRememberToken(token) {
  * @returns {Promise<boolean>} - Returns true if token was revoked
  */
 async function revokeRememberToken(tokenId) {
-  if (!db) {
-    throw new Error('Database not initialized. Call init() first.');
-  }
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
 
-  try {
-    if (dbType === 'sqlite') {
-      const stmt = db.prepare('UPDATE remember_tokens SET revoked_at = CURRENT_TIMESTAMP WHERE id = ?');
-      const result = stmt.run(tokenId);
-      return result.changes > 0;
-    } else if (dbType === 'postgresql') {
-      const result = await db.query('UPDATE remember_tokens SET revoked_at = NOW() WHERE id = $1', [tokenId]);
-      return result.rowCount > 0;
-    }
-  } catch (error) {
-    console.error('Error revoking remember token:', error);
-    return false;
-  }
+	try {
+		if (dbType === 'sqlite') {
+			const stmt = db.prepare('UPDATE remember_tokens SET revoked_at = CURRENT_TIMESTAMP WHERE id = ?');
+			const result = stmt.run(tokenId);
+			return result.changes > 0;
+		} else if (dbType === 'postgresql') {
+			const result = await db.query('UPDATE remember_tokens SET revoked_at = NOW() WHERE id = $1', [tokenId]);
+			return result.rowCount > 0;
+		}
+	} catch (error) {
+		console.error('Error revoking remember token:', error);
+		return false;
+	}
 }
 
 /**
@@ -4235,23 +4254,23 @@ async function revokeRememberToken(tokenId) {
  * @returns {Promise<number>} - Returns number of tokens revoked
  */
 async function revokeAllRememberTokensForUser(userId) {
-  if (!db) {
-    throw new Error('Database not initialized. Call init() first.');
-  }
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
 
-  try {
-    if (dbType === 'sqlite') {
-      const stmt = db.prepare('UPDATE remember_tokens SET revoked_at = CURRENT_TIMESTAMP WHERE user_id = ? AND revoked_at IS NULL');
-      const result = stmt.run(userId);
-      return result.changes;
-    } else if (dbType === 'postgresql') {
-      const result = await db.query('UPDATE remember_tokens SET revoked_at = NOW() WHERE user_id = $1 AND revoked_at IS NULL', [userId]);
-      return result.rowCount;
-    }
-  } catch (error) {
-    console.error('Error revoking all remember tokens for user:', error);
-    return 0;
-  }
+	try {
+		if (dbType === 'sqlite') {
+			const stmt = db.prepare('UPDATE remember_tokens SET revoked_at = CURRENT_TIMESTAMP WHERE user_id = ? AND revoked_at IS NULL');
+			const result = stmt.run(userId);
+			return result.changes;
+		} else if (dbType === 'postgresql') {
+			const result = await db.query('UPDATE remember_tokens SET revoked_at = NOW() WHERE user_id = $1 AND revoked_at IS NULL', [userId]);
+			return result.rowCount;
+		}
+	} catch (error) {
+		console.error('Error revoking all remember tokens for user:', error);
+		return 0;
+	}
 }
 
 /**
@@ -4264,15 +4283,15 @@ async function revokeAllRememberTokensForUser(userId) {
  * @returns {Promise<{token: string, id: number}>} - Returns the new plain token and token ID
  */
 async function rotateRememberToken(oldTokenId, userId, expiresAt, userAgent = null, ipAddress = null) {
-  if (!db) {
-    throw new Error('Database not initialized. Call init() first.');
-  }
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
 
-  // Revoke old token
-  await revokeRememberToken(oldTokenId);
+	// Revoke old token
+	await revokeRememberToken(oldTokenId);
 
-  // Create new token
-  return await createRememberToken(userId, expiresAt, userAgent, ipAddress);
+	// Create new token
+	return await createRememberToken(userId, expiresAt, userAgent, ipAddress);
 }
 
 /**
@@ -4280,23 +4299,23 @@ async function rotateRememberToken(oldTokenId, userId, expiresAt, userAgent = nu
  * @returns {Promise<number>} - Returns number of tokens deleted
  */
 async function cleanupExpiredRememberTokens() {
-  if (!db) {
-    throw new Error('Database not initialized. Call init() first.');
-  }
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
 
-  try {
-    if (dbType === 'sqlite') {
-      const stmt = db.prepare('DELETE FROM remember_tokens WHERE expires_at < CURRENT_TIMESTAMP');
-      const result = stmt.run();
-      return result.changes;
-    } else if (dbType === 'postgresql') {
-      const result = await db.query('DELETE FROM remember_tokens WHERE expires_at < NOW()');
-      return result.rowCount;
-    }
-  } catch (error) {
-    console.error('Error cleaning up expired remember tokens:', error);
-    return 0;
-  }
+	try {
+		if (dbType === 'sqlite') {
+			const stmt = db.prepare('DELETE FROM remember_tokens WHERE expires_at < CURRENT_TIMESTAMP');
+			const result = stmt.run();
+			return result.changes;
+		} else if (dbType === 'postgresql') {
+			const result = await db.query('DELETE FROM remember_tokens WHERE expires_at < NOW()');
+			return result.rowCount;
+		}
+	} catch (error) {
+		console.error('Error cleaning up expired remember tokens:', error);
+		return 0;
+	}
 }
 
 /**
@@ -4305,104 +4324,102 @@ async function cleanupExpiredRememberTokens() {
  * @returns {Promise<number>} - Returns count of active tokens
  */
 async function getActiveRememberTokensCount(userId) {
-  if (!db) {
-    throw new Error('Database not initialized. Call init() first.');
-  }
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
 
-  try {
-    if (dbType === 'sqlite') {
-      const stmt = db.prepare(`
+	try {
+		if (dbType === 'sqlite') {
+			const stmt = db.prepare(`
         SELECT COUNT(*) as count
         FROM remember_tokens
         WHERE user_id = ?
           AND expires_at > CURRENT_TIMESTAMP
           AND revoked_at IS NULL
       `);
-      const row = stmt.get(userId);
-      return row ? row.count : 0;
-    } else if (dbType === 'postgresql') {
-      const result = await db.query(
-        `SELECT COUNT(*) as count
+			const row = stmt.get(userId);
+			return row ? row.count : 0;
+		} else if (dbType === 'postgresql') {
+			const result = await db.query(
+				`SELECT COUNT(*) as count
          FROM remember_tokens
          WHERE user_id = $1
            AND expires_at > NOW()
            AND revoked_at IS NULL`,
-        [userId]
-      );
-      return result.rows.length > 0 ? parseInt(result.rows[0].count, 10) : 0;
-    }
-  } catch (error) {
-    console.error('Error getting active remember tokens count:', error);
-    return 0;
-  }
+				[userId]
+			);
+			return result.rows.length > 0 ? parseInt(result.rows[0].count, 10) : 0;
+		}
+	} catch (error) {
+		console.error('Error getting active remember tokens count:', error);
+		return 0;
+	}
 }
 
 module.exports = {
-  // Database type for migration scripts
-  dbType,
-  init,
-  storeEvent,
-  getStats,
-  getEvents,
-  getEventById,
-  getEventTypeStats,
-  getSessions,
-  getDailyStats,
-  getDailyStatsByEventType,
-  getTopUsersLastDays,
-  getTopTeamsLastDays,
-  getUserEventStats,
-  getTeamStats,
-  deleteEvent,
-  deleteAllEvents,
-  deleteEventsBySession,
-  getDatabaseSize,
-  close,
-  DEFAULT_MAX_DB_SIZE,
-  // User management
-  getUserByUsername,
-  getUserById,
-  createUser,
-  updateLastLogin,
-  getAllUsers,
-  deleteUser,
-  updateUserPassword,
-  updateUserRole,
-  // Organization management
-  getOrgCompanyName,
-  getAllOrgs,
-  upsertOrgCompanyName,
-  getAllOrgsWithTeams,
-  upsertOrg,
-  moveOrgToTeam,
-  // Team management
-  getAllTeams,
-  getTeamById,
-  getTeamLogo,
-  createTeam,
-  updateTeam,
-  deleteTeam,
-  assignUserToTeam,
-  addEventUserToTeam,
-  removeEventUserFromTeam,
-  getEventUserNames,
-  // Event updates
-  updateEventData,
-  // User filtering
-  getUniqueUserIds,
-  // Session store
-  getPostgresPool,
-  // Settings
-  getSetting,
-  saveSetting,
-  // Remember tokens
-  createRememberToken,
-  validateRememberToken,
-  revokeRememberToken,
-  revokeAllRememberTokensForUser,
-  rotateRememberToken,
-  cleanupExpiredRememberTokens,
-  getActiveRememberTokensCount,
-  // Utilities
-  getNormalizedUserId
+	init,
+	storeEvent,
+	getStats,
+	getEvents,
+	getEventById,
+	getEventTypeStats,
+	getSessions,
+	getDailyStats,
+	getDailyStatsByEventType,
+	getTopUsersLastDays,
+	getTopTeamsLastDays,
+	getUserEventStats,
+	getTeamStats,
+	deleteEvent,
+	deleteAllEvents,
+	deleteEventsBySession,
+	getDatabaseSize,
+	close,
+	DEFAULT_MAX_DB_SIZE,
+	// User management
+	getUserByUsername,
+	getUserById,
+	createUser,
+	updateLastLogin,
+	getAllUsers,
+	deleteUser,
+	updateUserPassword,
+	updateUserRole,
+	// Organization management
+	getOrgCompanyName,
+	getAllOrgs,
+	upsertOrgCompanyName,
+	getAllOrgsWithTeams,
+	upsertOrg,
+	moveOrgToTeam,
+	// Team management
+	getAllTeams,
+	getTeamById,
+	getTeamLogo,
+	createTeam,
+	updateTeam,
+	deleteTeam,
+	assignUserToTeam,
+	addEventUserToTeam,
+	removeEventUserFromTeam,
+	getEventUserNames,
+	// Event updates
+	updateEventData,
+	// User filtering
+	getUniqueUserIds,
+	// Session store
+	getPostgresPool,
+	// Settings
+	getSetting,
+	saveSetting,
+	// Remember tokens
+	createRememberToken,
+	validateRememberToken,
+	revokeRememberToken,
+	revokeAllRememberTokensForUser,
+	rotateRememberToken,
+	cleanupExpiredRememberTokens,
+	getActiveRememberTokensCount,
+	// Utilities
+	getNormalizedUserId
 };
