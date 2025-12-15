@@ -510,18 +510,20 @@ async function renderTeamDetail(teamId) {
 
   container.innerHTML = `
     <div style="padding: 24px;">
-      <div id="teamDetailHeader" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 24px;">
-				<button type="button" class="back-link subtitle" id="backToTeamsBtn" style="padding: 0; background: none; border: none; cursor: pointer;">
+      <div id="teamDetailHeader" style="margin-bottom: 24px;">
+				<button type="button" class="back-link subtitle" id="backToTeamsBtn" style="padding: 0; background: none; border: none; cursor: pointer; margin-bottom: 12px; display: block;">
 					← Back to Teams
 				</button>
-				<div id="teamDetailName" style="flex: 1; text-align: center; font-size: 1.5rem; font-weight: 600;">Loading...</div>
-				<div style="display: flex; gap: 8px;">
-					<button id="editTeamBtn" class="btn">
-						<i class="fas fa-pen" style="margin-right: 6px;"></i>Edit
-					</button>
-					<button id="deleteTeamBtn" class="btn btn-destructive">
-						<i class="fas fa-trash" style="margin-right: 6px;"></i>Delete
-					</button>
+				<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+					<div id="teamDetailName" style="font-size: 1.5rem; font-weight: 600;">Loading...</div>
+					<div style="display: flex; gap: 8px;">
+						<button id="editTeamBtn" class="btn">
+							<i class="fas fa-pen" style="margin-right: 6px;"></i>Edit
+						</button>
+						<button id="deleteTeamBtn" class="btn btn-destructive">
+							<i class="fas fa-trash" style="margin-right: 6px;"></i>Delete
+						</button>
+					</div>
 				</div>
 			</div>
 			<div id="teamDetailMeta" style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 24px;"></div>
