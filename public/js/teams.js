@@ -470,8 +470,8 @@ function renderTeamsList() {
          </span>`;
 
     return `
-      <div class="group relative bg-white p-6 transition-all duration-300 ease-out hover:bg-sky-50 hover:shadow-lg hover:shadow-gray-200/50 hover:-translate-y-1 hover:scale-[1.02] focus:outline-none focus-visible:outline-none cursor-pointer" role="button" tabindex="0" onclick="viewTeamDetail(${team.id})" onkeypress="if(event.key==='Enter'||event.key===' '){event.preventDefault();viewTeamDetail(${team.id});}">
-        <div class="transition-all duration-150 group-hover:scale-110" style="transform-origin: top left;">
+      <div class="group relative bg-white p-6 transition hover:bg-gray-50 focus:outline-none focus-visible:outline-none" role="button" tabindex="0" onclick="viewTeamDetail(${team.id})" onkeypress="if(event.key==='Enter'||event.key===' '){event.preventDefault();viewTeamDetail(${team.id});}">
+        <div>
           ${logoOrAvatar}
         </div>
         <div class="mt-8 space-y-2">
@@ -495,8 +495,8 @@ function renderTeamsList() {
           </div>
         </div>
         <span aria-hidden="true" class="pointer-events-none absolute top-6 right-6 text-gray-300 opacity-0 transition duration-150 group-hover:opacity-100 group-hover:text-gray-400">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5ZM12 12.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5ZM12 18.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5Z" />
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
+            <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
           </svg>
         </span>
       </div>
@@ -510,27 +510,20 @@ async function renderTeamDetail(teamId) {
 
   container.innerHTML = `
     <div style="padding: 24px;">
-      <div id="teamDetailHeader" style="margin-bottom: 24px;">
-				<button type="button" class="back-link subtitle" id="backToTeamsBtn" style="padding: 0; background: none; border: none; cursor: pointer; margin-bottom: 12px; display: block;">
-					← Back to Teams
-				</button>
-				<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
-					<div id="teamDetailName" style="font-size: 1.5rem; font-weight: 600;">Loading...</div>
-					<div style="display: flex; gap: 8px;">
-						<button id="editTeamBtn" class="icon-btn" aria-label="Edit team">
-							<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
-								<path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
-							</svg>
-						</button>
-						<button id="deleteTeamBtn" class="icon-btn btn-destructive" aria-label="Delete team">
-							<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
-								<path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
-							</svg>
-						</button>
-					</div>
-				</div>
-			</div>
-			<div id="teamDetailMeta" style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 24px;"></div>
+      <div id="teamDetailHeader" style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 24px;">
+        <div>
+          <h1 id="teamDetailName" style="margin: 0 0 8px 0; font-size: 1.5rem; font-weight: 600;">Loading...</h1>
+          <div id="teamDetailMeta" style="color: var(--text-secondary); font-size: 0.9rem;"></div>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button id="editTeamBtn" class="btn">
+            <i class="fas fa-pen" style="margin-right: 6px;"></i>Edit
+          </button>
+          <button id="deleteTeamBtn" class="btn btn-destructive">
+            <i class="fas fa-trash" style="margin-right: 6px;"></i>Delete
+          </button>
+        </div>
+      </div>
       <div id="teamDetailContent">
         <div style="padding: 24px; text-align: center; color: var(--text-secondary);">Loading team details...</div>
       </div>
@@ -547,59 +540,19 @@ async function renderTeamDetail(teamId) {
 
   // Sanitize team color to prevent XSS
   const sanitizedTeamColor = sanitizeCssColor(team.color);
-  const accentColor = sanitizedTeamColor || '#4f46e5';
-  const accentBg = sanitizedTeamColor ? (hexToRgba(sanitizedTeamColor, 0.14) || 'rgba(79, 70, 229, 0.12)') : 'rgba(79, 70, 229, 0.12)';
+  const colorDot = sanitizedTeamColor ? `<span style="display: inline-block; width: 16px; height: 16px; border-radius: 999px; background: ${sanitizedTeamColor}; margin-right: 8px; border: 1px solid var(--border-color);"></span>` : '';
 
-  // Get team initials for fallback avatar
-  const initials = team.name.split(' ').map(word => word[0]).join('').substring(0, 2).toUpperCase();
-
-  // Logo or avatar for team header
-  const logoOrAvatar = team.has_logo
-    ? `<img src="/api/teams/${team.id}/logo" alt="${escapeHtml(team.name)} logo" style="width: 48px; height: 48px; object-fit: contain; border-radius: 6px;" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-flex';">
-       <span style="display: none; align-items: center; justify-content: center; border-radius: 6px; font-size: 1.125rem; font-weight: 600; width: 48px; height: 48px; color: ${accentColor}; background-color: ${accentBg};">
-         ${escapeHtml(initials)}
-       </span>`
-    : `<span style="display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; font-size: 1.125rem; font-weight: 600; width: 48px; height: 48px; color: ${accentColor}; background-color: ${accentBg};">
-       ${escapeHtml(initials)}
-     </span>`;
-
-  document.getElementById('teamDetailName').innerHTML = `
-    <div style="display: flex; align-items: center; gap: 12px;">
-      ${logoOrAvatar}
-      <div>
-        <div style="font-size: 1.5rem; font-weight: 600;">${escapeHtml(team.name)}</div>
-        <div style="color: var(--text-secondary); font-size: 0.9rem; display: flex; align-items: center; gap: 16px;">
-          <span style="display: inline-flex; align-items: center; gap: 4px;">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" style="width: 14px; height: 14px;">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15a4.5 4.5 0 0 0 4.5 4.5H18a3.75 3.75 0 0 0 1.332-7.257 3 3 0 0 0-3.758-3.848 5.25 5.25 0 0 0-10.233 2.33A4.502 4.502 0 0 0 2.25 15Z" />
-            </svg>
-            ${team.orgs.length} org${team.orgs.length !== 1 ? 's' : ''}
-          </span>
-          <span style="display: inline-flex; align-items: center; gap: 4px;">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" style="width: 14px; height: 14px;">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.75 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
-            </svg>
-            ${team.users.length} user${team.users.length !== 1 ? 's' : ''}
-          </span>
-        </div>
-      </div>
-    </div>
-  `;
-
-  // Hide the separate meta div since it's now included in the name div
-  document.getElementById('teamDetailMeta').style.display = 'none';
+  document.getElementById('teamDetailName').innerHTML = `${colorDot}${escapeHtml(team.name)}`;
+  document.getElementById('teamDetailMeta').textContent = `${team.orgs.length} org${team.orgs.length !== 1 ? 's' : ''} · ${team.users.length} user${team.users.length !== 1 ? 's' : ''}`;
 
   const detailContent = document.getElementById('teamDetailContent');
   detailContent.innerHTML = `
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
       <div class="divide-y divide-gray-200 overflow-hidden rounded-lg bg-white shadow-sm">
         <div class="px-4 py-5 sm:px-6" style="display: flex; justify-content: space-between; align-items: center;">
-          <h2 style="margin: 0; font-size: 1.1rem; font-weight: 600;">Orgs</h2>
+          <h2 style="margin: 0; font-size: 1.1rem; font-weight: 600;">Organizations</h2>
           <button id="addOrgBtn" class="confirm-modal-btn confirm-modal-btn-cancel" onclick="showAddOrgModalForTeam(${teamId})">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" style="width: 14px; height: 14px; margin-right: 4px;">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15a4.5 4.5 0 0 0 4.5 4.5H18a3.75 3.75 0 0 0 1.332-7.257 3 3 0 0 0-3.758-3.848 5.25 5.25 0 0 0-10.233 2.33A4.502 4.502 0 0 0 2.25 15Z" />
-            </svg>
-            Add Org
+            <i class="fas fa-plus" style="margin-right: 4px;"></i>Add Org
           </button>
         </div>
         <div class="px-4 py-5 sm:p-6">
@@ -612,10 +565,7 @@ async function renderTeamDetail(teamId) {
         <div class="px-4 py-5 sm:px-6" style="display: flex; justify-content: space-between; align-items: center;">
           <h2 style="margin: 0; font-size: 1.1rem; font-weight: 600;">Users</h2>
           <button id="addUserBtn" class="confirm-modal-btn confirm-modal-btn-cancel" onclick="showAddUserModalForTeam(${teamId})">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" style="width: 14px; height: 14px; margin-right: 4px;">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.75 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
-            </svg>
-            Add User
+            <i class="fas fa-plus" style="margin-right: 4px;"></i>Add User
           </button>
         </div>
         <div class="px-4 py-5 sm:p-6">
@@ -667,18 +617,6 @@ async function renderTeamDetail(teamId) {
   }
 
   // Event listeners
-	const backBtn = document.getElementById('backToTeamsBtn');
-	if (backBtn) {
-		backBtn.addEventListener('click', () => {
-			if (typeof window.backToTeamsList === 'function') {
-				window.backToTeamsList();
-			} else {
-				currentView = 'list';
-				_currentTeamId = null;
-				renderTeamsList();
-			}
-		});
-	}
   document.getElementById('editTeamBtn')?.addEventListener('click', () => showEditTeamModal(team));
   document.getElementById('deleteTeamBtn')?.addEventListener('click', () => showDeleteTeamConfirm(team));
 }
@@ -1162,12 +1100,6 @@ window.viewTeamDetail = (teamId) => {
   currentView = 'detail';
   _currentTeamId = teamId;
   renderTeamDetail(teamId);
-};
-
-window.backToTeamsList = () => {
-	currentView = 'list';
-	_currentTeamId = null;
-	renderTeamsList();
 };
 
 window.showCreateTeamModal = showCreateTeamModal;

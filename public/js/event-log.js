@@ -481,20 +481,12 @@ if (window.__EVENT_LOG_LOADED__) {
               <div>
                 <label class="settings-modal-placeholder-text" style="display: block; margin-bottom: 6px;">
                   Role
-                  <el-autocomplete class="relative" style="margin-top: 4px;">
-                    <input id="createUserRole" name="role" type="text" value="basic"
-                      class="block w-full rounded-md bg-white py-1.5 pr-12 pl-3 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6">
-                    <button type="button" class="absolute inset-y-0 right-0 flex items-center rounded-r-md px-2">
-                      <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5 text-gray-400">
-                        <path d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" fill-rule="evenodd" />
-                      </svg>
-                    </button>
-                    <el-options anchor="bottom end" popover class="max-h-60 w-(--input-width) overflow-auto rounded-md bg-white py-1 text-base shadow-lg outline outline-black/5 transition-discrete [--anchor-gap:--spacing(1)] data-leave:transition data-leave:duration-100 data-leave:ease-in data-closed:data-leave:opacity-0 sm:text-sm">
-                      <el-option value="basic" class="block truncate px-3 py-2 text-gray-900 select-none aria-selected:bg-indigo-600 aria-selected:text-white">Basic</el-option>
-                      <el-option value="advanced" class="block truncate px-3 py-2 text-gray-900 select-none aria-selected:bg-indigo-600 aria-selected:text-white">Advanced</el-option>
-                      <el-option value="administrator" class="block truncate px-3 py-2 text-gray-900 select-none aria-selected:bg-indigo-600 aria-selected:text-white">Administrator</el-option>
-                    </el-options>
-                  </el-autocomplete>
+                  <select id="createUserRole" name="role" required
+                    style="margin-top: 4px; width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 14px;">
+                    <option value="basic">Basic</option>
+                    <option value="advanced">Advanced</option>
+                    <option value="administrator">Administrator</option>
+                  </select>
                 </label>
               </div>
             `,
@@ -579,20 +571,12 @@ if (window.__EVENT_LOG_LOADED__) {
               <div>
                 <label class="settings-modal-placeholder-text" style="display: block; margin-bottom: 6px;">
                   Role
-                  <el-autocomplete class="relative" style="margin-top: 4px;">
-                    <input id="editUserRole" name="role" type="text" value="${currentRole}"
-                      class="block w-full rounded-md bg-white py-1.5 pr-12 pl-3 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6">
-                    <button type="button" class="absolute inset-y-0 right-0 flex items-center rounded-r-md px-2">
-                      <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5 text-gray-400">
-                        <path d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" fill-rule="evenodd" />
-                      </svg>
-                    </button>
-                    <el-options anchor="bottom end" popover class="max-h-60 w-(--input-width) overflow-auto rounded-md bg-white py-1 text-base shadow-lg outline outline-black/5 transition-discrete [--anchor-gap:--spacing(1)] data-leave:transition data-leave:duration-100 data-leave:ease-in data-closed:data-leave:opacity-0 sm:text-sm">
-                      <el-option value="basic" class="block truncate px-3 py-2 text-gray-900 select-none aria-selected:bg-indigo-600 aria-selected:text-white">Basic</el-option>
-                      <el-option value="advanced" class="block truncate px-3 py-2 text-gray-900 select-none aria-selected:bg-indigo-600 aria-selected:text-white">Advanced</el-option>
-                      <el-option value="administrator" class="block truncate px-3 py-2 text-gray-900 select-none aria-selected:bg-indigo-600 aria-selected:text-white">Administrator</el-option>
-                    </el-options>
-                  </el-autocomplete>
+                  <select id="editUserRole" name="role" required
+                    style="margin-top: 4px; width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 14px;">
+                    <option value="basic" ${currentRole === 'basic' ? 'selected' : ''}>Basic</option>
+                    <option value="advanced" ${currentRole === 'advanced' ? 'selected' : ''}>Advanced</option>
+                    <option value="administrator" ${currentRole === 'administrator' ? 'selected' : ''}>Administrator</option>
+                  </select>
                 </label>
               </div>
             `,
