@@ -551,11 +551,11 @@ async function renderTeamDetail(teamId) {
 
   // Logo or avatar for team header
   const logoOrAvatar = team.has_logo
-    ? `<img src="/api/teams/${team.id}/logo" alt="${escapeHtml(team.name)} logo" style="width: 32px; height: 32px; object-fit: contain; border-radius: 6px;" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-flex';">
-       <span style="display: none; align-items: center; justify-content: center; border-radius: 6px; font-size: 0.875rem; font-weight: 600; width: 32px; height: 32px; color: ${accentColor}; background-color: ${accentBg};">
+    ? `<img src="/api/teams/${team.id}/logo" alt="${escapeHtml(team.name)} logo" style="width: 48px; height: 48px; object-fit: contain; border-radius: 6px;" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-flex';">
+       <span style="display: none; align-items: center; justify-content: center; border-radius: 6px; font-size: 1.125rem; font-weight: 600; width: 48px; height: 48px; color: ${accentColor}; background-color: ${accentBg};">
          ${escapeHtml(initials)}
        </span>`
-    : `<span style="display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; font-size: 0.875rem; font-weight: 600; width: 32px; height: 32px; color: ${accentColor}; background-color: ${accentBg};">
+    : `<span style="display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; font-size: 1.125rem; font-weight: 600; width: 48px; height: 48px; color: ${accentColor}; background-color: ${accentBg};">
        ${escapeHtml(initials)}
      </span>`;
 
