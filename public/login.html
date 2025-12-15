@@ -6,9 +6,18 @@
 	<title>Login - IBM Salesforce Context Telemetry</title>
 	<link rel="icon" type="image/svg+xml" sizes="any" href="/resources/favicon.svg">
 	<link rel="icon" type="image/png" sizes="32x32" href="/resources/favicon.png">
-	<link rel="stylesheet" href="https://rsms.me/inter/inter.css">
-	<link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
-	<script src="/js/polyfills.js"></script>
+
+	<!-- Preconnect to external domains for faster loading -->
+	<link rel="preconnect" href="https://rsms.me">
+
+	<!-- Preload critical font for better LCP -->
+	<link rel="preload" href="https://rsms.me/inter/inter.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+	<noscript><link rel="stylesheet" href="https://rsms.me/inter/inter.css"></noscript>
+
+	<!-- Load FontAwesome asynchronously to prevent render blocking -->
+	<link rel="preload" href="/vendor/fontawesome/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+	<noscript><link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css"></noscript>
+	<script src="/js/polyfills.js" defer></script>
 	<script>
 		// Apply theme immediately before page render to prevent flash
 		(function() {
@@ -511,8 +520,7 @@
 		</div>
 	</div>
 
-	<!-- Load CSRF helper first -->
-	<script src="/js/csrf-helper.js"></script>
+	<script src="/js/csrf-helper.js" defer></script>
 	
 	<script>
 		const form = document.getElementById('loginForm');

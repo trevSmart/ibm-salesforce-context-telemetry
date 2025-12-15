@@ -29,6 +29,11 @@ function csrfProtection(req, res, next) {
     return next();
   }
 
+  // Skip CSRF for /login endpoint (authentication entry point)
+  if (req.path === '/login') {
+    return next();
+  }
+
   // Get token from header or body
   const token = req.headers['x-csrf-token'] || req.body._csrf;
   
