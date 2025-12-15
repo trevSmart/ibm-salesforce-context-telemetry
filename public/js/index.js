@@ -1,7 +1,7 @@
 // @ts-nocheck
 // Dashboard constants
 const SESSION_START_SERIES_COLOR = '#2195cf';
-const TOP_USERS_LOOKBACK_DAYS = 3;
+const TOP_USERS_LOOKBACK_DAYS = 10;
 const TOP_USERS_LIMIT = 3;
 const TOP_TEAMS_LOOKBACK_DAYS = 30;
 const TOP_TEAMS_LIMIT = 5;
@@ -1573,7 +1573,7 @@ function renderTopUsers(users) {
 	}
 
 	if (!users || users.length === 0) {
-		renderTopUsersPlaceholder('No events recorded in the last 3 days yet.');
+		renderTopUsersPlaceholder('No events recorded in the last 10 days yet.');
 		return;
 	}
 
@@ -1581,7 +1581,7 @@ function renderTopUsers(users) {
 		const name = user.label || user.id || 'Unknown user';
 		const initial = getUserInitials(name);
 		const eventCount = Number(user.eventCount) || 0;
-		const countLabel = eventCount === 1 ? '1 event last 3 days' : `${eventCount} events last 3 days`;
+		const countLabel = eventCount === 1 ? '1 event last 10 days' : `${eventCount} events last 10 days`;
 		const badgeBackground = index === 0 ? '#dc2626' : SESSION_START_SERIES_COLOR;
 
 		return `
