@@ -1867,15 +1867,13 @@ async function loadChartData(days = currentDays) {
 			return out;
 		}
 
-		function buildDenseTrendSeries(trendLineSourceTrimmed, fullLen, trendLine, samplesPerSegment = 100) {
+		function buildDenseTrendSeries(trendLineSource, fullLen, trendLine, samplesPerSegment = 100) {
 			const yTrend = [...trendLine.trendData, ...trendLine.extrapolatedData];
 			const dense = densifyTrendY(yTrend, samplesPerSegment);
 
-			const trimmedLen = trendLineSourceTrimmed.length;
-			const startIndex = Math.max(0, fullLen - trimmedLen);
-
+			// No need to shift - trend line should align with all data points including trailing zeros
 			const CATEGORY_CENTER_SHIFT = -0.35;
-			return dense.map(([x, y]) => [x + startIndex + CATEGORY_CENTER_SHIFT, y]);
+			return dense.map(([x, y]) => [x + CATEGORY_CENTER_SHIFT, y]);
 		}
 
 		function compressYAroundMean(points, factor = 0.88) {
@@ -2087,7 +2085,7 @@ async function loadChartData(days = currentDays) {
 			const trendLine = generateTrendLine(trendLineSource, FUTURE_POINTS, 'exponential');
 
 			const denseTrendRaw = buildDenseTrendSeries(
-				trendLineSource,
+				toolEventsData,
 				extendedLabels.length,
 				trendLine,
 				30
@@ -2196,7 +2194,7 @@ async function loadChartData(days = currentDays) {
 			const trendLine = generateTrendLine(trendLineSource, FUTURE_POINTS, 'exponential');
 
 			const denseTrendRaw = buildDenseTrendSeries(
-				trendLineSource,
+				totalEventsDataWithZeroes,
 				extendedLabels.length,
 				trendLine,
 				30
