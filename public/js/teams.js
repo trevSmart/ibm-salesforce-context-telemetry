@@ -509,18 +509,25 @@ async function renderTeamDetail(teamId) {
 
   container.innerHTML = `
     <div style="padding: 24px;">
-      <div id="teamDetailHeader" style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 24px;">
+      <div id="teamDetailHeader" style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px;">
+				<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+					<div style="display: flex; align-items: center; gap: 12px;">
+						<button type="button" class="back-link subtitle" id="backToTeamsBtn" style="padding: 0; background: none; border: none; cursor: pointer;">
+							← Back to Teams
+						</button>
+					</div>
+					<div style="display: flex; gap: 8px;">
+						<button id="editTeamBtn" class="btn">
+							<i class="fas fa-pen" style="margin-right: 6px;"></i>Edit
+						</button>
+						<button id="deleteTeamBtn" class="btn btn-destructive">
+							<i class="fas fa-trash" style="margin-right: 6px;"></i>Delete
+						</button>
+					</div>
+				</div>
         <div>
           <h1 id="teamDetailName" style="margin: 0 0 8px 0; font-size: 1.5rem; font-weight: 600;">Loading...</h1>
           <div id="teamDetailMeta" style="color: var(--text-secondary); font-size: 0.9rem;"></div>
-        </div>
-        <div style="display: flex; gap: 8px;">
-          <button id="editTeamBtn" class="btn">
-            <i class="fas fa-pen" style="margin-right: 6px;"></i>Edit
-          </button>
-          <button id="deleteTeamBtn" class="btn btn-destructive">
-            <i class="fas fa-trash" style="margin-right: 6px;"></i>Delete
-          </button>
         </div>
       </div>
       <div id="teamDetailContent">
@@ -616,6 +623,18 @@ async function renderTeamDetail(teamId) {
   }
 
   // Event listeners
+	const backBtn = document.getElementById('backToTeamsBtn');
+	if (backBtn) {
+		backBtn.addEventListener('click', () => {
+			if (typeof window.backToTeamsList === 'function') {
+				window.backToTeamsList();
+			} else {
+				currentView = 'list';
+				_currentTeamId = null;
+				renderTeamsList();
+			}
+		});
+	}
   document.getElementById('editTeamBtn')?.addEventListener('click', () => showEditTeamModal(team));
   document.getElementById('deleteTeamBtn')?.addEventListener('click', () => showDeleteTeamConfirm(team));
 }
@@ -1099,6 +1118,12 @@ window.viewTeamDetail = (teamId) => {
   currentView = 'detail';
   _currentTeamId = teamId;
   renderTeamDetail(teamId);
+};
+
+window.backToTeamsList = () => {
+	currentView = 'list';
+	_currentTeamId = null;
+	renderTeamsList();
 };
 
 window.showCreateTeamModal = showCreateTeamModal;

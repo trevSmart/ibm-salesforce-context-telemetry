@@ -1627,7 +1627,7 @@ function renderTopTeams(teams) {
 		const teamName = team.label || team.id || 'Unknown team';
 		const eventCount = Number(team.eventCount) || 0;
 		const countLabel = eventCount === 1 ? '1 event last 30 days' : `${eventCount} events last 30 days`;
-		const clientName = team.clientName ? ` · ${team.clientName}` : '';
+		const clientName = team.clientName ? team.clientName : '';
 		const badgeBackground = index === 0 ? '#dc2626' : SESSION_START_SERIES_COLOR;
 		const logoUrl = team.logoUrl || (team.teamId && team.hasLogo ? `/api/teams/${team.teamId}/logo` : '');
 
@@ -1653,10 +1653,12 @@ function renderTopTeams(teams) {
         ${avatar}
         <div class="top-users-info">
           <div class="top-users-name-row">
-            <strong class="top-users-name" title="${escapeHtml(teamName)}${clientName}">${escapeHtml(teamName)}${clientName}</strong>
+            <strong class="top-users-name" title="${escapeHtml(teamName)}">${escapeHtml(teamName)}</strong>
             <span class="top-users-badge" style="background: ${badgeBackground}; color: #ffffff;">${escapeHtml(String(eventCount))} events</span>
           </div>
-          <div class="top-users-role">${escapeHtml(countLabel)}</div>
+          <div class="top-users-role">
+						${escapeHtml(countLabel)}${clientName ? ` · ${escapeHtml(clientName)}` : ''}
+					</div>
         </div>
         <button type="button" class="top-users-action" aria-label="Open team">
           <i class="fa-solid fa-chevron-right" aria-hidden="true" style="font-size: 11px;"></i>
@@ -2081,7 +2083,8 @@ async function loadChartData(days = currentDays) {
 
 			const trimmedToolEvents = trimTrailingZeros(toolEventsData);
 			const trendLineSource = trimmedToolEvents.length >= 2 ? trimmedToolEvents : toolEventsData;
-			const trendLine = generateTrendLine(trendLineSource, FUTURE_POINTS);
+			// Use exponential smoothing for a more stable trend line when there are sparse days
+			const trendLine = generateTrendLine(trendLineSource, FUTURE_POINTS, 'exponential');
 
 			const denseTrendRaw = buildDenseTrendSeries(
 				trendLineSource,
@@ -2189,7 +2192,8 @@ async function loadChartData(days = currentDays) {
 			];
 
 			const trendLineSource = trimmedTotalEvents.length >= 2 ? trimmedTotalEvents : totalEventsDataWithZeroes;
-			const trendLine = generateTrendLine(trendLineSource, FUTURE_POINTS);
+			// Use exponential smoothing for a more stable trend line when there are sparse days
+			const trendLine = generateTrendLine(trendLineSource, FUTURE_POINTS, 'exponential');
 
 			const denseTrendRaw = buildDenseTrendSeries(
 				trendLineSource,
