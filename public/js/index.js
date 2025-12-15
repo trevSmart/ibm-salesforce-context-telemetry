@@ -1,7 +1,7 @@
 // @ts-nocheck
 // Dashboard constants
 const SESSION_START_SERIES_COLOR = '#2195cf';
-const TOP_USERS_LOOKBACK_DAYS = 10;
+const TOP_USERS_LOOKBACK_DAYS = 14;
 const TOP_USERS_LIMIT = 3;
 const TOP_TEAMS_LOOKBACK_DAYS = 30;
 const TOP_TEAMS_LIMIT = 5;
@@ -11,6 +11,7 @@ let serverStatsLastFetchTime = null;
 let serverStatsUpdateIntervalId = null;
 let autoRefreshEnabledState = false;
 let autoRefreshIntervalMinutes = '';
+let currentDays = 7;
 
 // Helper function to escape HTML
 function escapeHtml(str) {
@@ -162,14 +163,20 @@ async function initializeDashboardPage({ resetState = false } = {}) {
 		}
 		chart = null;
 	}
+
+	// Always restore saved time range from localStorage, default to 7 if not found
+	const savedTimeRange = localStorage.getItem('dashboardTimeRange');
+	currentDays = savedTimeRange ? parseInt(savedTimeRange, 10) : 7;
+
 	if (resetState) {
 		isInitialChartLoad = true;
-		currentDays = 7;
 		resetServerStatsUi();
-		const timeRangeSelect = document.getElementById('timeRangeSelect');
-		if (timeRangeSelect) {
-			timeRangeSelect.value = String(currentDays);
-		}
+	}
+
+	// Always set the combobox value to match the current days
+	const timeRangeSelect = document.getElementById('timeRangeSelect');
+	if (timeRangeSelect) {
+		timeRangeSelect.value = String(currentDays);
 	}
 
 	setServerStatsVersion();
@@ -205,6 +212,8 @@ async function initializeDashboardPage({ resetState = false } = {}) {
 			const handleTimeRangeChange = (e) => {
 				const days = parseInt(e.target.value, 10);
 				const resolvedDays = Number.isFinite(days) ? days : currentDays;
+				// Save selected time range to localStorage
+				localStorage.setItem('dashboardTimeRange', resolvedDays.toString());
 				loadChartData(resolvedDays);
 			};
 			timeRangeSelect.addEventListener('change', handleTimeRangeChange);
@@ -1293,7 +1302,6 @@ async function refreshDashboard(event) {
 
 // Chart configuration
 let chart = null;
-let currentDays = 7;
 let isInitialChartLoad = true; // Track if this is the initial chart load
 let savedChartOption = null; // Store chart option when pausing for cache restoration
 let chartResizeObserver = null;
@@ -1573,7 +1581,7 @@ function renderTopUsers(users) {
 	}
 
 	if (!users || users.length === 0) {
-		renderTopUsersPlaceholder('No events recorded in the last 10 days yet.');
+		renderTopUsersPlaceholder('No events recorded in the last 14 days yet.');
 		return;
 	}
 
@@ -1581,7 +1589,7 @@ function renderTopUsers(users) {
 		const name = user.label || user.id || 'Unknown user';
 		const initial = getUserInitials(name);
 		const eventCount = Number(user.eventCount) || 0;
-		const countLabel = eventCount === 1 ? '1 event last 10 days' : `${eventCount} events last 10 days`;
+		const countLabel = eventCount === 1 ? '1 event last 14 days' : `${eventCount} events last 14 days`;
 		const badgeBackground = index === 0 ? '#dc2626' : SESSION_START_SERIES_COLOR;
 
 		return `
@@ -2241,6 +2249,12 @@ async function loadChartData(days = currentDays) {
 
 		updateChartLegendOverlay(legendData);
 
+		// Calculate label interval based on number of days to prevent overlapping
+		let labelInterval = 0;
+		if (days > 14) {
+			labelInterval = Math.max(1, Math.floor(days / 10)); // Show ~10 labels max
+		}
+
 		const option = {
 			textStyle: {
 				fontFamily:
@@ -2274,7 +2288,7 @@ async function loadChartData(days = currentDays) {
 					axisLabel: {
 						color: textColor,
 						fontSize: 12,
-						interval: 0,
+						interval: labelInterval,
 						margin: 18
 					},
 					axisLine: { show: false },
