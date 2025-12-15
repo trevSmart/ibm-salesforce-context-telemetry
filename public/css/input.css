@@ -784,6 +784,12 @@
     padding: 12px 16px;
     display: inline-flex;
     align-items: center;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+
+  .dashboard-chart-card:hover .chart-floating-header .chart-header #timeRangeSelect {
+    opacity: 1;
   }
 
   html.dark .dashboard-chart-card .chart-floating-header .chart-header h1,
