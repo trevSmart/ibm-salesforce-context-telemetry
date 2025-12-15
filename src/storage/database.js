@@ -95,6 +95,10 @@ async function init() {
 			CREATE INDEX IF NOT EXISTS idx_username ON users(username);
 			CREATE INDEX IF NOT EXISTS idx_event_created_at ON telemetry_events(event, created_at);
 			CREATE INDEX IF NOT EXISTS idx_user_created_at ON telemetry_events(user_id, created_at);
+			-- Performance indexes for dashboard queries
+			CREATE INDEX IF NOT EXISTS idx_timestamp_event ON telemetry_events(timestamp, event);
+			CREATE INDEX IF NOT EXISTS idx_created_at_org_id ON telemetry_events(created_at, org_id);
+			CREATE INDEX IF NOT EXISTS idx_org_id ON telemetry_events(org_id);
 		`);
 
     console.log(`SQLite database initialized at: ${dbPath}`);
@@ -164,6 +168,10 @@ async function init() {
 			CREATE INDEX IF NOT EXISTS idx_username ON users(username);
 			CREATE INDEX IF NOT EXISTS idx_event_created_at ON telemetry_events(event, created_at);
 			CREATE INDEX IF NOT EXISTS idx_user_created_at ON telemetry_events(user_id, created_at);
+			-- Performance indexes for dashboard queries
+			CREATE INDEX IF NOT EXISTS idx_timestamp_event ON telemetry_events(timestamp, event);
+			CREATE INDEX IF NOT EXISTS idx_created_at_org_id ON telemetry_events(created_at, org_id);
+			CREATE INDEX IF NOT EXISTS idx_org_id ON telemetry_events(org_id);
 		`);
 
     db = pool;
@@ -1361,56 +1369,29 @@ async function getDailyStatsByEventType(days = 30) {
   const startDateISO = startDate.toISOString();
 
   if (dbType === 'sqlite') {
-    // Get all session_start events
-    const sessionStarts = db.prepare(`
+    // Single optimized query with conditional aggregation
+    const stats = db.prepare(`
 			SELECT
 				date(timestamp, 'utc') as date,
-				session_id,
-				id
+				COUNT(CASE WHEN event = 'session_start' THEN 1 END) as start_sessions,
+				COUNT(CASE WHEN event IN ('tool_call', 'tool_error') THEN 1 END) as tool_events,
+				COUNT(CASE WHEN event = 'tool_error' THEN 1 END) as error_events
 			FROM telemetry_events
-			WHERE timestamp >= ? AND event = 'session_start'
+			WHERE timestamp >= ?
+			GROUP BY date(timestamp, 'utc')
+			ORDER BY date
 		`).all(startDateISO);
 
-    // Count all session_starts by date (regardless of whether they have an end)
     const startSessionsMap = new Map();
-    sessionStarts.forEach(row => {
-      let dateStr = String(row.date);
-      dateStr = dateStr.split('T')[0].split(' ')[0];
-      startSessionsMap.set(dateStr, (startSessionsMap.get(dateStr) || 0) + 1);
-    });
-
-    // Get tool events (tool_call and tool_error)
-    const toolEvents = db.prepare(`
-			SELECT
-				date(timestamp, 'utc') as date,
-				COUNT(*) as count
-			FROM telemetry_events
-			WHERE timestamp >= ? AND event IN ('tool_call', 'tool_error')
-			GROUP BY date(timestamp, 'utc')
-		`).all(startDateISO);
-
     const toolEventsMap = new Map();
-    toolEvents.forEach(row => {
-      let dateStr = String(row.date);
-      dateStr = dateStr.split('T')[0].split(' ')[0];
-      toolEventsMap.set(dateStr, parseInt(row.count));
-    });
-
-    // Get error events (tool_error only)
-    const errorEvents = db.prepare(`
-			SELECT
-				date(timestamp, 'utc') as date,
-				COUNT(*) as count
-			FROM telemetry_events
-			WHERE timestamp >= ? AND event = 'tool_error'
-			GROUP BY date(timestamp, 'utc')
-		`).all(startDateISO);
-
     const errorEventsMap = new Map();
-    errorEvents.forEach(row => {
+
+    stats.forEach(row => {
       let dateStr = String(row.date);
       dateStr = dateStr.split('T')[0].split(' ')[0];
-      errorEventsMap.set(dateStr, parseInt(row.count));
+      startSessionsMap.set(dateStr, parseInt(row.start_sessions) || 0);
+      toolEventsMap.set(dateStr, parseInt(row.tool_events) || 0);
+      errorEventsMap.set(dateStr, parseInt(row.error_events) || 0);
     });
 
     // Fill in missing days with 0 counts
@@ -4357,6 +4338,8 @@ async function getActiveRememberTokensCount(userId) {
 }
 
 module.exports = {
+  // Database type for migration scripts
+  dbType,
   init,
   storeEvent,
   getStats,

@@ -8,6 +8,7 @@ let _currentTeamId = null;
 let teams = [];
 let _allOrgs = [];
 let _allUsers = [];
+let autoRefreshIntervalMinutes = '';
 
 // Modal cleanup helper
 function createModalCleanupSystem() {

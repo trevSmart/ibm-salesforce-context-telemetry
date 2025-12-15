@@ -1160,8 +1160,20 @@ app.get('/api/top-users-today', auth.requireAuth, async (req, res) => {
     const daysRaw = parseInt(req.query.days, 10);
     const limit = Math.min(Math.max(1, Number.isFinite(limitRaw) ? limitRaw : 3), 500);
     const days = Math.min(Math.max(1, Number.isFinite(daysRaw) ? daysRaw : 3), 365);
+
+    // Use cache for expensive user stats queries
+    const cacheKey = `topUsers:${days}:${limit}`;
+    const cached = statsCache.get(cacheKey);
+    if (cached) {
+      return res.json(cached);
+    }
+
     const users = await db.getTopUsersLastDays(limit, days);
-    res.json({ users, days });
+
+    const result = { users, days };
+    statsCache.set(cacheKey, result);
+
+    res.json(result);
   } catch (error) {
     console.error('Error fetching top users for the selected window:', error);
     res.status(500).json({
@@ -1188,8 +1200,20 @@ app.get('/api/top-teams-today', auth.requireAuth, async (req, res) => {
       console.warn('Invalid org-team mappings provided, using empty array:', error);
     }
 
+    // Use cache for expensive team stats queries
+    const mappingsKey = JSON.stringify(orgTeamMappings.sort((a, b) => (a.orgIdentifier || '').localeCompare(b.orgIdentifier || '')));
+    const cacheKey = `topTeams:${days}:${limit}:${mappingsKey}`;
+    const cached = statsCache.get(cacheKey);
+    if (cached) {
+      return res.json(cached);
+    }
+
     const teams = await db.getTopTeamsLastDays(orgTeamMappings, limit, days);
-    res.json({ teams, days });
+
+    const result = { teams, days };
+    statsCache.set(cacheKey, result);
+
+    res.json(result);
   } catch (error) {
     console.error('Error fetching top teams for the selected window:', error);
     res.status(500).json({
@@ -1735,6 +1759,13 @@ app.get('/api/telemetry-users', auth.requireAuth, auth.requireRole('advanced'), 
 
 app.get('/api/database-size', auth.requireAuth, auth.requireRole('advanced'), apiReadLimiter, async (req, res) => {
   try {
+    // Cache database size for 5 minutes (expensive operation)
+    const cacheKey = 'dbSize';
+    const cached = healthCheckCache.get(cacheKey);
+    if (cached) {
+      return res.json(cached);
+    }
+
     const sizeInfo = await db.getDatabaseSize();
     if (sizeInfo === null) {
       return res.status(404).json({
@@ -1748,7 +1779,7 @@ app.get('/api/database-size', auth.requireAuth, auth.requireRole('advanced'), ap
     const maxSizeFormatted = maxSize ? formatBytes(maxSize) : null;
     const percentage = maxSize ? Math.round((size / maxSize) * 100) : null;
 
-    res.json({
+    const result = {
       status: 'ok',
       size: size,
       maxSize: maxSize,
@@ -1758,7 +1789,11 @@ app.get('/api/database-size', auth.requireAuth, auth.requireRole('advanced'), ap
       displayText: maxSize
         ? `${percentage}% (${sizeFormatted} / ${maxSizeFormatted})`
         : sizeFormatted
-    });
+    };
+
+    healthCheckCache.set(cacheKey, result);
+
+    res.json(result);
   } catch (error) {
     console.error('Error fetching database size:', error);
     res.status(500).json({

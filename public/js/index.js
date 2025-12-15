@@ -1311,10 +1311,12 @@ function revealDashboardShell() {
 	if (body.classList.contains('hydrating')) {
 		body.classList.remove('hydrating');
 	}
-	const container = document.querySelector('.container');
-	if (container) {
-		container.style.visibility = 'visible';
-		container.style.opacity = '1';
+	// Container is now visible by default for better LCP
+	// Only reveal the chart area when ready
+	const chartEl = document.getElementById('eventsChart');
+	if (chartEl) {
+		chartEl.style.visibility = 'visible';
+		chartEl.style.opacity = '1';
 	}
 }
 
@@ -1771,8 +1773,6 @@ async function loadChartData(days = currentDays) {
 		if (data.length === 0 && isInitialChartLoad) {
 			isInitialChartLoad = false;
 			revealDashboardShell();
-			const chartEl = document.getElementById('eventsChart');
-			if (chartEl) chartEl.style.visibility = 'visible';
 		}
 
 		const chartInstance = initChart();
@@ -2333,9 +2333,6 @@ async function loadChartData(days = currentDays) {
 
 		const onChartFinished = () => {
 			chartInstance.off('finished', onChartFinished);
-
-			const chartEl = document.getElementById('eventsChart');
-			if (chartEl) chartEl.style.visibility = 'visible';
 
 			if (isInitialChartLoad) {
 				isInitialChartLoad = false;

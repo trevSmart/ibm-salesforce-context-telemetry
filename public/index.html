@@ -12,9 +12,10 @@
 	<link rel="preconnect" href="https://rsms.me">
 	<link rel="preconnect" href="https://cdn.jsdelivr.net">
 
-	<!-- Preload critical font for better LCP -->
-	<link rel="preload" href="https://rsms.me/inter/inter.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
-	<noscript><link rel="stylesheet" href="https://rsms.me/inter/inter.css"></noscript>
+		<!-- Load Inter font asynchronously to prevent render blocking -->
+		<link rel="preconnect" href="https://fonts.googleapis.com">
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+		<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 
 	<!-- Load main CSS synchronously as it's critical for layout -->
 	<link href="/css/output.css" rel="stylesheet">
@@ -26,50 +27,43 @@
 	<noscript><link rel="stylesheet" href="/vendor/fontawesome/css/v4-shims.min.css"></noscript>
 	<script src="/js/polyfills.js" defer></script>
 	<script src="https://cdn.jsdelivr.net/npm/@tailwindplus/elements@1" type="module" defer></script>
-	<script>
-		// Apply theme immediately before page render to prevent flash
-		(function () {
-			const savedTheme = localStorage.getItem('theme');
-			const systemTheme = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-			const theme = savedTheme || systemTheme;
-			if (theme === 'dark') {
-				document.documentElement.classList.add('dark');
-			}
-			// Don't make container visible here - wait for chart to render
-			// The container will be made visible when chart animation completes
-			// Fallback: if chart doesn't load within 5 seconds, show page anyway
-			setTimeout(() => {
-				const container = document.querySelector('.container');
-				if (container) {
-					const computedStyle = window.getComputedStyle(container);
-					if (computedStyle.visibility === 'hidden' || computedStyle.opacity === '0') {
-						container.style.visibility = 'visible';
-						requestAnimationFrame(() => {
-							container.style.opacity = '1';
-						});
-					}
+		<script>
+			// Apply theme immediately before page render to prevent flash
+			(function () {
+				const savedTheme = localStorage.getItem('theme');
+				const systemTheme = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+				const theme = savedTheme || systemTheme;
+				if (theme === 'dark') {
+					document.documentElement.classList.add('dark');
 				}
-			}, 5000);
-		})();
-	</script>
+				// Container is now visible by default for better LCP
+				// Only chart area is hidden during hydration
+			})();
+		</script>
 </head>
 
 <body class="index-page hydrating">
 	<div class="container main-container">
 		<div id="global-header-placeholder"></div>
-		<script src="/js/header.js"></script>
 		<script>
-			// Initialize header for dashboard page
-			initGlobalHeader({
-				activePage: '/',
-				refreshButton: {
-					onClick: 'refreshDashboard(event)',
-					ariaLabel: 'Refresh dashboard',
-					title: 'Refresh dashboard'
-				},
-				secondaryButton: {
-					type: 'settings'
-				}
+			// Defer header initialization to prevent render blocking
+			window.addEventListener('DOMContentLoaded', () => {
+				const script = document.createElement('script');
+				script.src = '/js/header.js';
+				script.onload = () => {
+					initGlobalHeader({
+						activePage: '/',
+						refreshButton: {
+							onClick: 'refreshDashboard(event)',
+							ariaLabel: 'Refresh dashboard',
+							title: 'Refresh dashboard'
+						},
+						secondaryButton: {
+							type: 'settings'
+						}
+					});
+				};
+				document.head.appendChild(script);
 			});
 		</script>
 		<div class="container-content">
@@ -244,17 +238,16 @@
 	</div>
 
 	<script>
-		// Load ECharts asynchronously to avoid blocking initial render
-		(function () {
+		// Load ECharts after DOM content loaded to prioritize initial render
+		window.addEventListener('DOMContentLoaded', () => {
 			const script = document.createElement('script');
 			script.src = '/vendor/echarts/echarts.min.js';
-			script.async = true;
 			script.onload = function () {
 				// Dispatch event when ECharts is loaded
 				window.dispatchEvent(new CustomEvent('echartsLoaded'));
 			};
 			document.head.appendChild(script);
-		})();
+		});
 	</script>
 	<script src="/js/navigation.js" defer></script>
 	<script src="/js/user-menu.js" defer></script>

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap');
+/* Font loading moved to HTML for better performance */
 @config "../../tailwind.config.js";
 @import "tailwindcss";
 
@@ -114,9 +114,7 @@
   }
 
   /* Prevent flash of unstyled content - gated by hydrating class */
-  body.hydrating {
-    visibility: hidden;
-  }
+  /* Removed body visibility hidden to allow LCP elements to render immediately */
 
   body {
     font-family: 'Manrope', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -628,9 +626,8 @@
     flex-direction: column;
   }
 
-  /* Hide container/main shell only while hydrating (initial render) */
-  body.hydrating .container,
-  body.hydrating .main-container {
+  /* Hide only chart area while hydrating (initial render) - allow content to render immediately for better LCP */
+  body.hydrating #eventsChart {
     opacity: 0;
     visibility: hidden;
   }
