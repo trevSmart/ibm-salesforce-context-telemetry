@@ -8,7 +8,9 @@ let _currentTeamId = null;
 let teams = [];
 let _allOrgs = [];
 let _allUsers = [];
-let autoRefreshIntervalMinutes = '';
+let autoRefreshIntervalMinutes = localStorage.getItem('teamsAutoRefreshInterval') || '';
+let autoRefreshEnabledState = autoRefreshIntervalMinutes !== '';
+let autoRefreshIntervalId = null;
 
 // Modal cleanup helper
 function createModalCleanupSystem() {
@@ -853,8 +855,13 @@ async function openSettingsModal() {
       const interval = (e.target.value || '').trim();
       autoRefreshIntervalMinutes = interval;
       autoRefreshEnabledState = interval !== '';
+      // Save to localStorage
+      if (interval === '') {
+        localStorage.removeItem('teamsAutoRefreshInterval');
+      } else {
+        localStorage.setItem('teamsAutoRefreshInterval', interval);
+      }
       updateAutoRefreshInterval();
-      setRefreshButtonAutoState(autoRefreshEnabledState, autoRefreshIntervalMinutes);
     };
     autoRefreshIntervalInput.addEventListener('change', handleAutoRefreshInput);
     autoRefreshIntervalInput.addEventListener('input', handleAutoRefreshInput);
@@ -1300,10 +1307,34 @@ async function renderTeamDetail(teamId) {
 
   // Sanitize team color to prevent XSS
   const sanitizedTeamColor = sanitizeCssColor(team.color);
-  const colorDot = sanitizedTeamColor ? `<span style="display: inline-block; width: 16px; height: 16px; border-radius: 999px; background: ${sanitizedTeamColor}; margin-right: 8px; border: 1px solid var(--border-color);"></span>` : '';
+  const accentColor = sanitizedTeamColor || '#4f46e5';
+  const accentBg = sanitizedTeamColor ? (hexToRgba(sanitizedTeamColor, 0.14) || 'rgba(79, 70, 229, 0.12)') : 'rgba(79, 70, 229, 0.12)';
 
-  document.getElementById('teamDetailName').innerHTML = `${colorDot}${escapeHtml(team.name)}`;
-  document.getElementById('teamDetailMeta').textContent = `${team.orgs.length} org${team.orgs.length !== 1 ? 's' : ''} · ${team.users.length} user${team.users.length !== 1 ? 's' : ''}`;
+  // Get team initials for fallback avatar
+  const initials = team.name.split(' ').map(word => word[0]).join('').substring(0, 2).toUpperCase();
+
+  // Logo or avatar for team header
+  const logoOrAvatar = team.has_logo
+    ? `<img src="/api/teams/${team.id}/logo" alt="${escapeHtml(team.name)} logo" style="width: 32px; height: 32px; object-fit: contain; border-radius: 6px;" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-flex';">
+       <span style="display: none; align-items: center; justify-content: center; border-radius: 6px; font-size: 0.875rem; font-weight: 600; width: 32px; height: 32px; color: ${accentColor}; background-color: ${accentBg};">
+         ${escapeHtml(initials)}
+       </span>`
+    : `<span style="display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; font-size: 0.875rem; font-weight: 600; width: 32px; height: 32px; color: ${accentColor}; background-color: ${accentBg};">
+         ${escapeHtml(initials)}
+       </span>`;
+
+  document.getElementById('teamDetailName').innerHTML = `
+    <div style="display: flex; align-items: center; gap: 12px;">
+      ${logoOrAvatar}
+      <div>
+        <h1 style="margin: 0; font-size: 1.5rem; font-weight: 600;">${escapeHtml(team.name)}</h1>
+        <div style="color: var(--text-secondary); font-size: 0.9rem;">${team.orgs.length} org${team.orgs.length !== 1 ? 's' : ''} · ${team.users.length} user${team.users.length !== 1 ? 's' : ''}</div>
+      </div>
+    </div>
+  `;
+
+  // Hide the separate meta div since it's now included in the name div
+  document.getElementById('teamDetailMeta').style.display = 'none';
 
   const detailContent = document.getElementById('teamDetailContent');
   detailContent.innerHTML = `
@@ -1888,6 +1919,59 @@ async function removeUserFromTeam(userName, teamId) {
   }
 }
 
+// Auto-refresh functions
+function clearAutoRefreshInterval() {
+  if (autoRefreshIntervalId) {
+    clearInterval(autoRefreshIntervalId);
+    autoRefreshIntervalId = null;
+  }
+}
+
+function updateAutoRefreshInterval() {
+  clearAutoRefreshInterval();
+
+  const intervalMinutes = autoRefreshIntervalMinutes;
+  const enabled = intervalMinutes !== '';
+  autoRefreshEnabledState = enabled;
+
+  setRefreshButtonAutoState(enabled, intervalMinutes);
+
+  if (enabled && intervalMinutes && intervalMinutes !== '') {
+    const intervalMs = parseInt(intervalMinutes) * 60 * 1000;
+    autoRefreshIntervalId = setInterval(() => {
+      refreshTeams();
+    }, intervalMs);
+  }
+}
+
+function setRefreshButtonAutoState(enabled, intervalMinutes) {
+  const refreshButton = document.getElementById('refreshButton');
+  const badge = document.getElementById('autoRefreshBadge');
+  if (!refreshButton) {
+    return;
+  }
+
+  const hasInterval = intervalMinutes && intervalMinutes !== '';
+  const shouldHighlight = enabled && hasInterval;
+  refreshButton.classList.toggle('auto-refresh-active', shouldHighlight);
+
+  if (shouldHighlight) {
+    refreshButton.setAttribute('title', `Auto-refresh every ${intervalMinutes} min`);
+    refreshButton.setAttribute('aria-label', `Auto-refresh every ${intervalMinutes} minutes. Click to refresh now.`);
+    if (badge) {
+      badge.textContent = intervalMinutes;
+      badge.style.display = 'inline-flex';
+    }
+    return;
+  }
+
+  refreshButton.setAttribute('title', 'Refresh teams');
+  refreshButton.setAttribute('aria-label', 'Refresh teams');
+  if (badge) {
+    badge.style.display = 'none';
+  }
+}
+
 // Global functions for onclick handlers
 window.viewTeamDetail = (teamId) => {
   currentView = 'detail';
@@ -1955,7 +2039,10 @@ async function init() {
       setTimeout(() => {
         const retryContainer = document.getElementById('teamsContent');
         if (retryContainer) {
-          loadTeams().then(() => renderTeamsList());
+          loadTeams().then(() => {
+            renderTeamsList();
+            updateAutoRefreshInterval();
+          });
         } else {
           console.error('Container still not found after retry');
           document.body.innerHTML = '<div style="padding: 24px;"><p>Error: teamsContent container not found</p></div>';
@@ -1965,6 +2052,7 @@ async function init() {
     }
     await loadTeams();
     renderTeamsList();
+    updateAutoRefreshInterval();
   } catch (error) {
     console.error('Error initializing teams page:', error);
     const container = document.getElementById('teamsContent');
@@ -1996,8 +2084,8 @@ if (document.readyState === 'loading') {
 
 // Pause/resume functions for soft navigation
 function pauseTeamsPage() {
-  // Teams page doesn't have intervals, but we can clear any pending timeouts if needed
-  // Currently no cleanup needed
+  // Clear auto-refresh interval when navigating away
+  clearAutoRefreshInterval();
 }
 
 function resumeTeamsPage() {
@@ -2023,6 +2111,7 @@ window.addEventListener('softNav:pageMounted', (event) => {
     if (fromCache) {
       // Page was restored from cache - no re-initialization needed
       resumeTeamsPage();
+      updateAutoRefreshInterval();
     } else {
       // New page load - full initialization
       init();
