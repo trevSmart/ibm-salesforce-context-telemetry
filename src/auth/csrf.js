@@ -34,6 +34,11 @@ function csrfProtection(req, res, next) {
 		return next();
 	}
 
+	// Skip CSRF for API routes (they use session-based auth instead)
+	if (req.path.startsWith('/api/')) {
+		return next();
+	}
+
 	// Get token from header or body
 	const token = req.headers['x-csrf-token'] || req.body._csrf;
   

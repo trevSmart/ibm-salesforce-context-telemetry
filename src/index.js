@@ -1807,139 +1807,139 @@ app.get('/people', auth.requireAuth, auth.requireRole('administrator'), (_req, r
 
 // Redirect /users to /people for backward compatibility
 app.get('/users', auth.requireAuth, auth.requireRole('administrator'), (_req, res) => {
-  res.redirect(301, '/people');
+	res.redirect(301, '/people');
 });
 
 // People management APIs
 app.get('/api/people', auth.requireAuth, auth.requireRole('administrator'), apiReadLimiter, async (req, res) => {
-  try {
-    const people = await db.getAllPeople();
-    res.json({
-      status: 'ok',
-      people: people
-    });
-  } catch (error) {
-    console.error('Error fetching people:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Failed to fetch people'
-    });
-  }
+	try {
+		const people = await db.getAllPeople();
+		res.json({
+			status: 'ok',
+			people: people
+		});
+	} catch (error) {
+		console.error('Error fetching people:', error);
+		res.status(500).json({
+			status: 'error',
+			message: 'Failed to fetch people'
+		});
+	}
 });
 
 app.post('/api/people', auth.requireAuth, auth.requireRole('administrator'), apiReadLimiter, async (req, res) => {
-  try {
-    const { name, email, notes } = req.body;
+	try {
+		const { name, email, notes } = req.body;
 
-    if (!name || typeof name !== 'string' || name.trim().length === 0) {
-      return res.status(400).json({
-        status: 'error',
-        message: 'Name is required and must be a non-empty string'
-      });
-    }
+		if (!name || typeof name !== 'string' || name.trim().length === 0) {
+			return res.status(400).json({
+				status: 'error',
+				message: 'Name is required and must be a non-empty string'
+			});
+		}
 
-    const person = await db.createPerson({
-      name: name.trim(),
-      email: email?.trim() || null,
-      notes: notes?.trim() || null
-    });
+		const person = await db.createPerson({
+			name: name.trim(),
+			email: email?.trim() || null,
+			notes: notes?.trim() || null
+		});
 
-    res.status(201).json({
-      status: 'ok',
-      person: person
-    });
-  } catch (error) {
-    console.error('Error creating person:', error);
-    if (error.message.includes('UNIQUE constraint failed') || error.message.includes('duplicate key value')) {
-      return res.status(409).json({
-        status: 'error',
-        message: 'A person with this name already exists'
-      });
-    }
-    res.status(500).json({
-      status: 'error',
-      message: 'Failed to create person'
-    });
-  }
+		res.status(201).json({
+			status: 'ok',
+			person: person
+		});
+	} catch (error) {
+		console.error('Error creating person:', error);
+		if (error.message.includes('UNIQUE constraint failed') || error.message.includes('duplicate key value')) {
+			return res.status(409).json({
+				status: 'error',
+				message: 'A person with this name already exists'
+			});
+		}
+		res.status(500).json({
+			status: 'error',
+			message: 'Failed to create person'
+		});
+	}
 });
 
 app.get('/api/people/:id/usernames', auth.requireAuth, auth.requireRole('administrator'), apiReadLimiter, async (req, res) => {
-  try {
-    const personId = parseInt(req.params.id);
+	try {
+		const personId = parseInt(req.params.id);
 
-    if (isNaN(personId)) {
-      return res.status(400).json({
-        status: 'error',
-        message: 'Invalid person ID'
-      });
-    }
+		if (isNaN(personId)) {
+			return res.status(400).json({
+				status: 'error',
+				message: 'Invalid person ID'
+			});
+		}
 
-    const usernames = await db.getPersonUsernames(personId);
-    res.json({
-      status: 'ok',
-      usernames: usernames
-    });
-  } catch (error) {
-    console.error('Error fetching person usernames:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Failed to fetch usernames'
-    });
-  }
+		const usernames = await db.getPersonUsernames(personId);
+		res.json({
+			status: 'ok',
+			usernames: usernames
+		});
+	} catch (error) {
+		console.error('Error fetching person usernames:', error);
+		res.status(500).json({
+			status: 'error',
+			message: 'Failed to fetch usernames'
+		});
+	}
 });
 
 app.post('/api/people/:id/usernames', auth.requireAuth, auth.requireRole('administrator'), apiReadLimiter, async (req, res) => {
-  try {
-    const personId = parseInt(req.params.id);
-    const { username, org_id, is_primary } = req.body;
+	try {
+		const personId = parseInt(req.params.id);
+		const { username, org_id, is_primary } = req.body;
 
-    if (isNaN(personId)) {
-      return res.status(400).json({
-        status: 'error',
-        message: 'Invalid person ID'
-      });
-    }
+		if (isNaN(personId)) {
+			return res.status(400).json({
+				status: 'error',
+				message: 'Invalid person ID'
+			});
+		}
 
-    if (!username || typeof username !== 'string' || username.trim().length === 0) {
-      return res.status(400).json({
-        status: 'error',
-        message: 'Username is required and must be a non-empty string'
-      });
-    }
+		if (!username || typeof username !== 'string' || username.trim().length === 0) {
+			return res.status(400).json({
+				status: 'error',
+				message: 'Username is required and must be a non-empty string'
+			});
+		}
 
-    // Check if person exists
-    const person = await db.getPersonById(personId);
-    if (!person) {
-      return res.status(404).json({
-        status: 'error',
-        message: 'Person not found'
-      });
-    }
+		// Check if person exists
+		const person = await db.getPersonById(personId);
+		if (!person) {
+			return res.status(404).json({
+				status: 'error',
+				message: 'Person not found'
+			});
+		}
 
-    const usernameAssociation = await db.addPersonUsername(
-      personId,
-      username.trim(),
-      org_id?.trim() || null,
-      is_primary === true
-    );
+		const usernameAssociation = await db.addPersonUsername(
+			personId,
+			username.trim(),
+			org_id?.trim() || null,
+			is_primary === true
+		);
 
-    res.status(201).json({
-      status: 'ok',
-      username: usernameAssociation
-    });
-  } catch (error) {
-    console.error('Error adding username to person:', error);
-    if (error.message.includes('UNIQUE constraint failed') || error.message.includes('duplicate key value')) {
-      return res.status(409).json({
-        status: 'error',
-        message: 'This username is already associated with a person'
-      });
-    }
-    res.status(500).json({
-      status: 'error',
-      message: 'Failed to add username'
-    });
-  }
+		res.status(201).json({
+			status: 'ok',
+			username: usernameAssociation
+		});
+	} catch (error) {
+		console.error('Error adding username to person:', error);
+		if (error.message.includes('UNIQUE constraint failed') || error.message.includes('duplicate key value')) {
+			return res.status(409).json({
+				status: 'error',
+				message: 'This username is already associated with a person'
+			});
+		}
+		res.status(500).json({
+			status: 'error',
+			message: 'Failed to add username'
+		});
+	}
 });
 
 app.get('/logs', auth.requireAuth, auth.requireRole('advanced'), (_req, res) => {
