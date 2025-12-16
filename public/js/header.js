@@ -4,7 +4,7 @@
   /**
    * Build the global header HTML
    * @param {Object} config - Configuration for page-specific elements
-   * @param {string} config.activePage - Path of the active page ('/', '/logs', '/teams')
+   * @param {string} config.activePage - Path of the active page ('/', '/logs', '/teams', '/users')
    * @param {Object} config.refreshButton - Refresh button configuration
    * @param {string} config.refreshButton.onClick - onClick handler function name
    * @param {string} config.refreshButton.id - Optional button ID
@@ -69,6 +69,7 @@
           <a href="/" class="top-nav-link${activePage === '/' ? ' active' : ''}">Dashboard</a>
           <a href="/logs" class="top-nav-link${activePage === '/logs' ? ' active' : ''}">Logs</a>
           <a href="/teams" class="top-nav-link${activePage === '/teams' ? ' active' : ''}">Teams</a>
+          <a href="/users" class="top-nav-link${activePage === '/users' ? ' active' : ''}">Users</a>
         </div>
         <div class="top-nav-search">
           <input type="text" class="top-nav-search-input" placeholder="Search" id="searchInput">

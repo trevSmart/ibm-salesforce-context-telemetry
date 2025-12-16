@@ -48,6 +48,15 @@ function getRequestHeaders(includeJson = true) {
   if (includeJson) {
     headers['Content-Type'] = 'application/json';
   }
+
+  // Fall back to cookie-stored token if the script hasn't cached it yet
+  if (!csrfToken) {
+    const cookieToken = getCsrfTokenFromCookie();
+    if (cookieToken) {
+      csrfToken = cookieToken;
+    }
+  }
+
   if (csrfToken) {
     headers['X-CSRF-Token'] = csrfToken;
   }

@@ -1796,6 +1796,15 @@ app.get('/teams', auth.requireAuth, auth.requireRole('administrator'), (_req, re
   }
 });
 
+app.get('/users', auth.requireAuth, auth.requireRole('administrator'), (_req, res) => {
+  const usersPath = path.join(__dirname, '..', 'public', 'users.html');
+  if (fs.existsSync(usersPath)) {
+    res.sendFile(usersPath);
+  } else {
+    res.status(404).send('Users page not found');
+  }
+});
+
 app.get('/logs', auth.requireAuth, auth.requireRole('advanced'), (_req, res) => {
   const eventLogPath = path.join(__dirname, '..', 'public', 'event-log.html');
   if (fs.existsSync(eventLogPath)) {

@@ -2064,8 +2064,9 @@ async function getTopTeamsLastDays(orgTeamMappings = [], limit = 50, days = 3) {
 		effectiveMappings.forEach(mapping => {
 			const isActive = mapping?.active !== false;
 			const rawTeamName = String(mapping?.teamName || '').trim();
-			const rawOrgId = normalizeOrgId(mapping?.orgIdentifier);
-			if (!isActive || !rawTeamName || !rawOrgId) {
+			const originalOrgId = String(mapping?.orgIdentifier || '').trim();
+			const normalizedOrgId = normalizeOrgId(originalOrgId);
+			if (!isActive || !rawTeamName || !normalizedOrgId) {
 				return;
 			}
 
@@ -2080,13 +2081,15 @@ async function getTopTeamsLastDays(orgTeamMappings = [], limit = 50, days = 3) {
 					logoUrl: String(mapping?.logoUrl || '').trim(),
 					clients: new Set(),
 					orgIds: new Set(),
+					orgDisplayNames: new Map(),
+					activeOrgDisplayNames: new Set(),
 					eventCount: 0
 				});
 			}
 
 			const entry = teamAggregates.get(teamKey);
-			entry.orgIds.add(rawOrgId);
-			orgToTeamKey.set(rawOrgId, teamKey);
+			entry.orgIds.add(normalizedOrgId);
+			orgToTeamKey.set(normalizedOrgId, teamKey);
 
 			if (!entry.teamId && mapping?.teamId) {
 				entry.teamId = mapping.teamId;
@@ -2102,6 +2105,11 @@ async function getTopTeamsLastDays(orgTeamMappings = [], limit = 50, days = 3) {
 			const clientName = String(mapping?.clientName || '').trim();
 			if (clientName) {
 				entry.clients.add(clientName);
+			}
+
+			const displayLabel = clientName || originalOrgId || normalizedOrgId;
+			if (displayLabel && !entry.orgDisplayNames.has(normalizedOrgId)) {
+				entry.orgDisplayNames.set(normalizedOrgId, displayLabel);
 			}
 
 			if (!entry.color && mapping?.color) {
@@ -2179,6 +2187,10 @@ async function getTopTeamsLastDays(orgTeamMappings = [], limit = 50, days = 3) {
 		const teamEntry = teamAggregates.get(teamKey);
 		if (teamEntry) {
 			teamEntry.eventCount += count;
+			const orgDisplayValue = teamEntry.orgDisplayNames.get(normalizedOrgId) || orgId;
+			if (orgDisplayValue) {
+				teamEntry.activeOrgDisplayNames.add(orgDisplayValue);
+			}
 		}
 	});
 
@@ -2188,10 +2200,14 @@ async function getTopTeamsLastDays(orgTeamMappings = [], limit = 50, days = 3) {
 			return;
 		}
 		const clients = Array.from(teamEntry.clients);
+		const orgNames = Array.from(teamEntry.activeOrgDisplayNames)
+			.map(name => String(name || '').trim())
+			.filter(name => name.length > 0);
 		results.push({
 			id: teamEntry.key,
 			label: teamEntry.teamName,
 			clientName: clients.join(' · '),
+			orgs: orgNames,
 			color: teamEntry.color,
 			eventCount: teamEntry.eventCount,
 			teamId: teamEntry.teamId,

@@ -126,6 +126,7 @@
   body.index-page,
   body.event-log-page,
   body.teams-page,
+  body.users-page,
   body.login-page,
   body.health-page {
     background: #8896b5;
@@ -136,6 +137,7 @@
   html.dark body.index-page,
   html.dark body.event-log-page,
   html.dark body.teams-page,
+  html.dark body.users-page,
   html.dark body.login-page,
   html.dark body.health-page {
     background: #18181b url("/resources/bg-01.jpg") center center / cover no-repeat fixed;
@@ -376,7 +378,20 @@
     justify-content: center;
   }
 
+  /* Users page body centering (match dashboard) */
+  body.users-page {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
   body.teams-page #teamsContent {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  body.users-page #usersContent {
     flex: 1;
     min-height: 0;
     overflow-y: auto;
@@ -1596,8 +1611,8 @@
   }
 
   .top-users-name {
-    font-size: 14px;
-    font-weight: 700;
+    font-size: 13.8px;
+    font-weight: 500;
     color: var(--text-primary);
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1613,6 +1628,7 @@
     font-weight: 300;
     white-space: nowrap;
     letter-spacing: 0.02em;
+    margin-left: 5px;
   }
 
   .top-users-role {
@@ -4145,7 +4161,7 @@
     z-index: 9999;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.18s ease-out;
+    transition: opacity 0.28s ease-out;
   }
 
   .confirm-modal-backdrop.visible {
@@ -4171,8 +4187,8 @@
     opacity: 0;
     transform: scale(0.96) translateY(6px);
     transition:
-      opacity 0.18s ease-out,
-      transform 0.18s ease-out;
+      opacity 0.28s ease-out,
+      transform 0.13s ease-out;
   }
 
   .confirm-modal.confirm-dialog {

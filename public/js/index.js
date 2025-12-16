@@ -1447,8 +1447,7 @@ function generateTrendLine(dataPoints, futurePoints = 3, method = 'polynomial') 
 		}
 	} else if (method === 'exponential') {
 		// Use exponential smoothing for trend following recent patterns
-		const smoothed = calculateExponentialSmoothing(dataPoints);
-
+		const smoothed = calculateExponentialSmoothing(dataPoints, 0.55); // menys smoothing
 		// Extend smoothing for future points (use last smoothed value)
 		const lastSmoothed = smoothed[smoothed.length - 1];
 		trendData = smoothed;
@@ -1617,6 +1616,22 @@ function renderTopTeams(teams) {
 		const eventCount = Number(team.eventCount) || 0;
 		const countLabel = eventCount === 1 ? '1 event last 30 days' : `${eventCount} events last 30 days`;
 		const clientName = team.clientName ? team.clientName : '';
+		const orgNames = Array.isArray(team.orgs)
+			? team.orgs
+				.map(name => typeof name === 'string' ? name.trim() : '')
+				.filter(name => name.length > 0)
+			: [];
+		const orgText = orgNames.length > 0
+			? orgNames.map(name => escapeHtml(name)).join(' · ')
+			: (clientName ? escapeHtml(clientName) : escapeHtml('No org events recorded yet'));
+		const orgSubtitle = `
+			<span class="top-teams-orgs" style="display: inline-flex; align-items: center; gap: 6px;">
+				<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" class="size-4">
+					<path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15a4.5 4.5 0 0 0 4.5 4.5H18a3.75 3.75 0 0 0 1.332-7.257 3 3 0 0 0-3.758-3.848 5.25 5.25 0 0 0-10.233 2.33A4.502 4.502 0 0 0 2.25 15Z" />
+				</svg>
+				<span>${orgText}</span>
+			</span>
+		`.trim();
 		const badgeBackground = index === 0 ? '#dc2626' : SESSION_START_SERIES_COLOR;
 		const logoUrl = team.logoUrl || (team.teamId && team.hasLogo ? `/api/teams/${team.teamId}/logo` : '');
 
@@ -1646,7 +1661,7 @@ function renderTopTeams(teams) {
             <span class="top-users-badge" style="background: ${badgeBackground}; color: #ffffff;">${escapeHtml(String(eventCount))} events</span>
           </div>
           <div class="top-users-role">
-						${escapeHtml(countLabel)}${clientName ? ` · ${escapeHtml(clientName)}` : ''}
+						${orgSubtitle}
 					</div>
         </div>
         <button type="button" class="top-users-action" aria-label="Open team">
@@ -1854,14 +1869,51 @@ async function loadChartData(days = currentDays) {
 			return out;
 		}
 
+		function weightedMovingAverage(y, weights = [1, 2, 3, 2, 1]) {
+			const half = Math.floor(weights.length / 2);
+			return y.map((_, i) => {
+				let acc = 0;
+				let wAcc = 0;
+				for (let k = -half; k <= half; k++) {
+					const idx = i + k;
+					if (idx >= 0 && idx < y.length) {
+						const w = weights[k + half];
+						acc += y[idx] * w;
+						wAcc += w;
+					}
+				}
+				return wAcc ? acc / wAcc : y[i];
+			});
+		}
+
+		function smoothSeries(y, passes = 2, weights = [1, 2, 3, 2, 1]) {
+			let out = y.slice();
+			for (let p = 0; p < passes; p++) {
+				out = weightedMovingAverage(out, weights);
+			}
+			return out;
+		}
+
 		function buildDenseTrendSeries(trendLineSource, fullLen, trendLine, samplesPerSegment = 100) {
-			const yTrend = [...trendLine.trendData, ...trendLine.extrapolatedData];
+			const yTrendRaw = [...trendLine.trendData, ...trendLine.extrapolatedData];
+
+			// ⭐️ Important: if we trimmed trailing zeros for fitting, the trend array can end earlier
+			// than the number of categories we still display (because we still show those zero days).
+			// Extend the trend to the full displayed length so the line reaches the last label.
+			const safeLast = yTrendRaw.length ? yTrendRaw[yTrendRaw.length - 1] : 0;
+			const missing = Math.max(0, (fullLen || 0) - yTrendRaw.length);
+			const yTrendFull = missing > 0 ? [...yTrendRaw, ...Array(missing).fill(safeLast)] : yTrendRaw;
+
+			// ⭐️ Nou: suavitzat per evitar zig-zag amb petites variacions
+			// - passes: 1..3 (2 és un bon punt dolç)
+			// - weights: pots provar [1,2,3,4,3,2,1] per encara més suavitat
+			const yTrend = smoothSeries(yTrendFull, 1, [1, 2, 1]);
 			const dense = densifyTrendY(yTrend, samplesPerSegment);
 
-			// No need to shift - trend line should align with all data points including trailing zeros
+			// Align slightly to the left so it feels centered on category ticks
 			const CATEGORY_CENTER_SHIFT = -0.35;
-			return dense.map(([x, y]) => [x + CATEGORY_CENTER_SHIFT, y]);
-		}
+			const TREND_FUTURE_OFFSET = 0.14; // shift the whole trend line slightly to the right (towards the future)
+			return dense.map(([x, y]) => [x + CATEGORY_CENTER_SHIFT + TREND_FUTURE_OFFSET, y]);		}
 
 		function compressYAroundMean(points, factor = 0.88) {
 			if (!points?.length) return points;
@@ -2078,7 +2130,7 @@ async function loadChartData(days = currentDays) {
 				30
 			);
 
-			const TREND_Y_COMPRESSION = 0.88;
+			const TREND_Y_COMPRESSION = 0.92;
 			const denseTrend = compressYAroundMean(denseTrendRaw, TREND_Y_COMPRESSION);
 
 			const BASE_OPACITY = 0.40;
@@ -2277,8 +2329,7 @@ async function loadChartData(days = currentDays) {
 				{
 					type: 'value',
 					min: -0.5,
-					max: Math.max(-0.5, extendedLabels.length - 0.5),
-					show: false
+					max: Math.max(-0.5, extendedLabels.length - 0.5 + 0.25),					show: false
 				}
 			],
 
