@@ -164,9 +164,9 @@ async function initializeDashboardPage({ resetState = false } = {}) {
 		chart = null;
 	}
 
-	// Always restore saved time range from localStorage, default to 7 if not found
+	// Always restore saved time range from localStorage, default to 30 if not found
 	const savedTimeRange = localStorage.getItem('dashboardTimeRange');
-	currentDays = savedTimeRange ? parseInt(savedTimeRange, 10) : 7;
+	currentDays = savedTimeRange ? parseInt(savedTimeRange, 10) : 30;
 
 	if (resetState) {
 		isInitialChartLoad = true;
