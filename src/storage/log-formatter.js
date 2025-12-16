@@ -15,24 +15,24 @@
  * @returns {string} JSONL formatted line
  */
 function formatAsJSONL(event) {
-  const logEntry = {
-    '@timestamp': event.timestamp || event.created_at,
-    '@version': '1',
-    event: event.event,
-    message: `Telemetry event: ${event.event}`,
-    fields: {
-      id: event.id,
-      serverId: event.server_id,
-      version: event.version,
-      sessionId: event.session_id,
-      userId: event.user_id,
-      receivedAt: event.received_at,
-      createdAt: event.created_at
-    },
-    data: event.data || {}
-  };
+	const logEntry = {
+		'@timestamp': event.timestamp || event.created_at,
+		'@version': '1',
+		event: event.event,
+		message: `Telemetry event: ${event.event}`,
+		fields: {
+			id: event.id,
+			serverId: event.server_id,
+			version: event.version,
+			sessionId: event.session_id,
+			userId: event.user_id,
+			receivedAt: event.received_at,
+			createdAt: event.created_at
+		},
+		data: event.data || {}
+	};
 
-  return JSON.stringify(logEntry);
+	return JSON.stringify(logEntry);
 }
 
 /**
@@ -42,10 +42,10 @@ function formatAsJSONL(event) {
  * @returns {string} Formatted logs as JSONL string
  */
 function formatEvents(events) {
-  return events.map(event => formatAsJSONL(event)).join('\n');
+	return events.map(event => formatAsJSONL(event)).join('\n');
 }
 
 module.exports = {
-  formatAsJSONL,
-  formatEvents
+	formatAsJSONL,
+	formatEvents
 };

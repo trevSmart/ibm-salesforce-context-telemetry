@@ -78,6 +78,26 @@ async function init() {
 				created_at TEXT DEFAULT CURRENT_TIMESTAMP
 			);
 
+			CREATE TABLE IF NOT EXISTS people (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				name TEXT NOT NULL,
+				email TEXT,
+				notes TEXT,
+				created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+				updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+			);
+
+			CREATE TABLE IF NOT EXISTS person_usernames (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				person_id INTEGER NOT NULL,
+				username TEXT NOT NULL,
+				org_id TEXT,
+				is_primary BOOLEAN DEFAULT FALSE,
+				created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+				FOREIGN KEY (person_id) REFERENCES people(id) ON DELETE CASCADE,
+				UNIQUE(username, org_id)
+			);
+
 			CREATE TABLE IF NOT EXISTS settings (
 				key TEXT PRIMARY KEY,
 				value TEXT NOT NULL,
@@ -95,6 +115,10 @@ async function init() {
 			CREATE INDEX IF NOT EXISTS idx_username ON users(username);
 			CREATE INDEX IF NOT EXISTS idx_event_created_at ON telemetry_events(event, created_at);
 			CREATE INDEX IF NOT EXISTS idx_user_created_at ON telemetry_events(user_id, created_at);
+			CREATE INDEX IF NOT EXISTS idx_person_name ON people(name);
+			CREATE INDEX IF NOT EXISTS idx_person_email ON people(email);
+			CREATE INDEX IF NOT EXISTS idx_person_username ON person_usernames(person_id, username);
+			CREATE INDEX IF NOT EXISTS idx_username_person ON person_usernames(username);
 		`);
 
 		console.log(`SQLite database initialized at: ${dbPath}`);
@@ -147,6 +171,25 @@ async function init() {
 				created_at TIMESTAMPTZ DEFAULT NOW()
 			);
 
+			CREATE TABLE IF NOT EXISTS people (
+				id SERIAL PRIMARY KEY,
+				name TEXT NOT NULL,
+				email TEXT,
+				notes TEXT,
+				created_at TIMESTAMPTZ DEFAULT NOW(),
+				updated_at TIMESTAMPTZ DEFAULT NOW()
+			);
+
+			CREATE TABLE IF NOT EXISTS person_usernames (
+				id SERIAL PRIMARY KEY,
+				person_id INTEGER NOT NULL REFERENCES people(id) ON DELETE CASCADE,
+				username TEXT NOT NULL,
+				org_id TEXT,
+				is_primary BOOLEAN DEFAULT FALSE,
+				created_at TIMESTAMPTZ DEFAULT NOW(),
+				UNIQUE(username, org_id)
+			);
+
 			CREATE TABLE IF NOT EXISTS settings (
 				key TEXT PRIMARY KEY,
 				value TEXT NOT NULL,
@@ -164,6 +207,10 @@ async function init() {
 			CREATE INDEX IF NOT EXISTS idx_username ON users(username);
 			CREATE INDEX IF NOT EXISTS idx_event_created_at ON telemetry_events(event, created_at);
 			CREATE INDEX IF NOT EXISTS idx_user_created_at ON telemetry_events(user_id, created_at);
+			CREATE INDEX IF NOT EXISTS idx_person_name ON people(name);
+			CREATE INDEX IF NOT EXISTS idx_person_email ON people(email);
+			CREATE INDEX IF NOT EXISTS idx_person_username ON person_usernames(person_id, username);
+			CREATE INDEX IF NOT EXISTS idx_username_person ON person_usernames(username);
 		`);
 
 		db = pool;
@@ -1234,22 +1281,52 @@ async function deleteEventsBySession(sessionId) {
 		const stmt = db.prepare('DELETE FROM telemetry_events WHERE session_id = ?');
 		const result = stmt.run(sessionId);
 		if (result.changes > 0) {
-			await Promise.all([
-				impactedUsers.length ? recomputeUserEventStats(impactedUsers) : Promise.resolve(),
-				impactedOrgs.length ? recomputeOrgEventStats(impactedOrgs) : Promise.resolve()
-			]);
+			try {
+				await Promise.all([
+					impactedUsers.length ? recomputeUserEventStats(impactedUsers) : Promise.resolve(),
+					impactedOrgs.length ? recomputeOrgEventStats(impactedOrgs) : Promise.resolve()
+				]);
+			} catch (recomputeError) {
+				console.error('Error recomputing stats after session deletion:', recomputeError);
+				// Don't fail the deletion if recomputation fails
+			}
 		}
 		return result.changes;
 	} else if (dbType === 'postgresql') {
 		const result = await db.query('DELETE FROM telemetry_events WHERE session_id = $1', [sessionId]);
 		if (result.rowCount > 0) {
-			await Promise.all([
-				impactedUsers.length ? recomputeUserEventStats(impactedUsers) : Promise.resolve(),
-				impactedOrgs.length ? recomputeOrgEventStats(impactedOrgs) : Promise.resolve()
-			]);
+			try {
+				await Promise.all([
+					impactedUsers.length ? recomputeUserEventStats(impactedUsers) : Promise.resolve(),
+					impactedOrgs.length ? recomputeOrgEventStats(impactedOrgs) : Promise.resolve()
+				]);
+			} catch (recomputeError) {
+				console.error('Error recomputing stats after session deletion:', recomputeError);
+				// Don't fail the deletion if recomputation fails
+			}
 		}
 		return result.rowCount;
 	}
+}
+
+async function checkSessionExists(sessionId) {
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
+
+	if (!sessionId) {
+		return false;
+	}
+
+	if (dbType === 'sqlite') {
+		const stmt = db.prepare('SELECT 1 FROM telemetry_events WHERE session_id = ? LIMIT 1');
+		const result = stmt.get(sessionId);
+		return !!result;
+	} else if (dbType === 'postgresql') {
+		const result = await db.query('SELECT 1 FROM telemetry_events WHERE session_id = $1 LIMIT 1', [sessionId]);
+		return result.rows.length > 0;
+	}
+	return false;
 }
 
 /**
@@ -1705,6 +1782,134 @@ async function getAllUsers() {
 	} else if (dbType === 'postgresql') {
 		const result = await db.query('SELECT id, username, role, created_at, last_login FROM users ORDER BY username');
 		return result.rows;
+	}
+}
+
+/**
+ * Create a new person
+ * @param {Object} personData - Person data
+ * @param {string} personData.name - Person's full name
+ * @param {string} personData.email - Person's email (optional)
+ * @param {string} personData.notes - Additional notes (optional)
+ * @returns {Promise<Object>} Created person with id
+ */
+async function createPerson(personData) {
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
+
+	const { name, email, notes } = personData;
+
+	if (dbType === 'sqlite') {
+		const stmt = db.prepare(`
+			INSERT INTO people (name, email, notes)
+			VALUES (?, ?, ?)
+		`);
+		const result = stmt.run(name, email || null, notes || null);
+		return { id: result.lastInsertRowid, name, email, notes };
+	} else if (dbType === 'postgresql') {
+		const result = await db.query(`
+			INSERT INTO people (name, email, notes)
+			VALUES ($1, $2, $3)
+			RETURNING id
+		`, [name, email || null, notes || null]);
+		return { id: result.rows[0].id, name, email, notes };
+	}
+}
+
+/**
+ * Get all people
+ * @returns {Promise<Array>} List of all people
+ */
+async function getAllPeople() {
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
+
+	if (dbType === 'sqlite') {
+		const stmt = db.prepare('SELECT id, name, email, notes, created_at, updated_at FROM people ORDER BY name');
+		return stmt.all();
+	} else if (dbType === 'postgresql') {
+		const result = await db.query('SELECT id, name, email, notes, created_at, updated_at FROM people ORDER BY name');
+		return result.rows;
+	}
+}
+
+/**
+ * Get a person by ID
+ * @param {number} personId - Person ID
+ * @returns {Promise<Object|null>} Person data or null if not found
+ */
+async function getPersonById(personId) {
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
+
+	if (dbType === 'sqlite') {
+		const stmt = db.prepare('SELECT id, name, email, notes, created_at, updated_at FROM people WHERE id = ?');
+		return stmt.get(personId);
+	} else if (dbType === 'postgresql') {
+		const result = await db.query('SELECT id, name, email, notes, created_at, updated_at FROM people WHERE id = $1', [personId]);
+		return result.rows[0] || null;
+	}
+}
+
+/**
+ * Get usernames associated with a person
+ * @param {number} personId - Person ID
+ * @returns {Promise<Array>} List of usernames for this person
+ */
+async function getPersonUsernames(personId) {
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
+
+	if (dbType === 'sqlite') {
+		const stmt = db.prepare(`
+			SELECT id, username, org_id, is_primary, created_at
+			FROM person_usernames
+			WHERE person_id = ?
+			ORDER BY is_primary DESC, username
+		`);
+		return stmt.all(personId);
+	} else if (dbType === 'postgresql') {
+		const result = await db.query(`
+			SELECT id, username, org_id, is_primary, created_at
+			FROM person_usernames
+			WHERE person_id = $1
+			ORDER BY is_primary DESC, username
+		`, [personId]);
+		return result.rows;
+	}
+}
+
+/**
+ * Add a username to a person
+ * @param {number} personId - Person ID
+ * @param {string} username - Username to add
+ * @param {string} orgId - Organization ID (optional)
+ * @param {boolean} isPrimary - Whether this is the primary username (optional)
+ * @returns {Promise<Object>} Created username association
+ */
+async function addPersonUsername(personId, username, orgId = null, isPrimary = false) {
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
+
+	if (dbType === 'sqlite') {
+		const stmt = db.prepare(`
+			INSERT INTO person_usernames (person_id, username, org_id, is_primary)
+			VALUES (?, ?, ?, ?)
+		`);
+		const result = stmt.run(personId, username, orgId, isPrimary ? 1 : 0);
+		return { id: result.lastInsertRowid, person_id: personId, username, org_id: orgId, is_primary: isPrimary };
+	} else if (dbType === 'postgresql') {
+		const result = await db.query(`
+			INSERT INTO person_usernames (person_id, username, org_id, is_primary)
+			VALUES ($1, $2, $3, $4)
+			RETURNING id
+		`, [personId, username, orgId, isPrimary]);
+		return { id: result.rows[0].id, person_id: personId, username, org_id: orgId, is_primary: isPrimary };
 	}
 }
 
@@ -4389,6 +4594,7 @@ module.exports = {
 	deleteEvent,
 	deleteAllEvents,
 	deleteEventsBySession,
+	checkSessionExists,
 	getDatabaseSize,
 	close,
 	DEFAULT_MAX_DB_SIZE,
@@ -4436,6 +4642,12 @@ module.exports = {
 	rotateRememberToken,
 	cleanupExpiredRememberTokens,
 	getActiveRememberTokensCount,
+	// People management
+	createPerson,
+	getAllPeople,
+	getPersonById,
+	getPersonUsernames,
+	addPersonUsername,
 	// Utilities
 	getNormalizedUserId
 };

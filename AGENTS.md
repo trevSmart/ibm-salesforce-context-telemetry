@@ -7,6 +7,8 @@ This document provides instructions for AI agents working with the IBM Salesforc
 The *IBM Salesforce Context Telemetry Server* is a backend service that collects telemetry data from *IBM Salesforce Context MCP server* instances. It provides:
 - REST API endpoints for receiving telemetry events and monitoring server health
 - A web-based UI for viewing and analyzing telemetry data
+- People management system for grouping usernames across organizations
+- Advanced analytics capabilities with user-centric data aggregation
 
 ## UI
 
@@ -20,6 +22,7 @@ La UI està construïda amb Tailwind CSS amb una capa lleugera de personalitzaci
 	- Dashboard
 	- Logs
 	- Teams
+	- People
 - Controls:
 	- Search input
 	- Refresh button
@@ -48,6 +51,20 @@ La UI està construïda amb Tailwind CSS amb una capa lleugera de personalitzaci
 - #### Teams (`/teams`)
     Same top navigation as dashboard, breadcrumb back link, and Teams header. Content is loaded by `teams.js`, refreshed via the top refresh button; notifications toggle and user menu remain available.
 
+- #### People (`/people`)
+    People management interface for grouping usernames from different organizations under single physical persons. Shows a form to add new people and a list of existing people with their associated usernames. Content is loaded by `people.js`, refreshed via the top refresh button. The old `/users` URL redirects to `/people` for backward compatibility.
+
+
+## Data Model and Nomenclature
+
+### User Types Clarification
+The system distinguishes between different types of users:
+
+- **`system_users`** (authentication table): System accounts for accessing the telemetry UI with different roles (basic, advanced, administrator)
+- **`people`** (telemetry data): Physical persons who generate telemetry events and may have multiple usernames across different organizations
+- **`person_usernames`** (relationship table): Links between usernames found in events and physical persons
+
+This distinction allows grouping telemetry data by actual people rather than by technical account names.
 
 ## Key Endpoints
 
@@ -69,6 +86,30 @@ La UI està construïda amb Tailwind CSS amb una capa lleugera de personalitzaci
 **GET `/`**
 - Root endpoint showing server status
 - Returns confirmation message when server is running
+
+### People Management (User Grouping)
+
+**GET `/api/people`**
+- Returns list of all physical people in the system
+- Requires administrator role
+
+**POST `/api/people`**
+- Creates a new physical person
+- Body: `{ "name": "Person Name", "email": "optional@email.com" }`
+- Requires administrator role
+
+**GET `/api/people/:id/usernames`**
+- Returns all usernames associated with a specific person
+- Requires administrator role
+
+**POST `/api/people/:id/usernames`**
+- Associates a username with a person
+- Body: `{ "username": "john.doe", "org_id": "optional-org-id" }`
+- Requires administrator role
+
+**GET `/api/events?groupBy=person`**
+- Returns events grouped by physical person instead of username
+- Useful for analytics by actual users rather than accounts
 
 ## Development Guidelines
 
@@ -99,6 +140,17 @@ Key `.env` variables:
 - `DATABASE_URL` / `DATABASE_SSL`: Only used when `DB_TYPE=postgresql`.
 - `TELEMETRY_DISABLED`: Optional flag that temporarily disables ingestion (set to `false` in production).
 
+### Database Tables
+
+| Table | Purpose | Key Fields |
+|-------|---------|------------|
+| `telemetry_events` | Raw telemetry events | `id`, `event`, `user_id`, `server_id`, `timestamp` |
+| `system_users` | System authentication accounts | `id`, `username`, `password_hash`, `role` |
+| `people` | Physical persons for telemetry grouping | `id`, `name`, `email`, `notes` |
+| `person_usernames` | Username-to-person relationships | `person_id`, `username`, `org_id`, `is_primary` |
+| `orgs` | Organization/company information | `server_id`, `company_name` |
+| `settings` | Application configuration | `key`, `value` |
+
 Always keep the `.env` comments aligned with the current deployment strategy so agents and contributors know which configuration to pick up.
 
 ### Security Considerations
@@ -124,7 +176,11 @@ The IBM Salesforce Context MCP server can be configured to send telemetry to thi
 2. Ensuring the MCP server has network access to the telemetry server
 3. Verifying the telemetry format matches expected schema
 
-## Testing
+## Development and Skills System
+
+The project includes a skills system for enhanced AI agent capabilities. Available skills are documented at the end of this file and can be invoked during development tasks.
+
+### Testing
 
 When testing the telemetry server:
 
@@ -132,27 +188,37 @@ When testing the telemetry server:
 - Verify error handling for malformed requests
 - Test health endpoints for monitoring integration
 - Validate response times under load
+- Test user management and people grouping functionality
 
 ## Deployment
 
 The server is designed to run on platforms like Render, Heroku, or any Node.js hosting service:
 
-- Set the `PORT` environment variable if needed
+- Set the `PORT` environment variable if needed (defaults to 3100)
 - Ensure the service can handle concurrent requests
-- Configure appropriate resource limits
-- Set up monitoring and logging
+- Configure appropriate resource limits based on expected telemetry volume
+- Set up monitoring and logging for both system health and data ingestion
+- Database migrations run automatically on startup for new features
+
+## Recent Features
+
+### People Management System (v1.0)
+- **Physical Person Tracking**: Group multiple usernames from different organizations under single people
+- **Enhanced Analytics**: View telemetry data grouped by actual users instead of technical accounts
+- **User Management UI**: Dedicated interface for managing people and their username associations
+- **Database Relations**: New `people` and `person_usernames` tables with proper foreign keys
 
 ## Future Enhancements
 
 Potential improvements to consider:
 
-- Real-time analytics dashboard
-- Data aggregation and reporting
-- Anonymization and privacy-preserving techniques
-- Support for multiple telemetry formats
-- Webhook notifications for specific events
-- Rate limiting and throttling
-- Authentication and authorization
+- Real-time analytics dashboard with live updates
+- Advanced data aggregation and automated reporting
+- Enhanced anonymization and privacy-preserving techniques
+- Support for additional telemetry formats beyond current JSON schema
+- Webhook notifications for specific events or thresholds
+- Advanced rate limiting and request throttling
+- Multi-factor authentication for admin accounts
 
 <skills_system priority="1">
 

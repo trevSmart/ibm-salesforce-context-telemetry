@@ -14,20 +14,20 @@ let csrfToken = null;
  * @returns {Promise<string|null>} CSRF token or null if unavailable
  */
 async function getCsrfToken() {
-  if (csrfToken) {
-    return csrfToken;
-  }
-  try {
-    const response = await fetch('/api/auth/status', {
-      credentials: 'include'
-    });
-    const data = await response.json();
-    csrfToken = data.csrfToken;
-    return csrfToken;
-  } catch (error) {
-    console.error('Failed to get CSRF token:', error);
-    return null;
-  }
+	if (csrfToken) {
+		return csrfToken;
+	}
+	try {
+		const response = await fetch('/api/auth/status', {
+			credentials: 'include'
+		});
+		const data = await response.json();
+		csrfToken = data.csrfToken;
+		return csrfToken;
+	} catch (error) {
+		console.error('Failed to get CSRF token:', error);
+		return null;
+	}
 }
 
 /**
@@ -35,7 +35,7 @@ async function getCsrfToken() {
  * @param {string} token - CSRF token to store
  */
 function setCsrfToken(token) {
-  csrfToken = token;
+	csrfToken = token;
 }
 
 /**
@@ -44,23 +44,23 @@ function setCsrfToken(token) {
  * @returns {Object} Headers object with CSRF token
  */
 function getRequestHeaders(includeJson = true) {
-  const headers = {};
-  if (includeJson) {
-    headers['Content-Type'] = 'application/json';
-  }
+	const headers = {};
+	if (includeJson) {
+		headers['Content-Type'] = 'application/json';
+	}
 
-  // Fall back to cookie-stored token if the script hasn't cached it yet
-  if (!csrfToken) {
-    const cookieToken = getCsrfTokenFromCookie();
-    if (cookieToken) {
-      csrfToken = cookieToken;
-    }
-  }
+	// Fall back to cookie-stored token if the script hasn't cached it yet
+	if (!csrfToken) {
+		const cookieToken = getCsrfTokenFromCookie();
+		if (cookieToken) {
+			csrfToken = cookieToken;
+		}
+	}
 
-  if (csrfToken) {
-    headers['X-CSRF-Token'] = csrfToken;
-  }
-  return headers;
+	if (csrfToken) {
+		headers['X-CSRF-Token'] = csrfToken;
+	}
+	return headers;
 }
 
 /**
@@ -68,25 +68,25 @@ function getRequestHeaders(includeJson = true) {
  * @returns {string|null} CSRF token from cookie or null
  */
 function getCsrfTokenFromCookie() {
-  try {
-    const cookies = document.cookie.split(';');
-    for (let cookie of cookies) {
-      const [name, value] = cookie.trim().split('=');
-      if (name === 'csrf-token') {
-        return decodeURIComponent(value);
-      }
-    }
-    return null;
-  } catch (error) {
-    console.error('Failed to get CSRF token from cookie:', error);
-    return null;
-  }
+	try {
+		const cookies = document.cookie.split(';');
+		for (let cookie of cookies) {
+			const [name, value] = cookie.trim().split('=');
+			if (name === 'csrf-token') {
+				return decodeURIComponent(value);
+			}
+		}
+		return null;
+	} catch (error) {
+		console.error('Failed to get CSRF token from cookie:', error);
+		return null;
+	}
 }
 
 // Export functions to global scope for use in other scripts
 if (typeof window !== 'undefined') {
-  window.getCsrfToken = getCsrfToken;
-  window.setCsrfToken = setCsrfToken;
-  window.getRequestHeaders = getRequestHeaders;
-  window.getCsrfTokenFromCookie = getCsrfTokenFromCookie;
+	window.getCsrfToken = getCsrfToken;
+	window.setCsrfToken = setCsrfToken;
+	window.getRequestHeaders = getRequestHeaders;
+	window.getCsrfTokenFromCookie = getCsrfTokenFromCookie;
 }

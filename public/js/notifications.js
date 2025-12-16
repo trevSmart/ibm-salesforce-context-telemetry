@@ -5,17 +5,17 @@
 const NOTIFICATION_DEFAULT_DURATION_MS = 4500;
 
 const NOTIFICATION_ICONS = {
-  success: `
+	success: `
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" class="ct-toast-icon ct-toast-icon-success">
       <path d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" stroke-linecap="round" stroke-linejoin="round" />
     </svg>
   `,
-  error: `
+	error: `
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" class="ct-toast-icon ct-toast-icon-error">
       <path d="M12 9v3.75m0 3v.008M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" stroke-linecap="round" stroke-linejoin="round" />
     </svg>
   `,
-  info: `
+	info: `
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" class="ct-toast-icon ct-toast-icon-info">
       <path d="M12 9h.008v.008H12V9Zm0 3v3m9-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" stroke-linecap="round" stroke-linejoin="round" />
     </svg>
@@ -23,10 +23,10 @@ const NOTIFICATION_ICONS = {
 };
 
 function ensureNotificationStyles() {
-  if (document.getElementById('ct-toast-styles')) return;
-  const style = document.createElement('style');
-  style.id = 'ct-toast-styles';
-  style.textContent = `
+	if (document.getElementById('ct-toast-styles')) return;
+	const style = document.createElement('style');
+	style.id = 'ct-toast-styles';
+	style.textContent = `
     .ct-toast-region {
       pointer-events: none;
       position: fixed;
@@ -154,43 +154,43 @@ function ensureNotificationStyles() {
       background: rgba(255,255,255,0.06);
     }
   `;
-  document.head.appendChild(style);
+	document.head.appendChild(style);
 }
 
 function ensureNotificationRegion() {
-  let region = document.getElementById('ct-toast-region');
-  let stack = document.getElementById('ct-toast-stack');
+	let region = document.getElementById('ct-toast-region');
+	let stack = document.getElementById('ct-toast-stack');
 
-  if (!region) {
-    region = document.createElement('div');
-    region.id = 'ct-toast-region';
-    region.className = 'ct-toast-region pointer-events-none fixed inset-0 flex items-end px-4 py-6 sm:items-start sm:p-6';
-    region.setAttribute('aria-live', 'assertive');
-    region.setAttribute('aria-atomic', 'true');
+	if (!region) {
+		region = document.createElement('div');
+		region.id = 'ct-toast-region';
+		region.className = 'ct-toast-region pointer-events-none fixed inset-0 flex items-end px-4 py-6 sm:items-start sm:p-6';
+		region.setAttribute('aria-live', 'assertive');
+		region.setAttribute('aria-atomic', 'true');
 
-    stack = document.createElement('div');
-    stack.id = 'ct-toast-stack';
-    stack.className = 'ct-toast-stack flex w-full flex-col items-center space-y-4 sm:items-end';
+		stack = document.createElement('div');
+		stack.id = 'ct-toast-stack';
+		stack.className = 'ct-toast-stack flex w-full flex-col items-center space-y-4 sm:items-end';
 
-    region.appendChild(stack);
-    document.body.appendChild(region);
-  }
+		region.appendChild(stack);
+		document.body.appendChild(region);
+	}
 
-  return { region, stack };
+	return { region, stack };
 }
 
 function buildIcon(type) {
-  return NOTIFICATION_ICONS[type] || NOTIFICATION_ICONS.info;
+	return NOTIFICATION_ICONS[type] || NOTIFICATION_ICONS.info;
 }
 
 function renderToast(title, type, description) {
-  const { stack } = ensureNotificationRegion();
+	const { stack } = ensureNotificationRegion();
 
-  const panel = document.createElement('div');
-  panel.className = 'ct-toast-panel pointer-events-auto w-full max-w-sm translate-y-0 transform rounded-lg bg-white opacity-100 shadow-lg outline-1 outline-black/5 transition duration-300 ease-out sm:translate-x-0';
-  panel.setAttribute('role', 'status');
+	const panel = document.createElement('div');
+	panel.className = 'ct-toast-panel pointer-events-auto w-full max-w-sm translate-y-0 transform rounded-lg bg-white opacity-100 shadow-lg outline-1 outline-black/5 transition duration-300 ease-out sm:translate-x-0';
+	panel.setAttribute('role', 'status');
 
-  panel.innerHTML = `
+	panel.innerHTML = `
     <div class="ct-toast-body p-4">
       <div class="ct-toast-icon-wrapper">
         ${buildIcon(type)}
@@ -209,46 +209,46 @@ function renderToast(title, type, description) {
     </div>
   `;
 
-  stack.appendChild(panel);
+	stack.appendChild(panel);
 
-  requestAnimationFrame(() => {
-    panel.classList.add('ct-visible');
-  });
+	requestAnimationFrame(() => {
+		panel.classList.add('ct-visible');
+	});
 
-  const removePanel = () => {
-    panel.classList.remove('ct-visible');
-    panel.classList.add('ct-leaving');
-    const cleanup = () => panel.remove();
-    panel.addEventListener('transitionend', cleanup, { once: true });
-    setTimeout(cleanup, 350);
-  };
+	const removePanel = () => {
+		panel.classList.remove('ct-visible');
+		panel.classList.add('ct-leaving');
+		const cleanup = () => panel.remove();
+		panel.addEventListener('transitionend', cleanup, { once: true });
+		setTimeout(cleanup, 350);
+	};
 
-  const closeButton = panel.querySelector('.ct-toast-close');
-  if (closeButton) {
-    closeButton.addEventListener('click', removePanel);
-  }
+	const closeButton = panel.querySelector('.ct-toast-close');
+	if (closeButton) {
+		closeButton.addEventListener('click', removePanel);
+	}
 
-  return { panel, remove: removePanel };
+	return { panel, remove: removePanel };
 }
 
 export function showToast(title, type = 'info', description) {
-  ensureNotificationStyles();
-  const resolvedTitle = title || 'Notification';
-  const resolvedDescription = typeof description === 'string' && description.trim() !== ''
-    ? description
-    : resolvedTitle;
-  const duration = NOTIFICATION_DEFAULT_DURATION_MS;
+	ensureNotificationStyles();
+	const resolvedTitle = title || 'Notification';
+	const resolvedDescription = typeof description === 'string' && description.trim() !== ''
+		? description
+		: resolvedTitle;
+	const duration = NOTIFICATION_DEFAULT_DURATION_MS;
 
-  const { remove } = renderToast(resolvedTitle, type, resolvedDescription);
+	const { remove } = renderToast(resolvedTitle, type, resolvedDescription);
 
-  if (duration > 0) {
-    setTimeout(remove, duration);
-  }
+	if (duration > 0) {
+		setTimeout(remove, duration);
+	}
 
-  return { dismiss: remove };
+	return { dismiss: remove };
 }
 
 // Expose globally for non-module scripts
 if (typeof window !== 'undefined') {
-  window.showToast = showToast;
+	window.showToast = showToast;
 }
