@@ -2052,27 +2052,15 @@ app.delete('/api/events', auth.requireAuth, auth.requireRole('advanced'), delete
 		const { sessionId } = req.query;
 
 		if (sessionId) {
-			console.log(`Attempting to delete session: ${sessionId}`);
 			// Check if session exists first
-			try {
-				const sessionExists = await db.checkSessionExists(sessionId);
-				console.log(`Session exists check result: ${sessionExists}`);
-				if (!sessionExists) {
-					console.log(`Session ${sessionId} not found, returning 404`);
-					return res.status(404).json({
-						status: 'error',
-						message: `Session ${sessionId} not found`
-					});
-				}
-			} catch (checkError) {
-				console.error('Error checking if session exists:', checkError);
-				return res.status(500).json({
+			const sessionExists = await db.checkSessionExists(sessionId);
+			if (!sessionExists) {
+				return res.status(404).json({
 					status: 'error',
-					message: 'Error checking session existence'
+					message: `Session ${sessionId} not found`
 				});
 			}
 
-			console.log(`Deleting events for session: ${sessionId}`);
 			const deletedCount = await db.deleteEventsBySession(sessionId);
 			statsCache.clear();
 			sessionsCache.clear();

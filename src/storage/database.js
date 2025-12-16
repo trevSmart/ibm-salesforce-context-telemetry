@@ -1310,36 +1310,23 @@ async function deleteEventsBySession(sessionId) {
 }
 
 async function checkSessionExists(sessionId) {
-	console.log(`checkSessionExists called with sessionId: ${sessionId}`);
 	if (!db) {
-		console.error('Database not initialized in checkSessionExists');
 		throw new Error('Database not initialized. Call init() first.');
 	}
 
 	if (!sessionId) {
-		console.log('sessionId is falsy, returning false');
 		return false;
 	}
 
-	try {
-		if (dbType === 'sqlite') {
-			console.log('Using SQLite for session check');
-			const stmt = db.prepare('SELECT 1 FROM telemetry_events WHERE session_id = ? LIMIT 1');
-			const result = stmt.get(sessionId);
-			console.log(`SQLite result: ${!!result}`);
-			return !!result;
-		} else if (dbType === 'postgresql') {
-			console.log('Using PostgreSQL for session check');
-			const result = await db.query('SELECT 1 FROM telemetry_events WHERE session_id = $1 LIMIT 1', [sessionId]);
-			console.log(`PostgreSQL result: ${result.rows.length > 0}`);
-			return result.rows.length > 0;
-		}
-		console.log('Unknown dbType, returning false');
-		return false;
-	} catch (error) {
-		console.error('Error in checkSessionExists:', error);
-		throw error;
+	if (dbType === 'sqlite') {
+		const stmt = db.prepare('SELECT 1 FROM telemetry_events WHERE session_id = ? LIMIT 1');
+		const result = stmt.get(sessionId);
+		return !!result;
+	} else if (dbType === 'postgresql') {
+		const result = await db.query('SELECT 1 FROM telemetry_events WHERE session_id = $1 LIMIT 1', [sessionId]);
+		return result.rows.length > 0;
 	}
+	return false;
 }
 
 /**
