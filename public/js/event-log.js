@@ -3885,6 +3885,11 @@ if (window.__EVENT_LOG_LOADED__) {
 	}
 
 	function formatDescription(event) {
+		// If event doesn't have data field (payload not loaded), return special marker
+		if (!event.hasOwnProperty('data')) {
+			return '__VIEW_PAYLOAD_BUTTON__';
+		}
+
 		// Reconstruct the full payload as it was received
 		const payload = {
 			event: event.event,
@@ -5993,6 +5998,13 @@ if (window.__EVENT_LOG_LOADED__) {
 		const tbody = document.getElementById('blueprintTableBody');
 		if (!tbody) return;
 
+		const showUserColumn = selectedSession === 'all';
+		const fallbackColspan = showUserColumn ? 9 : 8;
+		const userHeader = document.querySelector('th.user-column');
+		if (userHeader) {
+			userHeader.style.display = showUserColumn ? '' : 'none';
+		}
+
 		try {
 			// Fetch recent events (limit to 10 for the preview table)
 			const params = new URLSearchParams({
@@ -6006,7 +6018,7 @@ if (window.__EVENT_LOG_LOADED__) {
 			});
 			const validResponse = await handleApiResponse(response);
 			if (!validResponse) {
-				tbody.innerHTML = '<tr><td colspan="8" class="py-8 text-center text-sm text-gray-500 dark:text-gray-400">Failed to load events</td></tr>';
+				tbody.innerHTML = `<tr><td colspan="${fallbackColspan}" class="py-8 text-center text-sm text-gray-500 dark:text-gray-400">Failed to load events</td></tr>`;
 				return;
 			}
 
@@ -6014,7 +6026,7 @@ if (window.__EVENT_LOG_LOADED__) {
 			const events = Array.isArray(data.events) ? data.events : [];
 
 			if (events.length === 0) {
-				tbody.innerHTML = '<tr><td colspan="8" class="py-8 text-center text-sm text-gray-500 dark:text-gray-400">No events found</td></tr>';
+				tbody.innerHTML = `<tr><td colspan="${fallbackColspan}" class="py-8 text-center text-sm text-gray-500 dark:text-gray-400">No events found</td></tr>`;
 				return;
 			}
 
@@ -6077,23 +6089,23 @@ if (window.__EVENT_LOG_LOADED__) {
 					eventTypeBadge = `<span class="inline-flex items-center rounded-md bg-gray-50 px-2 py-1 text-xs font-medium text-gray-700 ring-1 ring-inset ring-gray-600/20 dark:bg-gray-400/10 dark:text-gray-400 dark:ring-gray-400/20">${escapeHtml(event.event)}</span>`;
 				}
 
+				const userCell = showUserColumn
+					? `<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">${escapeHtml(userLabel || '—')}</td>`
+					: '';
+
 				row.innerHTML = `
-          <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 dark:text-white sm:pl-0">${escapeHtml(timeStr)}</td>
-          <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">${escapeHtml(userLabel || '—')}</td>
-          <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">${eventTypeBadge}</td>
-          <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">${escapeHtml(toolName)}</td>
-          <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">${escapeHtml(clientName || '—')}</td>
-          <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400 blueprint-payload">${escapeHtml(payloadPreview)}</td>
+          <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 dark:text-white sm:pl-0 text-center">—</td>
           <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">${statusBadge}</td>
+          <td class="whitespace-nowrap px-3 py-4 text-sm font-medium text-gray-900 dark:text-white">${escapeHtml(timeStr)}</td>
+          ${userCell}
+          <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">${eventTypeBadge}</td>
+          <td class="hidden md:table-cell whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">${escapeHtml(clientName || '—')}</td>
+          <td class="hidden lg:table-cell whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">${escapeHtml(toolName)}</td>
+          <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400 blueprint-payload" title="${payloadPreview === '__VIEW_PAYLOAD_BUTTON__' ? 'Click to view payload' : escapeHtml(payloadPreview)}">${payloadPreview === '__VIEW_PAYLOAD_BUTTON__' ? `<button onclick="loadEventPayload(${event.id})" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline text-xs">View Payload</button>` : escapeHtml(payloadPreview)}</td>
           <td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-0">
             <button onclick="scrollToEvent('${event.id}')" class="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300">View<span class="sr-only">, Event ${event.id}</span></button>
           </td>
         `;
-
-				const payloadCell = row.querySelector('.blueprint-payload');
-				if (payloadCell) {
-					payloadCell.textContent = payloadPreview;
-				}
 
 				tbody.appendChild(row);
 			});
@@ -6125,10 +6137,95 @@ if (window.__EVENT_LOG_LOADED__) {
 	window.openSettingsModal = openSettingsModal;
 	window.toggleNotificationMode = toggleNotificationMode;
 	window.toggleSelectionMode = toggleSelectionMode;
+	// Load and display event payload in a modal
+	async function loadEventPayload(eventId) {
+		try {
+			const response = await fetch(`/api/events/${eventId}/payload`);
+			if (!response.ok) {
+				throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+			}
+			const data = await response.json();
+
+			// Show payload in modal
+			showPayloadModal(data.payload, eventId);
+		} catch (error) {
+			console.error('Error loading event payload:', error);
+			alert('Error loading event payload: ' + error.message);
+		}
+	}
+
+	// Show payload modal
+	function showPayloadModal(payload, eventId) {
+		// Remove existing payload modal if any
+		const existingModal = document.querySelector('.payload-modal-backdrop');
+		if (existingModal) {
+			existingModal.remove();
+		}
+
+		// Create backdrop
+		const backdrop = document.createElement('div');
+		backdrop.className = 'payload-modal-backdrop fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50';
+
+		// Create modal
+		const modal = document.createElement('div');
+		modal.className = 'payload-modal relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white dark:bg-gray-800';
+
+		// Format payload as pretty JSON
+		const formattedPayload = JSON.stringify(payload, null, 2);
+
+		modal.innerHTML = `
+			<div class="mt-3">
+				<div class="flex items-center justify-between mb-4">
+					<h3 class="text-lg font-medium text-gray-900 dark:text-white">Event Payload - ID ${eventId}</h3>
+					<button onclick="closePayloadModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+						<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+						</svg>
+					</button>
+				</div>
+				<div class="mt-2 px-7 py-3">
+					<pre class="bg-gray-100 dark:bg-gray-700 p-4 rounded text-sm overflow-x-auto max-h-96 overflow-y-auto">${escapeHtml(formattedPayload)}</pre>
+				</div>
+				<div class="flex items-center justify-end px-7 py-3 bg-gray-50 dark:bg-gray-700 rounded-b-md">
+					<button onclick="closePayloadModal()" class="px-4 py-2 bg-blue-500 text-white text-base font-medium rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-300">
+						Close
+					</button>
+				</div>
+			</div>
+		`;
+
+		backdrop.appendChild(modal);
+		document.body.appendChild(backdrop);
+
+		// Close modal when clicking backdrop
+		backdrop.addEventListener('click', function(e) {
+			if (e.target === backdrop) {
+				closePayloadModal();
+			}
+		});
+
+		// Close modal on Escape key
+		document.addEventListener('keydown', function(e) {
+			if (e.key === 'Escape') {
+				closePayloadModal();
+			}
+		});
+	}
+
+	// Close payload modal
+	function closePayloadModal() {
+		const modal = document.querySelector('.payload-modal-backdrop');
+		if (modal) {
+			modal.remove();
+		}
+	}
+
 	window.confirmDeleteSelectedSessions = confirmDeleteSelectedSessions;
 	window.toggleMobileSidebar = toggleMobileSidebar;
 	window.navigateToPreviousDay = navigateToPreviousDay;
 	window.navigateToNextDay = navigateToNextDay;
 	window.scrollToEvent = scrollToEvent;
+	window.loadEventPayload = loadEventPayload;
+	window.closePayloadModal = closePayloadModal;
 
 } // end guard to avoid duplicate execution

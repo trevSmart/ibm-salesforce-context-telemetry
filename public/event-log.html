@@ -219,21 +219,38 @@
 								<table class="min-w-full divide-y divide-gray-300 dark:divide-white/10" id="blueprintTable">
 									<thead>
 										<tr>
-											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:border-zinc-700 dark:bg-zinc-900/75 dark:text-white sm:pl-0 uppercase">Time</th>
-											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 px-3 py-3.5 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:border-zinc-700 dark:bg-zinc-900/75 dark:text-white uppercase user-column">User</th>
-											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 px-3 py-3.5 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:border-zinc-700 dark:bg-zinc-900/75 dark:text-white uppercase">Event Type</th>
-											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 px-3 py-3.5 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:border-zinc-700 dark:bg-zinc-900/75 dark:text-white uppercase">Tool Name</th>
-											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 px-3 py-3.5 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:border-zinc-700 dark:bg-zinc-900/75 dark:text-white uppercase">Company</th>
-											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 px-3 py-3.5 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:border-zinc-700 dark:bg-zinc-900/75 dark:text-white uppercase">Payload</th>
-											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 px-3 py-3.5 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:border-zinc-700 dark:bg-zinc-900/75 dark:text-white uppercase">Status</th>
+											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:border-zinc-700 dark:bg-zinc-900/75 dark:text-white sm:pl-0 uppercase">
+												<span class="sr-only">Expand</span>
+											</th>
+											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 px-3 py-3.5 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:border-zinc-700 dark:bg-zinc-900/75 dark:text-white uppercase">
+												Status
+											</th>
+											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 px-3 py-3.5 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:border-zinc-700 dark:bg-zinc-900/75 dark:text-white uppercase">
+												Time
+											</th>
+											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 px-3 py-3.5 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:border-zinc-700 dark:bg-zinc-900/75 dark:text-white uppercase user-column">
+												User
+											</th>
+											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 px-3 py-3.5 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:border-zinc-700 dark:bg-zinc-900/75 dark:text-white uppercase">
+												Event Type
+											</th>
+											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 px-3 py-3.5 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:border-zinc-700 dark:bg-zinc-900/75 dark:text-white uppercase hidden md:table-cell">
+												Company
+											</th>
+											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 px-3 py-3.5 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:border-zinc-700 dark:bg-zinc-900/75 dark:text-white uppercase hidden lg:table-cell">
+												Tool Name
+											</th>
+											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 px-3 py-3.5 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:border-zinc-700 dark:bg-zinc-900/75 dark:text-white uppercase">
+												Payload
+											</th>
 											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 py-3.5 pl-3 pr-4 backdrop-blur-sm backdrop-filter dark:border-zinc-700 dark:bg-zinc-900/75 sm:pr-0">
-												<span class="sr-only">View</span>
+												<span class="sr-only">Actions</span>
 											</th>
 										</tr>
 									</thead>
 									<tbody class="divide-y divide-gray-200 dark:divide-white/10" id="blueprintTableBody">
 										<tr>
-											<td colspan="8" class="py-8 text-center text-sm text-gray-500 dark:text-gray-400">
+											<td colspan="9" class="py-8 text-center text-sm text-gray-500 dark:text-gray-400">
 												Loading recent events...
 											</td>
 										</tr>

@@ -3287,7 +3287,8 @@
     font-size: 0.6875rem;
     line-height: 1.4;
     min-width: 0;
-    max-width: 100%;
+    max-width: 200px;
+    width: 200px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -3297,6 +3298,14 @@
 
   html.dark .log-description {
     color: #a1a1aa;
+  }
+
+  .blueprint-payload {
+    max-width: 200px;
+    width: 200px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .expand-btn {

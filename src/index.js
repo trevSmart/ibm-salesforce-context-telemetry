@@ -131,44 +131,25 @@ const settingsLimiter = createLimiter({
 const sharp = require('sharp');
 
 // Process team logo image - only resize if larger than target, always convert to WebP
-async function processTeamLogo(buffer, mimeType, originalFilename = null) {
+async function processTeamLogo(buffer, mimeType) {
 	try {
 		// Get image metadata to check dimensions
 		const metadata = await sharp(buffer).metadata();
-		const { width, height, format: detectedFormat } = metadata;
+		const { width, height } = metadata;
 
 		// Target dimensions
 		const TARGET_SIZE = 48;
-
-		// Extract file extension from filename if provided
-		let fileExtension = '';
-		if (originalFilename) {
-			const extMatch = originalFilename.toLowerCase().match(/\.([a-z0-9]+)$/);
-			fileExtension = extMatch ? extMatch[1] : '';
-		}
 
 		// Check if resizing is needed
 		const needsResize = width > TARGET_SIZE || height > TARGET_SIZE;
 		const needsFormatConversion = mimeType !== 'image/webp';
 
-		// Log processing info
-		const filename = originalFilename || 'unknown';
-		console.log(`🔄 Processing logo "${filename}": ${width}x${height}px ${detectedFormat} → ${needsResize ? '48x48px ' : 'unchanged '}${needsFormatConversion ? 'WebP' : 'WebP (already)'}`);
-
 		// If already WebP and correct size or smaller, return as-is
 		if (!needsResize && !needsFormatConversion) {
-			console.log(`✅ Logo "${filename}" already optimized (${buffer.length} bytes)`);
 			return {
 				data: buffer,
 				mime: mimeType,
-				size: buffer.length,
-				originalSize: buffer.length,
-				resized: false,
-				converted: false,
-				filename: originalFilename,
-				extension: fileExtension,
-				originalDimensions: { width, height },
-				processedDimensions: { width, height }
+				size: buffer.length
 			};
 		}
 
@@ -193,24 +174,16 @@ async function processTeamLogo(buffer, mimeType, originalFilename = null) {
 
 		const processedBuffer = await sharpInstance.toBuffer();
 
-		const savings = buffer.length - processedBuffer.size;
-		console.log(`✅ Processed logo "${filename}": ${buffer.length} → ${processedBuffer.size} bytes (${savings > 0 ? '+' + savings + ' saved' : 'no change'})`);
-
 		return {
 			data: processedBuffer,
 			mime: 'image/webp',
 			size: processedBuffer.length,
 			originalSize: buffer.length,
 			resized: needsResize,
-			converted: needsFormatConversion,
-			filename: originalFilename,
-			extension: fileExtension,
-			originalDimensions: { width, height },
-			processedDimensions: needsResize ? { width: TARGET_SIZE, height: TARGET_SIZE } : { width, height }
+			converted: needsFormatConversion
 		};
 	} catch (error) {
-		const filename = originalFilename || 'unknown';
-		console.error(`❌ Error processing logo "${filename}":`, error);
+		console.error('Error processing team logo:', error);
 		throw new Error('Failed to process image: ' + error.message);
 	}
 }
@@ -1067,7 +1040,8 @@ app.get('/api/events', auth.requireAuth, auth.requireRole('advanced'), apiReadLi
 			endDate,
 			userId,
 			orderBy = 'created_at',
-			order = 'DESC'
+			order = 'DESC',
+			includePayload = 'false'
 		} = req.query;
 
 		// Enforce maximum limit to prevent performance issues
@@ -1098,7 +1072,8 @@ app.get('/api/events', auth.requireAuth, auth.requireRole('advanced'), apiReadLi
 			endDate,
 			userIds: userIds.length > 0 ? userIds : undefined,
 			orderBy,
-			order
+			order,
+			includePayload: includePayload === 'true'
 		});
 
 		const isUnfiltered =
@@ -1145,6 +1120,37 @@ app.get('/api/events/:id', auth.requireAuth, auth.requireRole('advanced'), apiRe
 		res.status(500).json({
 			status: 'error',
 			message: 'Failed to fetch event'
+		});
+	}
+});
+
+app.get('/api/events/:id/payload', auth.requireAuth, auth.requireRole('advanced'), apiReadLimiter, async (req, res) => {
+	try {
+		const eventId = parseInt(req.params.id, 10);
+		if (isNaN(eventId)) {
+			return res.status(400).json({
+				status: 'error',
+				message: 'Invalid event ID'
+			});
+		}
+
+		const payload = await db.getEventPayload(eventId);
+		if (!payload) {
+			return res.status(404).json({
+				status: 'error',
+				message: 'Event not found'
+			});
+		}
+
+		res.json({
+			status: 'ok',
+			payload: payload
+		});
+	} catch (error) {
+		console.error('Error fetching event payload:', error);
+		res.status(500).json({
+			status: 'error',
+			message: 'Failed to fetch event payload'
 		});
 	}
 });
@@ -1400,10 +1406,13 @@ app.post('/api/teams', auth.requireAuth, auth.requireRole('administrator'), team
 		// Process logo if uploaded
 		if (req.file) {
 			try {
-				const processed = await processTeamLogo(req.file.buffer, req.file.mimetype, req.file.originalname);
+				const processed = await processTeamLogo(req.file.buffer, req.file.mimetype);
 				req.file.buffer = processed.data;
 				req.file.mimetype = processed.mime;
 				req.file.size = processed.size;
+
+				// Log processing info
+				console.log(`Logo processed: resized=${processed.resized}, converted=${processed.converted}, size: ${processed.originalSize} -> ${processed.size} bytes`);
 			} catch (processError) {
 				console.error('Logo processing error:', processError);
 				return res.status(400).json({
@@ -1428,14 +1437,12 @@ app.post('/api/teams', auth.requireAuth, auth.requireRole('administrator'), team
 
 		let logoData = null;
 		let logoMime = null;
-		let logoFilename = null;
 		if (req.file) {
 			logoData = req.file.buffer;
 			logoMime = req.file.mimetype;
-			logoFilename = req.file.originalname;
 		}
 
-		const team = await db.createTeam(name.trim(), color || null, logo_url || null, logoData, logoMime, logoFilename);
+		const team = await db.createTeam(name.trim(), color || null, logo_url || null, logoData, logoMime);
 		res.status(201).json({
 			status: 'ok',
 			team
@@ -1482,10 +1489,13 @@ app.put('/api/teams/:id', auth.requireAuth, auth.requireRole('administrator'), t
 		// Process logo if uploaded
 		if (req.file) {
 			try {
-				const processed = await processTeamLogo(req.file.buffer, req.file.mimetype, req.file.originalname);
+				const processed = await processTeamLogo(req.file.buffer, req.file.mimetype);
 				req.file.buffer = processed.data;
 				req.file.mimetype = processed.mime;
 				req.file.size = processed.size;
+
+				// Log processing info
+				console.log(`Logo processed: resized=${processed.resized}, converted=${processed.converted}, size: ${processed.originalSize} -> ${processed.size} bytes`);
 			} catch (processError) {
 				console.error('Logo processing error:', processError);
 				return res.status(400).json({
@@ -1517,12 +1527,10 @@ app.put('/api/teams/:id', auth.requireAuth, auth.requireRole('administrator'), t
 		if (req.file) {
 			updates.logo_data = req.file.buffer;
 			updates.logo_mime = req.file.mimetype;
-			updates.logo_filename = req.file.originalname;
 		} else if (remove_logo === 'true' || remove_logo === true) {
 			// Allow removing logo by setting to null
 			updates.logo_data = null;
 			updates.logo_mime = null;
-			updates.logo_filename = null;
 		}
 
 		if (Object.keys(updates).length === 0) {
