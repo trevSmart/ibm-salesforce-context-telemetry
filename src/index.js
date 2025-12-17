@@ -127,6 +127,94 @@ const settingsLimiter = createLimiter({
 	}
 });
 
+// Import Sharp for image processing
+const sharp = require('sharp');
+
+// Process team logo image - only resize if larger than target, always convert to WebP
+async function processTeamLogo(buffer, mimeType, originalFilename = null) {
+	try {
+		// Get image metadata to check dimensions
+		const metadata = await sharp(buffer).metadata();
+		const { width, height, format: detectedFormat } = metadata;
+
+		// Target dimensions
+		const TARGET_SIZE = 48;
+
+		// Extract file extension from filename if provided
+		let fileExtension = '';
+		if (originalFilename) {
+			const extMatch = originalFilename.toLowerCase().match(/\.([a-z0-9]+)$/);
+			fileExtension = extMatch ? extMatch[1] : '';
+		}
+
+		// Check if resizing is needed
+		const needsResize = width > TARGET_SIZE || height > TARGET_SIZE;
+		const needsFormatConversion = mimeType !== 'image/webp';
+
+		// Log processing info
+		const filename = originalFilename || 'unknown';
+		console.log(`🔄 Processing logo "${filename}": ${width}x${height}px ${detectedFormat} → ${needsResize ? '48x48px ' : 'unchanged '}${needsFormatConversion ? 'WebP' : 'WebP (already)'}`);
+
+		// If already WebP and correct size or smaller, return as-is
+		if (!needsResize && !needsFormatConversion) {
+			console.log(`✅ Logo "${filename}" already optimized (${buffer.length} bytes)`);
+			return {
+				data: buffer,
+				mime: mimeType,
+				size: buffer.length,
+				originalSize: buffer.length,
+				resized: false,
+				converted: false,
+				filename: originalFilename,
+				extension: fileExtension,
+				originalDimensions: { width, height },
+				processedDimensions: { width, height }
+			};
+		}
+
+		let sharpInstance = sharp(buffer);
+
+		// Only resize if image is larger than target
+		if (needsResize) {
+			sharpInstance = sharpInstance.resize(TARGET_SIZE, TARGET_SIZE, {
+				fit: 'contain',
+				background: { r: 255, g: 255, b: 255, alpha: 0 }, // Transparent background
+				withoutEnlargement: true // Never enlarge smaller images
+			});
+		}
+
+		// Convert to WebP if not already
+		if (needsFormatConversion) {
+			sharpInstance = sharpInstance.webp({
+				quality: 85, // Good quality with compression
+				effort: 6    // Better compression (takes more time but better result)
+			});
+		}
+
+		const processedBuffer = await sharpInstance.toBuffer();
+
+		const savings = buffer.length - processedBuffer.size;
+		console.log(`✅ Processed logo "${filename}": ${buffer.length} → ${processedBuffer.size} bytes (${savings > 0 ? '+' + savings + ' saved' : 'no change'})`);
+
+		return {
+			data: processedBuffer,
+			mime: 'image/webp',
+			size: processedBuffer.length,
+			originalSize: buffer.length,
+			resized: needsResize,
+			converted: needsFormatConversion,
+			filename: originalFilename,
+			extension: fileExtension,
+			originalDimensions: { width, height },
+			processedDimensions: needsResize ? { width: TARGET_SIZE, height: TARGET_SIZE } : { width, height }
+		};
+	} catch (error) {
+		const filename = originalFilename || 'unknown';
+		console.error(`❌ Error processing logo "${filename}":`, error);
+		throw new Error('Failed to process image: ' + error.message);
+	}
+}
+
 const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
@@ -179,15 +267,15 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' })); // Parse URL-enc
 const upload = multer({
 	storage: multer.memoryStorage(),
 	limits: {
-		fileSize: 500 * 1024 // 500KB max
+		fileSize: 2 * 1024 * 1024 // 2MB max for originals (will be processed)
 	},
 	fileFilter: (req, file, cb) => {
-		// Only allow PNG, JPEG, and WebP images
-		const allowedMimes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+		// Accept common image formats that will be converted to WebP
+		const allowedMimes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/gif', 'image/bmp'];
 		if (allowedMimes.includes(file.mimetype)) {
 			cb(null, true);
 		} else {
-			cb(new Error('Invalid file type. Only PNG, JPEG, and WebP images are allowed.'), false);
+			cb(new Error('Invalid file type. Only image files are allowed.'), false);
 		}
 	}
 });
@@ -1286,13 +1374,13 @@ app.get('/api/teams/:id', auth.requireAuth, auth.requireRole('advanced'), apiRea
 });
 
 app.post('/api/teams', auth.requireAuth, auth.requireRole('administrator'), teamCreationLimiter, (req, res, next) => {
-	upload.single('logo')(req, res, (err) => {
+	upload.single('logo')(req, res, async (err) => {
 		if (err) {
 			if (err instanceof multer.MulterError) {
 				if (err.code === 'LIMIT_FILE_SIZE') {
 					return res.status(400).json({
 						status: 'error',
-						message: 'Logo file is too large. Maximum size is 500KB.'
+						message: 'Logo file is too large. Maximum size is 2MB.'
 					});
 				}
 				return res.status(400).json({
@@ -1308,6 +1396,23 @@ app.post('/api/teams', auth.requireAuth, auth.requireRole('administrator'), team
 			}
 			return next(err);
 		}
+
+		// Process logo if uploaded
+		if (req.file) {
+			try {
+				const processed = await processTeamLogo(req.file.buffer, req.file.mimetype, req.file.originalname);
+				req.file.buffer = processed.data;
+				req.file.mimetype = processed.mime;
+				req.file.size = processed.size;
+			} catch (processError) {
+				console.error('Logo processing error:', processError);
+				return res.status(400).json({
+					status: 'error',
+					message: 'Failed to process logo image: ' + processError.message
+				});
+			}
+		}
+
 		next();
 	});
 }, async (req, res) => {
@@ -1323,12 +1428,14 @@ app.post('/api/teams', auth.requireAuth, auth.requireRole('administrator'), team
 
 		let logoData = null;
 		let logoMime = null;
+		let logoFilename = null;
 		if (req.file) {
 			logoData = req.file.buffer;
 			logoMime = req.file.mimetype;
+			logoFilename = req.file.originalname;
 		}
 
-		const team = await db.createTeam(name.trim(), color || null, logo_url || null, logoData, logoMime);
+		const team = await db.createTeam(name.trim(), color || null, logo_url || null, logoData, logoMime, logoFilename);
 		res.status(201).json({
 			status: 'ok',
 			team
@@ -1349,13 +1456,13 @@ app.post('/api/teams', auth.requireAuth, auth.requireRole('administrator'), team
 });
 
 app.put('/api/teams/:id', auth.requireAuth, auth.requireRole('administrator'), teamOrgLimiter, (req, res, next) => {
-	upload.single('logo')(req, res, (err) => {
+	upload.single('logo')(req, res, async (err) => {
 		if (err) {
 			if (err instanceof multer.MulterError) {
 				if (err.code === 'LIMIT_FILE_SIZE') {
 					return res.status(400).json({
 						status: 'error',
-						message: 'Logo file is too large. Maximum size is 500KB.'
+						message: 'Logo file is too large. Maximum size is 2MB.'
 					});
 				}
 				return res.status(400).json({
@@ -1371,6 +1478,23 @@ app.put('/api/teams/:id', auth.requireAuth, auth.requireRole('administrator'), t
 			}
 			return next(err);
 		}
+
+		// Process logo if uploaded
+		if (req.file) {
+			try {
+				const processed = await processTeamLogo(req.file.buffer, req.file.mimetype, req.file.originalname);
+				req.file.buffer = processed.data;
+				req.file.mimetype = processed.mime;
+				req.file.size = processed.size;
+			} catch (processError) {
+				console.error('Logo processing error:', processError);
+				return res.status(400).json({
+					status: 'error',
+					message: 'Failed to process logo image: ' + processError.message
+				});
+			}
+		}
+
 		next();
 	});
 }, async (req, res) => {
@@ -1393,10 +1517,12 @@ app.put('/api/teams/:id', auth.requireAuth, auth.requireRole('administrator'), t
 		if (req.file) {
 			updates.logo_data = req.file.buffer;
 			updates.logo_mime = req.file.mimetype;
+			updates.logo_filename = req.file.originalname;
 		} else if (remove_logo === 'true' || remove_logo === true) {
 			// Allow removing logo by setting to null
 			updates.logo_data = null;
 			updates.logo_mime = null;
+			updates.logo_filename = null;
 		}
 
 		if (Object.keys(updates).length === 0) {

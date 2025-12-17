@@ -3209,11 +3209,15 @@ async function ensureTeamsAndOrgsTables() {
 			const teamsColumns = db.prepare('PRAGMA table_info(teams)').all();
 			const hasLogoData = teamsColumns.some(column => column.name === 'logo_data');
 			const hasLogoMime = teamsColumns.some(column => column.name === 'logo_mime');
+			const hasLogoFilename = teamsColumns.some(column => column.name === 'logo_filename');
 			if (!hasLogoData) {
 				db.exec('ALTER TABLE teams ADD COLUMN logo_data BLOB');
 			}
 			if (!hasLogoMime) {
 				db.exec('ALTER TABLE teams ADD COLUMN logo_mime TEXT');
+			}
+			if (!hasLogoFilename) {
+				db.exec('ALTER TABLE teams ADD COLUMN logo_filename TEXT');
 			}
 
 			// Add team_id to orgs table if it doesn't exist
@@ -3271,12 +3275,14 @@ async function ensureTeamsAndOrgsTables() {
         CREATE INDEX IF NOT EXISTS idx_teams_name ON teams(name);
       `);
 
-			// Add logo_data and logo_mime columns if they don't exist
+			// Add logo_data, logo_mime and logo_filename columns if they don't exist
 			await db.query(`
         ALTER TABLE teams
         ADD COLUMN IF NOT EXISTS logo_data BYTEA;
         ALTER TABLE teams
         ADD COLUMN IF NOT EXISTS logo_mime TEXT;
+        ALTER TABLE teams
+        ADD COLUMN IF NOT EXISTS logo_filename TEXT;
       `);
 
 			// Add team_id to orgs table if it doesn't exist
@@ -3674,9 +3680,10 @@ async function getEventUserNames(limit = 1000) {
  * @param {string} logoUrl - Optional logo URL
  * @param {Buffer} logoData - Optional logo binary data
  * @param {string} logoMime - Optional logo MIME type
+ * @param {string} logoFilename - Optional original filename
  * @returns {Promise<object>} Created team object
  */
-async function createTeam(name, color = null, logoUrl = null, logoData = null, logoMime = null) {
+async function createTeam(name, color = null, logoUrl = null, logoData = null, logoMime = null, logoFilename = null) {
 	if (!db) {
 		throw new Error('Database not initialized. Call init() first.');
 	}
@@ -3690,10 +3697,10 @@ async function createTeam(name, color = null, logoUrl = null, logoData = null, l
 	try {
 		if (dbType === 'sqlite') {
 			const stmt = db.prepare(`
-        INSERT INTO teams (name, color, logo_url, logo_data, logo_mime, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO teams (name, color, logo_url, logo_data, logo_mime, logo_filename, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `);
-			const result = stmt.run(name.trim(), color || null, logoUrl || null, logoData || null, logoMime || null, now, now);
+			const result = stmt.run(name.trim(), color || null, logoUrl || null, logoData || null, logoMime || null, logoFilename || null, now, now);
 			return {
 				id: result.lastInsertRowid,
 				name: name.trim(),
@@ -3704,10 +3711,10 @@ async function createTeam(name, color = null, logoUrl = null, logoData = null, l
 			};
 		} else if (dbType === 'postgresql') {
 			const result = await db.query(`
-        INSERT INTO teams (name, color, logo_url, logo_data, logo_mime, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        INSERT INTO teams (name, color, logo_url, logo_data, logo_mime, logo_filename, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         RETURNING id, name, color, logo_url, created_at, updated_at
-      `, [name.trim(), color || null, logoUrl || null, logoData || null, logoMime || null, now, now]);
+      `, [name.trim(), color || null, logoUrl || null, logoData || null, logoMime || null, logoFilename || null, now, now]);
 			return result.rows[0];
 		}
 	} catch (error) {
@@ -3730,7 +3737,7 @@ async function updateTeam(teamId, updates) {
 		throw new Error('Database not initialized. Call init() first.');
 	}
 
-	const { name, color, logo_url, logo_data, logo_mime } = updates || {};
+	const { name, color, logo_url, logo_data, logo_mime, logo_filename } = updates || {};
 	const now = new Date().toISOString();
 	const updatesList = [];
 	const params = [];
@@ -3761,6 +3768,11 @@ async function updateTeam(teamId, updates) {
 	if (logo_mime !== undefined) {
 		updatesList.push(dbType === 'sqlite' ? 'logo_mime = ?' : 'logo_mime = $' + (params.length + 1));
 		params.push(logo_mime || null);
+	}
+
+	if (logo_filename !== undefined) {
+		updatesList.push(dbType === 'sqlite' ? 'logo_filename = ?' : 'logo_filename = $' + (params.length + 1));
+		params.push(logo_filename || null);
 	}
 
 	if (updatesList.length === 0) {
@@ -4493,8 +4505,8 @@ async function importDatabase(importData) {
 				// Import teams
 				if (importData.tables.teams && Array.isArray(importData.tables.teams)) {
 					const insertTeam = db.prepare(`
-						INSERT OR REPLACE INTO teams (id, name, color, logo_url, logo_data, logo_mime, created_at, updated_at)
-						VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+						INSERT OR REPLACE INTO teams (id, name, color, logo_url, logo_data, logo_mime, logo_filename, created_at, updated_at)
+						VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 					`);
 					importData.tables.teams.forEach(team => {
 						try {
@@ -4505,6 +4517,7 @@ async function importDatabase(importData) {
 								team.logo_url,
 								team.logo_data,
 								team.logo_mime,
+								team.logo_filename,
 								team.created_at,
 								team.updated_at
 							);
@@ -4678,14 +4691,15 @@ async function importDatabase(importData) {
 					for (const team of importData.tables.teams) {
 						try {
 							await client.query(`
-								INSERT INTO teams (id, name, color, logo_url, logo_data, logo_mime, created_at, updated_at)
-								VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+								INSERT INTO teams (id, name, color, logo_url, logo_data, logo_mime, logo_filename, created_at, updated_at)
+								VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 								ON CONFLICT (id) DO UPDATE SET
 									name = EXCLUDED.name,
 									color = EXCLUDED.color,
 									logo_url = EXCLUDED.logo_url,
 									logo_data = EXCLUDED.logo_data,
 									logo_mime = EXCLUDED.logo_mime,
+									logo_filename = EXCLUDED.logo_filename,
 									created_at = EXCLUDED.created_at,
 									updated_at = EXCLUDED.updated_at
 							`, [
@@ -4695,6 +4709,7 @@ async function importDatabase(importData) {
 								team.logo_url,
 								team.logo_data ? Buffer.from(team.logo_data) : null,
 								team.logo_mime,
+								team.logo_filename,
 								team.created_at,
 								team.updated_at
 							]);

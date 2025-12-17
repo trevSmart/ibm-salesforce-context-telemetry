@@ -664,9 +664,9 @@ function showTeamFormModal(team = null) {
                 </div>
               </div>
             ` : ''}
-            <input type="file" id="teamLogoInput" accept="image/png,image/jpeg,image/jpg,image/webp"
+            <input type="file" id="teamLogoInput" accept="image/png,image/jpeg,image/jpg,image/webp,image/gif,image/bmp"
                    style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary);">
-            <div style="font-size: 0.75rem; color: var(--text-secondary);">PNG, JPEG, or WebP (max 500KB)</div>
+            <div style="font-size: 0.75rem; color: var(--text-secondary);">Images will be automatically optimized to WebP format (max 2MB)</div>
             <div id="logoPreviewNew" style="display: none; margin-top: 8px;">
               <img id="logoPreviewImg" src="" alt="Logo preview" style="width: 48px; height: 48px; object-fit: contain; border-radius: 4px; background: white; border: 1px solid var(--border-color);">
             </div>
@@ -738,17 +738,17 @@ function showTeamFormModal(team = null) {
 		logoInput.addEventListener('change', (e) => {
 			const file = e.target.files[0];
 			if (file) {
-				// Validate file size (500KB max)
-				if (file.size > 500 * 1024) {
-					showToast('Logo file is too large. Maximum size is 500KB.', 'error');
+				// Validate file size (2MB max for originals)
+				if (file.size > 2 * 1024 * 1024) {
+					showToast('Logo file is too large. Maximum size is 2MB.', 'error');
 					e.target.value = '';
 					return;
 				}
 
 				// Validate file type
-				const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+				const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/gif', 'image/bmp'];
 				if (!allowedTypes.includes(file.type)) {
-					showToast('Invalid file type. Only PNG, JPEG, and WebP images are allowed.', 'error');
+					showToast('Invalid file type. Only image files are allowed.', 'error');
 					e.target.value = '';
 					return;
 				}
