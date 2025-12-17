@@ -60,7 +60,7 @@
     "connect-livereload": "^0.6.1",
     "electron": "^39.2.5",
     "electron-builder": "^26.0.12",
-    "eslint": "^9.39.1",
+    "eslint": "^9.39.2",
     "livereload": "^0.10.3",
     "nodemon": "^3.1.0",
     "purgecss": "^7.0.2",
