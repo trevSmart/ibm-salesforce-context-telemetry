@@ -2800,6 +2800,34 @@ async function recomputeUserEventStats(userIds = []) {
 		return;
 	}
 
+	// Ensure user_event_stats table exists (defensive programming for production issues)
+	try {
+		if (dbType === 'sqlite') {
+			db.exec(`
+        CREATE TABLE IF NOT EXISTS user_event_stats (
+          user_id TEXT PRIMARY KEY,
+          event_count INTEGER NOT NULL DEFAULT 0,
+          last_event TEXT,
+          display_name TEXT
+        );
+        CREATE INDEX IF NOT EXISTS idx_user_event_stats_last_event ON user_event_stats(last_event);
+      `);
+		} else if (dbType === 'postgresql') {
+			await db.query(`
+        CREATE TABLE IF NOT EXISTS user_event_stats (
+          user_id TEXT PRIMARY KEY,
+          event_count INTEGER NOT NULL DEFAULT 0,
+          last_event TIMESTAMPTZ,
+          display_name TEXT
+        );
+        CREATE INDEX IF NOT EXISTS idx_user_event_stats_last_event ON user_event_stats(last_event);
+      `);
+		}
+	} catch (error) {
+		console.warn('Warning: Could not ensure user_event_stats table exists:', error.message);
+		// Continue execution - the operation might still work if table exists
+	}
+
 	if (dbType === 'sqlite') {
 		const statsStmt = db.prepare(`
       SELECT
@@ -2885,6 +2913,32 @@ async function recomputeOrgEventStats(orgIds = []) {
 	const uniqueIds = Array.from(new Set((orgIds || []).filter(id => typeof id === 'string' && id.trim() !== '')));
 	if (uniqueIds.length === 0) {
 		return;
+	}
+
+	// Ensure org_event_stats table exists (defensive programming for production issues)
+	try {
+		if (dbType === 'sqlite') {
+			db.exec(`
+        CREATE TABLE IF NOT EXISTS org_event_stats (
+          org_id TEXT PRIMARY KEY,
+          event_count INTEGER NOT NULL DEFAULT 0,
+          last_event TEXT
+        );
+        CREATE INDEX IF NOT EXISTS idx_org_event_stats_last_event ON org_event_stats(last_event);
+      `);
+		} else if (dbType === 'postgresql') {
+			await db.query(`
+        CREATE TABLE IF NOT EXISTS org_event_stats (
+          org_id TEXT PRIMARY KEY,
+          event_count INTEGER NOT NULL DEFAULT 0,
+          last_event TIMESTAMPTZ
+        );
+        CREATE INDEX IF NOT EXISTS idx_org_event_stats_last_event ON org_event_stats(last_event);
+      `);
+		}
+	} catch (error) {
+		console.warn('Warning: Could not ensure org_event_stats table exists:', error.message);
+		// Continue execution - the operation might still work if table exists
 	}
 
 	if (dbType === 'sqlite') {
