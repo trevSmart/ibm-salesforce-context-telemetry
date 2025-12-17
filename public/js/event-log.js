@@ -4329,8 +4329,18 @@ if (window.__EVENT_LOG_LOADED__) {
 
 	// Search with debounce
 	let searchDebounceTimer;
-	const searchInputEl = document.getElementById('searchInput');
-	if (searchInputEl) {
+	let searchInputBound = false;
+
+	function bindSearchInput() {
+		if (searchInputBound) {
+			return true;
+		}
+
+		const searchInputEl = document.getElementById('searchInput');
+		if (!searchInputEl) {
+			return false;
+		}
+
 		searchInputEl.addEventListener('input', (e) => {
 			clearTimeout(searchDebounceTimer);
 			searchDebounceTimer = setTimeout(() => {
@@ -4339,8 +4349,19 @@ if (window.__EVENT_LOG_LOADED__) {
 				loadEvents();
 			}, 500);
 		});
-	} else {
-		handleInitializationError('search input binding', new Error('Search input not found'));
+		searchInputBound = true;
+		return true;
+	}
+
+	if (!bindSearchInput()) {
+		// Header builds the search input on DOMContentLoaded; defer binding until it exists
+		window.addEventListener('DOMContentLoaded', () => {
+			requestAnimationFrame(() => {
+				if (!bindSearchInput()) {
+					handleInitializationError('search input binding', new Error('Search input not found after header init'));
+				}
+			});
+		});
 	}
 
 	// Sort order change
