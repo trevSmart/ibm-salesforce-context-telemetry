@@ -202,10 +202,21 @@ if (isDevelopment) {
 		const livereload = require('livereload');
 		const connectLivereload = require('connect-livereload');
 
+		const livereloadPort = parseInt(process.env.LIVERELOAD_PORT || '35729', 10);
+
 		// Create livereload server
 		const liveReloadServer = livereload.createServer({
-			port: 35729,
+			port: livereloadPort,
 			exts: ['html', 'css', 'js', 'json']
+		});
+
+		// Avoid crashing when the livereload port is already in use
+		liveReloadServer.server?.on('error', (error) => {
+			if (error && error.code === 'EADDRINUSE') {
+				console.warn(`⚠️  Live reload port ${livereloadPort} already in use; skipping live reload.`);
+			} else {
+				console.warn('⚠️  Live reload server error; skipping live reload.', error?.message || error);
+			}
 		});
 
 		// Watch public directory for changes
@@ -213,10 +224,12 @@ if (isDevelopment) {
 
 		// Inject livereload script into HTML responses
 		app.use(connectLivereload({
-			port: 35729
+			port: livereloadPort
 		}));
 
-		console.log('🔄 Live reload enabled on port 35729');
+		liveReloadServer.server?.once('listening', () => {
+			console.log(`🔄 Live reload enabled on port ${livereloadPort}`);
+		});
 	} catch (_error) {
 		// Live reload dependencies not installed, continue without it
 		console.log('⚠️  Live reload not available (install dev dependencies: npm install)');

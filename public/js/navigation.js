@@ -226,6 +226,7 @@
 		}
 
 		isNavigating = true;
+		const containerParent = container.parentNode;
 
 		try {
 			const currentPath = window.location.pathname;
@@ -300,8 +301,27 @@
 				nextContent.style[prop] = containerStyle[prop];
 			});
 
+			// Overlay the incoming content exactly where the outgoing one sits to avoid visual mixing
+			if (containerParent) {
+				const parentRect = containerParent.getBoundingClientRect();
+				const containerRect = container.getBoundingClientRect();
+
+				if (window.getComputedStyle(containerParent).position === 'static') {
+					containerParent.style.position = 'relative';
+				}
+
+				nextContent.style.position = 'absolute';
+				nextContent.style.top = `${containerRect.top - parentRect.top}px`;
+				nextContent.style.left = `${containerRect.left - parentRect.left}px`;
+				nextContent.style.width = `${containerRect.width}px`;
+				nextContent.style.height = `${containerRect.height}px`;
+				nextContent.style.zIndex = '1';
+			}
+			nextContent.style.opacity = '0';
+			nextContent.style.pointerEvents = 'none';
+
 			// Insert new content after current content (both will be visible briefly)
-			container.parentNode.style.position = 'relative';
+			containerParent.style.position = 'relative';
 			container.after(nextContent);
 
 			updateActiveLink(targetPath);
@@ -312,9 +332,11 @@
 
 			// Start crossfade: fade out old, fade in new
 			container.style.transition = `opacity ${TRANSITION_DURATION_MS}ms ease-out`;
+			container.style.pointerEvents = 'none';
 			container.style.opacity = '0';
 			nextContent.style.transition = `opacity ${TRANSITION_DURATION_MS}ms ease-in`;
 			nextContent.style.opacity = '1';
+			nextContent.style.pointerEvents = 'auto';
 
 			// Wait for transition to complete
 			await new Promise((resolve) => setTimeout(resolve, TRANSITION_DURATION_MS));
@@ -322,13 +344,19 @@
 			// Remove old content and reset positioning on new content
 			container.remove();
 			nextContent.style.position = '';
+			nextContent.style.top = '';
+			nextContent.style.left = '';
+			nextContent.style.width = '';
+			nextContent.style.height = '';
 			nextContent.style.inset = '';
 			nextContent.style.transition = '';
 			nextContent.style.opacity = '';
+			nextContent.style.zIndex = '';
 			nextContent.style.paddingTop = '';
 			nextContent.style.paddingRight = '';
 			nextContent.style.paddingBottom = '';
 			nextContent.style.paddingLeft = '';
+			nextContent.style.pointerEvents = '';
 
 			// Notify pages that a soft navigation completed so they can resume
 			window.dispatchEvent(new CustomEvent('softNav:pageMounted', { detail: { path: targetPath, fromCache: !!cachedContainer } }));

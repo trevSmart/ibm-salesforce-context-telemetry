@@ -7,12 +7,8 @@
 	<link rel="icon" type="image/svg+xml" sizes="any" href="/resources/favicon.svg">
 	<link rel="icon" type="image/png" sizes="32x32" href="/resources/favicon.png">
 
-	<!-- Preconnect to external domains for faster loading -->
-	<link rel="preconnect" href="https://rsms.me">
-
-	<!-- Preload critical font for better LCP -->
-	<link rel="preload" href="https://rsms.me/inter/inter.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
-	<noscript><link rel="stylesheet" href="https://rsms.me/inter/inter.css"></noscript>
+	<!-- Preload local Inter variable font used across the UI -->
+	<link rel="preload" href="/fonts/inter-variable.woff2" as="font" type="font/woff2" crossorigin>
 
 	<!-- Load FontAwesome asynchronously to prevent render blocking -->
 	<link rel="preload" href="/vendor/fontawesome/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
@@ -40,6 +36,15 @@
 		})();
 	</script>
 	<style>
+		@font-face {
+			font-family: 'InterVariable';
+			font-style: normal;
+			font-weight: 100 900;
+			font-display: swap;
+			src: url('/fonts/inter-variable.woff2') format('woff2-variations');
+			font-stretch: 75% 125%;
+		}
+
 		* {
 			margin: 0;
 			padding: 0;
@@ -47,8 +52,8 @@
 		}
 
 		body {
-			font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-		background: #8896b5;
+			font-family: 'InterVariable', 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+	background: #8896b5;
 			min-height: 100vh;
 			display: flex;
 			align-items: center;

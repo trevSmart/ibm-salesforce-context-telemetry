@@ -7,9 +7,11 @@
 	<title>IBM Salesforce Context Telemetry</title>
 	<link rel="icon" type="image/svg+xml" sizes="any" href="/resources/favicon.svg">
 	<link rel="icon" type="image/png" sizes="32x32" href="/resources/favicon.png">
-	<link rel="stylesheet" href="https://rsms.me/inter/inter.css">
-	<link href="/css/output.css" rel="stylesheet">
-	<script src="/js/polyfills.js"></script>
+	<link rel="preload" href="/fonts/inter-variable.woff2" as="font" type="font/woff2" crossorigin>
+	<link rel="preload" href="/css/output.css" as="style">
+	<link rel="stylesheet" href="/css/output.css" media="print" onload="this.media='all'">
+	<noscript><link rel="stylesheet" href="/css/output.css"></noscript>
+	<script src="/js/polyfills.js" defer></script>
 	<script>
 		// Apply theme immediately before page render to prevent flash
 		(function () {
@@ -50,7 +52,7 @@
 		}
 
 		body {
-			font-family: 'Manrope', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+			font-family: 'InterVariable', 'Manrope', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 			background: #8896b5;
 			min-height: 100vh;
 			padding: 20px;

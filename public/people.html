@@ -9,15 +9,13 @@
 	<link rel="icon" type="image/png" sizes="32x32" href="/resources/favicon.png">
 
 	<!-- Preconnect to external domains for faster loading -->
-	<link rel="preconnect" href="https://rsms.me">
 	<link rel="preconnect" href="https://cdn.jsdelivr.net">
 
-	<!-- Preload critical font for better LCP -->
-	<link rel="preload" href="https://rsms.me/inter/inter.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
-	<noscript><link rel="stylesheet" href="https://rsms.me/inter/inter.css"></noscript>
-
-	<!-- Load main CSS synchronously as it's critical for layout -->
-	<link href="/css/output.css" rel="stylesheet">
+	<!-- Preload local Inter variable font and main stylesheet without blocking render -->
+	<link rel="preload" href="/fonts/inter-variable.woff2" as="font" type="font/woff2" crossorigin>
+	<link rel="preload" href="/css/output.css" as="style">
+	<link rel="stylesheet" href="/css/output.css" media="print" onload="this.media='all'">
+	<noscript><link rel="stylesheet" href="/css/output.css"></noscript>
 
 	<!-- Load FontAwesome asynchronously to prevent render blocking -->
 	<link rel="preload" href="/vendor/fontawesome/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
@@ -42,19 +40,21 @@
 <body class="people-page">
 	<div class="container main-container">
 		<div id="global-header-placeholder"></div>
-		<script src="/js/header.js"></script>
+		<script src="/js/header.js" defer></script>
 		<script>
-			// Initialize header for people page
-			initGlobalHeader({
-				activePage: '/people',
-				refreshButton: {
-					onClick: 'refreshPeople(event)',
-					ariaLabel: 'Refresh people',
-					title: 'Refresh people'
-				},
-				secondaryButton: {
-					type: 'settings'
-				}
+			// Initialize header for people page after scripts are parsed
+			window.addEventListener('DOMContentLoaded', () => {
+				initGlobalHeader({
+					activePage: '/people',
+					refreshButton: {
+						onClick: 'refreshPeople(event)',
+						ariaLabel: 'Refresh people',
+						title: 'Refresh people'
+					},
+					secondaryButton: {
+						type: 'settings'
+					}
+				});
 			});
 		</script>
 		<div class="container-content">

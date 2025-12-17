@@ -7,8 +7,10 @@
 	<title>IBM Salesforce Context Telemetry</title>
 	<link rel="icon" type="image/svg+xml" sizes="any" href="/resources/favicon.svg">
 	<link rel="icon" type="image/png" sizes="32x32" href="/resources/favicon.png">
-	<link rel="stylesheet" href="https://rsms.me/inter/inter.css">
-	<link href="/css/output.css" rel="stylesheet">
+	<link rel="preload" href="/fonts/inter-variable.woff2" as="font" type="font/woff2" crossorigin>
+	<link rel="preload" href="/css/output.css" as="style">
+	<link rel="stylesheet" href="/css/output.css" media="print" onload="this.media='all'">
+	<noscript><link rel="stylesheet" href="/css/output.css"></noscript>
 	<link rel="preload" href="/vendor/fontawesome/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
 	<noscript>
 		<link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
@@ -17,7 +19,7 @@
 	<noscript>
 		<link rel="stylesheet" href="/vendor/fontawesome/css/v4-shims.min.css">
 	</noscript>
-	<script src="/js/polyfills.js"></script>
+	<script src="/js/polyfills.js" defer></script>
 	<script src="https://cdn.jsdelivr.net/npm/@tailwindplus/elements@1" type="module"></script>
 	<script>
 		// Apply theme immediately before page render to prevent flash
@@ -50,21 +52,23 @@
 <body class="event-log-page hydrating">
 	<div class="container main-container">
 		<div id="global-header-placeholder"></div>
-		<script src="/js/header.js"></script>
+		<script src="/js/header.js" defer></script>
 		<script>
-			// Initialize header for event log page
-			initGlobalHeader({
-				activePage: '/logs',
-				refreshButton: {
-					onClick: 'refreshLogs(event)',
-					id: 'refreshButton',
-					showBadge: true,
-					ariaLabel: 'Refresh now',
-					title: 'Refresh now'
-				},
-				secondaryButton: {
-					type: 'settings'
-				}
+			// Initialize header for event log page after scripts are parsed
+			window.addEventListener('DOMContentLoaded', () => {
+				initGlobalHeader({
+					activePage: '/logs',
+					refreshButton: {
+						onClick: 'refreshLogs(event)',
+						id: 'refreshButton',
+						showBadge: true,
+						ariaLabel: 'Refresh now',
+						title: 'Refresh now'
+					},
+					secondaryButton: {
+						type: 'settings'
+					}
+				});
 			});
 		</script>
 		<div class="container-content">
@@ -260,9 +264,9 @@
 				document.head.appendChild(script);
 			})();
 		</script>
-		<script src="/js/navigation.js"></script>
+		<script src="/js/navigation.js" defer></script>
 		<script src="/js/user-menu.js" defer></script>
-		<script src="/js/csrf-helper.js"></script>
+		<script src="/js/csrf-helper.js" defer></script>
 		<script src="/js/event-log.js" defer></script>
 </body>
 
