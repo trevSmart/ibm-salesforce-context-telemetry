@@ -1211,45 +1211,70 @@ async function deleteAllEvents() {
  * @returns {Promise<number>} Number of deleted events
  */
 async function deleteEventsBySession(sessionId) {
-	if (!db) {
-		throw new Error('Database not initialized. Call init() first.');
-	}
-
-	if (!sessionId) {
-		throw new Error('Session ID is required to delete events by session');
-	}
-
-	let impactedUsers = [];
-	let impactedOrgs = [];
-	if (dbType === 'sqlite') {
-		const rows = db.prepare('SELECT DISTINCT user_id, org_id FROM telemetry_events WHERE session_id = ?').all(sessionId);
-		impactedUsers = rows.map(row => row.user_id).filter(Boolean);
-		impactedOrgs = rows.map(row => row.org_id).filter(Boolean);
-	} else if (dbType === 'postgresql') {
-		const result = await db.query('SELECT DISTINCT user_id, org_id FROM telemetry_events WHERE session_id = $1', [sessionId]);
-		impactedUsers = result.rows.map(row => row.user_id).filter(Boolean);
-		impactedOrgs = result.rows.map(row => row.org_id).filter(Boolean);
-	}
-
-	if (dbType === 'sqlite') {
-		const stmt = db.prepare('DELETE FROM telemetry_events WHERE session_id = ?');
-		const result = stmt.run(sessionId);
-		if (result.changes > 0) {
-			await Promise.all([
-				impactedUsers.length ? recomputeUserEventStats(impactedUsers) : Promise.resolve(),
-				impactedOrgs.length ? recomputeOrgEventStats(impactedOrgs) : Promise.resolve()
-			]);
+	try {
+		if (!db) {
+			throw new Error('Database not initialized. Call init() first.');
 		}
-		return result.changes;
-	} else if (dbType === 'postgresql') {
-		const result = await db.query('DELETE FROM telemetry_events WHERE session_id = $1', [sessionId]);
-		if (result.rowCount > 0) {
-			await Promise.all([
-				impactedUsers.length ? recomputeUserEventStats(impactedUsers) : Promise.resolve(),
-				impactedOrgs.length ? recomputeOrgEventStats(impactedOrgs) : Promise.resolve()
-			]);
+
+		if (!sessionId) {
+			throw new Error('Session ID is required to delete events by session');
 		}
-		return result.rowCount;
+
+		console.log(`[DELETE_SESSION] Starting deletion of session: ${sessionId}`);
+
+		let impactedUsers = [];
+		let impactedOrgs = [];
+		if (dbType === 'sqlite') {
+			console.log(`[DELETE_SESSION] Querying impacted users/orgs for session: ${sessionId}`);
+			const rows = db.prepare('SELECT DISTINCT user_id, org_id FROM telemetry_events WHERE session_id = ?').all(sessionId);
+			impactedUsers = rows.map(row => row.user_id).filter(Boolean);
+			impactedOrgs = rows.map(row => row.org_id).filter(Boolean);
+			console.log(`[DELETE_SESSION] Found ${impactedUsers.length} users and ${impactedOrgs.length} orgs`);
+		} else if (dbType === 'postgresql') {
+			console.log(`[DELETE_SESSION] Querying impacted users/orgs for session: ${sessionId}`);
+			const result = await db.query('SELECT DISTINCT user_id, org_id FROM telemetry_events WHERE session_id = $1', [sessionId]);
+			impactedUsers = result.rows.map(row => row.user_id).filter(Boolean);
+			impactedOrgs = result.rows.map(row => row.org_id).filter(Boolean);
+			console.log(`[DELETE_SESSION] Found ${impactedUsers.length} users and ${impactedOrgs.length} orgs`);
+		}
+
+		let deletedCount = 0;
+		if (dbType === 'sqlite') {
+			console.log(`[DELETE_SESSION] Executing DELETE query for session: ${sessionId}`);
+			const stmt = db.prepare('DELETE FROM telemetry_events WHERE session_id = ?');
+			const result = stmt.run(sessionId);
+			deletedCount = result.changes;
+			console.log(`[DELETE_SESSION] Deleted ${deletedCount} events`);
+
+			if (result.changes > 0) {
+				console.log(`[DELETE_SESSION] Recomputing stats for ${impactedUsers.length} users and ${impactedOrgs.length} orgs`);
+				await Promise.all([
+					impactedUsers.length ? recomputeUserEventStats(impactedUsers) : Promise.resolve(),
+					impactedOrgs.length ? recomputeOrgEventStats(impactedOrgs) : Promise.resolve()
+				]);
+				console.log(`[DELETE_SESSION] Stats recomputation completed`);
+			}
+		} else if (dbType === 'postgresql') {
+			console.log(`[DELETE_SESSION] Executing DELETE query for session: ${sessionId}`);
+			const result = await db.query('DELETE FROM telemetry_events WHERE session_id = $1', [sessionId]);
+			deletedCount = result.rowCount;
+			console.log(`[DELETE_SESSION] Deleted ${deletedCount} events`);
+
+			if (result.rowCount > 0) {
+				console.log(`[DELETE_SESSION] Recomputing stats for ${impactedUsers.length} users and ${impactedOrgs.length} orgs`);
+				await Promise.all([
+					impactedUsers.length ? recomputeUserEventStats(impactedUsers) : Promise.resolve(),
+					impactedOrgs.length ? recomputeOrgEventStats(impactedOrgs) : Promise.resolve()
+				]);
+				console.log(`[DELETE_SESSION] Stats recomputation completed`);
+			}
+		}
+
+		console.log(`[DELETE_SESSION] Successfully completed deletion of session: ${sessionId}`);
+		return deletedCount;
+	} catch (error) {
+		console.error(`[DELETE_SESSION] Error deleting session ${sessionId}:`, error);
+		throw error;
 	}
 }
 
@@ -2792,41 +2817,48 @@ async function updateAggregatedStatsForEvent(userId, orgId, eventTimestamp, disp
 }
 
 async function recomputeUserEventStats(userIds = []) {
-	if (!db) {
-		return;
-	}
-	const uniqueIds = Array.from(new Set((userIds || []).filter(id => typeof id === 'string' && id.trim() !== '')));
-	if (uniqueIds.length === 0) {
-		return;
-	}
-
-	// Ensure user_event_stats table exists (defensive programming for production issues)
 	try {
-		if (dbType === 'sqlite') {
-			db.exec(`
-        CREATE TABLE IF NOT EXISTS user_event_stats (
-          user_id TEXT PRIMARY KEY,
-          event_count INTEGER NOT NULL DEFAULT 0,
-          last_event TEXT,
-          display_name TEXT
-        );
-        CREATE INDEX IF NOT EXISTS idx_user_event_stats_last_event ON user_event_stats(last_event);
-      `);
-		} else if (dbType === 'postgresql') {
-			await db.query(`
-        CREATE TABLE IF NOT EXISTS user_event_stats (
-          user_id TEXT PRIMARY KEY,
-          event_count INTEGER NOT NULL DEFAULT 0,
-          last_event TIMESTAMPTZ,
-          display_name TEXT
-        );
-        CREATE INDEX IF NOT EXISTS idx_user_event_stats_last_event ON user_event_stats(last_event);
-      `);
+		console.log(`[RECOMPUTE_USER_STATS] Starting recomputation for ${userIds?.length || 0} users`);
+		if (!db) {
+			console.log(`[RECOMPUTE_USER_STATS] No database connection, skipping`);
+			return;
 		}
-	} catch (error) {
-		console.warn('Warning: Could not ensure user_event_stats table exists:', error.message);
-		// Continue execution - the operation might still work if table exists
-	}
+		const uniqueIds = Array.from(new Set((userIds || []).filter(id => typeof id === 'string' && id.trim() !== '')));
+		if (uniqueIds.length === 0) {
+			console.log(`[RECOMPUTE_USER_STATS] No valid user IDs to process`);
+			return;
+		}
+
+		console.log(`[RECOMPUTE_USER_STATS] Processing ${uniqueIds.length} unique user IDs`);
+
+		// Ensure user_event_stats table exists (defensive programming for production issues)
+		try {
+			if (dbType === 'sqlite') {
+				db.exec(`
+	        CREATE TABLE IF NOT EXISTS user_event_stats (
+	          user_id TEXT PRIMARY KEY,
+	          event_count INTEGER NOT NULL DEFAULT 0,
+	          last_event TEXT,
+	          display_name TEXT
+	        );
+	        CREATE INDEX IF NOT EXISTS idx_user_event_stats_last_event ON user_event_stats(last_event);
+	      `);
+			} else if (dbType === 'postgresql') {
+				await db.query(`
+	        CREATE TABLE IF NOT EXISTS user_event_stats (
+	          user_id TEXT PRIMARY KEY,
+	          event_count INTEGER NOT NULL DEFAULT 0,
+	          last_event TIMESTAMPTZ,
+	          display_name TEXT
+	        );
+	        CREATE INDEX IF NOT EXISTS idx_user_event_stats_last_event ON user_event_stats(last_event);
+	      `);
+			}
+			console.log(`[RECOMPUTE_USER_STATS] Ensured user_event_stats table exists`);
+		} catch (error) {
+			console.warn('Warning: Could not ensure user_event_stats table exists:', error.message);
+			// Continue execution - the operation might still work if table exists
+		}
 
 	if (dbType === 'sqlite') {
 		const statsStmt = db.prepare(`
@@ -2904,42 +2936,54 @@ async function recomputeUserEventStats(userIds = []) {
 			);
 		}
 	}
+	console.log(`[RECOMPUTE_USER_STATS] Completed successfully for ${uniqueIds.length} users`);
+	} catch (error) {
+		console.error(`[RECOMPUTE_USER_STATS] Error during recomputation:`, error);
+		throw error;
+	}
 }
 
 async function recomputeOrgEventStats(orgIds = []) {
-	if (!db) {
-		return;
-	}
-	const uniqueIds = Array.from(new Set((orgIds || []).filter(id => typeof id === 'string' && id.trim() !== '')));
-	if (uniqueIds.length === 0) {
-		return;
-	}
-
-	// Ensure org_event_stats table exists (defensive programming for production issues)
 	try {
-		if (dbType === 'sqlite') {
-			db.exec(`
-        CREATE TABLE IF NOT EXISTS org_event_stats (
-          org_id TEXT PRIMARY KEY,
-          event_count INTEGER NOT NULL DEFAULT 0,
-          last_event TEXT
-        );
-        CREATE INDEX IF NOT EXISTS idx_org_event_stats_last_event ON org_event_stats(last_event);
-      `);
-		} else if (dbType === 'postgresql') {
-			await db.query(`
-        CREATE TABLE IF NOT EXISTS org_event_stats (
-          org_id TEXT PRIMARY KEY,
-          event_count INTEGER NOT NULL DEFAULT 0,
-          last_event TIMESTAMPTZ
-        );
-        CREATE INDEX IF NOT EXISTS idx_org_event_stats_last_event ON org_event_stats(last_event);
-      `);
+		console.log(`[RECOMPUTE_ORG_STATS] Starting recomputation for ${orgIds?.length || 0} orgs`);
+		if (!db) {
+			console.log(`[RECOMPUTE_ORG_STATS] No database connection, skipping`);
+			return;
 		}
-	} catch (error) {
-		console.warn('Warning: Could not ensure org_event_stats table exists:', error.message);
-		// Continue execution - the operation might still work if table exists
-	}
+		const uniqueIds = Array.from(new Set((orgIds || []).filter(id => typeof id === 'string' && id.trim() !== '')));
+		if (uniqueIds.length === 0) {
+			console.log(`[RECOMPUTE_ORG_STATS] No valid org IDs to process`);
+			return;
+		}
+
+		console.log(`[RECOMPUTE_ORG_STATS] Processing ${uniqueIds.length} unique org IDs`);
+
+		// Ensure org_event_stats table exists (defensive programming for production issues)
+		try {
+			if (dbType === 'sqlite') {
+				db.exec(`
+	        CREATE TABLE IF NOT EXISTS org_event_stats (
+	          org_id TEXT PRIMARY KEY,
+	          event_count INTEGER NOT NULL DEFAULT 0,
+	          last_event TEXT
+	        );
+	        CREATE INDEX IF NOT EXISTS idx_org_event_stats_last_event ON org_event_stats(last_event);
+	      `);
+			} else if (dbType === 'postgresql') {
+				await db.query(`
+	        CREATE TABLE IF NOT EXISTS org_event_stats (
+	          org_id TEXT PRIMARY KEY,
+	          event_count INTEGER NOT NULL DEFAULT 0,
+	          last_event TIMESTAMPTZ
+	        );
+	        CREATE INDEX IF NOT EXISTS idx_org_event_stats_last_event ON org_event_stats(last_event);
+	      `);
+			}
+			console.log(`[RECOMPUTE_ORG_STATS] Ensured org_event_stats table exists`);
+		} catch (error) {
+			console.warn('Warning: Could not ensure org_event_stats table exists:', error.message);
+			// Continue execution - the operation might still work if table exists
+		}
 
 	if (dbType === 'sqlite') {
 		const statsStmt = db.prepare(`
@@ -2996,6 +3040,11 @@ async function recomputeOrgEventStats(orgIds = []) {
 				[orgId, count, stats.last_event || null]
 			);
 		}
+	}
+	console.log(`[RECOMPUTE_ORG_STATS] Completed successfully for ${uniqueIds.length} orgs`);
+	} catch (error) {
+		console.error(`[RECOMPUTE_ORG_STATS] Error during recomputation:`, error);
+		throw error;
 	}
 }
 
