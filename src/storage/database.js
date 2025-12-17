@@ -4871,6 +4871,64 @@ async function importDatabase(importData) {
 	}
 }
 
+async function getToolCallStats(options = {}) {
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
+
+	const { days = 30 } = options;
+
+	// Calculate the date threshold
+	const cutoffDate = new Date();
+	cutoffDate.setDate(cutoffDate.getDate() - days);
+	const cutoffDateStr = cutoffDate.toISOString();
+
+	if (dbType === 'sqlite') {
+		const query = `
+			SELECT
+				JSON_EXTRACT(data, '$.toolName') as tool_name,
+				COUNT(*) as count
+			FROM telemetry_events
+			WHERE event = 'tool_call'
+				AND created_at >= ?
+				AND JSON_EXTRACT(data, '$.toolName') IS NOT NULL
+				AND JSON_EXTRACT(data, '$.toolName') != ''
+			GROUP BY JSON_EXTRACT(data, '$.toolName')
+			ORDER BY count DESC
+		`;
+
+		const stmt = db.prepare(query);
+		const rows = stmt.all(cutoffDateStr);
+
+		return rows.map(row => ({
+			toolName: row.tool_name,
+			count: row.count
+		}));
+	} else if (dbType === 'postgresql') {
+		const query = `
+			SELECT
+				data->>'toolName' as tool_name,
+				COUNT(*) as count
+			FROM telemetry_events
+			WHERE event = 'tool_call'
+				AND created_at >= $1
+				AND data->>'toolName' IS NOT NULL
+				AND data->>'toolName' != ''
+			GROUP BY data->>'toolName'
+			ORDER BY count DESC
+		`;
+
+		const result = await db.query(query, [cutoffDateStr]);
+
+		return result.rows.map(row => ({
+			toolName: row.tool_name,
+			count: row.count
+		}));
+	}
+
+	throw new Error('Unsupported database type');
+}
+
 module.exports = {
 	init,
 	storeEvent,
@@ -4937,6 +4995,8 @@ module.exports = {
 	getActiveRememberTokensCount,
 	// Utilities
 	getNormalizedUserId,
+	// Tool call statistics
+	getToolCallStats,
 	// Database export/import
 	exportDatabase,
 	importDatabase

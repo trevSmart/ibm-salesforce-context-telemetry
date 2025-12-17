@@ -206,6 +206,7 @@ async function initializeDashboardPage({ resetState = false } = {}) {
 		await loadTopUsersToday();
 		await loadTopTeamsToday();
 		await loadDashboardDatabaseSize();
+		await loadToolCallStats();
 
 		// Set up time range selector (guard against duplicate listeners)
 		const timeRangeSelect = document.getElementById('timeRangeSelect');
@@ -1449,7 +1450,8 @@ async function refreshDashboard(event) {
 			loadChartData(currentDays),
 			loadTopUsersToday(),
 			loadTopTeamsToday(),
-			loadDashboardDatabaseSize()
+			loadDashboardDatabaseSize(),
+			loadToolCallStats()
 		]);
 	} catch (error) {
 		// Any errors are already logged inside loadChartData; this catch
@@ -1870,16 +1872,6 @@ async function loadTopUsersToday() {
 		return;
 	}
 
-	const cacheKey = `topUsers_${TOP_USERS_LOOKBACK_DAYS}_${TOP_USERS_LIMIT}`;
-
-	// Try to get data from cache first
-	const cachedUsers = window.getCachedData ? window.getCachedData(cacheKey) : null;
-	if (cachedUsers) {
-		console.log('[Dashboard] Using cached top users data');
-		renderTopUsers(cachedUsers);
-		return;
-	}
-
 	renderTopUsersPlaceholder('Loading top users…');
 
 	try {
@@ -1898,12 +1890,6 @@ async function loadTopUsersToday() {
 
 		const payload = await response.json();
 		const users = Array.isArray(payload?.users) ? payload.users : [];
-
-		// Cache the data for future use
-		if (window.setCachedData) {
-			window.setCachedData(cacheKey, users);
-		}
-
 		renderTopUsers(users);
 	} catch (error) {
 		console.error('Error loading top users:', error);
@@ -1914,16 +1900,6 @@ async function loadTopUsersToday() {
 async function loadTopTeamsToday() {
 	const list = document.getElementById('topTeamsList');
 	if (!list) {
-		return;
-	}
-
-	const cacheKey = `topTeams_${TOP_TEAMS_LOOKBACK_DAYS}_${TOP_TEAMS_LIMIT}`;
-
-	// Try to get data from cache first
-	const cachedTeams = window.getCachedData ? window.getCachedData(cacheKey) : null;
-	if (cachedTeams) {
-		console.log('[Dashboard] Using cached top teams data');
-		renderTopTeams(cachedTeams);
 		return;
 	}
 
@@ -1950,17 +1926,113 @@ async function loadTopTeamsToday() {
 
 		const payload = await response.json();
 		const teams = Array.isArray(payload?.teams) ? payload.teams : [];
-
-		// Cache the data for future use
-		if (window.setCachedData) {
-			window.setCachedData(cacheKey, teams);
-		}
-
 		renderTopTeams(teams);
 	} catch (error) {
 		console.error('Error loading top teams:', error);
 		renderTopTeamsPlaceholder('Unable to load top teams right now.');
 	}
+}
+
+async function loadToolCallStats() {
+	const container = document.getElementById('toolCallChartContainer');
+	if (!container) {
+		return;
+	}
+
+	try {
+		const response = await fetch('/api/tool-call-stats?days=30', {
+			credentials: 'include'
+		});
+
+		if (response.status === 401) {
+			window.location.href = '/login';
+			return;
+		}
+
+		if (!response.ok) {
+			throw new Error(`HTTP error! status: ${response.status}`);
+		}
+
+		const stats = await response.json();
+		renderToolCallChart(stats);
+	} catch (error) {
+		console.error('Error loading tool call stats:', error);
+		container.innerHTML = '<div class="text-center text-gray-500">Unable to load tool call statistics</div>';
+	}
+}
+
+function renderToolCallChart(stats) {
+	const container = document.getElementById('toolCallChartContainer');
+	if (!container) {
+		return;
+	}
+
+	// Clear previous content
+	container.innerHTML = '<div id="toolCallChart" style="width: 100%; height: 250px;"></div>';
+
+	if (typeof echarts === 'undefined') {
+		container.innerHTML = '<div class="text-center text-gray-500">Chart library not loaded</div>';
+		return;
+	}
+
+	if (!stats || stats.length === 0) {
+		container.innerHTML = '<div class="text-center text-gray-500">No tool call data available</div>';
+		return;
+	}
+
+	const chart = echarts.init(document.getElementById('toolCallChart'));
+
+	// Prepare data for pie chart with padAngle
+	const data = stats.slice(0, 10).map(item => ({
+		name: item.toolName,
+		value: item.count
+	}));
+
+	const option = {
+		tooltip: {
+			trigger: 'item',
+			formatter: '{a} <br/>{b}: {c} ({d}%)'
+		},
+		legend: {
+			orient: 'vertical',
+			left: 'left',
+			show: false // Hide legend for space efficiency
+		},
+		series: [
+			{
+				name: 'Tool Calls',
+				type: 'pie',
+				radius: '60%',
+				center: ['50%', '50%'],
+				padAngle: 5,
+				data: data,
+				emphasis: {
+					itemStyle: {
+						shadowBlur: 10,
+						shadowOffsetX: 0,
+						shadowColor: 'rgba(0, 0, 0, 0.5)'
+					}
+				},
+				label: {
+					show: false
+				},
+				labelLine: {
+					show: false
+				}
+			}
+		],
+		color: [
+			'#5470c6', '#91cc75', '#fac858', '#ee6666', '#73c0de',
+			'#3ba272', '#fc8452', '#9a60b4', '#ea7ccc', '#6b9bd1'
+		]
+	};
+
+	chart.setOption(option);
+
+	// Make chart responsive
+	window.addEventListener('resize', () => {
+		chart.resize();
+	});
 }
 
 async function loadChartData(days = currentDays) {

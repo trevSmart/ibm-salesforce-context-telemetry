@@ -2959,95 +2959,87 @@ if (window.__EVENT_LOG_LOADED__) {
 	}
 
 	async function loadUsersList() {
-		const userList = document.getElementById('userList');
-		if (!userList) {
-			console.error('userList element not found');
-			return;
-		}
-
-		userList.innerHTML = '';
-
-		const cacheKey = 'telemetry_users';
-		let usersWithStats = window.getCachedData ? window.getCachedData(cacheKey) : null;
-
 		try {
-			if (!usersWithStats) {
-				const response = await fetch('/api/telemetry-users', {
-					credentials: 'include'
-				});
-				const validResponse = await handleApiResponse(response);
-				if (!validResponse) return;
-				const data = await validResponse.json();
+			const response = await fetch('/api/telemetry-users', {
+				credentials: 'include'
+			});
+			const validResponse = await handleApiResponse(response);
+			if (!validResponse) return;
+			const data = await validResponse.json();
 
-				if (data && data.status === 'error') {
-					console.error('Error loading users:', data.message);
-					return;
-				}
-
-				// Normalize API response to consistent objects { id, label, count, last_event }
-				const normalizedUsers = (Array.isArray(data) ? data : [])
-					.map(entry => {
-						if (entry && typeof entry === 'object') {
-							const rawId = typeof entry.id === 'string' ? entry.id : (typeof entry.user_id === 'string' ? entry.user_id : '');
-							const trimmedId = rawId.trim();
-							if (!trimmedId) {
-								return null;
-							}
-							const label = typeof entry.label === 'string' && entry.label.trim() !== ''
-								? entry.label.trim()
-								: trimmedId;
-							const count = Number.isFinite(entry.eventCount)
-								? Number(entry.eventCount)
-								: (Number.isFinite(entry.count) ? Number(entry.count) : 0);
-							const lastEvent = entry.lastEvent || entry.last_event || null;
-							const userName = entry.user_name || label;
-							return { id: trimmedId, label, count, last_event: lastEvent, user_name: userName };
-						}
-						if (typeof entry === 'string') {
-							const trimmedValue = entry.trim();
-							return trimmedValue
-								? { id: trimmedValue, label: trimmedValue, count: 0, last_event: null, user_name: trimmedValue }
-								: null;
-						}
-						return null;
-					})
-					.filter(Boolean)
-					.reduce((acc, user) => {
-						if (!acc.seen.has(user.id)) {
-							acc.seen.add(user.id);
-							acc.values.push(user);
-						}
-						return acc;
-					}, { seen: new Set(), values: [] }).values;
-
-				if (normalizedUsers.length === 0) {
-					return;
-				}
-
-				// Sort users by last activity (most recent first)
-				usersWithStats = normalizedUsers.map(user => {
-					return {
-						user_id: user.id,
-						label: user.label,
-						count: user.count || 0,
-						last_event: user.last_event || null,
-						user_name: user.user_name || user.label
-					};
-				}).sort((a, b) => {
-					if (!a.last_event && !b.last_event) return 0;
-					if (!a.last_event) return 1;
-					if (!b.last_event) return -1;
-					const dateA = new Date(a.last_event);
-					const dateB = new Date(b.last_event);
-					return dateB - dateA;
-				});
-
-				if (window.setCachedData) {
-					window.setCachedData(cacheKey, usersWithStats);
-				}
-			} else {
-				console.log('[Logs] Using cached users data');
+			// Check if response is an error object
+			if (data && data.status === 'error') {
+				console.error('Error loading users:', data.message);
+				return;
 			}
+
+			const userList = document.getElementById('userList');
+			if (!userList) {
+				console.error('userList element not found');
+				return;
+			}
+
+			// Clear the list
+			userList.innerHTML = '';
+
+			// Normalize API response to consistent objects { id, label, count, last_event }
+			const normalizedUsers = (Array.isArray(data) ? data : [])
+				.map(entry => {
+					if (entry && typeof entry === 'object') {
+						const rawId = typeof entry.id === 'string' ? entry.id : (typeof entry.user_id === 'string' ? entry.user_id : '');
+						const trimmedId = rawId.trim();
+						if (!trimmedId) {
+							return null;
+						}
+						const label = typeof entry.label === 'string' && entry.label.trim() !== ''
+							? entry.label.trim()
+							: trimmedId;
+						const count = Number.isFinite(entry.eventCount)
+							? Number(entry.eventCount)
+							: (Number.isFinite(entry.count) ? Number(entry.count) : 0);
+						const lastEvent = entry.lastEvent || entry.last_event || null;
+						const userName = entry.user_name || label;
+						return { id: trimmedId, label, count, last_event: lastEvent, user_name: userName };
+					}
+					if (typeof entry === 'string') {
+						const trimmedValue = entry.trim();
+						return trimmedValue
+							? { id: trimmedValue, label: trimmedValue, count: 0, last_event: null, user_name: trimmedValue }
+							: null;
+					}
+					return null;
+				})
+				.filter(Boolean)
+				.reduce((acc, user) => {
+					if (!acc.seen.has(user.id)) {
+						acc.seen.add(user.id);
+						acc.values.push(user);
+					}
+					return acc;
+				}, { seen: new Set(), values: [] }).values;
+
+			if (normalizedUsers.length === 0) {
+				return;
+			}
+
+			// Sort users by last activity (most recent first)
+			const usersWithStats = normalizedUsers.map(user => {
+				return {
+					user_id: user.id,
+					label: user.label,
+					count: user.count || 0,
+					last_event: user.last_event || null,
+					user_name: user.user_name || user.label
+				};
+			}).sort((a, b) => {
+				// Sort by last_event DESC, users without events go to the end
+				if (!a.last_event && !b.last_event) return 0;
+				if (!a.last_event) return 1;
+				if (!b.last_event) return -1;
+				const dateA = new Date(a.last_event);
+				const dateB = new Date(b.last_event);
+				return dateB - dateA;
+			});
 
 			// Add each user to the list
 			usersWithStats.forEach(user => {

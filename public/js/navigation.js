@@ -3,7 +3,6 @@
 // Lightweight client-side navigation to avoid repainting shared chrome
 (() => {
 	const SUPPORTED_PATHS = ['/', '/logs', '/teams'];
-	const EVENT_LOG_JS_SRC = '/js/event-log.js?v=20251217';
 	const SOFT_NAV_SELECTOR = [
 		'a.top-nav-link',
 		'a.top-nav-logo',
@@ -13,7 +12,7 @@
 	].join(',');
 	const PAGE_SCRIPTS = {
 		'/': [{ src: '/js/index.js', type: 'module' }],
-		'/logs': [{ src: EVENT_LOG_JS_SRC }],
+		'/logs': [{ src: '/js/event-log.js' }],
 		'/teams': [{ src: '/js/teams.js', type: 'module' }]
 	};
 
@@ -23,47 +22,17 @@
 	const domParser = new DOMParser();
 	const pageCache = new Map();
 	const containerCache = new Map(); // Cache for DOM container nodes per path
-	const dataCache = new Map(); // Cache for API data between navigation
-	const normalizeSrc = (src) => {
-		try {
-			const url = new URL(src, window.location.href);
-			return `${url.pathname}${url.search}`;
-		} catch (_e) {
-			return src;
-		}
-	};
-
 	const loadedScripts = new Set(
-		Array.from(document.querySelectorAll('script[src]')).map((script) => normalizeSrc(script.src))
+		Array.from(document.querySelectorAll('script[src]')).map((script) => {
+			try {
+				return new URL(script.src, window.location.href).pathname;
+			} catch (_e) {
+				return script.src;
+			}
+		})
 	);
 
 	let isNavigating = false;
-
-	// Data cache management functions
-	function getCachedData(key) {
-		const cached = dataCache.get(key);
-		if (cached && Date.now() - cached.timestamp < 300000) { // 5 minutes cache
-			return cached.data;
-		}
-		dataCache.delete(key);
-		return null;
-	}
-
-	function setCachedData(key, data) {
-		dataCache.set(key, {
-			data: data,
-			timestamp: Date.now()
-		});
-	}
-
-	function clearDataCache() {
-		dataCache.clear();
-	}
-
-	// Expose cache functions globally
-	window.getCachedData = getCachedData;
-	window.setCachedData = setCachedData;
-	window.clearDataCache = clearDataCache;
 
 	function getPath(href) {
 		try {
@@ -121,9 +90,8 @@
 		for (const entry of scripts) {
 			const src = typeof entry === 'string' ? entry : entry.src;
 			const type = typeof entry === 'object' ? entry.type : undefined;
-			const normalizedSrc = normalizeSrc(src);
 
-			if (loadedScripts.has(normalizedSrc)) {
+			if (loadedScripts.has(src)) {
 				continue;
 			}
 			await new Promise((resolve, reject) => {
@@ -134,7 +102,7 @@
 				}
 				script.async = true;
 				script.onload = () => {
-					loadedScripts.add(normalizedSrc);
+					loadedScripts.add(src);
 					resolve();
 				};
 				script.onerror = (err) => reject(err);
@@ -428,40 +396,9 @@
 		});
 	}
 
-	// Register Service Worker for modern caching
-	function registerServiceWorker() {
-		if ('serviceWorker' in navigator) {
-			navigator.serviceWorker.register('/sw.js', { scope: '/' })
-				.then((registration) => {
-					console.log('[SW] Registered successfully:', registration.scope);
-
-					// Handle updates
-					registration.addEventListener('updatefound', () => {
-						const newWorker = registration.installing;
-						if (newWorker) {
-							newWorker.addEventListener('statechange', () => {
-								if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-									// New version available
-									console.log('[SW] New version available, notifying user');
-									// You could show a notification to the user here
-									newWorker.postMessage({ type: 'SKIP_WAITING' });
-								}
-							});
-						}
-					});
-				})
-				.catch((error) => {
-					console.log('[SW] Registration failed:', error);
-				});
-		}
-	}
-
 	if (document.readyState === 'loading') {
 		document.addEventListener('DOMContentLoaded', initNav);
 	} else {
 		initNav();
 	}
-
-	// Register Service Worker
-	registerServiceWorker();
 })();
