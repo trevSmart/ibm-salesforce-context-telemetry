@@ -1,36 +1,17 @@
 // Service Worker for IBM Salesforce Context Telemetry
 // Implements modern caching strategies for optimal performance
 
-const CACHE_NAME = 'ibm-salesforce-telemetry-v1.0.0';
-const API_CACHE_NAME = 'api-cache-v1.0.0';
+const CACHE_NAME = 'ibm-salesforce-telemetry-v1.1.0';
+const API_CACHE_NAME = 'api-cache-v1.1.0';
 
-// Resources to cache immediately on install
+// Resources to cache immediately on install - only critical, publicly accessible resources
 const STATIC_CACHE_URLS = [
-  '/',
-  '/index.html',
-  '/logs',
-  '/event-log.html',
-  '/teams',
-  '/teams.html',
-  '/people',
-  '/people.html',
-  '/login',
-  '/login.html',
   '/css/input.css',
-  '/js/index.js',
-  '/js/event-log.js',
-  '/js/teams.js',
-  '/js/people.js',
   '/js/navigation.js',
-  '/js/header.js',
-  '/js/user-menu.js',
-  '/js/notifications.js',
-  '/js/csrf-helper.js',
-  '/js/polyfills.js',
-  '/favicon.ico',
   '/resources/favicon.svg',
   '/resources/favicon.png',
-  '/resources/telemetry.png'
+  '/resources/telemetry.png',
+  '/resources/bg-01.jpg'
 ];
 
 // API endpoints that should be cached (with different strategies)
@@ -58,7 +39,15 @@ self.addEventListener('install', (event) => {
     caches.open(CACHE_NAME)
       .then((cache) => {
         console.log('[SW] Caching static resources');
-        return cache.addAll(STATIC_CACHE_URLS);
+        // Cache resources individually to handle failures gracefully
+        return Promise.allSettled(
+          STATIC_CACHE_URLS.map(url => {
+            return cache.add(url).catch(error => {
+              console.warn(`[SW] Failed to cache ${url}:`, error);
+              // Continue with other resources
+            });
+          })
+        );
       })
       .then(() => self.skipWaiting())
   );
@@ -88,7 +77,7 @@ function cacheFirst(request) {
         return cachedResponse;
       }
 
-      return fetch(request)
+      return fetch(request, { credentials: 'include' })
         .then((response) => {
           // Only cache successful responses
           if (!response || response.status !== 200 || response.type !== 'basic') {
@@ -115,7 +104,7 @@ function cacheFirst(request) {
 
 // Network First Strategy - for dynamic API data
 function networkFirst(request) {
-  return fetch(request)
+  return fetch(request, { credentials: 'include' })
     .then((response) => {
       // Cache successful responses
       if (response && response.status === 200) {
@@ -146,7 +135,7 @@ function staleWhileRevalidate(request) {
   return caches.match(request)
     .then((cachedResponse) => {
       // Always try to update the cache in background
-      const fetchPromise = fetch(request)
+      const fetchPromise = fetch(request, { credentials: 'include' })
         .then((networkResponse) => {
           if (networkResponse && networkResponse.status === 200) {
             caches.open(API_CACHE_NAME)
