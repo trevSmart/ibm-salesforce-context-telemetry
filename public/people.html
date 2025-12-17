@@ -4,17 +4,20 @@
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>People - IBM Salesforce Context Telemetry</title>
+	<title>Users - IBM Salesforce Context Telemetry</title>
 	<link rel="icon" type="image/svg+xml" sizes="any" href="/resources/favicon.svg">
 	<link rel="icon" type="image/png" sizes="32x32" href="/resources/favicon.png">
 
 	<!-- Preconnect to external domains for faster loading -->
+	<link rel="preconnect" href="https://rsms.me">
 	<link rel="preconnect" href="https://cdn.jsdelivr.net">
 
-	<!-- Preload local Inter variable font and main stylesheet without blocking render -->
-	<link rel="preload" href="/fonts/inter-variable.woff2" as="font" type="font/woff2" crossorigin>
-	<link rel="preload" href="/css/output.css" as="style">
-	<link rel="stylesheet" href="/css/output.css">
+	<!-- Preload critical font for better LCP -->
+	<link rel="preload" href="https://rsms.me/inter/inter.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+	<noscript><link rel="stylesheet" href="https://rsms.me/inter/inter.css"></noscript>
+
+	<!-- Load main CSS synchronously as it's critical for layout -->
+	<link href="/css/output.css" rel="stylesheet">
 
 	<!-- Load FontAwesome asynchronously to prevent render blocking -->
 	<link rel="preload" href="/vendor/fontawesome/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
@@ -22,12 +25,13 @@
 	<link rel="preload" href="/vendor/fontawesome/css/v4-shims.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
 	<noscript><link rel="stylesheet" href="/vendor/fontawesome/css/v4-shims.min.css"></noscript>
 	<script src="/js/polyfills.js" defer></script>
-	<script src="/vendor/tailwindplus/elements.js" type="module" defer></script>
+	<script src="https://cdn.jsdelivr.net/npm/@tailwindplus/elements@1" type="module" defer></script>
 	<script>
 		// Apply theme immediately before page render to prevent flash
 		(function () {
 			const savedTheme = localStorage.getItem('theme');
-			const theme = savedTheme || 'light';
+			const systemTheme = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+			const theme = savedTheme || systemTheme;
 			if (theme === 'dark') {
 				document.documentElement.classList.add('dark');
 			}
@@ -35,70 +39,45 @@
 	</script>
 </head>
 
-<body class="people-page">
+<body class="users-page">
 	<div class="container main-container">
 		<div id="global-header-placeholder"></div>
-		<script src="/js/header.js" defer></script>
+		<script src="/js/header.js"></script>
 		<script>
-			// Initialize header for people page after scripts are parsed
-			window.addEventListener('DOMContentLoaded', () => {
-				initGlobalHeader({
-					activePage: '/people',
-					refreshButton: {
-						onClick: 'refreshPeople(event)',
-						ariaLabel: 'Refresh people',
-						title: 'Refresh people'
-					},
-					secondaryButton: {
-						type: 'settings'
-					}
-				});
+			// Initialize header for users page
+			initGlobalHeader({
+				activePage: '/users',
+				refreshButton: {
+					onClick: 'refreshUsers(event)',
+					ariaLabel: 'Refresh users',
+					title: 'Refresh users'
+				},
+				secondaryButton: {
+					type: 'settings'
+				}
 			});
 		</script>
 		<div class="container-content">
-			<div class="people-header" style="display: flex; align-items: flex-end; justify-content: space-between; gap: 16px;">
-				<div class="people-breadcrumbs" style="display: flex; flex-direction: column; gap: 6px;">
+			<div class="users-header" style="display: flex; align-items: flex-end; justify-content: space-between; gap: 16px;">
+				<div class="users-breadcrumbs" style="display: flex; flex-direction: column; gap: 6px;">
 					<div style="display: flex; align-items: center; gap: 12px;">
 						<a href="/" class="back-link subtitle" data-soft-nav="true">← Back to Dashboard</a>
 					</div>
-					<div class="log-viewer-title font-semibold">People</div>
+					<div class="log-viewer-title font-semibold">Users</div>
+				</div>
+				<div style="display: flex; justify-content: flex-end;">
+					<button type="button" onclick="showCreateUserModal()" class="btn">
+						<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5">
+							<path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5z" />
+						</svg>
+						New user
+					</button>
 				</div>
 			</div>
-			<div id="peopleContent">
-				<!-- Content will be loaded by people.js -->
-				<div class="people-loading">
-					<p>Loading people...</p>
-				</div>
-			</div>
-
-			<!-- Add person form (always visible) -->
-			<div id="addPersonSection">
-				<div class="mx-auto max-w-lg">
-					<div>
-						<div class="text-center">
-							<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" aria-hidden="true" class="mx-auto size-12 text-gray-400">
-								<path d="M34 40h10v-4a6 6 0 00-10.712-3.714M34 40H14m20 0v-4a9.971 9.971 0 00-.712-3.714M14 40H4v-4a6 6 0 0110.713-3.714M14 40v-4c0-1.313.253-2.566.713-3.714m0 0A10.003 10.003 0 0124 26c4.21 0 7.813 2.602 9.288 6.286M30 14a6 6 0 11-12 0 6 6 0 0112 0zm12 6a4 4 0 11-8 0 4 4 0 018 0zm-28 0a4 4 0 11-8 0 4 4 0 018 0z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-							</svg>
-							<h2 class="mt-2 text-base font-semibold text-gray-900">Add people</h2>
-							<p class="mt-1 text-sm text-gray-500">Add people to group their usernames from different organizations.</p>
-						</div>
-						<form id="addPersonForm" onsubmit="handleCreatePerson(event)" class="mt-6 flex">
-							<input type="text" name="name" placeholder="Enter a name" aria-label="Person name" required class="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6" />
-							<button type="submit" class="ml-4 shrink-0 rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">Add person</button>
-						</form>
-					</div>
-				</div>
-			</div>
-
-			<!-- People list (always visible) -->
-			<div id="peopleListSection">
-				<div class="mx-auto max-w-lg">
-					<div class="mt-10">
-						<h3 class="text-sm font-medium text-gray-500">People added to the system</h3>
-						<ul id="peopleList" role="list" class="mt-4 divide-y divide-gray-200 border-t border-b border-gray-200">
-							<!-- People will be loaded here -->
-						</ul>
-					</div>
+			<div id="usersContent">
+				<!-- Content will be loaded by users.js -->
+				<div class="users-loading">
+					<p>Loading users...</p>
 				</div>
 			</div>
 		</div>
@@ -107,7 +86,7 @@
 	<script src="/js/navigation.js" defer></script>
 	<script src="/js/user-menu.js" defer></script>
 	<script src="/js/csrf-helper.js" defer></script>
-	<script type="module" src="/js/people.js" defer></script>
+	<script type="module" src="/js/users.js" defer></script>
 </body>
 
 </html>

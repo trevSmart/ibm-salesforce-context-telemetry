@@ -204,53 +204,35 @@ if (isDevelopment) {
 
 		const livereloadPort = parseInt(process.env.LIVERELOAD_PORT || '35729', 10);
 
-		// Try to create livereload server with fallback ports
-		let liveReloadServer = null;
-		let actualPort = livereloadPort;
+		// Create livereload server
+		const liveReloadServer = livereload.createServer({
+			port: livereloadPort,
+			exts: ['html', 'css', 'js', 'json']
+		});
 
-		// Try up to 20 different ports starting from the configured port
-		for (let attempt = 0; attempt < 20; attempt++) {
-			try {
-				liveReloadServer = livereload.createServer({
-					port: actualPort,
-					exts: ['html', 'css', 'js', 'json']
-				});
-				break; // Success, exit the loop
-			} catch (error) {
-				if (error.code === 'EADDRINUSE') {
-					console.warn(`⚠️  Live reload port ${actualPort} already in use, trying next port...`);
-					actualPort++;
-				} else {
-					// For other errors, try next port as well
-					console.warn(`⚠️  Live reload error on port ${actualPort}: ${error.message}, trying next port...`);
-					actualPort++;
-				}
+		// Avoid crashing when the livereload port is already in use
+		liveReloadServer.server?.on('error', (error) => {
+			if (error && error.code === 'EADDRINUSE') {
+				console.warn(`⚠️  Live reload port ${livereloadPort} already in use; skipping live reload.`);
+			} else {
+				console.warn('⚠️  Live reload server error; skipping live reload.', error?.message || error);
 			}
-		}
+		});
 
-		if (liveReloadServer) {
-			// Handle runtime errors
-			liveReloadServer.server?.on('error', (error) => {
-				console.warn('⚠️  Live reload server runtime error; continuing without live reload.', error?.message || error);
-			});
+		// Watch public directory for changes
+		liveReloadServer.watch(path.join(__dirname, '..', 'public'));
 
-			// Watch public directory for changes
-			liveReloadServer.watch(path.join(__dirname, '..', 'public'));
+		// Inject livereload script into HTML responses
+		app.use(connectLivereload({
+			port: livereloadPort
+		}));
 
-			// Inject livereload script into HTML responses
-			app.use(connectLivereload({
-				port: actualPort
-			}));
-
-			liveReloadServer.server?.once('listening', () => {
-				console.log(`🔄 Live reload enabled on port ${actualPort}`);
-			});
-		} else {
-			console.warn(`⚠️  Could not find an available port for live reload after trying 20 ports starting from ${livereloadPort}. Continuing without live reload.`);
-		}
-	} catch (error) {
-		// Live reload dependencies not installed or other fatal error, continue without it
-		console.log(`⚠️  Live reload not available (error: ${error.message}). Continuing without live reload.`);
+		liveReloadServer.server?.once('listening', () => {
+			console.log(`🔄 Live reload enabled on port ${livereloadPort}`);
+		});
+	} catch (_error) {
+		// Live reload dependencies not installed, continue without it
+		console.log('⚠️  Live reload not available (install dev dependencies: npm install)');
 	}
 }
 
@@ -364,19 +346,6 @@ app.use(express.static(path.join(__dirname, '..', 'public'), {
 		} else if (filePath.endsWith('sort-desc') || filePath.endsWith('sort-asc')) {
 			res.type('image/svg+xml');
 		}
-
-		// Add CSP headers for HTML files in development
-		if (isDevelopment && filePath.endsWith('.html')) {
-			res.setHeader('Content-Security-Policy', [
-				"default-src 'self'",
-				"script-src 'self' 'unsafe-inline' http://localhost:35729 https://cdn.jsdelivr.net",
-				"style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
-				"connect-src 'self' http://localhost:35729 ws://localhost:35729",
-				"img-src 'self' data: https://cdn.jsdelivr.net",
-				"font-src 'self' https://cdn.jsdelivr.net"
-			].join('; '));
-		}
-
 		// Add cache control for static assets
 		if (!isDevelopment) {
 			// Keep CSS/JS on a short leash so updates propagate quickly after deploys
@@ -1198,22 +1167,6 @@ app.get('/api/daily-stats', auth.requireAuth, async (req, res) => {
 	}
 });
 
-app.get('/api/tool-call-stats', auth.requireAuth, async (req, res) => {
-	try {
-		const days = parseInt(req.query.days, 10) || 30;
-
-		const stats = await db.getToolCallStats({ days });
-
-		res.json(stats);
-	} catch (error) {
-		console.error('Error fetching tool call stats:', error);
-		res.status(500).json({
-			status: 'error',
-			message: 'Failed to fetch tool call statistics'
-		});
-	}
-});
-
 app.get('/api/top-users-today', auth.requireAuth, async (req, res) => {
 	try {
 		const limitRaw = parseInt(req.query.limit, 10);
@@ -1500,7 +1453,7 @@ app.get('/api/teams/:id/logo', auth.requireAuth, apiReadLimiter, async (req, res
 		}
 
 		res.setHeader('Content-Type', logo.mime);
-		res.setHeader('Cache-Control', 'public, max-age=86400'); // Cache for 24 hours (Service Worker will handle updates)
+		res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache for 1 hour
 		res.send(logo.data);
 	} catch (error) {
 		console.error('Error fetching team logo:', error);
@@ -1836,25 +1789,10 @@ function formatBytes(bytes) {
 	return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
 }
 
-// Helper function to set CSP headers for HTML pages in development
-function setCSPHeadersForHTML(res) {
-	if (isDevelopment) {
-		res.setHeader('Content-Security-Policy', [
-			"default-src 'self'",
-			"script-src 'self' 'unsafe-inline' http://localhost:35729",
-			"style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
-			"connect-src 'self' http://localhost:35729",
-			"img-src 'self' data: https://cdn.jsdelivr.net",
-			"font-src 'self' https://cdn.jsdelivr.net"
-		].join('; '));
-	}
-}
-
 // Serve landing page
 app.get('/', auth.requireAuth, (_req, res) => {
 	const landingPath = path.join(__dirname, '..', 'public', 'index.html');
 	if (fs.existsSync(landingPath)) {
-		setCSPHeadersForHTML(res);
 		res.sendFile(landingPath);
 	} else {
 		res.status(200).send('MCP Telemetry server is running ✅<br><a href="/api/events">View API</a>');
@@ -1865,7 +1803,6 @@ app.get('/', auth.requireAuth, (_req, res) => {
 app.get('/teams', auth.requireAuth, auth.requireRole('administrator'), (_req, res) => {
 	const teamsPath = path.join(__dirname, '..', 'public', 'teams.html');
 	if (fs.existsSync(teamsPath)) {
-		setCSPHeadersForHTML(res);
 		res.sendFile(teamsPath);
 	} else {
 		res.status(404).send('Teams page not found');
@@ -1875,21 +1812,9 @@ app.get('/teams', auth.requireAuth, auth.requireRole('administrator'), (_req, re
 app.get('/logs', auth.requireAuth, auth.requireRole('advanced'), (_req, res) => {
 	const eventLogPath = path.join(__dirname, '..', 'public', 'event-log.html');
 	if (fs.existsSync(eventLogPath)) {
-		setCSPHeadersForHTML(res);
 		res.sendFile(eventLogPath);
 	} else {
 		res.status(404).send('Event logs page not found');
-	}
-});
-
-// Serve people page
-app.get('/people', auth.requireAuth, auth.requireRole('administrator'), (_req, res) => {
-	const peoplePath = path.join(__dirname, '..', 'public', 'people.html');
-	if (fs.existsSync(peoplePath)) {
-		setCSPHeadersForHTML(res);
-		res.sendFile(peoplePath);
-	} else {
-		res.status(404).send('People page not found');
 	}
 });
 

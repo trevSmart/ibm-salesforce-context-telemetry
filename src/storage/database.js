@@ -10,7 +10,7 @@ const fs = require('fs');
 const path = require('path');
 
 // Database configuration constants
-const DEFAULT_MAX_DB_SIZE = 10 * 1024 * 1024 * 1024; // 10 GB in bytes
+const DEFAULT_MAX_DB_SIZE = 1024 * 1024 * 1024; // 1 GB in bytes
 const VALID_ROLES = ['basic', 'advanced', 'administrator'];
 const MAX_LIMIT_FOR_TOTAL_COMPUTATION = 100; // Skip expensive COUNT queries for large limits
 
@@ -45,7 +45,6 @@ async function init() {
 		db.pragma('cache_size = -64000'); // 64MB cache
 		db.pragma('temp_store = MEMORY'); // Use memory for temporary tables
 		db.pragma('mmap_size = 30000000000'); // Use memory-mapped I/O
-		db.pragma('max_page_count = 1073741823'); // Allow database to grow up to ~4TB
 
 		// Create tables if they don't exist
 		db.exec(`
@@ -1211,82 +1210,45 @@ async function deleteAllEvents() {
  * @returns {Promise<number>} Number of deleted events
  */
 async function deleteEventsBySession(sessionId) {
-	try {
-		if (!db) {
-			throw new Error('Database not initialized. Call init() first.');
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
+
+	if (!sessionId) {
+		throw new Error('Session ID is required to delete events by session');
+	}
+
+	let impactedUsers = [];
+	let impactedOrgs = [];
+	if (dbType === 'sqlite') {
+		const rows = db.prepare('SELECT DISTINCT user_id, org_id FROM telemetry_events WHERE session_id = ?').all(sessionId);
+		impactedUsers = rows.map(row => row.user_id).filter(Boolean);
+		impactedOrgs = rows.map(row => row.org_id).filter(Boolean);
+	} else if (dbType === 'postgresql') {
+		const result = await db.query('SELECT DISTINCT user_id, org_id FROM telemetry_events WHERE session_id = $1', [sessionId]);
+		impactedUsers = result.rows.map(row => row.user_id).filter(Boolean);
+		impactedOrgs = result.rows.map(row => row.org_id).filter(Boolean);
+	}
+
+	if (dbType === 'sqlite') {
+		const stmt = db.prepare('DELETE FROM telemetry_events WHERE session_id = ?');
+		const result = stmt.run(sessionId);
+		if (result.changes > 0) {
+			await Promise.all([
+				impactedUsers.length ? recomputeUserEventStats(impactedUsers) : Promise.resolve(),
+				impactedOrgs.length ? recomputeOrgEventStats(impactedOrgs) : Promise.resolve()
+			]);
 		}
-
-		if (!sessionId) {
-			throw new Error('Session ID is required to delete events by session');
+		return result.changes;
+	} else if (dbType === 'postgresql') {
+		const result = await db.query('DELETE FROM telemetry_events WHERE session_id = $1', [sessionId]);
+		if (result.rowCount > 0) {
+			await Promise.all([
+				impactedUsers.length ? recomputeUserEventStats(impactedUsers) : Promise.resolve(),
+				impactedOrgs.length ? recomputeOrgEventStats(impactedOrgs) : Promise.resolve()
+			]);
 		}
-
-		console.log(`[DELETE_SESSION] Starting deletion of session: ${sessionId}`);
-
-		let impactedUsers = [];
-		let impactedOrgs = [];
-		if (dbType === 'sqlite') {
-			console.log(`[DELETE_SESSION] Querying impacted users/orgs for session: ${sessionId}`);
-			const rows = db.prepare('SELECT DISTINCT user_id, org_id FROM telemetry_events WHERE session_id = ?').all(sessionId);
-			impactedUsers = rows.map(row => row.user_id).filter(Boolean);
-			impactedOrgs = rows.map(row => row.org_id).filter(Boolean);
-			console.log(`[DELETE_SESSION] Found ${impactedUsers.length} users and ${impactedOrgs.length} orgs`);
-		} else if (dbType === 'postgresql') {
-			console.log(`[DELETE_SESSION] Querying impacted users/orgs for session: ${sessionId}`);
-			const result = await db.query('SELECT DISTINCT user_id, org_id FROM telemetry_events WHERE session_id = $1', [sessionId]);
-			impactedUsers = result.rows.map(row => row.user_id).filter(Boolean);
-			impactedOrgs = result.rows.map(row => row.org_id).filter(Boolean);
-			console.log(`[DELETE_SESSION] Found ${impactedUsers.length} users and ${impactedOrgs.length} orgs`);
-		}
-
-		let deletedCount = 0;
-		if (dbType === 'sqlite') {
-			console.log(`[DELETE_SESSION] Executing DELETE query for session: ${sessionId}`);
-			const stmt = db.prepare('DELETE FROM telemetry_events WHERE session_id = ?');
-			const result = stmt.run(sessionId);
-			deletedCount = result.changes;
-			console.log(`[DELETE_SESSION] Deleted ${deletedCount} events`);
-
-			if (result.changes > 0) {
-				console.log(`[DELETE_SESSION] Recomputing stats for ${impactedUsers.length} users and ${impactedOrgs.length} orgs`);
-				try {
-					await Promise.all([
-						impactedUsers.length ? recomputeUserEventStats(impactedUsers) : Promise.resolve(),
-						impactedOrgs.length ? recomputeOrgEventStats(impactedOrgs) : Promise.resolve()
-					]);
-					console.log(`[DELETE_SESSION] Stats recomputation completed`);
-				} catch (statsError) {
-					console.error(`[DELETE_SESSION] Stats recomputation failed, but delete succeeded:`, statsError.message);
-					// Don't fail the entire operation if stats recomputation fails
-					// The delete was successful, stats will be recomputed on next query or can be rebuilt manually
-				}
-			}
-		} else if (dbType === 'postgresql') {
-			console.log(`[DELETE_SESSION] Executing DELETE query for session: ${sessionId}`);
-			const result = await db.query('DELETE FROM telemetry_events WHERE session_id = $1', [sessionId]);
-			deletedCount = result.rowCount;
-			console.log(`[DELETE_SESSION] Deleted ${deletedCount} events`);
-
-			if (result.rowCount > 0) {
-				console.log(`[DELETE_SESSION] Recomputing stats for ${impactedUsers.length} users and ${impactedOrgs.length} orgs`);
-				try {
-					await Promise.all([
-						impactedUsers.length ? recomputeUserEventStats(impactedUsers) : Promise.resolve(),
-						impactedOrgs.length ? recomputeOrgEventStats(impactedOrgs) : Promise.resolve()
-					]);
-					console.log(`[DELETE_SESSION] Stats recomputation completed`);
-				} catch (statsError) {
-					console.error(`[DELETE_SESSION] Stats recomputation failed, but delete succeeded:`, statsError.message);
-					// Don't fail the entire operation if stats recomputation fails
-					// The delete was successful, stats will be recomputed on next query or can be rebuilt manually
-				}
-			}
-		}
-
-		console.log(`[DELETE_SESSION] Successfully completed deletion of session: ${sessionId}`);
-		return deletedCount;
-	} catch (error) {
-		console.error(`[DELETE_SESSION] Error deleting session ${sessionId}:`, error);
-		throw error;
+		return result.rowCount;
 	}
 }
 
@@ -2829,48 +2791,13 @@ async function updateAggregatedStatsForEvent(userId, orgId, eventTimestamp, disp
 }
 
 async function recomputeUserEventStats(userIds = []) {
-	try {
-		console.log(`[RECOMPUTE_USER_STATS] Starting recomputation for ${userIds?.length || 0} users`);
-		if (!db) {
-			console.log(`[RECOMPUTE_USER_STATS] No database connection, skipping`);
-			return;
-		}
-		const uniqueIds = Array.from(new Set((userIds || []).filter(id => typeof id === 'string' && id.trim() !== '')));
-		if (uniqueIds.length === 0) {
-			console.log(`[RECOMPUTE_USER_STATS] No valid user IDs to process`);
-			return;
-		}
-
-		console.log(`[RECOMPUTE_USER_STATS] Processing ${uniqueIds.length} unique user IDs`);
-
-		// Ensure user_event_stats table exists (defensive programming for production issues)
-		try {
-			if (dbType === 'sqlite') {
-				db.exec(`
-	        CREATE TABLE IF NOT EXISTS user_event_stats (
-	          user_id TEXT PRIMARY KEY,
-	          event_count INTEGER NOT NULL DEFAULT 0,
-	          last_event TEXT,
-	          display_name TEXT
-	        );
-	        CREATE INDEX IF NOT EXISTS idx_user_event_stats_last_event ON user_event_stats(last_event);
-	      `);
-			} else if (dbType === 'postgresql') {
-				await db.query(`
-	        CREATE TABLE IF NOT EXISTS user_event_stats (
-	          user_id TEXT PRIMARY KEY,
-	          event_count INTEGER NOT NULL DEFAULT 0,
-	          last_event TIMESTAMPTZ,
-	          display_name TEXT
-	        );
-	        CREATE INDEX IF NOT EXISTS idx_user_event_stats_last_event ON user_event_stats(last_event);
-	      `);
-			}
-			console.log(`[RECOMPUTE_USER_STATS] Ensured user_event_stats table exists`);
-		} catch (error) {
-			console.warn('Warning: Could not ensure user_event_stats table exists:', error.message);
-			// Continue execution - the operation might still work if table exists
-		}
+	if (!db) {
+		return;
+	}
+	const uniqueIds = Array.from(new Set((userIds || []).filter(id => typeof id === 'string' && id.trim() !== '')));
+	if (uniqueIds.length === 0) {
+		return;
+	}
 
 	if (dbType === 'sqlite') {
 		const statsStmt = db.prepare(`
@@ -2910,111 +2837,54 @@ async function recomputeUserEventStats(userIds = []) {
 		});
 	} else if (dbType === 'postgresql') {
 		for (const userId of uniqueIds) {
-			try {
-				// First get basic stats
-				const statsResult = await db.query(
-					`
-	          SELECT
-	            COUNT(*) AS event_count,
-	            MAX(timestamp) AS last_event
-	          FROM telemetry_events
-	          WHERE user_id = $1
-	        `,
-					[userId]
-				);
-				const basicStats = statsResult.rows[0] || {};
-				const count = parseInt(basicStats.event_count) || 0;
-
-				// Get display name separately
-				let displayName = null;
-				try {
-					const nameResult = await db.query(
-						`
-	          SELECT user_name
-	          FROM telemetry_events
-	          WHERE user_id = $1
-	            AND user_name IS NOT NULL
-	            AND TRIM(COALESCE(user_name, '')) != ''
-	          ORDER BY timestamp DESC
-	          LIMIT 1
-	        `,
-						[userId]
-					);
-					displayName = nameResult.rows[0]?.user_name || null;
-				} catch (nameError) {
-					console.warn(`[RECOMPUTE_USER_STATS] Could not get display name for user ${userId}:`, nameError.message);
-				}
-
-				if (count === 0) {
-					await db.query('DELETE FROM user_event_stats WHERE user_id = $1', [userId]);
-					continue;
-				}
-
-				await db.query(
-					`
-	          INSERT INTO user_event_stats (user_id, event_count, last_event, display_name)
-	          VALUES ($1, $2, $3, $4)
-	          ON CONFLICT (user_id) DO UPDATE SET
-	            event_count = EXCLUDED.event_count,
-	            last_event = EXCLUDED.last_event,
-	            display_name = COALESCE(EXCLUDED.display_name, user_event_stats.display_name)
-	        `,
-					[userId, count, basicStats.last_event || null, displayName]
-				);
-			} catch (userError) {
-				console.error(`[RECOMPUTE_USER_STATS] Error processing user ${userId}:`, userError.message);
-				// Continue with other users instead of failing completely
+			const { rows } = await db.query(
+				`
+          SELECT
+            COUNT(*) AS event_count,
+            MAX(timestamp) AS last_event,
+            (
+              SELECT user_name
+              FROM telemetry_events te2
+              WHERE te2.user_id = $1
+                AND te2.user_name IS NOT NULL
+                AND TRIM(te2.user_name) != ''
+              ORDER BY te2.timestamp DESC
+              LIMIT 1
+            ) AS display_name
+          FROM telemetry_events
+          WHERE user_id = $1
+        `,
+				[userId]
+			);
+			const stats = rows[0] || {};
+			const count = parseInt(stats.event_count) || 0;
+			if (count === 0) {
+				await db.query('DELETE FROM user_event_stats WHERE user_id = $1', [userId]);
+				continue;
 			}
+			await db.query(
+				`
+          INSERT INTO user_event_stats (user_id, event_count, last_event, display_name)
+          VALUES ($1, $2, $3, $4)
+          ON CONFLICT (user_id) DO UPDATE SET
+            event_count = EXCLUDED.event_count,
+            last_event = EXCLUDED.last_event,
+            display_name = COALESCE(EXCLUDED.display_name, user_event_stats.display_name)
+        `,
+				[userId, count, stats.last_event || null, stats.display_name || null]
+			);
 		}
-	}
-	console.log(`[RECOMPUTE_USER_STATS] Completed successfully for ${uniqueIds.length} users`);
-	} catch (error) {
-		console.error(`[RECOMPUTE_USER_STATS] Error during recomputation:`, error);
-		throw error;
 	}
 }
 
 async function recomputeOrgEventStats(orgIds = []) {
-	try {
-		console.log(`[RECOMPUTE_ORG_STATS] Starting recomputation for ${orgIds?.length || 0} orgs`);
-		if (!db) {
-			console.log(`[RECOMPUTE_ORG_STATS] No database connection, skipping`);
-			return;
-		}
-		const uniqueIds = Array.from(new Set((orgIds || []).filter(id => typeof id === 'string' && id.trim() !== '')));
-		if (uniqueIds.length === 0) {
-			console.log(`[RECOMPUTE_ORG_STATS] No valid org IDs to process`);
-			return;
-		}
-
-		console.log(`[RECOMPUTE_ORG_STATS] Processing ${uniqueIds.length} unique org IDs`);
-
-		// Ensure org_event_stats table exists (defensive programming for production issues)
-		try {
-			if (dbType === 'sqlite') {
-				db.exec(`
-	        CREATE TABLE IF NOT EXISTS org_event_stats (
-	          org_id TEXT PRIMARY KEY,
-	          event_count INTEGER NOT NULL DEFAULT 0,
-	          last_event TEXT
-	        );
-	        CREATE INDEX IF NOT EXISTS idx_org_event_stats_last_event ON org_event_stats(last_event);
-	      `);
-			} else if (dbType === 'postgresql') {
-				await db.query(`
-	        CREATE TABLE IF NOT EXISTS org_event_stats (
-	          org_id TEXT PRIMARY KEY,
-	          event_count INTEGER NOT NULL DEFAULT 0,
-	          last_event TIMESTAMPTZ
-	        );
-	        CREATE INDEX IF NOT EXISTS idx_org_event_stats_last_event ON org_event_stats(last_event);
-	      `);
-			}
-			console.log(`[RECOMPUTE_ORG_STATS] Ensured org_event_stats table exists`);
-		} catch (error) {
-			console.warn('Warning: Could not ensure org_event_stats table exists:', error.message);
-			// Continue execution - the operation might still work if table exists
-		}
+	if (!db) {
+		return;
+	}
+	const uniqueIds = Array.from(new Set((orgIds || []).filter(id => typeof id === 'string' && id.trim() !== '')));
+	if (uniqueIds.length === 0) {
+		return;
+	}
 
 	if (dbType === 'sqlite') {
 		const statsStmt = db.prepare(`
@@ -3044,43 +2914,33 @@ async function recomputeOrgEventStats(orgIds = []) {
 		});
 	} else if (dbType === 'postgresql') {
 		for (const orgId of uniqueIds) {
-			try {
-				const { rows } = await db.query(
-					`
-	          SELECT
-	            COUNT(*) AS event_count,
-	            MAX(timestamp) AS last_event
-	          FROM telemetry_events
-	          WHERE org_id = $1
-	        `,
-					[orgId]
-				);
-				const stats = rows[0] || {};
-				const count = parseInt(stats.event_count) || 0;
-				if (count === 0) {
-					await db.query('DELETE FROM org_event_stats WHERE org_id = $1', [orgId]);
-					continue;
-				}
-				await db.query(
-					`
-	          INSERT INTO org_event_stats (org_id, event_count, last_event)
-	          VALUES ($1, $2, $3)
-	          ON CONFLICT (org_id) DO UPDATE SET
-	            event_count = EXCLUDED.event_count,
-	            last_event = EXCLUDED.last_event
-	        `,
-					[orgId, count, stats.last_event || null]
-				);
-			} catch (orgError) {
-				console.error(`[RECOMPUTE_ORG_STATS] Error processing org ${orgId}:`, orgError.message);
-				// Continue with other orgs instead of failing completely
+			const { rows } = await db.query(
+				`
+          SELECT
+            COUNT(*) AS event_count,
+            MAX(timestamp) AS last_event
+          FROM telemetry_events
+          WHERE org_id = $1
+        `,
+				[orgId]
+			);
+			const stats = rows[0] || {};
+			const count = parseInt(stats.event_count) || 0;
+			if (count === 0) {
+				await db.query('DELETE FROM org_event_stats WHERE org_id = $1', [orgId]);
+				continue;
 			}
+			await db.query(
+				`
+          INSERT INTO org_event_stats (org_id, event_count, last_event)
+          VALUES ($1, $2, $3)
+          ON CONFLICT (org_id) DO UPDATE SET
+            event_count = EXCLUDED.event_count,
+            last_event = EXCLUDED.last_event
+        `,
+				[orgId, count, stats.last_event || null]
+			);
 		}
-	}
-	console.log(`[RECOMPUTE_ORG_STATS] Completed successfully for ${uniqueIds.length} orgs`);
-	} catch (error) {
-		console.error(`[RECOMPUTE_ORG_STATS] Error during recomputation:`, error);
-		throw error;
 	}
 }
 
@@ -5010,64 +4870,6 @@ async function importDatabase(importData) {
 	}
 }
 
-async function getToolCallStats(options = {}) {
-	if (!db) {
-		throw new Error('Database not initialized. Call init() first.');
-	}
-
-	const { days = 30 } = options;
-
-	// Calculate the date threshold
-	const cutoffDate = new Date();
-	cutoffDate.setDate(cutoffDate.getDate() - days);
-	const cutoffDateStr = cutoffDate.toISOString();
-
-	if (dbType === 'sqlite') {
-		const query = `
-			SELECT
-				JSON_EXTRACT(data, '$.toolName') as tool_name,
-				COUNT(*) as count
-			FROM telemetry_events
-			WHERE event = 'tool_call'
-				AND created_at >= ?
-				AND JSON_EXTRACT(data, '$.toolName') IS NOT NULL
-				AND JSON_EXTRACT(data, '$.toolName') != ''
-			GROUP BY JSON_EXTRACT(data, '$.toolName')
-			ORDER BY count DESC
-		`;
-
-		const stmt = db.prepare(query);
-		const rows = stmt.all(cutoffDateStr);
-
-		return rows.map(row => ({
-			toolName: row.tool_name,
-			count: row.count
-		}));
-	} else if (dbType === 'postgresql') {
-		const query = `
-			SELECT
-				data->>'toolName' as tool_name,
-				COUNT(*) as count
-			FROM telemetry_events
-			WHERE event = 'tool_call'
-				AND created_at >= $1
-				AND data->>'toolName' IS NOT NULL
-				AND data->>'toolName' != ''
-			GROUP BY data->>'toolName'
-			ORDER BY count DESC
-		`;
-
-		const result = await db.query(query, [cutoffDateStr]);
-
-		return result.rows.map(row => ({
-			toolName: row.tool_name,
-			count: row.count
-		}));
-	}
-
-	throw new Error('Unsupported database type');
-}
-
 module.exports = {
 	init,
 	storeEvent,
@@ -5134,8 +4936,6 @@ module.exports = {
 	getActiveRememberTokensCount,
 	// Utilities
 	getNormalizedUserId,
-	// Tool call statistics
-	getToolCallStats,
 	// Database export/import
 	exportDatabase,
 	importDatabase

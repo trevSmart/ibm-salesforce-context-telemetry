@@ -35,7 +35,7 @@ function csrfProtection(req, res, next) {
 	}
 
 	// Get token from header or body
-	const token = req.headers['x-csrf-token'] || (req.body && req.body._csrf);
+	const token = req.headers['x-csrf-token'] || req.body._csrf;
 
 	// Get expected token from cookie
 	const cookieToken = req.cookies['csrf-token'];
