@@ -33,7 +33,7 @@
   "type": "commonjs",
   "dependencies": {
     "@fortawesome/fontawesome-free": "^7.1.0",
-    "@tailwindcss/cli": "^4.1.17",
+    "@tailwindcss/cli": "^4.1.18",
     "@tailwindcss/postcss": "^4.1.17",
     "@tailwindplus/elements": "^1.0.20",
     "ajv": "^8.17.1",
