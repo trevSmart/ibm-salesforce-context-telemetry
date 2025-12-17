@@ -10,7 +10,7 @@ const fs = require('fs');
 const path = require('path');
 
 // Database configuration constants
-const DEFAULT_MAX_DB_SIZE = 1024 * 1024 * 1024; // 1 GB in bytes
+const DEFAULT_MAX_DB_SIZE = 10 * 1024 * 1024 * 1024; // 10 GB in bytes
 const VALID_ROLES = ['basic', 'advanced', 'administrator'];
 const MAX_LIMIT_FOR_TOTAL_COMPUTATION = 100; // Skip expensive COUNT queries for large limits
 
@@ -45,6 +45,7 @@ async function init() {
 		db.pragma('cache_size = -64000'); // 64MB cache
 		db.pragma('temp_store = MEMORY'); // Use memory for temporary tables
 		db.pragma('mmap_size = 30000000000'); // Use memory-mapped I/O
+		db.pragma('max_page_count = 1073741823'); // Allow database to grow up to ~4TB
 
 		// Create tables if they don't exist
 		db.exec(`

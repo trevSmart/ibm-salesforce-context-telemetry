@@ -173,6 +173,14 @@
 			color: var(--text-primary);
 		}
 
+		.stat-value.warning {
+			color: var(--warning);
+		}
+
+		.stat-value.error {
+			color: var(--error);
+		}
+
 		.stat-unit {
 			font-size: 1rem;
 			color: var(--text-secondary);
@@ -511,8 +519,21 @@
 
 				const memoryMB = (data.memory?.used || 0) / (1024 * 1024);
 				const memoryTotalMB = (data.memory?.total || 0) / (1024 * 1024);
-				document.getElementById('memoryUsage').textContent = memoryMB.toFixed(1);
-				document.getElementById('memoryUnit').textContent = `MB / ${memoryTotalMB.toFixed(1)} MB`;
+				const memoryPercent = memoryTotalMB > 0 ? (memoryMB / memoryTotalMB * 100) : 0;
+				const memoryUsageElement = document.getElementById('memoryUsage');
+				memoryUsageElement.textContent = `${memoryPercent.toFixed(1)}%`;
+
+				// Remove existing classes
+				memoryUsageElement.classList.remove('warning', 'error');
+
+				// Apply color based on percentage
+				if (memoryPercent > 85) {
+					memoryUsageElement.classList.add('error');
+				} else if (memoryPercent > 65) {
+					memoryUsageElement.classList.add('warning');
+				}
+
+				document.getElementById('memoryUnit').textContent = `${memoryMB.toFixed(1)} MB / ${memoryTotalMB.toFixed(1)} MB`;
 
 				// Update system info
 				document.getElementById('version').textContent = data.version || 'Unknown';

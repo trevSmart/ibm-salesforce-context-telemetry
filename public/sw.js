@@ -1,8 +1,8 @@
 // Service Worker for IBM Salesforce Context Telemetry
 // Implements modern caching strategies for optimal performance
 
-const CACHE_NAME = 'ibm-salesforce-telemetry-v1.1.1';
-const API_CACHE_NAME = 'api-cache-v1.1.1';
+const CACHE_NAME = 'ibm-salesforce-telemetry-v1.1.2';
+const API_CACHE_NAME = 'api-cache-v1.1.2';
 
 // Resources to cache immediately on install - only critical, publicly accessible resources
 const STATIC_CACHE_URLS = [

@@ -3,7 +3,7 @@
 // Lightweight client-side navigation to avoid repainting shared chrome
 (() => {
 	const SUPPORTED_PATHS = ['/', '/logs', '/teams'];
-	const EVENT_LOG_JS_SRC = '/js/event-log.js?v=20240221';
+	const EVENT_LOG_JS_SRC = '/js/event-log.js?v=20251217';
 	const SOFT_NAV_SELECTOR = [
 		'a.top-nav-link',
 		'a.top-nav-logo',

@@ -2958,7 +2958,7 @@ if (window.__EVENT_LOG_LOADED__) {
 		return { html: `${userHtml} <span class="session-date">${escapeHtml(dateStr)}</span>`, text: `${userText} • ${dateStr}` };
 	}
 
-	async function renderUsersList() {
+	async function loadUsersList() {
 		const userList = document.getElementById('userList');
 		if (!userList) {
 			console.error('userList element not found');
