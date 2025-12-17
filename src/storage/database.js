@@ -1248,11 +1248,17 @@ async function deleteEventsBySession(sessionId) {
 
 			if (result.changes > 0) {
 				console.log(`[DELETE_SESSION] Recomputing stats for ${impactedUsers.length} users and ${impactedOrgs.length} orgs`);
-				await Promise.all([
-					impactedUsers.length ? recomputeUserEventStats(impactedUsers) : Promise.resolve(),
-					impactedOrgs.length ? recomputeOrgEventStats(impactedOrgs) : Promise.resolve()
-				]);
-				console.log(`[DELETE_SESSION] Stats recomputation completed`);
+				try {
+					await Promise.all([
+						impactedUsers.length ? recomputeUserEventStats(impactedUsers) : Promise.resolve(),
+						impactedOrgs.length ? recomputeOrgEventStats(impactedOrgs) : Promise.resolve()
+					]);
+					console.log(`[DELETE_SESSION] Stats recomputation completed`);
+				} catch (statsError) {
+					console.error(`[DELETE_SESSION] Stats recomputation failed, but delete succeeded:`, statsError.message);
+					// Don't fail the entire operation if stats recomputation fails
+					// The delete was successful, stats will be recomputed on next query or can be rebuilt manually
+				}
 			}
 		} else if (dbType === 'postgresql') {
 			console.log(`[DELETE_SESSION] Executing DELETE query for session: ${sessionId}`);
@@ -1262,11 +1268,17 @@ async function deleteEventsBySession(sessionId) {
 
 			if (result.rowCount > 0) {
 				console.log(`[DELETE_SESSION] Recomputing stats for ${impactedUsers.length} users and ${impactedOrgs.length} orgs`);
-				await Promise.all([
-					impactedUsers.length ? recomputeUserEventStats(impactedUsers) : Promise.resolve(),
-					impactedOrgs.length ? recomputeOrgEventStats(impactedOrgs) : Promise.resolve()
-				]);
-				console.log(`[DELETE_SESSION] Stats recomputation completed`);
+				try {
+					await Promise.all([
+						impactedUsers.length ? recomputeUserEventStats(impactedUsers) : Promise.resolve(),
+						impactedOrgs.length ? recomputeOrgEventStats(impactedOrgs) : Promise.resolve()
+					]);
+					console.log(`[DELETE_SESSION] Stats recomputation completed`);
+				} catch (statsError) {
+					console.error(`[DELETE_SESSION] Stats recomputation failed, but delete succeeded:`, statsError.message);
+					// Don't fail the entire operation if stats recomputation fails
+					// The delete was successful, stats will be recomputed on next query or can be rebuilt manually
+				}
 			}
 		}
 
@@ -2898,42 +2910,61 @@ async function recomputeUserEventStats(userIds = []) {
 		});
 	} else if (dbType === 'postgresql') {
 		for (const userId of uniqueIds) {
-			const { rows } = await db.query(
-				`
-          SELECT
-            COUNT(*) AS event_count,
-            MAX(timestamp) AS last_event,
-            (
-              SELECT user_name
-              FROM telemetry_events te2
-              WHERE te2.user_id = $1
-                AND te2.user_name IS NOT NULL
-                AND TRIM(te2.user_name) != ''
-              ORDER BY te2.timestamp DESC
-              LIMIT 1
-            ) AS display_name
-          FROM telemetry_events
-          WHERE user_id = $1
-        `,
-				[userId]
-			);
-			const stats = rows[0] || {};
-			const count = parseInt(stats.event_count) || 0;
-			if (count === 0) {
-				await db.query('DELETE FROM user_event_stats WHERE user_id = $1', [userId]);
-				continue;
+			try {
+				// First get basic stats
+				const statsResult = await db.query(
+					`
+	          SELECT
+	            COUNT(*) AS event_count,
+	            MAX(timestamp) AS last_event
+	          FROM telemetry_events
+	          WHERE user_id = $1
+	        `,
+					[userId]
+				);
+				const basicStats = statsResult.rows[0] || {};
+				const count = parseInt(basicStats.event_count) || 0;
+
+				// Get display name separately
+				let displayName = null;
+				try {
+					const nameResult = await db.query(
+						`
+	          SELECT user_name
+	          FROM telemetry_events
+	          WHERE user_id = $1
+	            AND user_name IS NOT NULL
+	            AND TRIM(COALESCE(user_name, '')) != ''
+	          ORDER BY timestamp DESC
+	          LIMIT 1
+	        `,
+						[userId]
+					);
+					displayName = nameResult.rows[0]?.user_name || null;
+				} catch (nameError) {
+					console.warn(`[RECOMPUTE_USER_STATS] Could not get display name for user ${userId}:`, nameError.message);
+				}
+
+				if (count === 0) {
+					await db.query('DELETE FROM user_event_stats WHERE user_id = $1', [userId]);
+					continue;
+				}
+
+				await db.query(
+					`
+	          INSERT INTO user_event_stats (user_id, event_count, last_event, display_name)
+	          VALUES ($1, $2, $3, $4)
+	          ON CONFLICT (user_id) DO UPDATE SET
+	            event_count = EXCLUDED.event_count,
+	            last_event = EXCLUDED.last_event,
+	            display_name = COALESCE(EXCLUDED.display_name, user_event_stats.display_name)
+	        `,
+					[userId, count, basicStats.last_event || null, displayName]
+				);
+			} catch (userError) {
+				console.error(`[RECOMPUTE_USER_STATS] Error processing user ${userId}:`, userError.message);
+				// Continue with other users instead of failing completely
 			}
-			await db.query(
-				`
-          INSERT INTO user_event_stats (user_id, event_count, last_event, display_name)
-          VALUES ($1, $2, $3, $4)
-          ON CONFLICT (user_id) DO UPDATE SET
-            event_count = EXCLUDED.event_count,
-            last_event = EXCLUDED.last_event,
-            display_name = COALESCE(EXCLUDED.display_name, user_event_stats.display_name)
-        `,
-				[userId, count, stats.last_event || null, stats.display_name || null]
-			);
 		}
 	}
 	console.log(`[RECOMPUTE_USER_STATS] Completed successfully for ${uniqueIds.length} users`);
@@ -3013,32 +3044,37 @@ async function recomputeOrgEventStats(orgIds = []) {
 		});
 	} else if (dbType === 'postgresql') {
 		for (const orgId of uniqueIds) {
-			const { rows } = await db.query(
-				`
-          SELECT
-            COUNT(*) AS event_count,
-            MAX(timestamp) AS last_event
-          FROM telemetry_events
-          WHERE org_id = $1
-        `,
-				[orgId]
-			);
-			const stats = rows[0] || {};
-			const count = parseInt(stats.event_count) || 0;
-			if (count === 0) {
-				await db.query('DELETE FROM org_event_stats WHERE org_id = $1', [orgId]);
-				continue;
+			try {
+				const { rows } = await db.query(
+					`
+	          SELECT
+	            COUNT(*) AS event_count,
+	            MAX(timestamp) AS last_event
+	          FROM telemetry_events
+	          WHERE org_id = $1
+	        `,
+					[orgId]
+				);
+				const stats = rows[0] || {};
+				const count = parseInt(stats.event_count) || 0;
+				if (count === 0) {
+					await db.query('DELETE FROM org_event_stats WHERE org_id = $1', [orgId]);
+					continue;
+				}
+				await db.query(
+					`
+	          INSERT INTO org_event_stats (org_id, event_count, last_event)
+	          VALUES ($1, $2, $3)
+	          ON CONFLICT (org_id) DO UPDATE SET
+	            event_count = EXCLUDED.event_count,
+	            last_event = EXCLUDED.last_event
+	        `,
+					[orgId, count, stats.last_event || null]
+				);
+			} catch (orgError) {
+				console.error(`[RECOMPUTE_ORG_STATS] Error processing org ${orgId}:`, orgError.message);
+				// Continue with other orgs instead of failing completely
 			}
-			await db.query(
-				`
-          INSERT INTO org_event_stats (org_id, event_count, last_event)
-          VALUES ($1, $2, $3)
-          ON CONFLICT (org_id) DO UPDATE SET
-            event_count = EXCLUDED.event_count,
-            last_event = EXCLUDED.last_event
-        `,
-				[orgId, count, stats.last_event || null]
-			);
 		}
 	}
 	console.log(`[RECOMPUTE_ORG_STATS] Completed successfully for ${uniqueIds.length} orgs`);
