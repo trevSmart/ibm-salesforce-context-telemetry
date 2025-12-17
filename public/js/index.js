@@ -1994,9 +1994,9 @@ function renderToolCallChart(stats) {
 			formatter: '{a} <br/>{b}: {c} ({d}%)'
 		},
 		legend: {
-			orient: 'vertical',
-			left: '5%',
-			top: 'center',
+			orient: 'horizontal',
+			bottom: '0%',
+			left: 'center',
 			show: true
 		},
 		series: [
