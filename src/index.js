@@ -1453,7 +1453,7 @@ app.get('/api/teams/:id/logo', auth.requireAuth, apiReadLimiter, async (req, res
 		}
 
 		res.setHeader('Content-Type', logo.mime);
-		res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache for 1 hour
+		res.setHeader('Cache-Control', 'public, max-age=86400'); // Cache for 24 hours (Service Worker will handle updates)
 		res.send(logo.data);
 	} catch (error) {
 		console.error('Error fetching team logo:', error);

@@ -2958,7 +2958,28 @@ if (window.__EVENT_LOG_LOADED__) {
 		return { html: `${userHtml} <span class="session-date">${escapeHtml(dateStr)}</span>`, text: `${userText} • ${dateStr}` };
 	}
 
-	async function loadUsersList() {
+	function renderUsersList(normalizedUsers) {
+		const userList = document.getElementById('userList');
+		if (!userList) {
+			console.error('userList element not found');
+			return;
+		}
+
+		// Clear the list
+		userList.innerHTML = '';
+
+		// Process and render users
+		normalizedUsers.forEach(user => {
+		const cacheKey = 'telemetry_users';
+
+		// Try to get data from cache first
+		const cachedUsers = window.getCachedData ? window.getCachedData(cacheKey) : null;
+		if (cachedUsers) {
+			console.log('[Logs] Using cached users data');
+			renderUsersList(cachedUsers);
+			return;
+		}
+
 		try {
 			const response = await fetch('/api/telemetry-users', {
 				credentials: 'include'
@@ -2972,15 +2993,6 @@ if (window.__EVENT_LOG_LOADED__) {
 				console.error('Error loading users:', data.message);
 				return;
 			}
-
-			const userList = document.getElementById('userList');
-			if (!userList) {
-				console.error('userList element not found');
-				return;
-			}
-
-			// Clear the list
-			userList.innerHTML = '';
 
 			// Normalize API response to consistent objects { id, label, count, last_event }
 			const normalizedUsers = (Array.isArray(data) ? data : [])
@@ -3040,6 +3052,11 @@ if (window.__EVENT_LOG_LOADED__) {
 				const dateB = new Date(b.last_event);
 				return dateB - dateA;
 			});
+
+			// Cache the processed data
+			if (window.setCachedData) {
+				window.setCachedData(cacheKey, usersWithStats);
+			}
 
 			// Add each user to the list
 			usersWithStats.forEach(user => {

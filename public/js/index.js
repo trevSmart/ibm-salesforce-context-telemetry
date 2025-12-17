@@ -7,11 +7,12 @@ const TOP_TEAMS_LOOKBACK_DAYS = 30;
 const TOP_TEAMS_LIMIT = 5;
 const SERVER_VERSION_LABEL = 'v1.0.0';
 const REFRESH_ICON_ANIMATION_DURATION_MS = 700;
+const DEFAULT_DASHBOARD_TIME_RANGE_DAYS = 30;
 let serverStatsLastFetchTime = null;
 let serverStatsUpdateIntervalId = null;
 let autoRefreshEnabledState = false;
 let autoRefreshIntervalMinutes = '';
-let currentDays = 7;
+let currentDays = DEFAULT_DASHBOARD_TIME_RANGE_DAYS;
 
 // Helper function to escape HTML
 function escapeHtml(str) {
@@ -164,9 +165,9 @@ async function initializeDashboardPage({ resetState = false } = {}) {
 		chart = null;
 	}
 
-	// Always restore saved time range from localStorage, default to 7 if not found
+	// Always restore saved time range from localStorage, default to last month if not found
 	const savedTimeRange = localStorage.getItem('dashboardTimeRange');
-	currentDays = savedTimeRange ? parseInt(savedTimeRange, 10) : 7;
+	currentDays = savedTimeRange ? parseInt(savedTimeRange, 10) : DEFAULT_DASHBOARD_TIME_RANGE_DAYS;
 
 	if (resetState) {
 		isInitialChartLoad = true;
@@ -295,11 +296,6 @@ async function deleteAllEvents() {
 	}
 }
 
-// Detect system theme
-function getSystemTheme() {
-	return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-}
-
 function applyTheme(theme) {
 	if (theme === 'dark') {
 		document.documentElement.classList.add('dark');
@@ -311,7 +307,7 @@ function applyTheme(theme) {
 
 function initTheme() {
 	const savedTheme = localStorage.getItem('theme');
-	const theme = savedTheme || getSystemTheme();
+	const theme = savedTheme || 'light';
 	applyTheme(theme);
 }
 
@@ -483,7 +479,7 @@ async function openSettingsModal() {
 	modal.className = 'confirm-modal settings-modal';
 
 	// Get current settings
-	const savedTheme = localStorage.getItem('theme') || getSystemTheme();
+	const savedTheme = localStorage.getItem('theme') || 'light';
 	const isDarkTheme = savedTheme === 'dark';
 	const autoRefreshInterval = autoRefreshIntervalMinutes;
 
@@ -1874,6 +1870,16 @@ async function loadTopUsersToday() {
 		return;
 	}
 
+	const cacheKey = `topUsers_${TOP_USERS_LOOKBACK_DAYS}_${TOP_USERS_LIMIT}`;
+
+	// Try to get data from cache first
+	const cachedUsers = window.getCachedData ? window.getCachedData(cacheKey) : null;
+	if (cachedUsers) {
+		console.log('[Dashboard] Using cached top users data');
+		renderTopUsers(cachedUsers);
+		return;
+	}
+
 	renderTopUsersPlaceholder('Loading top users…');
 
 	try {
@@ -1892,6 +1898,12 @@ async function loadTopUsersToday() {
 
 		const payload = await response.json();
 		const users = Array.isArray(payload?.users) ? payload.users : [];
+
+		// Cache the data for future use
+		if (window.setCachedData) {
+			window.setCachedData(cacheKey, users);
+		}
+
 		renderTopUsers(users);
 	} catch (error) {
 		console.error('Error loading top users:', error);
@@ -1902,6 +1914,16 @@ async function loadTopUsersToday() {
 async function loadTopTeamsToday() {
 	const list = document.getElementById('topTeamsList');
 	if (!list) {
+		return;
+	}
+
+	const cacheKey = `topTeams_${TOP_TEAMS_LOOKBACK_DAYS}_${TOP_TEAMS_LIMIT}`;
+
+	// Try to get data from cache first
+	const cachedTeams = window.getCachedData ? window.getCachedData(cacheKey) : null;
+	if (cachedTeams) {
+		console.log('[Dashboard] Using cached top teams data');
+		renderTopTeams(cachedTeams);
 		return;
 	}
 
@@ -1928,6 +1950,12 @@ async function loadTopTeamsToday() {
 
 		const payload = await response.json();
 		const teams = Array.isArray(payload?.teams) ? payload.teams : [];
+
+		// Cache the data for future use
+		if (window.setCachedData) {
+			window.setCachedData(cacheKey, teams);
+		}
+
 		renderTopTeams(teams);
 	} catch (error) {
 		console.error('Error loading top teams:', error);

@@ -22,6 +22,7 @@
 	const domParser = new DOMParser();
 	const pageCache = new Map();
 	const containerCache = new Map(); // Cache for DOM container nodes per path
+	const dataCache = new Map(); // Cache for API data between navigation
 	const loadedScripts = new Set(
 		Array.from(document.querySelectorAll('script[src]')).map((script) => {
 			try {
@@ -33,6 +34,32 @@
 	);
 
 	let isNavigating = false;
+
+	// Data cache management functions
+	function getCachedData(key) {
+		const cached = dataCache.get(key);
+		if (cached && Date.now() - cached.timestamp < 300000) { // 5 minutes cache
+			return cached.data;
+		}
+		dataCache.delete(key);
+		return null;
+	}
+
+	function setCachedData(key, data) {
+		dataCache.set(key, {
+			data: data,
+			timestamp: Date.now()
+		});
+	}
+
+	function clearDataCache() {
+		dataCache.clear();
+	}
+
+	// Expose cache functions globally
+	window.getCachedData = getCachedData;
+	window.setCachedData = setCachedData;
+	window.clearDataCache = clearDataCache;
 
 	function getPath(href) {
 		try {
@@ -396,9 +423,40 @@
 		});
 	}
 
+	// Register Service Worker for modern caching
+	function registerServiceWorker() {
+		if ('serviceWorker' in navigator) {
+			navigator.serviceWorker.register('/sw.js', { scope: '/' })
+				.then((registration) => {
+					console.log('[SW] Registered successfully:', registration.scope);
+
+					// Handle updates
+					registration.addEventListener('updatefound', () => {
+						const newWorker = registration.installing;
+						if (newWorker) {
+							newWorker.addEventListener('statechange', () => {
+								if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+									// New version available
+									console.log('[SW] New version available, notifying user');
+									// You could show a notification to the user here
+									newWorker.postMessage({ type: 'SKIP_WAITING' });
+								}
+							});
+						}
+					});
+				})
+				.catch((error) => {
+					console.log('[SW] Registration failed:', error);
+				});
+		}
+	}
+
 	if (document.readyState === 'loading') {
 		document.addEventListener('DOMContentLoaded', initNav);
 	} else {
 		initNav();
 	}
+
+	// Register Service Worker
+	registerServiceWorker();
 })();
