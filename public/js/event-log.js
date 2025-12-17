@@ -512,9 +512,7 @@ if (window.__EVENT_LOG_LOADED__) {
 
 							const response = await fetch('/api/users', {
 								method: 'POST',
-								headers: {
-									'Content-Type': 'application/json'
-								},
+								headers: getCsrfHeaders(true),
 								credentials: 'include',
 								body: JSON.stringify({ username, password, role })
 							});
@@ -554,9 +552,7 @@ if (window.__EVENT_LOG_LOADED__) {
 
 							const response = await fetch(`/api/users/${encodeURIComponent(username)}/password`, {
 								method: 'PUT',
-								headers: {
-									'Content-Type': 'application/json'
-								},
+								headers: getCsrfHeaders(true),
 								credentials: 'include',
 								body: JSON.stringify({ password })
 							});
@@ -607,9 +603,7 @@ if (window.__EVENT_LOG_LOADED__) {
 
 							const response = await fetch(`/api/users/${encodeURIComponent(username)}/role`, {
 								method: 'PUT',
-								headers: {
-									'Content-Type': 'application/json'
-								},
+								headers: getCsrfHeaders(true),
 								credentials: 'include',
 								body: JSON.stringify({ role })
 							});
@@ -640,6 +634,7 @@ if (window.__EVENT_LOG_LOADED__) {
 					try {
 						const response = await fetch(`/api/users/${encodeURIComponent(username)}`, {
 							method: 'DELETE',
+							headers: getCsrfHeaders(false),
 							credentials: 'include'
 						});
 						const data = await response.json();
@@ -834,6 +829,22 @@ if (window.__EVENT_LOG_LOADED__) {
 			throw new Error(`HTTP error! status: ${response.status}`);
 		}
 		return response;
+	}
+
+	// Attach CSRF token to mutating requests
+	function getCsrfHeaders(includeJson = false) {
+		if (typeof window.getRequestHeaders === 'function') {
+			return window.getRequestHeaders(includeJson);
+		}
+
+		const headers = includeJson ? { 'Content-Type': 'application/json' } : {};
+		if (typeof window.getCsrfTokenFromCookie === 'function') {
+			const token = window.getCsrfTokenFromCookie();
+			if (token) {
+				headers['X-CSRF-Token'] = token;
+			}
+		}
+		return headers;
 	}
 
 	// Format time ago in natural language
@@ -4055,6 +4066,7 @@ if (window.__EVENT_LOG_LOADED__) {
 		try {
 			const response = await fetch('/api/events', {
 				method: 'DELETE',
+				headers: getCsrfHeaders(false),
 				credentials: 'include' // Ensure cookies are sent
 			});
 			const validResponse = await handleApiResponse(response);
@@ -4916,6 +4928,7 @@ if (window.__EVENT_LOG_LOADED__) {
 		try {
 			const response = await fetch(`/api/events/${eventId}`, {
 				method: 'DELETE',
+				headers: getCsrfHeaders(false),
 				credentials: 'include' // Ensure cookies are sent
 			});
 			const validResponse = await handleApiResponse(response);
@@ -5196,6 +5209,7 @@ if (window.__EVENT_LOG_LOADED__) {
 		try {
 			const response = await fetch(`/api/events?sessionId=${encodeURIComponent(sessionId)}`, {
 				method: 'DELETE',
+				headers: getCsrfHeaders(false),
 				credentials: 'include' // Ensure cookies are sent
 			});
 			const validResponse = await handleApiResponse(response);
@@ -5248,6 +5262,7 @@ if (window.__EVENT_LOG_LOADED__) {
 			const deletePromises = sessionsToDelete.map(async (sessionId) => {
 				const response = await fetch(`/api/events?sessionId=${encodeURIComponent(sessionId)}`, {
 					method: 'DELETE',
+					headers: getCsrfHeaders(false),
 					credentials: 'include'
 				});
 				const validResponse = await handleApiResponse(response);
