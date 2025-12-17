@@ -5194,8 +5194,15 @@ if (window.__EVENT_LOG_LOADED__) {
 
 	async function deleteSession(sessionId) {
 		try {
+			const headers = {};
+			const csrfToken = await window.getCsrfToken();
+			if (csrfToken) {
+				headers['x-csrf-token'] = csrfToken;
+			}
+
 			const response = await fetch(`/api/events?sessionId=${encodeURIComponent(sessionId)}`, {
 				method: 'DELETE',
+				headers: headers,
 				credentials: 'include' // Ensure cookies are sent
 			});
 			const validResponse = await handleApiResponse(response);
