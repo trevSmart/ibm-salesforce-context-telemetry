@@ -78,26 +78,6 @@ async function init() {
 				created_at TEXT DEFAULT CURRENT_TIMESTAMP
 			);
 
-			CREATE TABLE IF NOT EXISTS people (
-				id INTEGER PRIMARY KEY AUTOINCREMENT,
-				name TEXT NOT NULL,
-				email TEXT,
-				notes TEXT,
-				created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-				updated_at TEXT DEFAULT CURRENT_TIMESTAMP
-			);
-
-			CREATE TABLE IF NOT EXISTS person_usernames (
-				id INTEGER PRIMARY KEY AUTOINCREMENT,
-				person_id INTEGER NOT NULL,
-				username TEXT NOT NULL,
-				org_id TEXT,
-				is_primary BOOLEAN DEFAULT FALSE,
-				created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-				FOREIGN KEY (person_id) REFERENCES people(id) ON DELETE CASCADE,
-				UNIQUE(username, org_id)
-			);
-
 			CREATE TABLE IF NOT EXISTS settings (
 				key TEXT PRIMARY KEY,
 				value TEXT NOT NULL,
@@ -115,10 +95,6 @@ async function init() {
 			CREATE INDEX IF NOT EXISTS idx_username ON users(username);
 			CREATE INDEX IF NOT EXISTS idx_event_created_at ON telemetry_events(event, created_at);
 			CREATE INDEX IF NOT EXISTS idx_user_created_at ON telemetry_events(user_id, created_at);
-			CREATE INDEX IF NOT EXISTS idx_person_name ON people(name);
-			CREATE INDEX IF NOT EXISTS idx_person_email ON people(email);
-			CREATE INDEX IF NOT EXISTS idx_person_username ON person_usernames(person_id, username);
-			CREATE INDEX IF NOT EXISTS idx_username_person ON person_usernames(username);
 		`);
 
 		console.log(`SQLite database initialized at: ${dbPath}`);
@@ -171,25 +147,6 @@ async function init() {
 				created_at TIMESTAMPTZ DEFAULT NOW()
 			);
 
-			CREATE TABLE IF NOT EXISTS people (
-				id SERIAL PRIMARY KEY,
-				name TEXT NOT NULL,
-				email TEXT,
-				notes TEXT,
-				created_at TIMESTAMPTZ DEFAULT NOW(),
-				updated_at TIMESTAMPTZ DEFAULT NOW()
-			);
-
-			CREATE TABLE IF NOT EXISTS person_usernames (
-				id SERIAL PRIMARY KEY,
-				person_id INTEGER NOT NULL REFERENCES people(id) ON DELETE CASCADE,
-				username TEXT NOT NULL,
-				org_id TEXT,
-				is_primary BOOLEAN DEFAULT FALSE,
-				created_at TIMESTAMPTZ DEFAULT NOW(),
-				UNIQUE(username, org_id)
-			);
-
 			CREATE TABLE IF NOT EXISTS settings (
 				key TEXT PRIMARY KEY,
 				value TEXT NOT NULL,
@@ -207,10 +164,6 @@ async function init() {
 			CREATE INDEX IF NOT EXISTS idx_username ON users(username);
 			CREATE INDEX IF NOT EXISTS idx_event_created_at ON telemetry_events(event, created_at);
 			CREATE INDEX IF NOT EXISTS idx_user_created_at ON telemetry_events(user_id, created_at);
-			CREATE INDEX IF NOT EXISTS idx_person_name ON people(name);
-			CREATE INDEX IF NOT EXISTS idx_person_email ON people(email);
-			CREATE INDEX IF NOT EXISTS idx_person_username ON person_usernames(person_id, username);
-			CREATE INDEX IF NOT EXISTS idx_username_person ON person_usernames(username);
 		`);
 
 		db = pool;
@@ -1281,52 +1234,22 @@ async function deleteEventsBySession(sessionId) {
 		const stmt = db.prepare('DELETE FROM telemetry_events WHERE session_id = ?');
 		const result = stmt.run(sessionId);
 		if (result.changes > 0) {
-			try {
-				await Promise.all([
-					impactedUsers.length ? recomputeUserEventStats(impactedUsers) : Promise.resolve(),
-					impactedOrgs.length ? recomputeOrgEventStats(impactedOrgs) : Promise.resolve()
-				]);
-			} catch (recomputeError) {
-				console.error('Error recomputing stats after session deletion:', recomputeError);
-				// Don't fail the deletion if recomputation fails
-			}
+			await Promise.all([
+				impactedUsers.length ? recomputeUserEventStats(impactedUsers) : Promise.resolve(),
+				impactedOrgs.length ? recomputeOrgEventStats(impactedOrgs) : Promise.resolve()
+			]);
 		}
 		return result.changes;
 	} else if (dbType === 'postgresql') {
 		const result = await db.query('DELETE FROM telemetry_events WHERE session_id = $1', [sessionId]);
 		if (result.rowCount > 0) {
-			try {
-				await Promise.all([
-					impactedUsers.length ? recomputeUserEventStats(impactedUsers) : Promise.resolve(),
-					impactedOrgs.length ? recomputeOrgEventStats(impactedOrgs) : Promise.resolve()
-				]);
-			} catch (recomputeError) {
-				console.error('Error recomputing stats after session deletion:', recomputeError);
-				// Don't fail the deletion if recomputation fails
-			}
+			await Promise.all([
+				impactedUsers.length ? recomputeUserEventStats(impactedUsers) : Promise.resolve(),
+				impactedOrgs.length ? recomputeOrgEventStats(impactedOrgs) : Promise.resolve()
+			]);
 		}
 		return result.rowCount;
 	}
-}
-
-async function checkSessionExists(sessionId) {
-	if (!db) {
-		throw new Error('Database not initialized. Call init() first.');
-	}
-
-	if (!sessionId) {
-		return false;
-	}
-
-	if (dbType === 'sqlite') {
-		const stmt = db.prepare('SELECT 1 FROM telemetry_events WHERE session_id = ? LIMIT 1');
-		const result = stmt.get(sessionId);
-		return !!result;
-	} else if (dbType === 'postgresql') {
-		const result = await db.query('SELECT 1 FROM telemetry_events WHERE session_id = $1 LIMIT 1', [sessionId]);
-		return result.rows.length > 0;
-	}
-	return false;
 }
 
 /**
@@ -1782,134 +1705,6 @@ async function getAllUsers() {
 	} else if (dbType === 'postgresql') {
 		const result = await db.query('SELECT id, username, role, created_at, last_login FROM users ORDER BY username');
 		return result.rows;
-	}
-}
-
-/**
- * Create a new person
- * @param {Object} personData - Person data
- * @param {string} personData.name - Person's full name
- * @param {string} personData.email - Person's email (optional)
- * @param {string} personData.notes - Additional notes (optional)
- * @returns {Promise<Object>} Created person with id
- */
-async function createPerson(personData) {
-	if (!db) {
-		throw new Error('Database not initialized. Call init() first.');
-	}
-
-	const { name, email, notes } = personData;
-
-	if (dbType === 'sqlite') {
-		const stmt = db.prepare(`
-			INSERT INTO people (name, email, notes)
-			VALUES (?, ?, ?)
-		`);
-		const result = stmt.run(name, email || null, notes || null);
-		return { id: result.lastInsertRowid, name, email, notes };
-	} else if (dbType === 'postgresql') {
-		const result = await db.query(`
-			INSERT INTO people (name, email, notes)
-			VALUES ($1, $2, $3)
-			RETURNING id
-		`, [name, email || null, notes || null]);
-		return { id: result.rows[0].id, name, email, notes };
-	}
-}
-
-/**
- * Get all people
- * @returns {Promise<Array>} List of all people
- */
-async function getAllPeople() {
-	if (!db) {
-		throw new Error('Database not initialized. Call init() first.');
-	}
-
-	if (dbType === 'sqlite') {
-		const stmt = db.prepare('SELECT id, name, email, notes, created_at, updated_at FROM people ORDER BY name');
-		return stmt.all();
-	} else if (dbType === 'postgresql') {
-		const result = await db.query('SELECT id, name, email, notes, created_at, updated_at FROM people ORDER BY name');
-		return result.rows;
-	}
-}
-
-/**
- * Get a person by ID
- * @param {number} personId - Person ID
- * @returns {Promise<Object|null>} Person data or null if not found
- */
-async function getPersonById(personId) {
-	if (!db) {
-		throw new Error('Database not initialized. Call init() first.');
-	}
-
-	if (dbType === 'sqlite') {
-		const stmt = db.prepare('SELECT id, name, email, notes, created_at, updated_at FROM people WHERE id = ?');
-		return stmt.get(personId);
-	} else if (dbType === 'postgresql') {
-		const result = await db.query('SELECT id, name, email, notes, created_at, updated_at FROM people WHERE id = $1', [personId]);
-		return result.rows[0] || null;
-	}
-}
-
-/**
- * Get usernames associated with a person
- * @param {number} personId - Person ID
- * @returns {Promise<Array>} List of usernames for this person
- */
-async function getPersonUsernames(personId) {
-	if (!db) {
-		throw new Error('Database not initialized. Call init() first.');
-	}
-
-	if (dbType === 'sqlite') {
-		const stmt = db.prepare(`
-			SELECT id, username, org_id, is_primary, created_at
-			FROM person_usernames
-			WHERE person_id = ?
-			ORDER BY is_primary DESC, username
-		`);
-		return stmt.all(personId);
-	} else if (dbType === 'postgresql') {
-		const result = await db.query(`
-			SELECT id, username, org_id, is_primary, created_at
-			FROM person_usernames
-			WHERE person_id = $1
-			ORDER BY is_primary DESC, username
-		`, [personId]);
-		return result.rows;
-	}
-}
-
-/**
- * Add a username to a person
- * @param {number} personId - Person ID
- * @param {string} username - Username to add
- * @param {string} orgId - Organization ID (optional)
- * @param {boolean} isPrimary - Whether this is the primary username (optional)
- * @returns {Promise<Object>} Created username association
- */
-async function addPersonUsername(personId, username, orgId = null, isPrimary = false) {
-	if (!db) {
-		throw new Error('Database not initialized. Call init() first.');
-	}
-
-	if (dbType === 'sqlite') {
-		const stmt = db.prepare(`
-			INSERT INTO person_usernames (person_id, username, org_id, is_primary)
-			VALUES (?, ?, ?, ?)
-		`);
-		const result = stmt.run(personId, username, orgId, isPrimary ? 1 : 0);
-		return { id: result.lastInsertRowid, person_id: personId, username, org_id: orgId, is_primary: isPrimary };
-	} else if (dbType === 'postgresql') {
-		const result = await db.query(`
-			INSERT INTO person_usernames (person_id, username, org_id, is_primary)
-			VALUES ($1, $2, $3, $4)
-			RETURNING id
-		`, [personId, username, orgId, isPrimary]);
-		return { id: result.rows[0].id, person_id: personId, username, org_id: orgId, is_primary: isPrimary };
 	}
 }
 
@@ -4577,6 +4372,504 @@ async function getActiveRememberTokensCount(userId) {
 	}
 }
 
+/**
+ * Export entire database to a JSON format
+ * Compatible with both SQLite and PostgreSQL
+ * @returns {Promise<Object>} Database dump with all tables
+ */
+async function exportDatabase() {
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
+
+	const exportData = {
+		version: '1.0',
+		exportedAt: new Date().toISOString(),
+		dbType: dbType,
+		tables: {}
+	};
+
+	// Helper function to safely export a table
+	const exportTable = (tableName, orderBy) => {
+		try {
+			if (dbType === 'sqlite') {
+				const data = db.prepare(`SELECT * FROM ${tableName} ORDER BY ${orderBy}`).all();
+				exportData.tables[tableName] = data;
+			}
+		} catch (error) {
+			// Table doesn't exist or other error - skip it
+			console.warn(`Skipping table ${tableName}:`, error.message);
+		}
+	};
+
+	// Helper function to safely export a table (PostgreSQL)
+	const exportTablePg = async (tableName, orderBy) => {
+		try {
+			const result = await db.query(`SELECT * FROM ${tableName} ORDER BY ${orderBy}`);
+			exportData.tables[tableName] = result.rows;
+		} catch (error) {
+			// Table doesn't exist or other error - skip it
+			console.warn(`Skipping table ${tableName}:`, error.message);
+		}
+	};
+
+	try {
+		if (dbType === 'sqlite') {
+			// Export all tables (skip if they don't exist)
+			exportTable('telemetry_events', 'id');
+			exportTable('users', 'id');
+			exportTable('orgs', 'server_id');
+			exportTable('teams', 'id');
+			exportTable('settings', 'key');
+			exportTable('remember_tokens', 'id');
+			exportTable('event_user_teams', 'id');
+
+		} else if (dbType === 'postgresql') {
+			// Export all tables (skip if they don't exist)
+			await exportTablePg('telemetry_events', 'id');
+			await exportTablePg('users', 'id');
+			await exportTablePg('orgs', 'server_id');
+			await exportTablePg('teams', 'id');
+			await exportTablePg('settings', 'key');
+			await exportTablePg('remember_tokens', 'id');
+			await exportTablePg('event_user_teams', 'id');
+		}
+
+		return exportData;
+	} catch (error) {
+		console.error('Error exporting database:', error);
+		throw new Error('Failed to export database: ' + error.message);
+	}
+}
+
+/**
+ * Import database from JSON format
+ * Compatible with both SQLite and PostgreSQL
+ * @param {Object} importData - Database dump to import
+ * @returns {Promise<{imported: number, errors: Array}>} Import results
+ */
+async function importDatabase(importData) {
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
+
+	if (!importData || !importData.tables) {
+		throw new Error('Invalid import data format');
+	}
+
+	const results = {
+		imported: 0,
+		errors: []
+	};
+
+	try {
+		if (dbType === 'sqlite') {
+			// Use transaction for atomic import
+			const importTransaction = db.transaction(() => {
+				// Import users first (referenced by other tables)
+				if (importData.tables.users && Array.isArray(importData.tables.users)) {
+					const insertUser = db.prepare(`
+						INSERT OR REPLACE INTO users (id, username, password_hash, role, created_at, last_login, team_id)
+						VALUES (?, ?, ?, ?, ?, ?, ?)
+					`);
+					importData.tables.users.forEach(user => {
+						try {
+							insertUser.run(
+								user.id,
+								user.username,
+								user.password_hash,
+								user.role || 'basic',
+								user.created_at,
+								user.last_login,
+								user.team_id || null
+							);
+							results.imported++;
+						} catch (err) {
+							results.errors.push({ table: 'users', id: user.id, error: err.message });
+						}
+					});
+				}
+
+				// Import teams
+				if (importData.tables.teams && Array.isArray(importData.tables.teams)) {
+					const insertTeam = db.prepare(`
+						INSERT OR REPLACE INTO teams (id, name, color, logo_url, logo_data, logo_mime, created_at, updated_at)
+						VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+					`);
+					importData.tables.teams.forEach(team => {
+						try {
+							insertTeam.run(
+								team.id,
+								team.name,
+								team.color,
+								team.logo_url,
+								team.logo_data,
+								team.logo_mime,
+								team.created_at,
+								team.updated_at
+							);
+							results.imported++;
+						} catch (err) {
+							results.errors.push({ table: 'teams', id: team.id, error: err.message });
+						}
+					});
+				}
+
+				// Import orgs
+				if (importData.tables.orgs && Array.isArray(importData.tables.orgs)) {
+					const insertOrg = db.prepare(`
+						INSERT OR REPLACE INTO orgs (server_id, company_name, updated_at, created_at, alias, color, team_id)
+						VALUES (?, ?, ?, ?, ?, ?, ?)
+					`);
+					importData.tables.orgs.forEach(org => {
+						try {
+							insertOrg.run(
+								org.server_id,
+								org.company_name,
+								org.updated_at,
+								org.created_at,
+								org.alias || null,
+								org.color || null,
+								org.team_id || null
+							);
+							results.imported++;
+						} catch (err) {
+							results.errors.push({ table: 'orgs', id: org.server_id, error: err.message });
+						}
+					});
+				}
+
+				// Import telemetry_events
+				if (importData.tables.telemetry_events && Array.isArray(importData.tables.telemetry_events)) {
+					const insertEvent = db.prepare(`
+						INSERT OR REPLACE INTO telemetry_events (id, event, timestamp, server_id, version, session_id, parent_session_id, user_id, data, received_at, created_at)
+						VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+					`);
+					importData.tables.telemetry_events.forEach(event => {
+						try {
+							insertEvent.run(
+								event.id,
+								event.event,
+								event.timestamp,
+								event.server_id,
+								event.version,
+								event.session_id,
+								event.parent_session_id,
+								event.user_id,
+								event.data,
+								event.received_at,
+								event.created_at
+							);
+							results.imported++;
+						} catch (err) {
+							results.errors.push({ table: 'telemetry_events', id: event.id, error: err.message });
+						}
+					});
+				}
+
+				// Import settings
+				if (importData.tables.settings && Array.isArray(importData.tables.settings)) {
+					const insertSetting = db.prepare(`
+						INSERT OR REPLACE INTO settings (key, value, updated_at, created_at)
+						VALUES (?, ?, ?, ?)
+					`);
+					importData.tables.settings.forEach(setting => {
+						try {
+							insertSetting.run(
+								setting.key,
+								setting.value,
+								setting.updated_at,
+								setting.created_at
+							);
+							results.imported++;
+						} catch (err) {
+							results.errors.push({ table: 'settings', key: setting.key, error: err.message });
+						}
+					});
+				}
+
+				// Import remember_tokens
+				if (importData.tables.remember_tokens && Array.isArray(importData.tables.remember_tokens)) {
+					const insertToken = db.prepare(`
+						INSERT OR REPLACE INTO remember_tokens (id, user_id, token_hash, expires_at, created_at, last_used_at, user_agent, ip_address)
+						VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+					`);
+					importData.tables.remember_tokens.forEach(token => {
+						try {
+							insertToken.run(
+								token.id,
+								token.user_id,
+								token.token_hash,
+								token.expires_at,
+								token.created_at,
+								token.last_used_at,
+								token.user_agent,
+								token.ip_address
+							);
+							results.imported++;
+						} catch (err) {
+							results.errors.push({ table: 'remember_tokens', id: token.id, error: err.message });
+						}
+					});
+				}
+
+				// Import event_user_teams
+				if (importData.tables.event_user_teams && Array.isArray(importData.tables.event_user_teams)) {
+					const insertEventUserTeam = db.prepare(`
+						INSERT OR REPLACE INTO event_user_teams (id, team_id, user_name, created_at)
+						VALUES (?, ?, ?, ?)
+					`);
+					importData.tables.event_user_teams.forEach(eut => {
+						try {
+							insertEventUserTeam.run(
+								eut.id,
+								eut.team_id,
+								eut.user_name,
+								eut.created_at
+							);
+							results.imported++;
+						} catch (err) {
+							results.errors.push({ table: 'event_user_teams', id: eut.id, error: err.message });
+						}
+					});
+				}
+			});
+
+			importTransaction();
+
+		} else if (dbType === 'postgresql') {
+			// Use transaction for atomic import
+			const client = await db.connect();
+			try {
+				await client.query('BEGIN');
+
+				// Import users first
+				if (importData.tables.users && Array.isArray(importData.tables.users)) {
+					for (const user of importData.tables.users) {
+						try {
+							await client.query(`
+								INSERT INTO users (id, username, password_hash, role, created_at, last_login, team_id)
+								VALUES ($1, $2, $3, $4, $5, $6, $7)
+								ON CONFLICT (id) DO UPDATE SET
+									username = EXCLUDED.username,
+									password_hash = EXCLUDED.password_hash,
+									role = EXCLUDED.role,
+									created_at = EXCLUDED.created_at,
+									last_login = EXCLUDED.last_login,
+									team_id = EXCLUDED.team_id
+							`, [
+								user.id,
+								user.username,
+								user.password_hash,
+								user.role || 'basic',
+								user.created_at,
+								user.last_login,
+								user.team_id || null
+							]);
+							results.imported++;
+						} catch (err) {
+							results.errors.push({ table: 'users', id: user.id, error: err.message });
+						}
+					}
+				}
+
+				// Import teams
+				if (importData.tables.teams && Array.isArray(importData.tables.teams)) {
+					for (const team of importData.tables.teams) {
+						try {
+							await client.query(`
+								INSERT INTO teams (id, name, color, logo_url, logo_data, logo_mime, created_at, updated_at)
+								VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+								ON CONFLICT (id) DO UPDATE SET
+									name = EXCLUDED.name,
+									color = EXCLUDED.color,
+									logo_url = EXCLUDED.logo_url,
+									logo_data = EXCLUDED.logo_data,
+									logo_mime = EXCLUDED.logo_mime,
+									created_at = EXCLUDED.created_at,
+									updated_at = EXCLUDED.updated_at
+							`, [
+								team.id,
+								team.name,
+								team.color,
+								team.logo_url,
+								team.logo_data ? Buffer.from(team.logo_data) : null,
+								team.logo_mime,
+								team.created_at,
+								team.updated_at
+							]);
+							results.imported++;
+						} catch (err) {
+							results.errors.push({ table: 'teams', id: team.id, error: err.message });
+						}
+					}
+				}
+
+				// Import orgs
+				if (importData.tables.orgs && Array.isArray(importData.tables.orgs)) {
+					for (const org of importData.tables.orgs) {
+						try {
+							await client.query(`
+								INSERT INTO orgs (server_id, company_name, updated_at, created_at, alias, color, team_id)
+								VALUES ($1, $2, $3, $4, $5, $6, $7)
+								ON CONFLICT (server_id) DO UPDATE SET
+									company_name = EXCLUDED.company_name,
+									updated_at = EXCLUDED.updated_at,
+									created_at = EXCLUDED.created_at,
+									alias = EXCLUDED.alias,
+									color = EXCLUDED.color,
+									team_id = EXCLUDED.team_id
+							`, [
+								org.server_id,
+								org.company_name,
+								org.updated_at,
+								org.created_at,
+								org.alias || null,
+								org.color || null,
+								org.team_id || null
+							]);
+							results.imported++;
+						} catch (err) {
+							results.errors.push({ table: 'orgs', id: org.server_id, error: err.message });
+						}
+					}
+				}
+
+				// Import telemetry_events
+				if (importData.tables.telemetry_events && Array.isArray(importData.tables.telemetry_events)) {
+					for (const event of importData.tables.telemetry_events) {
+						try {
+							// For PostgreSQL, convert data string to JSONB if needed
+							const eventData = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+							await client.query(`
+								INSERT INTO telemetry_events (id, event, timestamp, server_id, version, session_id, parent_session_id, user_id, data, received_at, created_at)
+								VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+								ON CONFLICT (id) DO UPDATE SET
+									event = EXCLUDED.event,
+									timestamp = EXCLUDED.timestamp,
+									server_id = EXCLUDED.server_id,
+									version = EXCLUDED.version,
+									session_id = EXCLUDED.session_id,
+									parent_session_id = EXCLUDED.parent_session_id,
+									user_id = EXCLUDED.user_id,
+									data = EXCLUDED.data,
+									received_at = EXCLUDED.received_at,
+									created_at = EXCLUDED.created_at
+							`, [
+								event.id,
+								event.event,
+								event.timestamp,
+								event.server_id,
+								event.version,
+								event.session_id,
+								event.parent_session_id,
+								event.user_id,
+								eventData,
+								event.received_at,
+								event.created_at
+							]);
+							results.imported++;
+						} catch (err) {
+							results.errors.push({ table: 'telemetry_events', id: event.id, error: err.message });
+						}
+					}
+				}
+
+				// Import settings
+				if (importData.tables.settings && Array.isArray(importData.tables.settings)) {
+					for (const setting of importData.tables.settings) {
+						try {
+							await client.query(`
+								INSERT INTO settings (key, value, updated_at, created_at)
+								VALUES ($1, $2, $3, $4)
+								ON CONFLICT (key) DO UPDATE SET
+									value = EXCLUDED.value,
+									updated_at = EXCLUDED.updated_at
+							`, [
+								setting.key,
+								setting.value,
+								setting.updated_at,
+								setting.created_at
+							]);
+							results.imported++;
+						} catch (err) {
+							results.errors.push({ table: 'settings', key: setting.key, error: err.message });
+						}
+					}
+				}
+
+				// Import remember_tokens
+				if (importData.tables.remember_tokens && Array.isArray(importData.tables.remember_tokens)) {
+					for (const token of importData.tables.remember_tokens) {
+						try {
+							await client.query(`
+								INSERT INTO remember_tokens (id, user_id, token_hash, expires_at, created_at, last_used_at, user_agent, ip_address)
+								VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+								ON CONFLICT (id) DO UPDATE SET
+									user_id = EXCLUDED.user_id,
+									token_hash = EXCLUDED.token_hash,
+									expires_at = EXCLUDED.expires_at,
+									created_at = EXCLUDED.created_at,
+									last_used_at = EXCLUDED.last_used_at,
+									user_agent = EXCLUDED.user_agent,
+									ip_address = EXCLUDED.ip_address
+							`, [
+								token.id,
+								token.user_id,
+								token.token_hash,
+								token.expires_at,
+								token.created_at,
+								token.last_used_at,
+								token.user_agent,
+								token.ip_address
+							]);
+							results.imported++;
+						} catch (err) {
+							results.errors.push({ table: 'remember_tokens', id: token.id, error: err.message });
+						}
+					}
+				}
+
+				// Import event_user_teams
+				if (importData.tables.event_user_teams && Array.isArray(importData.tables.event_user_teams)) {
+					for (const eut of importData.tables.event_user_teams) {
+						try {
+							await client.query(`
+								INSERT INTO event_user_teams (id, team_id, user_name, created_at)
+								VALUES ($1, $2, $3, $4)
+								ON CONFLICT (id) DO UPDATE SET
+									team_id = EXCLUDED.team_id,
+									user_name = EXCLUDED.user_name,
+									created_at = EXCLUDED.created_at
+							`, [
+								eut.id,
+								eut.team_id,
+								eut.user_name,
+								eut.created_at
+							]);
+							results.imported++;
+						} catch (err) {
+							results.errors.push({ table: 'event_user_teams', id: eut.id, error: err.message });
+						}
+					}
+				}
+
+				await client.query('COMMIT');
+			} catch (error) {
+				await client.query('ROLLBACK');
+				throw error;
+			} finally {
+				client.release();
+			}
+		}
+
+		return results;
+	} catch (error) {
+		console.error('Error importing database:', error);
+		throw new Error('Failed to import database: ' + error.message);
+	}
+}
+
 module.exports = {
 	init,
 	storeEvent,
@@ -4594,7 +4887,6 @@ module.exports = {
 	deleteEvent,
 	deleteAllEvents,
 	deleteEventsBySession,
-	checkSessionExists,
 	getDatabaseSize,
 	close,
 	DEFAULT_MAX_DB_SIZE,
@@ -4642,12 +4934,9 @@ module.exports = {
 	rotateRememberToken,
 	cleanupExpiredRememberTokens,
 	getActiveRememberTokensCount,
-	// People management
-	createPerson,
-	getAllPeople,
-	getPersonById,
-	getPersonUsernames,
-	addPersonUsername,
 	// Utilities
-	getNormalizedUserId
+	getNormalizedUserId,
+	// Database export/import
+	exportDatabase,
+	importDatabase
 };

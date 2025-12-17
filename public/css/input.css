@@ -18,6 +18,11 @@
     --button-bg: #f1f5f9;
   }
 
+  /* Global button styles */
+  button {
+    cursor: pointer;
+    font-size: 0.875rem; /* 14px - same as text-sm */
+  }
 
   button,
   input,
@@ -126,7 +131,6 @@
   body.index-page,
   body.event-log-page,
   body.teams-page,
-  body.people-page,
   body.login-page,
   body.health-page {
     background: #8896b5;
@@ -137,7 +141,6 @@
   html.dark body.index-page,
   html.dark body.event-log-page,
   html.dark body.teams-page,
-  html.dark body.people-page,
   html.dark body.login-page,
   html.dark body.health-page {
     background: #18181b url("/resources/bg-01.jpg") center center / cover no-repeat fixed;
@@ -360,38 +363,25 @@
   /* Index page specific body styles */
   body.index-page {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: center;
   }
 
   /* Event log page body centering (match dashboard) */
   body.event-log-page {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: center;
   }
 
   /* Teams page body centering (match dashboard) */
   body.teams-page {
     display: flex;
-    align-items: flex-start;
-    justify-content: center;
-  }
-
-  /* People page body centering (match dashboard) */
-  body.people-page {
-    display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: center;
   }
 
   body.teams-page #teamsContent {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
-  }
-
-  body.people-page #peopleContent {
     flex: 1;
     min-height: 0;
     overflow-y: auto;
@@ -411,9 +401,8 @@
     min-width: 780px;
     max-width: none;
     width: calc(100vw - 58px);
-    height: calc(100vh - 40px);
-    min-height: calc(100vh - 40px);
-    max-height: calc(100vh - 40px);
+    height: calc(100vh - 50px);
+    min-height: calc(100vh - 50px);
     padding: 6px 30px;
     gap: 5px;
   }
@@ -632,9 +621,8 @@
     /* text-align: center; */
     max-width: 1250px;
     width: min(95vw, 1250px);
-    height: calc(100vh - 40px);
-    min-height: calc(100vh - 40px);
-    max-height: calc(100vh - 40px);
+    height: 85vh;
+    min-height: 89vh;
     background: #e8ebec;
     backdrop-filter: blur(10px);
     border-radius: 23px;
@@ -662,12 +650,6 @@
     flex: 1 1 auto;
   }
 
-  body.index-page .container-content {
-    display: grid;
-    gap: 0;
-    grid-template-rows: minmax(0, 2.8fr) 22px minmax(0, 2.2fr) 12px 36px;
-  }
-
   html.dark .container {
     background: var(--main-container-bg);
     border: 1px solid #1f1f1f;
@@ -675,21 +657,12 @@
 
 
   .dashboard-footer {
-    flex: 0 0 36px;
-    height: 36px;
-    padding: 0 0 2px 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    flex: 4 0 0;
+    padding: 18px 0 0px 0;
     font-size: 13px;
     font-weight: 400;
     color: var(--text-primary);
     text-align: center;
-  }
-
-  body.index-page .dashboard-footer {
-    width: 100%;
-    align-self: stretch;
   }
 
   .dashboard-footer a {
@@ -745,57 +718,19 @@
   }
 
   .dashboard-row-top {
-    flex: 55 1 0;
+    flex: 60 0 0;
     display: flex;
     flex-direction: column;
     min-height: 0;
-    overflow: hidden;
   }
 
   .dashboard-row-bottom {
-    flex: 45 1 0;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-    overflow: hidden;
-  }
-
-  body.index-page .dashboard-row-top,
-  body.index-page .dashboard-row-bottom {
-    min-height: 0;
-  }
-
-  body.index-page .dashboard-row-top {
-    grid-row: 1 / 2;
-  }
-
-  body.index-page .dashboard-row-bottom {
-    grid-row: 3 / 4;
-  }
-
-  body.index-page .dashboard-footer {
-    grid-row: 5 / 6;
-  }
-
-  body.index-page .dashboard-row-top > *,
-  body.index-page .dashboard-row-bottom > * {
-    flex: 1 1 auto;
-    min-height: 0;
-    height: 100%;
-  }
-
-  body.index-page .dashboard-row-top section,
-  body.index-page .dashboard-row-bottom section {
+    flex: 38 0 0;
     display: flex;
     flex-direction: column;
     min-height: 0;
   }
 
-  body.index-page .card-body {
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow: auto;
-  }
 
   .dashboard-card {
     margin: 0;
@@ -4436,15 +4371,19 @@
   }
 
   .confirm-modal-btn-destructive {
-    @apply inline-flex items-center justify-center gap-2 rounded-md px-2.5 py-1.5 text-sm text-white shadow-sm ring-1 ring-inset;
+    @apply inline-flex items-center justify-center gap-2 rounded-md px-2.5 py-1.5 text-sm shadow-sm ring-1 ring-inset;
     line-height: 1.25;
-    background-color: #dc2626;
+    background-color: transparent;
+    color: #dc2626;
     border-color: #dc2626;
     --tw-ring-color: #dc2626;
   }
 
   .confirm-modal-btn-destructive:hover {
-    background-color: #b91c1c;
+    background-color: #fef2f2;
+    color: #b91c1c;
+    border-color: #b91c1c;
+    --tw-ring-color: #b91c1c;
   }
 
   .org-team-actions {
@@ -4542,7 +4481,7 @@
   .settings-modal-placeholder-text {
     font-size: 0.75rem;
     line-height: 1.4;
-    color: var(--text-secondary);
+    color: var(--text-primary);
   }
 
   .settings-toggle-row {
@@ -4580,7 +4519,7 @@
   .settings-toggle-description {
     font-size: 0.75rem;
     line-height: 1.4;
-    color: var(--text-secondary);
+    color: var(--text-primary);
   }
 
   .settings-toggle-control {
@@ -4649,13 +4588,16 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 10px;
+    margin-bottom: 12px;
     gap: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border-color);
   }
 
   .settings-users-title {
     margin-bottom: 0;
-    font-size: 0.82rem;
+    padding-bottom: 0;
+    border-bottom: none;
   }
 
   .settings-users-add-btn {
@@ -4684,17 +4626,18 @@
 
   .settings-users-table th {
     text-align: left;
-    font-weight: 600;
+    font-weight: 700;
     letter-spacing: 0.01em;
     padding: 8px 10px;
-    font-size: 0.7rem;
+    font-size: 0.75rem;
     color: var(--text-primary);
+    opacity: 1;
   }
 
   .settings-users-table td {
     padding: 8px 10px;
     font-size: 0.7rem;
-    color: var(--text-secondary);
+    color: var(--text-primary);
   }
 
   .settings-users-table tbody tr + tr {
@@ -4708,7 +4651,7 @@
 
   .settings-users-actions-column,
   .settings-users-table td:last-child {
-    width: 130px;
+    width: 100px;
   }
 
   .settings-users-empty {
@@ -4957,12 +4900,6 @@
     width: 20px;
     height: 20px;
     font-size: 13px;
-  }
-
-  .settings-sidebar-link.active span:first-child {
-    background: var(--brand-600);
-    border-color: var(--brand-600);
-    color: white;
   }
 
   .team-actions-btn:hover {

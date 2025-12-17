@@ -1,6 +1,6 @@
 /**
  * CSRF Protection Middleware
- * 
+ *
  * Implements Double Submit Cookie pattern for CSRF protection.
  * This is a modern alternative to the deprecated csurf package.
  */
@@ -34,14 +34,9 @@ function csrfProtection(req, res, next) {
 		return next();
 	}
 
-	// Skip CSRF for API routes (they use session-based auth instead)
-	if (req.path.startsWith('/api/')) {
-		return next();
-	}
-
 	// Get token from header or body
 	const token = req.headers['x-csrf-token'] || req.body._csrf;
-  
+
 	// Get expected token from cookie
 	const cookieToken = req.cookies['csrf-token'];
 
@@ -57,7 +52,7 @@ function csrfProtection(req, res, next) {
 	try {
 		const tokenBuffer = Buffer.from(token);
 		const cookieBuffer = Buffer.from(cookieToken);
-    
+
 		// Buffers must be same length for timingSafeEqual
 		if (tokenBuffer.length !== cookieBuffer.length) {
 			return res.status(403).json({
@@ -65,7 +60,7 @@ function csrfProtection(req, res, next) {
 				message: 'Invalid CSRF token'
 			});
 		}
-    
+
 		if (!crypto.timingSafeEqual(tokenBuffer, cookieBuffer)) {
 			return res.status(403).json({
 				status: 'error',

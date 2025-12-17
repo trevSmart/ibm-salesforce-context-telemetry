@@ -122,22 +122,22 @@ if (window.__EVENT_LOG_LOADED__) {
 		const autoRefreshInterval = autoRefreshIntervalMinutes;
 
 		const sidebarNav = `
-    <a href="#settings-general" class="settings-sidebar-link flex items-center gap-2 rounded-md px-2 py-1.5 text-(--text-secondary) hover:text-(--text-primary) hover:bg-(--bg-secondary)">
+    <a href="#settings-general" class="settings-sidebar-link flex items-center gap-2 rounded-md px-2 py-1.5 text-[color:var(--text-primary)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-secondary)]">
       <span class="w-5 h-5 flex items-center justify-center rounded-full border border-(--border-color) bg-(--bg-secondary)">
         <i class="fa-solid fa-gear text-[12px]"></i>
       </span>
       <span class="font-medium">General</span>
     </a>
     ${isAdministrator ? `
-    <a href="#settings-users" class="settings-sidebar-link flex items-center gap-2 rounded-md px-2 py-1.5 text-(--text-secondary) hover:text-(--text-primary) hover:bg-(--bg-secondary)">
-      <span class="w-5 h-5 flex items-center justify-center rounded-full border border-(--border-color) bg-(--bg-secondary)">
+    <a href="#settings-users" class="settings-sidebar-link flex items-center gap-2 rounded-md px-2 py-1.5 text-[color:var(--text-primary)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-secondary)]">
+      <span class="w-5 h-5 flex items-center justify-center rounded-full border border-[color:var(--border-color)] bg-[color:var(--bg-secondary)]">
         <i class="fa-solid fa-user-gear text-[12px]"></i>
       </span>
       <span class="font-medium">Users</span>
     </a>
     ` : ''}
-    <a href="#settings-danger" class="settings-sidebar-link flex items-center gap-2 rounded-md px-2 py-1.5 text-(--text-secondary) hover:text-(--text-primary) hover:bg-(--bg-secondary)">
-      <span class="w-5 h-5 flex items-center justify-center rounded-full border border-(--border-color) bg-(--bg-secondary)">
+    <a href="#settings-danger" class="settings-sidebar-link flex items-center gap-2 rounded-md px-2 py-1.5 text-[color:var(--text-primary)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-secondary)]">
+      <span class="w-5 h-5 flex items-center justify-center rounded-full border border-[color:var(--border-color)] bg-[color:var(--bg-secondary)]">
         <i class="fa-solid fa-triangle-exclamation text-[12px]"></i>
       </span>
       <span class="font-medium">Danger zone</span>
@@ -150,7 +150,7 @@ if (window.__EVENT_LOG_LOADED__) {
 			</div>
 			<div class="settings-modal-content">
 				<div class="settings-layout flex flex-col md:flex-row md:gap-8 mt-2">
-					<aside class="settings-sidebar-nav md:w-56 border-b md:border-b-0 md:border-r border-(--border-color) pb-3 md:pb-0 md:pr-3">
+					<aside class="settings-sidebar-nav md:w-56 border-b md:border-b-0 md:border-r border-[color:var(--border-color)] pb-3 md:pb-0 md:pr-3">
 						<nav class="flex md:flex-col gap-2 text-sm" aria-label="Settings sections">
 							${sidebarNav}
 						</nav>
@@ -160,8 +160,8 @@ if (window.__EVENT_LOG_LOADED__) {
               <div class="settings-modal-placeholder-title">General</div>
 							<label class="flex items-center justify-between cursor-pointer py-2">
 								<div class="flex flex-col">
-									<span class="text-sm font-medium text-(--text-primary)">Dark theme</span>
-									<span class="text-xs text-(--text-secondary)">Switch between light and dark color scheme.</span>
+									<span class="text-sm font-medium text-[color:var(--text-primary)]">Dark theme</span>
+									<span class="text-xs text-[color:var(--text-primary)]">Switch between light and dark color scheme.</span>
 								</div>
 								<div class="group relative inline-flex w-11 shrink-0 rounded-full bg-gray-200 p-0.5 inset-ring inset-ring-gray-900/5 outline-offset-2 outline-indigo-600 transition-colors duration-200 ease-in-out has-checked:bg-indigo-600 has-focus-visible:outline-2">
 									<span class="size-5 rounded-full bg-white shadow-xs ring-1 ring-gray-900/5 transition-transform duration-200 ease-in-out group-has-checked:translate-x-5"></span>
@@ -226,6 +226,7 @@ if (window.__EVENT_LOG_LOADED__) {
 									</div>
 								<div class="settings-toggle-actions">
 									<button type="button" class="confirm-modal-btn confirm-modal-btn-destructive" id="clearLocalDataBtn">
+										<i class="fa-solid fa-broom"></i>
 										Clear local data
 									</button>
 								</div>
@@ -240,6 +241,7 @@ if (window.__EVENT_LOG_LOADED__) {
                 <div class="settings-toggle-actions">
                   ${canDeleteAllEvents ? `
                     <button type="button" class="confirm-modal-btn confirm-modal-btn-destructive" id="deleteAllEventsBtn">
+                      <i class="fa-solid fa-trash-can"></i>
                       Delete all events
                     </button>
                   ` : `
@@ -481,12 +483,20 @@ if (window.__EVENT_LOG_LOADED__) {
               <div>
                 <label class="settings-modal-placeholder-text" style="display: block; margin-bottom: 6px;">
                   Role
-                  <select id="createUserRole" name="role" required
-                    style="margin-top: 4px; width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 14px;">
-                    <option value="basic">Basic</option>
-                    <option value="advanced">Advanced</option>
-                    <option value="administrator">Administrator</option>
-                  </select>
+                  <el-autocomplete class="relative" style="margin-top: 4px;">
+                    <input id="createUserRole" name="role" type="text" value="basic"
+                      class="block w-full rounded-md bg-white py-1.5 pr-12 pl-3 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6">
+                    <button type="button" class="absolute inset-y-0 right-0 flex items-center rounded-r-md px-2">
+                      <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5 text-gray-400">
+                        <path d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" fill-rule="evenodd" />
+                      </svg>
+                    </button>
+                    <el-options anchor="bottom end" popover class="max-h-60 w-(--input-width) overflow-auto rounded-md bg-white py-1 text-base shadow-lg outline outline-black/5 transition-discrete [--anchor-gap:--spacing(1)] data-leave:transition data-leave:duration-100 data-leave:ease-in data-closed:data-leave:opacity-0 sm:text-sm">
+                      <el-option value="basic" class="block truncate px-3 py-2 text-gray-900 select-none aria-selected:bg-indigo-600 aria-selected:text-white">Basic</el-option>
+                      <el-option value="advanced" class="block truncate px-3 py-2 text-gray-900 select-none aria-selected:bg-indigo-600 aria-selected:text-white">Advanced</el-option>
+                      <el-option value="administrator" class="block truncate px-3 py-2 text-gray-900 select-none aria-selected:bg-indigo-600 aria-selected:text-white">Administrator</el-option>
+                    </el-options>
+                  </el-autocomplete>
                 </label>
               </div>
             `,
@@ -502,7 +512,9 @@ if (window.__EVENT_LOG_LOADED__) {
 
 							const response = await fetch('/api/users', {
 								method: 'POST',
-								headers: window.getRequestHeaders(),
+								headers: {
+									'Content-Type': 'application/json'
+								},
 								credentials: 'include',
 								body: JSON.stringify({ username, password, role })
 							});
@@ -542,7 +554,9 @@ if (window.__EVENT_LOG_LOADED__) {
 
 							const response = await fetch(`/api/users/${encodeURIComponent(username)}/password`, {
 								method: 'PUT',
-								headers: window.getRequestHeaders(),
+								headers: {
+									'Content-Type': 'application/json'
+								},
 								credentials: 'include',
 								body: JSON.stringify({ password })
 							});
@@ -567,12 +581,20 @@ if (window.__EVENT_LOG_LOADED__) {
               <div>
                 <label class="settings-modal-placeholder-text" style="display: block; margin-bottom: 6px;">
                   Role
-                  <select id="editUserRole" name="role" required
-                    style="margin-top: 4px; width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 14px;">
-                    <option value="basic" ${currentRole === 'basic' ? 'selected' : ''}>Basic</option>
-                    <option value="advanced" ${currentRole === 'advanced' ? 'selected' : ''}>Advanced</option>
-                    <option value="administrator" ${currentRole === 'administrator' ? 'selected' : ''}>Administrator</option>
-                  </select>
+                  <el-autocomplete class="relative" style="margin-top: 4px;">
+                    <input id="editUserRole" name="role" type="text" value="${currentRole}"
+                      class="block w-full rounded-md bg-white py-1.5 pr-12 pl-3 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6">
+                    <button type="button" class="absolute inset-y-0 right-0 flex items-center rounded-r-md px-2">
+                      <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5 text-gray-400">
+                        <path d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" fill-rule="evenodd" />
+                      </svg>
+                    </button>
+                    <el-options anchor="bottom end" popover class="max-h-60 w-(--input-width) overflow-auto rounded-md bg-white py-1 text-base shadow-lg outline outline-black/5 transition-discrete [--anchor-gap:--spacing(1)] data-leave:transition data-leave:duration-100 data-leave:ease-in data-closed:data-leave:opacity-0 sm:text-sm">
+                      <el-option value="basic" class="block truncate px-3 py-2 text-gray-900 select-none aria-selected:bg-indigo-600 aria-selected:text-white">Basic</el-option>
+                      <el-option value="advanced" class="block truncate px-3 py-2 text-gray-900 select-none aria-selected:bg-indigo-600 aria-selected:text-white">Advanced</el-option>
+                      <el-option value="administrator" class="block truncate px-3 py-2 text-gray-900 select-none aria-selected:bg-indigo-600 aria-selected:text-white">Administrator</el-option>
+                    </el-options>
+                  </el-autocomplete>
                 </label>
               </div>
             `,
@@ -618,7 +640,6 @@ if (window.__EVENT_LOG_LOADED__) {
 					try {
 						const response = await fetch(`/api/users/${encodeURIComponent(username)}`, {
 							method: 'DELETE',
-							headers: window.getRequestHeaders(false), // No Content-Type for DELETE
 							credentials: 'include'
 						});
 						const data = await response.json();

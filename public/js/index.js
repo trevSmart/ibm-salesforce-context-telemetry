@@ -164,9 +164,9 @@ async function initializeDashboardPage({ resetState = false } = {}) {
 		chart = null;
 	}
 
-	// Always restore saved time range from localStorage, default to 30 if not found
+	// Always restore saved time range from localStorage, default to 7 if not found
 	const savedTimeRange = localStorage.getItem('dashboardTimeRange');
-	currentDays = savedTimeRange ? parseInt(savedTimeRange, 10) : 30;
+	currentDays = savedTimeRange ? parseInt(savedTimeRange, 10) : 7;
 
 	if (resetState) {
 		isInitialChartLoad = true;
@@ -489,22 +489,30 @@ async function openSettingsModal() {
 
 	// Build sidebar navigation
 	const sidebarNav = `
-    <a href="#settings-general" class="settings-sidebar-link flex items-center gap-2 rounded-md px-2 py-1.5 text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-secondary)]">
-	 <span class="w-5 h-5 flex items-center justify-center rounded-full border border-(--border-color) bg-[color:var(--bg-secondary)]">
+    <a href="#settings-general" class="settings-sidebar-link flex items-center gap-2 rounded-md px-2 py-1.5 text-[color:var(--text-primary)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-secondary)]">
+	 <span class="w-5 h-5 flex items-center justify-center">
         <i class="fa-solid fa-gear text-[12px]"></i>
       </span>
       <span class="font-medium">General</span>
     </a>
     ${isAdministrator ? `
-    <a href="#settings-users" class="settings-sidebar-link flex items-center gap-2 rounded-md px-2 py-1.5 text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-secondary)]">
-      <span class="w-5 h-5 flex items-center justify-center rounded-full border border-[color:var(--border-color)] bg-[color:var(--bg-secondary)]">
+    <a href="#settings-users" class="settings-sidebar-link flex items-center gap-2 rounded-md px-2 py-1.5 text-[color:var(--text-primary)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-secondary)]">
+      <span class="w-5 h-5 flex items-center justify-center">
         <i class="fa-solid fa-user-gear text-[12px]"></i>
       </span>
       <span class="font-medium">Users</span>
     </a>
     ` : ''}
-    <a href="#settings-danger" class="settings-sidebar-link flex items-center gap-2 rounded-md px-2 py-1.5 text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-secondary)]">
-      <span class="w-5 h-5 flex items-center justify-center rounded-full border border-[color:var(--border-color)] bg-[color:var(--bg-secondary)]">
+    ${isAdministrator ? `
+    <a href="#settings-import-export" class="settings-sidebar-link flex items-center gap-2 rounded-md px-2 py-1.5 text-[color:var(--text-primary)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-secondary)]">
+      <span class="w-5 h-5 flex items-center justify-center">
+        <i class="fa-solid fa-database text-[12px]"></i>
+      </span>
+      <span class="font-medium">Import/Export</span>
+    </a>
+    ` : ''}
+    <a href="#settings-danger" class="settings-sidebar-link flex items-center gap-2 rounded-md px-2 py-1.5 text-[color:var(--text-primary)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-secondary)]">
+      <span class="w-5 h-5 flex items-center justify-center">
         <i class="fa-solid fa-triangle-exclamation text-[12px]"></i>
       </span>
       <span class="font-medium">Danger zone</span>
@@ -528,7 +536,7 @@ async function openSettingsModal() {
 						<label class="flex items-center justify-between cursor-pointer py-2">
 							<div class="flex flex-col">
 								<span class="text-sm font-medium text-[color:var(--text-primary)]">Dark theme</span>
-								<span class="text-xs text-(--text-secondary)">Switch between light and dark color scheme.</span>
+								<span class="text-xs text-[color:var(--text-primary)]">Switch between light and dark color scheme.</span>
 							</div>
 							<div class="group relative inline-flex w-11 shrink-0 rounded-full bg-gray-200 p-0.5 inset-ring inset-ring-gray-900/5 outline-offset-2 outline-indigo-600 transition-colors duration-200 ease-in-out has-checked:bg-indigo-600 has-focus-visible:outline-2">
 								<span class="size-5 rounded-full bg-white shadow-xs ring-1 ring-gray-900/5 transition-transform duration-200 ease-in-out group-has-checked:translate-x-5"></span>
@@ -559,7 +567,9 @@ async function openSettingsModal() {
 						<div class="settings-users-header">
 							<div class="settings-modal-placeholder-title settings-users-title">User Management</div>
 							<button type="button" class="confirm-modal-btn settings-users-add-btn" id="addUserBtn">
-								<i class="fa-solid fa-plus"></i>
+								<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="16" height="16" style="margin-right: 6px;">
+									<path fill-rule="evenodd" d="M12 2.25a5.25 5.25 0 0 0-3.717 8.966 8.252 8.252 0 0 0-4.367 7.284.75.75 0 0 0 1.5 0 6.75 6.75 0 1 1 13.5 0 .75.75 0 0 0 1.5 0 8.252 8.252 0 0 0-4.366-7.284A5.25 5.25 0 0 0 12 2.25Zm0 1.5a3.75 3.75 0 1 1 0 7.5 3.75 3.75 0 0 1 0-7.5Z" clip-rule="evenodd"/>
+								</svg>
 								Add User
 							</button>
 						</div>
@@ -585,6 +595,51 @@ async function openSettingsModal() {
 						<div id="userFormContainer" class="settings-users-inline-form" style="display: none;"></div>
 					</section>
 					` : ''}
+					${isAdministrator ? `
+					<section id="settings-import-export" class="settings-danger-section">
+						<div class="settings-modal-placeholder-title">Import/Export</div>
+						<div class="settings-modal-placeholder-text">
+							<div class="settings-toggle-row" style="align-items: flex-start;">
+								<div class="settings-toggle-text">
+									<div class="settings-toggle-title">Export database</div>
+									<div class="settings-toggle-description">
+										Download a complete backup of the database as a JSON file. This includes all telemetry events, users, teams, organizations, and settings.
+									</div>
+								</div>
+								<div class="settings-toggle-actions">
+									<button type="button" class="confirm-modal-btn" id="exportDatabaseBtn">
+										<i class="fa-solid fa-download"></i>
+										Export database
+									</button>
+								</div>
+							</div>
+							<div class="settings-toggle-row" style="align-items: flex-start; margin-top: 8px;">
+								<div class="settings-toggle-text">
+									<div class="settings-toggle-title">Import database</div>
+									<div class="settings-toggle-description">
+										Import data from a previously exported database JSON file. This will merge the imported data with the existing database. Existing records with the same ID will be replaced.
+									</div>
+								</div>
+								<div class="settings-toggle-actions">
+									<input type="file" id="importDatabaseInput" accept=".json" style="display: none;">
+									<button type="button" class="confirm-modal-btn" id="importDatabaseBtn">
+										<i class="fa-solid fa-upload"></i>
+										Import database
+									</button>
+								</div>
+							</div>
+							<div id="importProgressContainer" style="display: none; margin-top: 16px; padding: 12px; background: var(--bg-secondary); border-radius: 6px;">
+								<div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+									<span class="settings-users-spinner" style="width: 16px; height: 16px;"></span>
+									<span id="importProgressText" style="font-size: 14px; color: var(--text-primary);">Importing database...</span>
+								</div>
+								<div style="width: 100%; height: 4px; background: var(--border-color); border-radius: 2px; overflow: hidden;">
+									<div id="importProgressBar" style="width: 0%; height: 100%; background: var(--color-primary); transition: width 0.3s ease;"></div>
+								</div>
+							</div>
+						</div>
+					</section>
+					` : ''}
 					<section id="settings-danger" class="settings-danger-section">
 						<div class="settings-modal-placeholder-title">Danger zone</div>
 						<div class="settings-modal-placeholder-text">
@@ -597,6 +652,7 @@ async function openSettingsModal() {
 								</div>
                 <div class="settings-toggle-actions">
                   <button type="button" class="confirm-modal-btn confirm-modal-btn-destructive" id="clearLocalDataBtn">
+                    <i class="fa-solid fa-broom"></i>
                     Clear local data
                   </button>
                 </div>
@@ -611,6 +667,7 @@ async function openSettingsModal() {
                 <div class="settings-toggle-actions">
                   ${canDeleteAllEvents ? `
                     <button type="button" class="confirm-modal-btn confirm-modal-btn-destructive" id="deleteAllEventsBtn">
+                      <i class="fa-solid fa-trash-can"></i>
                       Delete all events
                     </button>
                   ` : `
@@ -693,6 +750,143 @@ async function openSettingsModal() {
 		deleteAllEventsBtn.addEventListener('click', () => {
 			confirmDeleteAll();
 		});
+	}
+
+	// Export/Import database functionality (only for administrators)
+	if (isAdministrator) {
+		const exportDatabaseBtn = modal.querySelector('#exportDatabaseBtn');
+		if (exportDatabaseBtn) {
+			exportDatabaseBtn.addEventListener('click', async () => {
+				try {
+					exportDatabaseBtn.disabled = true;
+					exportDatabaseBtn.innerHTML = '<span class="settings-users-spinner" style="width: 14px; height: 14px; margin-right: 6px;"></span>Exporting...';
+
+					const response = await fetch('/api/database/export', {
+						method: 'GET',
+						headers: {
+							'Content-Type': 'application/json',
+							'X-CSRF-Token': await window.getCsrfToken()
+						},
+						credentials: 'include'
+					});
+
+					if (!response.ok) {
+						const error = await response.json();
+						throw new Error(error.message || 'Failed to export database');
+					}
+
+					const blob = await response.blob();
+					const url = window.URL.createObjectURL(blob);
+					const a = document.createElement('a');
+					a.href = url;
+					a.download = `database-export-${new Date().toISOString().split('T')[0]}.json`;
+					document.body.appendChild(a);
+					a.click();
+					window.URL.revokeObjectURL(url);
+					document.body.removeChild(a);
+
+					window.showToast('Database exported successfully', 'success');
+				} catch (error) {
+					console.error('Error exporting database:', error);
+					window.showToast('Failed to export database: ' + error.message, 'error');
+				} finally {
+					exportDatabaseBtn.disabled = false;
+					exportDatabaseBtn.innerHTML = '<i class="fa-solid fa-download" style="margin-right: 6px;"></i>Export database';
+				}
+			});
+		}
+
+		const importDatabaseBtn = modal.querySelector('#importDatabaseBtn');
+		const importDatabaseInput = modal.querySelector('#importDatabaseInput');
+		if (importDatabaseBtn && importDatabaseInput) {
+			importDatabaseBtn.addEventListener('click', () => {
+				importDatabaseInput.click();
+			});
+
+			importDatabaseInput.addEventListener('change', async (e) => {
+				const file = e.target.files[0];
+				if (!file) return;
+
+				if (!file.name.endsWith('.json')) {
+					window.showToast('Please select a valid JSON file', 'error');
+					importDatabaseInput.value = '';
+					return;
+				}
+
+				try {
+					const progressContainer = modal.querySelector('#importProgressContainer');
+					const progressText = modal.querySelector('#importProgressText');
+					const progressBar = modal.querySelector('#importProgressBar');
+
+					progressContainer.style.display = 'block';
+					progressText.textContent = 'Reading file...';
+					progressBar.style.width = '10%';
+					importDatabaseBtn.disabled = true;
+
+					const fileContent = await file.text();
+					let importData;
+					try {
+						importData = JSON.parse(fileContent);
+					} catch (_parseError) {
+						throw new Error('Invalid JSON file format');
+					}
+
+					progressText.textContent = 'Uploading to server...';
+					progressBar.style.width = '30%';
+
+					const response = await fetch('/api/database/import', {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json',
+							'X-CSRF-Token': await window.getCsrfToken()
+						},
+						credentials: 'include',
+						body: JSON.stringify(importData)
+					});
+
+					progressBar.style.width = '60%';
+					progressText.textContent = 'Processing import...';
+
+					if (!response.ok) {
+						const error = await response.json();
+						throw new Error(error.message || 'Failed to import database');
+					}
+
+					const result = await response.json();
+					progressBar.style.width = '100%';
+					progressText.textContent = 'Import completed!';
+
+					const errorMsg = result.errors && result.errors.length > 0
+						? ` (${result.errors.length} errors)`
+						: '';
+					window.showToast(`Database imported successfully: ${result.imported} records imported${errorMsg}`, 'success');
+
+					if (result.errors && result.errors.length > 0) {
+						console.warn('Import errors:', result.errors);
+					}
+
+					setTimeout(() => {
+						progressContainer.style.display = 'none';
+						progressBar.style.width = '0%';
+					}, 2000);
+
+					// Reload the page after successful import to refresh all data
+					setTimeout(() => {
+						window.location.reload();
+					}, 2500);
+				} catch (error) {
+					console.error('Error importing database:', error);
+					window.showToast('Failed to import database: ' + error.message, 'error');
+					const progressContainer = modal.querySelector('#importProgressContainer');
+					if (progressContainer) {
+						progressContainer.style.display = 'none';
+					}
+				} finally {
+					importDatabaseInput.value = '';
+					importDatabaseBtn.disabled = false;
+				}
+			});
+		}
 	}
 
 	// Navigation between settings sections
@@ -1807,7 +2001,8 @@ async function loadChartData(days = currentDays) {
 			futureDate.setDate(futureDate.getDate() + i);
 			const dayIndex = futureDate.getDay();
 			const dayNumber = futureDate.getDate();
-			futureLabels.push(`${weekdayLabels[dayIndex] || ''} ${dayNumber}`);
+			// Mostrar etiqueta només per als dilluns
+			futureLabels.push(dayIndex === 1 ? `DL ${dayNumber}` : '');
 		}
 		const extendedLabels = [...labels, ...futureLabels];
 

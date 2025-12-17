@@ -56,9 +56,7 @@ module.exports = [
 				define: 'readonly',
 				AbortController: 'readonly',
 				AbortSignal: 'readonly',
-				Element: 'readonly',
-				HTMLElement: 'readonly',
-				ResizeObserver: 'readonly'
+				Element: 'readonly'
 			}
 		},
 		rules: {
@@ -75,12 +73,6 @@ module.exports = [
 			'no-prototype-builtins': 'off',
 			'no-fallthrough': 'warn',
 			'no-useless-escape': 'warn'
-		}
-	},
-	{
-		files: ['public/js/notifications.js', 'public/js/teams.js'],
-		languageOptions: {
-			sourceType: 'module'
 		}
 	}
 ];
