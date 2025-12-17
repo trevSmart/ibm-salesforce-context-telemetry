@@ -2958,104 +2958,95 @@ if (window.__EVENT_LOG_LOADED__) {
 		return { html: `${userHtml} <span class="session-date">${escapeHtml(dateStr)}</span>`, text: `${userText} • ${dateStr}` };
 	}
 
-	function renderUsersList(normalizedUsers) {
+	async function renderUsersList() {
 		const userList = document.getElementById('userList');
 		if (!userList) {
 			console.error('userList element not found');
 			return;
 		}
 
-		// Clear the list
 		userList.innerHTML = '';
 
-		// Process and render users
-		normalizedUsers.forEach(user => {
 		const cacheKey = 'telemetry_users';
-
-		// Try to get data from cache first
-		const cachedUsers = window.getCachedData ? window.getCachedData(cacheKey) : null;
-		if (cachedUsers) {
-			console.log('[Logs] Using cached users data');
-			renderUsersList(cachedUsers);
-			return;
-		}
+		let usersWithStats = window.getCachedData ? window.getCachedData(cacheKey) : null;
 
 		try {
-			const response = await fetch('/api/telemetry-users', {
-				credentials: 'include'
-			});
-			const validResponse = await handleApiResponse(response);
-			if (!validResponse) return;
-			const data = await validResponse.json();
+			if (!usersWithStats) {
+				const response = await fetch('/api/telemetry-users', {
+					credentials: 'include'
+				});
+				const validResponse = await handleApiResponse(response);
+				if (!validResponse) return;
+				const data = await validResponse.json();
 
-			// Check if response is an error object
-			if (data && data.status === 'error') {
-				console.error('Error loading users:', data.message);
-				return;
-			}
+				if (data && data.status === 'error') {
+					console.error('Error loading users:', data.message);
+					return;
+				}
 
-			// Normalize API response to consistent objects { id, label, count, last_event }
-			const normalizedUsers = (Array.isArray(data) ? data : [])
-				.map(entry => {
-					if (entry && typeof entry === 'object') {
-						const rawId = typeof entry.id === 'string' ? entry.id : (typeof entry.user_id === 'string' ? entry.user_id : '');
-						const trimmedId = rawId.trim();
-						if (!trimmedId) {
-							return null;
+				// Normalize API response to consistent objects { id, label, count, last_event }
+				const normalizedUsers = (Array.isArray(data) ? data : [])
+					.map(entry => {
+						if (entry && typeof entry === 'object') {
+							const rawId = typeof entry.id === 'string' ? entry.id : (typeof entry.user_id === 'string' ? entry.user_id : '');
+							const trimmedId = rawId.trim();
+							if (!trimmedId) {
+								return null;
+							}
+							const label = typeof entry.label === 'string' && entry.label.trim() !== ''
+								? entry.label.trim()
+								: trimmedId;
+							const count = Number.isFinite(entry.eventCount)
+								? Number(entry.eventCount)
+								: (Number.isFinite(entry.count) ? Number(entry.count) : 0);
+							const lastEvent = entry.lastEvent || entry.last_event || null;
+							const userName = entry.user_name || label;
+							return { id: trimmedId, label, count, last_event: lastEvent, user_name: userName };
 						}
-						const label = typeof entry.label === 'string' && entry.label.trim() !== ''
-							? entry.label.trim()
-							: trimmedId;
-						const count = Number.isFinite(entry.eventCount)
-							? Number(entry.eventCount)
-							: (Number.isFinite(entry.count) ? Number(entry.count) : 0);
-						const lastEvent = entry.lastEvent || entry.last_event || null;
-						const userName = entry.user_name || label;
-						return { id: trimmedId, label, count, last_event: lastEvent, user_name: userName };
-					}
-					if (typeof entry === 'string') {
-						const trimmedValue = entry.trim();
-						return trimmedValue
-							? { id: trimmedValue, label: trimmedValue, count: 0, last_event: null, user_name: trimmedValue }
-							: null;
-					}
-					return null;
-				})
-				.filter(Boolean)
-				.reduce((acc, user) => {
-					if (!acc.seen.has(user.id)) {
-						acc.seen.add(user.id);
-						acc.values.push(user);
-					}
-					return acc;
-				}, { seen: new Set(), values: [] }).values;
+						if (typeof entry === 'string') {
+							const trimmedValue = entry.trim();
+							return trimmedValue
+								? { id: trimmedValue, label: trimmedValue, count: 0, last_event: null, user_name: trimmedValue }
+								: null;
+						}
+						return null;
+					})
+					.filter(Boolean)
+					.reduce((acc, user) => {
+						if (!acc.seen.has(user.id)) {
+							acc.seen.add(user.id);
+							acc.values.push(user);
+						}
+						return acc;
+					}, { seen: new Set(), values: [] }).values;
 
-			if (normalizedUsers.length === 0) {
-				return;
-			}
+				if (normalizedUsers.length === 0) {
+					return;
+				}
 
-			// Sort users by last activity (most recent first)
-			const usersWithStats = normalizedUsers.map(user => {
-				return {
-					user_id: user.id,
-					label: user.label,
-					count: user.count || 0,
-					last_event: user.last_event || null,
-					user_name: user.user_name || user.label
-				};
-			}).sort((a, b) => {
-				// Sort by last_event DESC, users without events go to the end
-				if (!a.last_event && !b.last_event) return 0;
-				if (!a.last_event) return 1;
-				if (!b.last_event) return -1;
-				const dateA = new Date(a.last_event);
-				const dateB = new Date(b.last_event);
-				return dateB - dateA;
-			});
+				// Sort users by last activity (most recent first)
+				usersWithStats = normalizedUsers.map(user => {
+					return {
+						user_id: user.id,
+						label: user.label,
+						count: user.count || 0,
+						last_event: user.last_event || null,
+						user_name: user.user_name || user.label
+					};
+				}).sort((a, b) => {
+					if (!a.last_event && !b.last_event) return 0;
+					if (!a.last_event) return 1;
+					if (!b.last_event) return -1;
+					const dateA = new Date(a.last_event);
+					const dateB = new Date(b.last_event);
+					return dateB - dateA;
+				});
 
-			// Cache the processed data
-			if (window.setCachedData) {
-				window.setCachedData(cacheKey, usersWithStats);
+				if (window.setCachedData) {
+					window.setCachedData(cacheKey, usersWithStats);
+				}
+			} else {
+				console.log('[Logs] Using cached users data');
 			}
 
 			// Add each user to the list

@@ -3,6 +3,7 @@
 // Lightweight client-side navigation to avoid repainting shared chrome
 (() => {
 	const SUPPORTED_PATHS = ['/', '/logs', '/teams'];
+	const EVENT_LOG_JS_SRC = '/js/event-log.js?v=20240221';
 	const SOFT_NAV_SELECTOR = [
 		'a.top-nav-link',
 		'a.top-nav-logo',
@@ -12,7 +13,7 @@
 	].join(',');
 	const PAGE_SCRIPTS = {
 		'/': [{ src: '/js/index.js', type: 'module' }],
-		'/logs': [{ src: '/js/event-log.js' }],
+		'/logs': [{ src: EVENT_LOG_JS_SRC }],
 		'/teams': [{ src: '/js/teams.js', type: 'module' }]
 	};
 
@@ -23,14 +24,17 @@
 	const pageCache = new Map();
 	const containerCache = new Map(); // Cache for DOM container nodes per path
 	const dataCache = new Map(); // Cache for API data between navigation
+	const normalizeSrc = (src) => {
+		try {
+			const url = new URL(src, window.location.href);
+			return `${url.pathname}${url.search}`;
+		} catch (_e) {
+			return src;
+		}
+	};
+
 	const loadedScripts = new Set(
-		Array.from(document.querySelectorAll('script[src]')).map((script) => {
-			try {
-				return new URL(script.src, window.location.href).pathname;
-			} catch (_e) {
-				return script.src;
-			}
-		})
+		Array.from(document.querySelectorAll('script[src]')).map((script) => normalizeSrc(script.src))
 	);
 
 	let isNavigating = false;
@@ -117,8 +121,9 @@
 		for (const entry of scripts) {
 			const src = typeof entry === 'string' ? entry : entry.src;
 			const type = typeof entry === 'object' ? entry.type : undefined;
+			const normalizedSrc = normalizeSrc(src);
 
-			if (loadedScripts.has(src)) {
+			if (loadedScripts.has(normalizedSrc)) {
 				continue;
 			}
 			await new Promise((resolve, reject) => {
@@ -129,7 +134,7 @@
 				}
 				script.async = true;
 				script.onload = () => {
-					loadedScripts.add(src);
+					loadedScripts.add(normalizedSrc);
 					resolve();
 				};
 				script.onerror = (err) => reject(err);

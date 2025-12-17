@@ -1,8 +1,8 @@
 // Service Worker for IBM Salesforce Context Telemetry
 // Implements modern caching strategies for optimal performance
 
-const CACHE_NAME = 'ibm-salesforce-telemetry-v1.1.0';
-const API_CACHE_NAME = 'api-cache-v1.1.0';
+const CACHE_NAME = 'ibm-salesforce-telemetry-v1.1.1';
+const API_CACHE_NAME = 'api-cache-v1.1.1';
 
 // Resources to cache immediately on install - only critical, publicly accessible resources
 const STATIC_CACHE_URLS = [
@@ -138,10 +138,14 @@ function staleWhileRevalidate(request) {
       const fetchPromise = fetch(request, { credentials: 'include' })
         .then((networkResponse) => {
           if (networkResponse && networkResponse.status === 200) {
-            caches.open(API_CACHE_NAME)
-              .then((cache) => {
-                cache.put(request, networkResponse.clone());
-              });
+            try {
+              const clone = networkResponse.clone();
+              caches.open(API_CACHE_NAME)
+                .then((cache) => cache.put(request, clone))
+                .catch((err) => console.warn('[SW] Failed to update API cache:', err));
+            } catch (err) {
+              console.warn('[SW] Failed to clone response for cache:', err);
+            }
           }
           return networkResponse;
         })
@@ -163,35 +167,13 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Skip non-GET requests and external domains
-  if (request.method !== 'GET' || !url.pathname.startsWith('/')) {
+  // Only handle same-origin GET requests; let the browser handle cross-origin fetches
+  if (request.method !== 'GET' || url.origin !== self.location.origin) {
     return;
   }
 
-  // Handle API requests
+  // Skip API requests entirely; let the network handle them to avoid multi-tab cache interference
   if (url.pathname.startsWith('/api/')) {
-    // Check if it's a cache-first endpoint (like images)
-    const isCacheFirst = API_ENDPOINTS.cacheFirst.some(endpoint =>
-      url.pathname.startsWith(endpoint)
-    );
-
-    if (isCacheFirst) {
-      event.respondWith(cacheFirst(request));
-      return;
-    }
-
-    // Check if it's a network-first endpoint
-    const isNetworkFirst = API_ENDPOINTS.networkFirst.some(endpoint =>
-      url.pathname.startsWith(endpoint)
-    );
-
-    if (isNetworkFirst) {
-      event.respondWith(networkFirst(request));
-      return;
-    }
-
-    // Default to stale-while-revalidate for other API calls
-    event.respondWith(staleWhileRevalidate(request));
     return;
   }
 
