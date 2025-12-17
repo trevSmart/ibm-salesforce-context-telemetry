@@ -1995,15 +1995,16 @@ function renderToolCallChart(stats) {
 		},
 		legend: {
 			orient: 'vertical',
-			left: 'left',
-			show: false // Hide legend for space efficiency
+			left: '5%',
+			top: 'center',
+			show: true
 		},
 		series: [
 			{
 				name: 'Tool Calls',
 				type: 'pie',
-				radius: '60%',
-				center: ['50%', '50%'],
+				radius: '50%',
+				center: ['60%', '50%'],
 				padAngle: 5,
 				data: data,
 				emphasis: {

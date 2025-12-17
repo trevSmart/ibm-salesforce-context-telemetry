@@ -1198,23 +1198,6 @@ app.get('/api/daily-stats', auth.requireAuth, async (req, res) => {
 	}
 });
 
-// Temporary endpoint without auth for testing
-app.get('/api/tool-call-stats-test', async (req, res) => {
-	try {
-		const days = parseInt(req.query.days, 10) || 30;
-
-		const stats = await db.getToolCallStats({ days });
-
-		res.json(stats);
-	} catch (error) {
-		console.error('Error fetching tool call stats:', error);
-		res.status(500).json({
-			status: 'error',
-			message: 'Failed to fetch tool call statistics'
-		});
-	}
-});
-
 app.get('/api/tool-call-stats', auth.requireAuth, async (req, res) => {
 	try {
 		const days = parseInt(req.query.days, 10) || 30;
