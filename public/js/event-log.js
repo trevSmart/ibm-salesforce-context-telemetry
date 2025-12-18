@@ -3743,7 +3743,7 @@ if (window.__EVENT_LOG_LOADED__) {
 				</td>
 				<td class="hidden border-b border-gray-200 px-3 py-4 text-sm text-gray-500 md:table-cell log-client whitespace-nowrap">${escapeHtml(clientName)}</td>
 				<td class="hidden border-b border-gray-200 px-3 py-4 text-sm text-gray-500 lg:table-cell log-tool-name whitespace-nowrap">${toolName}</td>
-				<td class="border-b border-gray-200 px-3 py-4 text-sm text-gray-500 log-description">${description}</td>
+				<td class="border-b border-gray-200 px-3 py-4 text-sm text-gray-500 text-center log-description">${description}</td>
 				<td class="border-b border-gray-200 py-4 pr-4 pl-3 text-right text-sm font-medium actions-cell whitespace-nowrap sm:pr-8 lg:pr-8">
 					<button class="actions-btn text-indigo-600 hover:text-indigo-900" onclick="toggleActionsDropdown(event, ${event.id})" style="background: none; border: none; cursor: pointer; padding: 4px;">
 						<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
@@ -3765,7 +3765,12 @@ if (window.__EVENT_LOG_LOADED__) {
 			const descriptionCell = row.querySelector('.log-description');
 			if (descriptionCell) {
 				if (description === '__VIEW_PAYLOAD_BUTTON__') {
-					descriptionCell.innerHTML = `<button onclick="loadEventPayload(${event.id})" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline text-xs">View Payload</button>`;
+					descriptionCell.innerHTML = `<button onclick="loadEventPayload(${event.id})" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 p-1 rounded" title="View payload">
+						<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+							<path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+						</svg>
+					</button>`;
 					descriptionCell.title = 'Click to view payload';
 				} else {
 					descriptionCell.textContent = description;
