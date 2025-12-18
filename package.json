@@ -20,6 +20,7 @@
     "create-user": "node src/scripts/create-user.js",
     "update-user-role": "node src/scripts/update-user-role.js",
     "update-admin-role": "node src/scripts/update-admin-role.js",
+    "regularize-telemetry-events": "node src/scripts/regularize-telemetry-events.js",
     "export-database": "node src/scripts/export-database.js",
     "import-database": "node src/scripts/import-database.js",
     "lint": "npm run lint:eslint && npm run lint:ts",

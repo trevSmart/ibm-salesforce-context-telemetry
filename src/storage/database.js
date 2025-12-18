@@ -5201,6 +5201,10 @@ async function deletePerson(id) {
 	}
 }
 
+function getDbConnection() {
+	return db;
+}
+
 async function getPersonUsernames(personId) {
 	try {
 		if (dbType === 'sqlite') {
@@ -5368,6 +5372,7 @@ module.exports = {
 	getActiveRememberTokensCount,
 	// Utilities
 	getNormalizedUserId,
+	getDbConnection,
 	// Database export/import
 	exportDatabase,
 	importDatabase,
