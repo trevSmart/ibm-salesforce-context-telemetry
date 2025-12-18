@@ -1557,49 +1557,139 @@ async function getToolUsageStats(days = 30) {
 	startDate.setUTCDate(startDate.getUTCDate() - (rangeDays - 1));
 	const startDateISO = startDate.toISOString();
 
-	if (dbType === 'sqlite') {
-		// Get successful tool calls and errors by tool name
-		const toolStats = db.prepare(`
-			SELECT
-				tool_name as tool,
-				SUM(CASE WHEN event = 'tool_call' THEN 1 ELSE 0 END) as successful,
-				SUM(CASE WHEN event = 'tool_error' THEN 1 ELSE 0 END) as errors
-			FROM telemetry_events
-			WHERE timestamp >= ?
-				AND event IN ('tool_call', 'tool_error')
-				AND tool_name IS NOT NULL
-				AND tool_name != ''
-			GROUP BY tool_name
-			ORDER BY (successful + errors) DESC
-			LIMIT 6
-		`).all(startDateISO);
+	try {
+		if (dbType === 'sqlite') {
+			// Try to use the tool_name column first (more efficient)
+			const toolStats = db.prepare(`
+				SELECT
+					tool_name as tool,
+					SUM(CASE WHEN event = 'tool_call' THEN 1 ELSE 0 END) as successful,
+					SUM(CASE WHEN event = 'tool_error' THEN 1 ELSE 0 END) as errors
+				FROM telemetry_events
+				WHERE timestamp >= ?
+					AND event IN ('tool_call', 'tool_error')
+					AND tool_name IS NOT NULL
+					AND tool_name != ''
+				GROUP BY tool_name
+				ORDER BY (successful + errors) DESC
+				LIMIT 6
+			`).all(startDateISO);
 
-		return toolStats.map(row => ({
-			tool: row.tool,
-			successful: parseInt(row.successful) || 0,
-			errors: parseInt(row.errors) || 0
-		}));
-	} else if (dbType === 'postgresql') {
-		const result = await db.query(`
-			SELECT
-				tool_name as tool,
-				SUM(CASE WHEN event = 'tool_call' THEN 1 ELSE 0 END) as successful,
-				SUM(CASE WHEN event = 'tool_error' THEN 1 ELSE 0 END) as errors
-			FROM telemetry_events
-			WHERE timestamp >= $1
-				AND event IN ('tool_call', 'tool_error')
-				AND tool_name IS NOT NULL
-				AND tool_name != ''
-			GROUP BY tool_name
-			ORDER BY (successful + errors) DESC
-			LIMIT 6
-		`, [startDateISO]);
+			return toolStats.map(row => ({
+				tool: row.tool,
+				successful: parseInt(row.successful) || 0,
+				errors: parseInt(row.errors) || 0
+			}));
+		} else if (dbType === 'postgresql') {
+			// Try to use the tool_name column first (more efficient)
+			const result = await db.query(`
+				SELECT
+					tool_name as tool,
+					SUM(CASE WHEN event = 'tool_call' THEN 1 ELSE 0 END) as successful,
+					SUM(CASE WHEN event = 'tool_error' THEN 1 ELSE 0 END) as errors
+				FROM telemetry_events
+				WHERE timestamp >= $1
+					AND event IN ('tool_call', 'tool_error')
+					AND tool_name IS NOT NULL
+					AND tool_name != ''
+				GROUP BY tool_name
+				ORDER BY (successful + errors) DESC
+				LIMIT 6
+			`, [startDateISO]);
 
-		return result.rows.map(row => ({
-			tool: row.tool,
-			successful: parseInt(row.successful) || 0,
-			errors: parseInt(row.errors) || 0
-		}));
+			return result.rows.map(row => ({
+				tool: row.tool,
+				successful: parseInt(row.successful) || 0,
+				errors: parseInt(row.errors) || 0
+			}));
+		}
+	} catch (error) {
+		console.warn('Error querying tool_name column, falling back to JSON extraction:', error.message);
+
+		// Fallback: extract tool names from JSON data
+		if (dbType === 'sqlite') {
+			const toolEvents = db.prepare(`
+				SELECT
+					json_extract(data, '$.toolName') as tool_name,
+					event,
+					COUNT(*) as count
+				FROM telemetry_events
+				WHERE timestamp >= ? AND event IN ('tool_call', 'tool_error')
+					AND json_extract(data, '$.toolName') IS NOT NULL
+					AND json_extract(data, '$.toolName') != ''
+				GROUP BY json_extract(data, '$.toolName'), event
+			`).all(startDateISO);
+
+			// Aggregate by tool name
+			const toolStats = new Map();
+			toolEvents.forEach(row => {
+				const toolName = String(row.tool_name).trim();
+				if (!toolName) return;
+
+				if (!toolStats.has(toolName)) {
+					toolStats.set(toolName, {
+						tool: toolName,
+						successful: 0,
+						errors: 0
+					});
+				}
+
+				const stat = toolStats.get(toolName);
+				const count = parseInt(row.count) || 0;
+
+				if (row.event === 'tool_call') {
+					stat.successful += count;
+				} else if (row.event === 'tool_error') {
+					stat.errors += count;
+				}
+			});
+
+			// Convert to array and sort by total usage
+			return Array.from(toolStats.values())
+				.sort((a, b) => (b.successful + b.errors) - (a.successful + a.errors))
+				.slice(0, 6);
+		} else if (dbType === 'postgresql') {
+			const result = await db.query(`
+				SELECT
+					COALESCE(data->>'toolName', data->>'tool') as tool_name,
+					event,
+					COUNT(*) as count
+				FROM telemetry_events
+				WHERE timestamp >= $1 AND event IN ('tool_call', 'tool_error')
+					AND (data->>'toolName' IS NOT NULL OR data->>'tool' IS NOT NULL)
+					AND (data->>'toolName' != '' OR data->>'tool' != '')
+				GROUP BY COALESCE(data->>'toolName', data->>'tool'), event
+			`, [startDateISO]);
+
+			// Aggregate by tool name
+			const toolStats = new Map();
+			result.rows.forEach(row => {
+				const toolName = String(row.tool_name).trim();
+				if (!toolName) return;
+
+				if (!toolStats.has(toolName)) {
+					toolStats.set(toolName, {
+						tool: toolName,
+						successful: 0,
+						errors: 0
+					});
+				}
+
+				const stat = toolStats.get(toolName);
+				const count = parseInt(row.count) || 0;
+
+				if (row.event === 'tool_call') {
+					stat.successful += count;
+				} else if (row.event === 'tool_error') {
+					stat.errors += count;
+				}
+			});
+
+			// Convert to array and sort by total usage
+			return Array.from(toolStats.values())
+				.sort((a, b) => (b.successful + b.errors) - (a.successful + a.errors))
+				.slice(0, 6);
+		}
 	}
 
 	return [];
