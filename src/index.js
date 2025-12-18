@@ -960,6 +960,301 @@ app.put('/api/users/:username/role', auth.requireAuth, auth.requireRole('adminis
 	}
 });
 
+// People management API endpoints
+app.get('/api/people', auth.requireAuth, auth.requireRole('administrator'), apiReadLimiter, async (req, res) => {
+	try {
+		const people = await db.getAllPeople();
+		res.json({
+			status: 'ok',
+			people: people
+		});
+	} catch (error) {
+		console.error('Error fetching people:', error);
+		res.status(500).json({
+			status: 'error',
+			message: 'Failed to fetch people'
+		});
+	}
+});
+
+app.post('/api/people', auth.requireAuth, auth.requireRole('administrator'), userManagementLimiter, async (req, res) => {
+	try {
+		const { name, email } = req.body;
+
+		if (!name || name.trim().length === 0) {
+			return res.status(400).json({
+				status: 'error',
+				message: 'Name is required'
+			});
+		}
+
+		const personId = await db.createPerson(name.trim(), email?.trim() || null);
+
+		res.status(201).json({
+			status: 'ok',
+			message: 'Person created successfully',
+			person: {
+				id: personId,
+				name: name.trim(),
+				email: email?.trim() || null
+			}
+		});
+	} catch (error) {
+		console.error('Error creating person:', error);
+		res.status(500).json({
+			status: 'error',
+			message: 'Failed to create person'
+		});
+	}
+});
+
+app.get('/api/people/:id', auth.requireAuth, auth.requireRole('administrator'), apiReadLimiter, async (req, res) => {
+	try {
+		const { id } = req.params;
+		const personId = parseInt(id, 10);
+
+		if (isNaN(personId)) {
+			return res.status(400).json({
+				status: 'error',
+				message: 'Invalid person ID'
+			});
+		}
+
+		const person = await db.getPersonById(personId);
+		if (!person) {
+			return res.status(404).json({
+				status: 'error',
+				message: 'Person not found'
+			});
+		}
+
+		res.json({
+			status: 'ok',
+			person: person
+		});
+	} catch (error) {
+		console.error('Error fetching person:', error);
+		res.status(500).json({
+			status: 'error',
+			message: 'Failed to fetch person'
+		});
+	}
+});
+
+app.put('/api/people/:id', auth.requireAuth, auth.requireRole('administrator'), userManagementLimiter, async (req, res) => {
+	try {
+		const { id } = req.params;
+		const personId = parseInt(id, 10);
+		const { name, email, notes } = req.body;
+
+		if (isNaN(personId)) {
+			return res.status(400).json({
+				status: 'error',
+				message: 'Invalid person ID'
+			});
+		}
+
+		if (!name || name.trim().length === 0) {
+			return res.status(400).json({
+				status: 'error',
+				message: 'Name is required'
+			});
+		}
+
+		const updated = await db.updatePerson(personId, {
+			name: name.trim(),
+			email: email?.trim() || null,
+			notes: notes?.trim() || null
+		});
+
+		if (!updated) {
+			return res.status(404).json({
+				status: 'error',
+				message: 'Person not found'
+			});
+		}
+
+		res.json({
+			status: 'ok',
+			message: 'Person updated successfully'
+		});
+	} catch (error) {
+		console.error('Error updating person:', error);
+		res.status(500).json({
+			status: 'error',
+			message: 'Failed to update person'
+		});
+	}
+});
+
+app.delete('/api/people/:id', auth.requireAuth, auth.requireRole('administrator'), userManagementLimiter, async (req, res) => {
+	try {
+		const { id } = req.params;
+		const personId = parseInt(id, 10);
+
+		if (isNaN(personId)) {
+			return res.status(400).json({
+				status: 'error',
+				message: 'Invalid person ID'
+			});
+		}
+
+		const deleted = await db.deletePerson(personId);
+		if (!deleted) {
+			return res.status(404).json({
+				status: 'error',
+				message: 'Person not found'
+			});
+		}
+
+		res.json({
+			status: 'ok',
+			message: 'Person deleted successfully'
+		});
+	} catch (error) {
+		console.error('Error deleting person:', error);
+		res.status(500).json({
+			status: 'error',
+			message: 'Failed to delete person'
+		});
+	}
+});
+
+app.get('/api/people/:id/usernames', auth.requireAuth, auth.requireRole('administrator'), apiReadLimiter, async (req, res) => {
+	try {
+		const { id } = req.params;
+		const personId = parseInt(id, 10);
+
+		if (isNaN(personId)) {
+			return res.status(400).json({
+				status: 'error',
+				message: 'Invalid person ID'
+			});
+		}
+
+		const usernames = await db.getPersonUsernames(personId);
+
+		res.json({
+			status: 'ok',
+			usernames: usernames
+		});
+	} catch (error) {
+		console.error('Error fetching person usernames:', error);
+		res.status(500).json({
+			status: 'error',
+			message: 'Failed to fetch usernames'
+		});
+	}
+});
+
+app.post('/api/people/:id/usernames', auth.requireAuth, auth.requireRole('administrator'), userManagementLimiter, async (req, res) => {
+	try {
+		const { id } = req.params;
+		const personId = parseInt(id, 10);
+		const { username, org_id } = req.body;
+
+		if (isNaN(personId)) {
+			return res.status(400).json({
+				status: 'error',
+				message: 'Invalid person ID'
+			});
+		}
+
+		if (!username || username.trim().length === 0) {
+			return res.status(400).json({
+				status: 'error',
+				message: 'Username is required'
+			});
+		}
+
+		await db.addPersonUsername(personId, username.trim(), org_id?.trim() || null);
+
+		res.status(201).json({
+			status: 'ok',
+			message: 'Username added successfully'
+		});
+	} catch (error) {
+		console.error('Error adding person username:', error);
+		if (error.message.includes('UNIQUE constraint failed') || error.message.includes('duplicate key value')) {
+			res.status(409).json({
+				status: 'error',
+				message: 'This username is already associated with this person'
+			});
+		} else {
+			res.status(500).json({
+				status: 'error',
+				message: 'Failed to add username'
+			});
+		}
+	}
+});
+
+app.delete('/api/people/:id/usernames/:username', auth.requireAuth, auth.requireRole('administrator'), userManagementLimiter, async (req, res) => {
+	try {
+		const { id, username } = req.params;
+		const personId = parseInt(id, 10);
+
+		if (isNaN(personId)) {
+			return res.status(400).json({
+				status: 'error',
+				message: 'Invalid person ID'
+			});
+		}
+
+		const removed = await db.removePersonUsername(personId, username);
+		if (!removed) {
+			return res.status(404).json({
+				status: 'error',
+				message: 'Username association not found'
+			});
+		}
+
+		res.json({
+			status: 'ok',
+			message: 'Username removed successfully'
+		});
+	} catch (error) {
+		console.error('Error removing person username:', error);
+		res.status(500).json({
+			status: 'error',
+			message: 'Failed to remove username'
+		});
+	}
+});
+
+app.put('/api/people/:id/usernames/:username/primary', auth.requireAuth, auth.requireRole('administrator'), userManagementLimiter, async (req, res) => {
+	try {
+		const { id, username } = req.params;
+		const personId = parseInt(id, 10);
+
+		if (isNaN(personId)) {
+			return res.status(400).json({
+				status: 'error',
+				message: 'Invalid person ID'
+			});
+		}
+
+		const updated = await db.setPrimaryUsername(personId, username);
+		if (!updated) {
+			return res.status(404).json({
+				status: 'error',
+				message: 'Username association not found'
+			});
+		}
+
+		res.json({
+			status: 'ok',
+			message: 'Primary username set successfully'
+		});
+	} catch (error) {
+		console.error('Error setting primary username:', error);
+		res.status(500).json({
+			status: 'error',
+			message: 'Failed to set primary username'
+		});
+	}
+});
+
 // Settings API endpoints
 app.get('/api/settings/org-team-mappings', auth.requireAuth, async (req, res) => {
 	try {
@@ -1040,8 +1335,7 @@ app.get('/api/events', auth.requireAuth, auth.requireRole('advanced'), apiReadLi
 			endDate,
 			userId,
 			orderBy = 'created_at',
-			order = 'DESC',
-			includePayload = 'false'
+			order = 'DESC'
 		} = req.query;
 
 		// Enforce maximum limit to prevent performance issues
@@ -1072,8 +1366,7 @@ app.get('/api/events', auth.requireAuth, auth.requireRole('advanced'), apiReadLi
 			endDate,
 			userIds: userIds.length > 0 ? userIds : undefined,
 			orderBy,
-			order,
-			includePayload: includePayload === 'true'
+			order
 		});
 
 		const isUnfiltered =
@@ -1120,37 +1413,6 @@ app.get('/api/events/:id', auth.requireAuth, auth.requireRole('advanced'), apiRe
 		res.status(500).json({
 			status: 'error',
 			message: 'Failed to fetch event'
-		});
-	}
-});
-
-app.get('/api/events/:id/payload', auth.requireAuth, auth.requireRole('advanced'), apiReadLimiter, async (req, res) => {
-	try {
-		const eventId = parseInt(req.params.id, 10);
-		if (isNaN(eventId)) {
-			return res.status(400).json({
-				status: 'error',
-				message: 'Invalid event ID'
-			});
-		}
-
-		const payload = await db.getEventPayload(eventId);
-		if (!payload) {
-			return res.status(404).json({
-				status: 'error',
-				message: 'Event not found'
-			});
-		}
-
-		res.json({
-			status: 'ok',
-			payload: payload
-		});
-	} catch (error) {
-		console.error('Error fetching event payload:', error);
-		res.status(500).json({
-			status: 'error',
-			message: 'Failed to fetch event payload'
 		});
 	}
 });
@@ -1261,20 +1523,6 @@ app.get('/api/daily-stats', auth.requireAuth, async (req, res) => {
 	}
 });
 
-app.get('/api/tool-usage-stats', auth.requireAuth, async (req, res) => {
-	try {
-		const days = parseInt(req.query.days, 10) || 30;
-		const stats = await db.getToolUsageStats(days);
-		res.json(stats);
-	} catch (error) {
-		console.error('Error fetching tool usage stats:', error);
-		res.status(500).json({
-			status: 'error',
-			message: 'Failed to fetch tool usage statistics'
-		});
-	}
-});
-
 app.get('/api/top-users-today', auth.requireAuth, async (req, res) => {
 	try {
 		const limitRaw = parseInt(req.query.limit, 10);
@@ -1316,6 +1564,20 @@ app.get('/api/top-teams-today', auth.requireAuth, async (req, res) => {
 		res.status(500).json({
 			status: 'error',
 			message: 'Failed to fetch top teams for the selected window'
+		});
+	}
+});
+
+app.get('/api/tool-usage-stats', auth.requireAuth, async (req, res) => {
+	try {
+		const days = parseInt(req.query.days, 10) || 30;
+		const stats = await db.getToolUsageStats(days);
+		res.json(stats);
+	} catch (error) {
+		console.error('Error fetching tool usage stats:', error);
+		res.status(500).json({
+			status: 'error',
+			message: 'Failed to fetch tool usage statistics'
 		});
 	}
 });
@@ -1964,6 +2226,20 @@ app.get('/logs', auth.requireAuth, auth.requireRole('advanced'), (_req, res) => 
 	} else {
 		res.status(404).send('Event logs page not found');
 	}
+});
+
+app.get('/people', auth.requireAuth, auth.requireRole('administrator'), (_req, res) => {
+	const peoplePath = path.join(__dirname, '..', 'public', 'people.html');
+	if (fs.existsSync(peoplePath)) {
+		res.sendFile(peoplePath);
+	} else {
+		res.status(404).send('People page not found');
+	}
+});
+
+// Redirect /users to /people for backward compatibility
+app.get('/users', auth.requireAuth, auth.requireRole('administrator'), (_req, res) => {
+	res.redirect('/people');
 });
 
 // Serve OpenAPI specification

@@ -217,6 +217,7 @@ async function initializeDashboardPage({ resetState = false } = {}) {
 				// Save selected time range to localStorage
 				localStorage.setItem('dashboardTimeRange', resolvedDays.toString());
 				loadChartData(resolvedDays);
+				loadToolUsageStats(resolvedDays);
 			};
 			timeRangeSelect.addEventListener('change', handleTimeRangeChange);
 			timeRangeSelect.addEventListener('input', handleTimeRangeChange);
@@ -1691,31 +1692,6 @@ function initChart() {
 	return chart;
 }
 
-function updateChartLegendOverlay(legendItems) {
-	const overlay = document.getElementById('chartLegendOverlay');
-	if (!overlay) {
-		return;
-	}
-
-	if (!Array.isArray(legendItems) || legendItems.length === 0) {
-		overlay.innerHTML = '';
-		overlay.setAttribute('data-state', 'empty');
-		return;
-	}
-
-	const itemsMarkup = legendItems.map((item) => {
-		const name = escapeHtml(item?.name || '');
-		const color = escapeHtml(item?.itemStyle?.color || '#94a3b8');
-		const icon = item?.icon === 'line' ? 'line' : 'circle';
-		const markerClass = icon === 'line'
-			? 'chart-legend-overlay-marker chart-legend-overlay-marker--line'
-			: 'chart-legend-overlay-marker';
-		return `<span class="chart-legend-overlay-item"><span class="${markerClass}" style="background:${color};"></span>${name}</span>`;
-	}).join('');
-
-	overlay.innerHTML = itemsMarkup;
-	overlay.setAttribute('data-state', 'ready');
-}
 
 function renderTopUsersPlaceholder(message) {
 	const list = document.getElementById('topUsersList');
@@ -1867,6 +1843,141 @@ function renderTopTeams(teams) {
 	list.innerHTML = items;
 }
 
+function renderToolUsageChart(stats) {
+	const chartEl = document.getElementById('toolUsageChart');
+	if (!chartEl) {
+		return;
+	}
+
+	// Wait for ECharts to load if not available yet
+	if (typeof echarts === 'undefined') {
+		window.addEventListener('echartsLoaded', () => renderToolUsageChart(stats), { once: true });
+		return;
+	}
+
+	// Initialize chart if not already done
+	if (!toolUsageChart) {
+		toolUsageChart = echarts.init(chartEl);
+		window.addEventListener('resize', () => {
+			toolUsageChart?.resize();
+		});
+	}
+
+	const isDark = document.documentElement.classList.contains('dark');
+	const textColor = isDark ? '#a1a1aa' : '#52525b';
+
+	if (!stats || stats.length === 0) {
+		// Show empty state
+		const option = {
+			title: {
+				text: 'No tool usage data',
+				left: 'center',
+				top: 'center',
+				textStyle: {
+					color: textColor,
+					fontSize: 14
+				}
+			},
+			graphic: {
+				type: 'text',
+				left: 'center',
+				top: '55%',
+				style: {
+					text: 'Tool usage statistics will appear here once you start using tools',
+					fontSize: 12,
+					fill: isDark ? '#71717a' : '#9ca3af'
+				}
+			}
+		};
+		toolUsageChart.setOption(option);
+		return;
+	}
+
+	// Prepare data for the chart - top 6 tools (sorted by total usage ascending)
+	const topStats = stats.slice(0, 6).reverse();
+
+	const option = {
+		textStyle: {
+			fontFamily: 'Inter, \'Manrope\', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, \'Helvetica Neue\', Arial, sans-serif'
+		},
+		animation: true,
+		animationDuration: 350,
+		tooltip: {
+			trigger: 'axis',
+			axisPointer: {
+				type: 'shadow'
+			},
+			formatter: (params) => {
+				const toolName = params[0].name;
+				const successful = params.find(p => p.seriesName === 'Successful')?.value || 0;
+				const errors = params.find(p => p.seriesName === 'Errors')?.value || 0;
+				const total = successful + errors;
+				const errorRate = total > 0 ? ((errors / total) * 100).toFixed(1) : 0;
+				return `${toolName}<br/>Successful: ${successful}<br/>Errors: ${errors}<br/>Error Rate: ${errorRate}%`;
+			}
+		},
+		legend: {
+			data: ['Successful', 'Errors'],
+			textStyle: {
+				color: textColor
+			}
+		},
+		grid: {
+			left: '3%',
+			right: '4%',
+			bottom: '3%',
+			containLabel: true
+		},
+		xAxis: {
+			type: 'category',
+			data: topStats.map(stat => stat.tool || 'Unknown'),
+			axisLabel: {
+				color: textColor,
+				formatter: (value) => {
+					// Truncate long tool names
+					return value.length > 15 ? value.substring(0, 15) + '...' : value;
+				}
+			}
+		},
+		yAxis: {
+			type: 'value',
+			axisLabel: {
+				color: textColor
+			},
+			splitLine: {
+				lineStyle: {
+					color: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'
+				}
+			}
+		},
+		series: [
+			{
+				name: 'Successful',
+				type: 'bar',
+				data: topStats.map(stat => stat.successful || 0),
+				itemStyle: {
+					color: '#3B82F6', // blue for ok
+					borderRadius: [0, 0, 4, 4] // rounded bottom corners for the bottom bar
+				},
+				stack: 'total'
+			},
+			{
+				name: 'Errors',
+				type: 'bar',
+				data: topStats.map(stat => stat.errors || 0),
+				itemStyle: {
+					color: '#EF4444', // red for ko
+					borderRadius: [4, 4, 0, 0] // rounded top corners for the top bar
+				},
+				stack: 'total'
+			}
+		]
+	};
+
+	toolUsageChart.setOption(option, true);
+	toolUsageChart.resize();
+}
+
 async function loadTopUsersToday() {
 	const list = document.getElementById('topUsersList');
 	if (!list) {
@@ -1958,180 +2069,6 @@ async function loadToolUsageStats(days = 30) {
 	}
 }
 
-function renderToolUsageChart(stats) {
-	const chartEl = document.getElementById('toolUsageChart');
-	if (!chartEl) {
-		return;
-	}
-
-	// Wait for ECharts to load if not available yet
-	if (typeof echarts === 'undefined') {
-		window.addEventListener('echartsLoaded', () => renderToolUsageChart(stats), { once: true });
-		return;
-	}
-
-	// Initialize chart if not already done
-	if (!toolUsageChart) {
-		toolUsageChart = echarts.init(chartEl);
-		window.addEventListener('resize', () => {
-			toolUsageChart?.resize();
-		});
-	}
-
-	const isDark = document.documentElement.classList.contains('dark');
-	const textColor = isDark ? '#a1a1aa' : '#52525b';
-
-	if (!stats || stats.length === 0) {
-		// Show empty state
-		const option = {
-			title: {
-				text: 'No tool usage data',
-				left: 'center',
-				top: 'center',
-				textStyle: {
-					color: textColor,
-					fontSize: 14
-				}
-			},
-			graphic: {
-				type: 'text',
-				left: 'center',
-				top: 'middle',
-				style: {
-					text: 'No tool events recorded yet',
-					fontSize: 12,
-					fill: isDark ? '#71717a' : '#9ca3af'
-				}
-			}
-		};
-		toolUsageChart.setOption(option);
-		return;
-	}
-
-	// Prepare data for the chart - top 6 tools (sorted by total usage ascending)
-	const topStats = stats.slice(0, 6).reverse();
-
-	const option = {
-		textStyle: {
-			fontFamily: 'Inter, \'Manrope\', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, \'Helvetica Neue\', Arial, sans-serif'
-		},
-		animation: true,
-		animationDuration: 350,
-		tooltip: {
-			trigger: 'axis',
-			axisPointer: {
-				type: 'shadow'
-			},
-			formatter: (params) => {
-				const toolName = params[0].name;
-				const successful = params.find(p => p.seriesName === 'Successful')?.value || 0;
-				const errors = params.find(p => p.seriesName === 'Errors')?.value || 0;
-				const total = successful + errors;
-				const successRate = total > 0 ? Math.round((successful / total) * 100) : 0;
-				return `
-					<strong>${escapeHtml(toolName)}</strong><br/>
-					Total calls: ${total}<br/>
-					Successful: ${successful}<br/>
-					Errors: ${errors}<br/>
-					Success rate: ${successRate}%
-				`;
-			}
-		},
-		legend: {
-			show: false
-		},
-		grid: {
-			left: '5%',
-			right: '15%',
-			bottom: '5%',
-			top: '1%',
-			containLabel: true
-		},
-		xAxis: {
-			type: 'value',
-			axisLabel: {
-				color: textColor,
-				fontSize: 11
-			},
-			axisLine: {
-				show: false
-			},
-			axisTick: {
-				show: false
-			},
-			splitLine: {
-				show: true,
-				lineStyle: {
-					color: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
-					width: 1
-				}
-			}
-		},
-		yAxis: {
-			type: 'category',
-			data: topStats.map(stat => stat.toolName),
-			axisLabel: {
-				color: textColor,
-				fontSize: 11,
-				interval: 0
-			},
-			axisLine: {
-				show: false
-			},
-			axisTick: {
-				show: false
-			}
-		},
-		series: [
-			{
-				name: 'Successful',
-				type: 'bar',
-				stack: 'total',
-				data: topStats.map(stat => stat.successfulCalls),
-				itemStyle: {
-					color: '#2c95cf' // custom blue for successful
-				},
-				label: {
-					show: true,
-					position: 'inside',
-					fontSize: 10,
-					color: '#ffffff',
-					formatter: (params) => params.value > 0 ? params.value : ''
-				},
-				emphasis: {
-					itemStyle: {
-						color: '#1e7eb5'
-					}
-				}
-			},
-			{
-				name: 'Errors',
-				type: 'bar',
-				stack: 'total',
-				data: topStats.map(stat => stat.errorCalls),
-				itemStyle: {
-					color: '#ef4444' // red for errors
-				},
-				label: {
-					show: true,
-					position: 'inside',
-					fontSize: 10,
-					color: '#ffffff',
-					formatter: (params) => params.value > 0 ? params.value : ''
-				},
-				emphasis: {
-					itemStyle: {
-						color: '#dc2626'
-					}
-				}
-			}
-		]
-	};
-
-	toolUsageChart.setOption(option, true);
-	toolUsageChart.resize();
-}
-
 async function loadChartData(days = currentDays) {
 	const fetchStartTime = performance.now();
 	try {
@@ -2173,7 +2110,7 @@ async function loadChartData(days = currentDays) {
 		const isDark = document.documentElement.classList.contains('dark');
 		const textColor = isDark ? '#a1a1aa' : '#52525b';
 		const gridColor = isDark ? '#50515c' : '#eaecf2';
-		const faintGridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)';
+		const faintGridColor = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)';
 		const axisPointerBg = isDark ? '#27272a' : '#ffffff';
 
 		const startSessionsColor = SESSION_START_SERIES_COLOR;
@@ -2335,7 +2272,6 @@ async function loadChartData(days = currentDays) {
 		const TREND_BLUR_OPACITY = 0.18; // trend no desapareix
 
 		let series = [];
-		let legendData = [];
 
 		if (hasBreakdown) {
 			const startSessionsData = data.map(item => {
@@ -2527,7 +2463,11 @@ async function loadChartData(days = currentDays) {
 
 			const BASE_OPACITY = 0.40;
 			const FADE_START = 0.78;
-			const trendLineGradient = makeRightFadeGradient(BASE_OPACITY, FADE_START);
+			const trendLineGradient = new echarts.graphic.LinearGradient(0, 1, 1, 0, [
+				{ offset: 0, color: `rgba(142, 129, 234, ${BASE_OPACITY})` }, // toolEventsColor with opacity
+				{ offset: FADE_START, color: `rgba(142, 129, 234, ${BASE_OPACITY})` },
+				{ offset: 1, color: 'rgba(142, 129, 234, 0)' }
+			]);
 
 			series.push({
 				name: 'Trend',
@@ -2542,7 +2482,7 @@ async function loadChartData(days = currentDays) {
 					width: 1,
 					type: 'solid',
 					color: trendLineGradient,
-					shadowColor: 'rgba(249, 115, 22, 0.35)',
+					shadowColor: 'rgba(142, 129, 234, 0.35)', // toolEventsColor shadow
 					shadowBlur: 8,
 					shadowOffsetY: 4
 				},
@@ -2555,12 +2495,56 @@ async function loadChartData(days = currentDays) {
 				}
 			});
 
-			legendData = [
-				{ name: 'Start Sessions', icon: 'circle', itemStyle: { color: startSessionsColor } },
-				{ name: 'Tool Events', icon: 'circle', itemStyle: { color: toolEventsColor } },
-				{ name: 'Errors', icon: 'circle', itemStyle: { color: errorEventsColor } },
-				{ name: 'Trend', icon: 'line', itemStyle: { color: '#ff6900' } }
-			];
+			// Add trend line for Start Sessions (blue series)
+			const trimmedStartSessions = trimTrailingZeros(startSessionsData);
+			const startSessionsTrendLineSource = trimmedStartSessions.length >= 2 ? trimmedStartSessions : startSessionsData;
+			const startSessionsTrendLine = generateTrendLine(startSessionsTrendLineSource, FUTURE_POINTS, 'exponential');
+
+			const startSessionsDenseTrendRaw = buildDenseTrendSeries(
+				startSessionsData,
+				extendedLabels.length,
+				startSessionsTrendLine,
+				30
+			);
+
+			// Scale Y values by 3x for Start Sessions trend line
+			const startSessionsDenseTrendScaled = startSessionsDenseTrendRaw.map(([x, y]) => [x, y * 3]);
+
+			const startSessionsDenseTrend = compressYAroundMean(startSessionsDenseTrendScaled, TREND_Y_COMPRESSION);
+
+			const startSessionsBaseOpacity = 0.35;
+			const startSessionsTrendLineGradient = new echarts.graphic.LinearGradient(0, 1, 1, 0, [
+				{ offset: 0, color: `rgba(33, 149, 207, ${startSessionsBaseOpacity})` },
+				{ offset: FADE_START, color: `rgba(33, 149, 207, ${startSessionsBaseOpacity})` },
+				{ offset: 1, color: 'rgba(33, 149, 207, 0)' }
+			]);
+
+			series.push({
+				name: 'Start Sessions Trend',
+				type: 'line',
+				xAxisIndex: 1,
+				data: startSessionsDenseTrend,
+				smooth: false,
+				symbol: 'none',
+				zlevel: 0,
+				z: -2,
+				lineStyle: {
+					width: 1,
+					type: 'solid',
+					color: startSessionsTrendLineGradient,
+					shadowColor: 'rgba(33, 149, 207, 0.35)',
+					shadowBlur: 8,
+					shadowOffsetY: 4
+				},
+				emphasis: {
+					focus: 'series',
+					lineStyle: { width: 3, opacity: 0.9 }
+				},
+				blur: {
+					lineStyle: { opacity: TREND_BLUR_OPACITY }
+				}
+			});
+
 		} else {
 			const totalEventsData = data.map(item => Number(item.count ?? item.total ?? 0));
 			const totalEventsDataWithZeroes = totalEventsData.map(v => (Number.isFinite(Number(v)) ? Number(v) : 0));
@@ -2664,13 +2648,7 @@ async function loadChartData(days = currentDays) {
 				}
 			});
 
-			legendData = [
-				{ name: 'Events', icon: 'circle', itemStyle: { color: totalEventsColor } },
-				{ name: 'Trend', icon: 'line', itemStyle: { color: '#ff6900' } }
-			];
 		}
-
-		updateChartLegendOverlay(legendData);
 
 		// Calculate label interval based on number of days to prevent overlapping
 		let labelInterval = 0;
@@ -2695,13 +2673,13 @@ async function loadChartData(days = currentDays) {
 				left: '3%',
 				right: '0%',
 				bottom: '14%',
-				top: '5%',
+				top: '2%',
 				containLabel: false,
 				width: 'auto',
 				height: 'auto'
 			},
 			tooltip: { show: false },
-			legend: { show: false, data: legendData },
+			legend: { show: false },
 
 			xAxis: [
 				{
@@ -2803,7 +2781,7 @@ function pauseDashboardPage() {
 			savedChartOption = null;
 		}
 	}
-	// Dispose charts when leaving page to avoid stale references
+	// Dispose chart when leaving page to avoid stale references
 	if (chart) {
 		if (typeof chart.dispose === 'function') {
 			chart.dispose();
