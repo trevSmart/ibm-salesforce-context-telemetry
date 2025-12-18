@@ -394,6 +394,23 @@ function extractToolName(eventData = {}) {
 		}
 	}
 
+	// For error events, also check data.error.toolName and data.error.tool
+	if (data.error && typeof data.error === 'object') {
+		if (data.error.toolName && typeof data.error.toolName === 'string') {
+			const toolName = data.error.toolName.trim();
+			if (toolName !== '') {
+				return toolName;
+			}
+		}
+
+		if (data.error.tool && typeof data.error.tool === 'string') {
+			const toolName = data.error.tool.trim();
+			if (toolName !== '') {
+				return toolName;
+			}
+		}
+	}
+
 	return null;
 }
 
