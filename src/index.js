@@ -1261,6 +1261,20 @@ app.get('/api/daily-stats', auth.requireAuth, async (req, res) => {
 	}
 });
 
+app.get('/api/tool-usage-stats', auth.requireAuth, async (req, res) => {
+	try {
+		const days = parseInt(req.query.days, 10) || 30;
+		const stats = await db.getToolUsageStats(days);
+		res.json(stats);
+	} catch (error) {
+		console.error('Error fetching tool usage stats:', error);
+		res.status(500).json({
+			status: 'error',
+			message: 'Failed to fetch tool usage statistics'
+		});
+	}
+});
+
 app.get('/api/top-users-today', auth.requireAuth, async (req, res) => {
 	try {
 		const limitRaw = parseInt(req.query.limit, 10);

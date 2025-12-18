@@ -4903,6 +4903,131 @@ async function importDatabase(importData) {
 	}
 }
 
+/**
+ * Get tool usage statistics grouped by tool name
+ * Returns tool events (tool_call and tool_error) aggregated by tool name
+ * @param {number} days - Number of days to retrieve (default: 30)
+ * @returns {Array} Array of {toolName, totalCalls, successfulCalls, errorCalls} objects
+ */
+async function getToolUsageStats(days = 30) {
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
+
+	// Always include today's data by building the range backwards from today (UTC)
+	const rangeDays = Math.max(1, Number.isFinite(days) ? Math.floor(days) : 30);
+	const now = new Date();
+	const startDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+	startDate.setUTCDate(startDate.getUTCDate() - (rangeDays - 1));
+	const startDateISO = startDate.toISOString();
+
+	if (dbType === 'sqlite') {
+		// Get all tool events with their tool names
+		const toolEvents = db.prepare(`
+			SELECT
+				json_extract(data, '$.toolName') as tool_name,
+				event,
+				COUNT(*) as count
+			FROM telemetry_events
+			WHERE timestamp >= ? AND event IN ('tool_call', 'tool_error')
+				AND json_extract(data, '$.toolName') IS NOT NULL
+				AND json_extract(data, '$.toolName') != ''
+			GROUP BY json_extract(data, '$.toolName'), event
+		`).all(startDateISO);
+
+		// Aggregate by tool name
+		const toolStats = new Map();
+
+		toolEvents.forEach(row => {
+			const toolName = String(row.tool_name).trim();
+			if (!toolName) return;
+
+			if (!toolStats.has(toolName)) {
+				toolStats.set(toolName, {
+					toolName: toolName,
+					totalCalls: 0,
+					successfulCalls: 0,
+					errorCalls: 0
+				});
+			}
+
+			const stat = toolStats.get(toolName);
+			const count = parseInt(row.count) || 0;
+
+			if (row.event === 'tool_call') {
+				stat.successfulCalls += count;
+			} else if (row.event === 'tool_error') {
+				stat.errorCalls += count;
+			}
+
+			stat.totalCalls += count;
+		});
+
+		// Convert to array and sort by total calls descending
+		const result = Array.from(toolStats.values())
+			.sort((a, b) => b.totalCalls - a.totalCalls);
+
+		return result;
+
+	} else if (dbType === 'postgresql') {
+		const client = await db.connect();
+
+		try {
+			const result = await client.query(`
+				SELECT
+					(data->>'toolName') as tool_name,
+					event,
+					COUNT(*) as count
+				FROM telemetry_events
+				WHERE timestamp >= $1 AND event IN ('tool_call', 'tool_error')
+					AND (data->>'toolName') IS NOT NULL
+					AND (data->>'toolName') != ''
+				GROUP BY (data->>'toolName'), event
+				ORDER BY (data->>'toolName')
+			`, [startDateISO]);
+
+			// Aggregate by tool name
+			const toolStats = new Map();
+
+			result.rows.forEach(row => {
+				const toolName = String(row.tool_name).trim();
+				if (!toolName) return;
+
+				if (!toolStats.has(toolName)) {
+					toolStats.set(toolName, {
+						toolName: toolName,
+						totalCalls: 0,
+						successfulCalls: 0,
+						errorCalls: 0
+					});
+				}
+
+				const stat = toolStats.get(toolName);
+				const count = parseInt(row.count) || 0;
+
+				if (row.event === 'tool_call') {
+					stat.successfulCalls += count;
+				} else if (row.event === 'tool_error') {
+					stat.errorCalls += count;
+				}
+
+				stat.totalCalls += count;
+			});
+
+			// Convert to array and sort by total calls descending
+			const finalResult = Array.from(toolStats.values())
+				.sort((a, b) => b.totalCalls - a.totalCalls);
+
+			return finalResult;
+
+		} finally {
+			client.release();
+		}
+	}
+
+	throw new Error(`Unsupported database type: ${dbType}`);
+}
+
 module.exports = {
 	init,
 	storeEvent,
@@ -4914,6 +5039,7 @@ module.exports = {
 	getSessions,
 	getDailyStats,
 	getDailyStatsByEventType,
+	getToolUsageStats,
 	getTopUsersLastDays,
 	getTopTeamsLastDays,
 	getUserEventStats,

@@ -22,11 +22,6 @@
     "update-admin-role": "node src/scripts/update-admin-role.js",
     "export-database": "node src/scripts/export-database.js",
     "import-database": "node src/scripts/import-database.js",
-    "migrate-logos": "node src/scripts/migrate-team-logos.js",
-    "migrate-logos-dry": "node src/scripts/migrate-team-logos.js --dry-run",
-    "migrate-logos-backup": "node src/scripts/migrate-team-logos.js --backup",
-    "migrate-logo-filenames": "node src/scripts/migrate-logo-filenames.js",
-    "verify-logos": "node src/scripts/verify-logo-migration.js",
     "lint": "npm run lint:eslint && npm run lint:ts",
     "lint:eslint": "eslint .",
     "lint:ts": "tsc --noEmit --pretty false --project tsconfig.lint.json",
@@ -98,7 +93,7 @@
       ".env"
     ],
     "mac": {
-      "icon": "public/resources/favicon.webp",
+      "icon": "public/resources/favicon.png",
       "target": [
         {
           "target": "dmg",

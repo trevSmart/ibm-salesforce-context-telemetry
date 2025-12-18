@@ -205,6 +205,7 @@ async function initializeDashboardPage({ resetState = false } = {}) {
 		await loadChartData();
 		await loadTopUsersToday();
 		await loadTopTeamsToday();
+		await loadToolUsageStats(currentDays);
 		await loadDashboardDatabaseSize();
 
 		// Set up time range selector (guard against duplicate listeners)
@@ -232,6 +233,7 @@ async function initializeDashboardPage({ resetState = false } = {}) {
 
 
 let deleteAllConfirmed = false;
+let toolUsageChart = null;
 
 function confirmDeleteAll() {
 	if (!deleteAllConfirmed) {
@@ -1449,6 +1451,7 @@ async function refreshDashboard(event) {
 			loadChartData(currentDays),
 			loadTopUsersToday(),
 			loadTopTeamsToday(),
+			loadToolUsageStats(currentDays),
 			loadDashboardDatabaseSize()
 		]);
 	} catch (error) {
@@ -1931,6 +1934,204 @@ async function loadTopTeamsToday() {
 	}
 }
 
+async function loadToolUsageStats(days = 30) {
+	try {
+		const response = await fetch(`/api/tool-usage-stats?days=${days}`, {
+			credentials: 'include'
+		});
+
+		if (response.status === 401) {
+			window.location.href = '/login';
+			return;
+		}
+
+		if (!response.ok) {
+			throw new Error(`HTTP error! status: ${response.status}`);
+		}
+
+		const stats = await response.json();
+		renderToolUsageChart(stats);
+	} catch (error) {
+		console.error('Error loading tool usage stats:', error);
+		// Show empty chart or error state
+		renderToolUsageChart([]);
+	}
+}
+
+function renderToolUsageChart(stats) {
+	const chartEl = document.getElementById('toolUsageChart');
+	if (!chartEl) {
+		return;
+	}
+
+	// Wait for ECharts to load if not available yet
+	if (typeof echarts === 'undefined') {
+		window.addEventListener('echartsLoaded', () => renderToolUsageChart(stats), { once: true });
+		return;
+	}
+
+	// Initialize chart if not already done
+	if (!toolUsageChart) {
+		toolUsageChart = echarts.init(chartEl);
+		window.addEventListener('resize', () => {
+			toolUsageChart?.resize();
+		});
+	}
+
+	const isDark = document.documentElement.classList.contains('dark');
+	const textColor = isDark ? '#a1a1aa' : '#52525b';
+
+	if (!stats || stats.length === 0) {
+		// Show empty state
+		const option = {
+			title: {
+				text: 'No tool usage data',
+				left: 'center',
+				top: 'center',
+				textStyle: {
+					color: textColor,
+					fontSize: 14
+				}
+			},
+			graphic: {
+				type: 'text',
+				left: 'center',
+				top: 'middle',
+				style: {
+					text: 'No tool events recorded yet',
+					fontSize: 12,
+					fill: isDark ? '#71717a' : '#9ca3af'
+				}
+			}
+		};
+		toolUsageChart.setOption(option);
+		return;
+	}
+
+	// Prepare data for the chart - top 6 tools (sorted by total usage ascending)
+	const topStats = stats.slice(0, 6).reverse();
+
+	const option = {
+		textStyle: {
+			fontFamily: 'Inter, \'Manrope\', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, \'Helvetica Neue\', Arial, sans-serif'
+		},
+		animation: true,
+		animationDuration: 350,
+		tooltip: {
+			trigger: 'axis',
+			axisPointer: {
+				type: 'shadow'
+			},
+			formatter: (params) => {
+				const toolName = params[0].name;
+				const successful = params.find(p => p.seriesName === 'Successful')?.value || 0;
+				const errors = params.find(p => p.seriesName === 'Errors')?.value || 0;
+				const total = successful + errors;
+				const successRate = total > 0 ? Math.round((successful / total) * 100) : 0;
+				return `
+					<strong>${escapeHtml(toolName)}</strong><br/>
+					Total calls: ${total}<br/>
+					Successful: ${successful}<br/>
+					Errors: ${errors}<br/>
+					Success rate: ${successRate}%
+				`;
+			}
+		},
+		legend: {
+			show: false
+		},
+		grid: {
+			left: '5%',
+			right: '15%',
+			bottom: '5%',
+			top: '15%',
+			containLabel: true
+		},
+		xAxis: {
+			type: 'value',
+			axisLabel: {
+				color: textColor,
+				fontSize: 11
+			},
+			axisLine: {
+				show: false
+			},
+			axisTick: {
+				show: false
+			},
+			splitLine: {
+				show: true,
+				lineStyle: {
+					color: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+					width: 1
+				}
+			}
+		},
+		yAxis: {
+			type: 'category',
+			data: topStats.map(stat => stat.toolName),
+			axisLabel: {
+				color: textColor,
+				fontSize: 11,
+				interval: 0
+			},
+			axisLine: {
+				show: false
+			},
+			axisTick: {
+				show: false
+			}
+		},
+		series: [
+			{
+				name: 'Successful',
+				type: 'bar',
+				stack: 'total',
+				data: topStats.map(stat => stat.successfulCalls),
+				itemStyle: {
+					color: '#2c95cf' // custom blue for successful
+				},
+				label: {
+					show: true,
+					position: 'inside',
+					fontSize: 10,
+					color: '#ffffff',
+					formatter: (params) => params.value > 0 ? params.value : ''
+				},
+				emphasis: {
+					itemStyle: {
+						color: '#1e7eb5'
+					}
+				}
+			},
+			{
+				name: 'Errors',
+				type: 'bar',
+				stack: 'total',
+				data: topStats.map(stat => stat.errorCalls),
+				itemStyle: {
+					color: '#ef4444' // red for errors
+				},
+				label: {
+					show: true,
+					position: 'inside',
+					fontSize: 10,
+					color: '#ffffff',
+					formatter: (params) => params.value > 0 ? params.value : ''
+				},
+				emphasis: {
+					itemStyle: {
+						color: '#dc2626'
+					}
+				}
+			}
+		]
+	};
+
+	toolUsageChart.setOption(option, true);
+	toolUsageChart.resize();
+}
+
 async function loadChartData(days = currentDays) {
 	const fetchStartTime = performance.now();
 	try {
@@ -1972,7 +2173,7 @@ async function loadChartData(days = currentDays) {
 		const isDark = document.documentElement.classList.contains('dark');
 		const textColor = isDark ? '#a1a1aa' : '#52525b';
 		const gridColor = isDark ? '#50515c' : '#eaecf2';
-		const faintGridColor = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)';
+		const faintGridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)';
 		const axisPointerBg = isDark ? '#27272a' : '#ffffff';
 
 		const startSessionsColor = SESSION_START_SERIES_COLOR;
@@ -2602,12 +2803,18 @@ function pauseDashboardPage() {
 			savedChartOption = null;
 		}
 	}
-	// Dispose chart when leaving page to avoid stale references
+	// Dispose charts when leaving page to avoid stale references
 	if (chart) {
 		if (typeof chart.dispose === 'function') {
 			chart.dispose();
 		}
 		chart = null;
+	}
+	if (toolUsageChart) {
+		if (typeof toolUsageChart.dispose === 'function') {
+			toolUsageChart.dispose();
+		}
+		toolUsageChart = null;
 	}
 }
 
@@ -2646,6 +2853,9 @@ async function resumeDashboardPage() {
 		// No saved option, load chart data normally
 		await loadChartData();
 	}
+
+	// Always reload tool usage stats
+	await loadToolUsageStats(currentDays);
 }
 
 // Expose pause/resume hooks
