@@ -2044,7 +2044,7 @@ function renderToolUsageChart(stats) {
 			left: '5%',
 			right: '15%',
 			bottom: '5%',
-			top: '15%',
+			top: '1%',
 			containLabel: true
 		},
 		xAxis: {
