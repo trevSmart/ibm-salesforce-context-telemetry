@@ -2370,8 +2370,8 @@ async function loadChartData(days = currentDays) {
 				30
 			);
 
-			// Scale Y values by 3x for Start Sessions trend line
-			const startSessionsDenseTrendScaled = startSessionsDenseTrendRaw.map(([x, y]) => [x, y * 3]);
+			// Scale Y values by 2x for Start Sessions trend line
+			const startSessionsDenseTrendScaled = startSessionsDenseTrendRaw.map(([x, y]) => [x, y * 2]);
 
 			const startSessionsDenseTrend = compressYAroundMean(startSessionsDenseTrendScaled, TREND_Y_COMPRESSION);
 

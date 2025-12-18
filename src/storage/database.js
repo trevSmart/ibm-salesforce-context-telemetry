@@ -621,12 +621,13 @@ async function storeEvent(eventData, receivedAt) {
 		const orgId = extractOrgId(eventData);
 		const userName = extractUserDisplayName(eventData.data || {});
 		const toolName = extractToolName(eventData);
+		const companyName = extractCompanyName(eventData);
 
 		if (dbType === 'sqlite') {
 			const stmt = getPreparedStatement('insertEvent', `
 				INSERT INTO telemetry_events
-				(event, timestamp, server_id, version, session_id, parent_session_id, user_id, data, received_at, org_id, user_name, tool_name)
-				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+				(event, timestamp, server_id, version, session_id, parent_session_id, user_id, data, received_at, org_id, user_name, tool_name, company_name)
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 			`);
 
 			stmt.run(
@@ -641,13 +642,14 @@ async function storeEvent(eventData, receivedAt) {
 				receivedAt,
 				orgId,
 				userName,
-				toolName
+				toolName,
+				companyName
 			);
 		} else if (dbType === 'postgresql') {
 			await db.query(
 				`INSERT INTO telemetry_events
-				(event, timestamp, server_id, version, session_id, parent_session_id, user_id, data, received_at, org_id, user_name, tool_name)
-				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+				(event, timestamp, server_id, version, session_id, parent_session_id, user_id, data, received_at, org_id, user_name, tool_name, company_name)
+				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
 				[
 					eventData.event,
 					eventData.timestamp,
@@ -660,7 +662,8 @@ async function storeEvent(eventData, receivedAt) {
 					receivedAt,
 					orgId,
 					userName,
-					toolName
+					toolName,
+					companyName
 				]
 			);
 		}
@@ -774,43 +777,43 @@ async function getEvents(options = {}) {
 
 	if (eventTypes && Array.isArray(eventTypes) && eventTypes.length > 0) {
 		if (eventTypes.length === 1) {
-			whereClause += dbType === 'sqlite' ? ' AND event = ?' : ` AND event = $${paramIndex++}`;
+			whereClause += dbType === 'sqlite' ? ' AND e.event = ?' : ` AND e.event = $${paramIndex++}`;
 			params.push(eventTypes[0]);
 		} else {
 			const placeholders = eventTypes.map(() => {
 				return dbType === 'sqlite' ? '?' : `$${paramIndex++}`;
 			}).join(', ');
-			whereClause += ` AND event IN (${placeholders})`;
+			whereClause += ` AND e.event IN (${placeholders})`;
 			params.push(...eventTypes);
 		}
 	}
 	if (serverId) {
-		whereClause += dbType === 'sqlite' ? ' AND server_id = ?' : ` AND server_id = $${paramIndex++}`;
+		whereClause += dbType === 'sqlite' ? ' AND e.server_id = ?' : ` AND e.server_id = $${paramIndex++}`;
 		params.push(serverId);
 	}
 	if (sessionId) {
 		// Filter by logical session: parent_session_id when set, otherwise raw session_id
 		if (dbType === 'sqlite') {
-			whereClause += ' AND (parent_session_id = ? OR (parent_session_id IS NULL AND session_id = ?))';
+			whereClause += ' AND (e.parent_session_id = ? OR (e.parent_session_id IS NULL AND e.session_id = ?))';
 		} else {
-			whereClause += ` AND (parent_session_id = $${paramIndex} OR (parent_session_id IS NULL AND session_id = $${paramIndex + 1}))`;
+			whereClause += ` AND (e.parent_session_id = $${paramIndex} OR (e.parent_session_id IS NULL AND e.session_id = $${paramIndex + 1}))`;
 		}
 		params.push(sessionId, sessionId);
 		paramIndex += dbType === 'sqlite' ? 0 : 2;
 	}
 	if (startDate) {
-		whereClause += dbType === 'sqlite' ? ' AND created_at >= ?' : ` AND created_at >= $${paramIndex++}`;
+		whereClause += dbType === 'sqlite' ? ' AND e.created_at >= ?' : ` AND e.created_at >= $${paramIndex++}`;
 		params.push(startDate);
 	}
 	if (endDate) {
-		whereClause += dbType === 'sqlite' ? ' AND created_at <= ?' : ` AND created_at <= $${paramIndex++}`;
+		whereClause += dbType === 'sqlite' ? ' AND e.created_at <= ?' : ` AND e.created_at <= $${paramIndex++}`;
 		params.push(endDate);
 	}
 	if (options.userIds && Array.isArray(options.userIds) && options.userIds.length > 0) {
 		const placeholders = options.userIds.map(() => {
 			return dbType === 'sqlite' ? '?' : `$${paramIndex++}`;
 		}).join(', ');
-		whereClause += ` AND user_id IN (${placeholders})`;
+		whereClause += ` AND e.user_id IN (${placeholders})`;
 		params.push(...options.userIds);
 	}
 
@@ -823,8 +826,7 @@ async function getEvents(options = {}) {
 	const shouldComputeTotal = offset === 0 || limit <= MAX_LIMIT_FOR_TOTAL_COMPUTATION;
 
 	if (shouldComputeTotal) {
-		// Count from telemetry_events only, not the joined query, to avoid incorrect counts
-		let countQuery = `SELECT COUNT(*) as total FROM telemetry_events ${whereClause}`;
+		let countQuery = `SELECT COUNT(*) as total FROM telemetry_events ${whereClause.replace(/e\./g, '')}`;
 		if (dbType === 'sqlite') {
 			total = db.prepare(countQuery).get(...params).total;
 		} else {
@@ -837,9 +839,9 @@ async function getEvents(options = {}) {
 	const validOrderBy = ['id', 'event', 'timestamp', 'created_at', 'server_id'];
 	const validOrder = ['ASC', 'DESC'];
 	// Only select orderBy and order values from predefined lists without using user data directly
-	let safeOrderBy = 'e.created_at';
+	let safeOrderBy = 'created_at';
 	if (validOrderBy.includes(orderBy)) {
-		safeOrderBy = 'e.' + orderBy;
+		safeOrderBy = orderBy;
 	}
 	let safeOrder = 'DESC';
 	if (typeof order === 'string' && validOrder.includes(order.toUpperCase())) {
@@ -849,10 +851,8 @@ async function getEvents(options = {}) {
 	let eventsQuery = `
 		SELECT
 			e.id, e.event, e.timestamp, e.server_id, e.version, e.session_id, e.parent_session_id,
-			e.user_id, e.received_at, e.created_at, e.tool_name,
-			COALESCE(o.company_name, '') AS company_name
+			e.user_id, e.received_at, e.created_at, e.user_name, e.tool_name, e.company_name
 		FROM telemetry_events e
-		LEFT JOIN orgs o ON e.server_id = o.server_id
 		${whereClause}
 		ORDER BY ${safeOrderBy} ${safeOrder}
 		LIMIT ${dbType === 'sqlite' ? '?' : `$${paramIndex++}`}
@@ -889,7 +889,7 @@ async function getEventById(id) {
 	}
 
 	if (dbType === 'sqlite') {
-		const event = db.prepare('SELECT id, event, timestamp, server_id, version, session_id, parent_session_id, user_id, data, received_at, created_at FROM telemetry_events WHERE id = ?').get(id);
+		const event = db.prepare('SELECT id, event, timestamp, server_id, version, session_id, user_id, data, received_at, created_at, org_id, user_name, tool_name, company_name FROM telemetry_events WHERE id = ?').get(id);
 		if (!event) {
 			return null;
 		}
@@ -898,7 +898,7 @@ async function getEventById(id) {
 			data: JSON.parse(event.data)
 		};
 	} else {
-		const result = await db.query('SELECT id, event, timestamp, server_id, version, session_id, parent_session_id, user_id, data, received_at, created_at FROM telemetry_events WHERE id = $1', [id]);
+		const result = await db.query('SELECT id, event, timestamp, server_id, version, session_id, user_id, data, received_at, created_at, org_id, user_name, tool_name, company_name FROM telemetry_events WHERE id = $1', [id]);
 		if (result.rows.length === 0) {
 			return null;
 		}
@@ -2506,10 +2506,17 @@ async function ensureDenormalizedColumns() {
 				console.log('Added tool_name column to telemetry_events');
 			}
 
+			// Add company_name column if it doesn't exist
+			if (!columnNames.includes('company_name')) {
+				db.exec('ALTER TABLE telemetry_events ADD COLUMN company_name TEXT');
+				console.log('Added company_name column to telemetry_events');
+			}
+
 			// Create indexes for denormalized columns (if they don't exist)
 			db.exec('CREATE INDEX IF NOT EXISTS idx_user_name_created_at ON telemetry_events(user_name, created_at)');
 			db.exec('CREATE INDEX IF NOT EXISTS idx_org_id_created_at ON telemetry_events(org_id, created_at)');
 			db.exec('CREATE INDEX IF NOT EXISTS idx_tool_name_created_at ON telemetry_events(tool_name, created_at)');
+			db.exec('CREATE INDEX IF NOT EXISTS idx_company_name_created_at ON telemetry_events(company_name, created_at)');
 			db.exec('CREATE INDEX IF NOT EXISTS idx_user_name_tool_name_created_at ON telemetry_events(user_name, tool_name, created_at)');
 			db.exec('CREATE INDEX IF NOT EXISTS idx_org_id_tool_name_created_at ON telemetry_events(org_id, tool_name, created_at)');
 		} else if (dbType === 'postgresql') {
@@ -2517,12 +2524,14 @@ async function ensureDenormalizedColumns() {
 			await db.query('ALTER TABLE IF EXISTS telemetry_events ADD COLUMN IF NOT EXISTS org_id TEXT');
 			await db.query('ALTER TABLE IF EXISTS telemetry_events ADD COLUMN IF NOT EXISTS user_name TEXT');
 			await db.query('ALTER TABLE IF EXISTS telemetry_events ADD COLUMN IF NOT EXISTS tool_name TEXT');
-			console.log('Ensured denormalized columns (org_id, user_name, tool_name) in telemetry_events');
+			await db.query('ALTER TABLE IF EXISTS telemetry_events ADD COLUMN IF NOT EXISTS company_name TEXT');
+			console.log('Ensured denormalized columns (org_id, user_name, tool_name, company_name) in telemetry_events');
 
 			// Create indexes for denormalized columns (if they don't exist)
 			await db.query('CREATE INDEX IF NOT EXISTS idx_user_name_created_at ON telemetry_events(user_name, created_at)');
 			await db.query('CREATE INDEX IF NOT EXISTS idx_org_id_created_at ON telemetry_events(org_id, created_at)');
 			await db.query('CREATE INDEX IF NOT EXISTS idx_tool_name_created_at ON telemetry_events(tool_name, created_at)');
+			await db.query('CREATE INDEX IF NOT EXISTS idx_company_name_created_at ON telemetry_events(company_name, created_at)');
 			await db.query('CREATE INDEX IF NOT EXISTS idx_user_name_tool_name_created_at ON telemetry_events(user_name, tool_name, created_at)');
 			await db.query('CREATE INDEX IF NOT EXISTS idx_org_id_tool_name_created_at ON telemetry_events(org_id, tool_name, created_at)');
 
@@ -2538,8 +2547,12 @@ async function ensureDenormalizedColumns() {
 }
 
 /**
- * Populate denormalized columns from JSON data for existing records
- * This is called after adding the columns to backfill existing data
+ * Omple les columnes denormalitzades amb dades JSON existents als registres
+ * Aquesta funció s'executa després d'afegir les columnes per emplenar dades existents
+ *
+ * Aquest procés és necessari quan s'afegeixen noves columnes denormalitzades a la taula,
+ * ja que els registres existents tenen aquestes columnes buides. Extreu informació
+ * del camp JSON 'data' i la guarda directament a les columnes per millorar el rendiment de consultes.
  */
 async function populateDenormalizedColumns() {
 	if (!db) {
@@ -2547,7 +2560,7 @@ async function populateDenormalizedColumns() {
 	}
 
 	try {
-		// Check if we need to populate (only if there are records with NULL values in new columns)
+		// Verifica si cal emplenar dades (només si hi ha registres amb valors NULL a les noves columnes)
 		let needsPopulation = false;
 
 		if (dbType === 'sqlite') {
@@ -2575,15 +2588,16 @@ async function populateDenormalizedColumns() {
 			return; // No data to populate
 		}
 
-		console.log('Populating denormalized columns from existing data...');
+		console.log('Emplenat columnes denormalitzades amb dades existents...');
 
 		if (dbType === 'sqlite') {
-			// For SQLite, we'll update in batches to avoid locking
-			const batchSize = 1000;
+			// Per SQLite, actualitzem en lots per evitar bloquejos de base de dades
+			const batchSize = 1000; // Processa 1000 registres cada vegada
 			let offset = 0;
 			let hasMore = true;
 
 			while (hasMore) {
+				// Obté el següent lot de registres que necessiten actualització
 				const rows = db.prepare(`
           SELECT id, data
           FROM telemetry_events
@@ -2598,23 +2612,32 @@ async function populateDenormalizedColumns() {
 					break;
 				}
 
+				// Prepara la consulta d'actualització
 				const updateStmt = db.prepare(`
           UPDATE telemetry_events
-          SET org_id = ?, user_name = ?, tool_name = ?
+          SET org_id = ?, user_name = ?, tool_name = ?, company_name = ?
           WHERE id = ?
         `);
 
+				// Processa cada registre del lot
 				for (const row of rows) {
 					try {
+						// Parseja les dades JSON si cal
 						const data = typeof row.data === 'string' ? JSON.parse(row.data) : row.data;
-						const orgId = extractOrgId({ data });
-						const userName = extractUserDisplayName(data);
-						const toolName = extractToolName({ data });
+						const eventData = { data };
 
-						updateStmt.run(orgId, userName, toolName, row.id);
+						// Extreu els valors denormalitzats usant les funcions d'extracció
+						const orgId = extractOrgId(eventData);
+						const userName = extractUserDisplayName(data);
+						const toolName = extractToolName(eventData);
+						const companyName = extractCompanyName(eventData);
+
+						// Actualitza el registre amb els valors extrets
+						updateStmt.run(orgId, userName, toolName, companyName, row.id);
 					} catch (error) {
-						// Skip invalid JSON
-						console.warn(`Error parsing data for event ${row.id}:`, error.message);
+						// Salta registres amb JSON invàlid (els deixa sense emplenar)
+						// Això evita aturar tot el procés per un sol registre corrupte
+						console.warn(`Error processant dades per l'event ${row.id}:`, error.message);
 					}
 				}
 
@@ -2624,31 +2647,40 @@ async function populateDenormalizedColumns() {
 				}
 			}
 		} else if (dbType === 'postgresql') {
-			// For PostgreSQL, use a single UPDATE with JSON extraction
+			// Per PostgreSQL, usa una sola consulta UPDATE amb extracció JSON nativa
+			// Això és més eficient que processar registre a registre
 			await db.query(`
         UPDATE telemetry_events
         SET
+          -- Extreu org_id de diverses ubicacions possibles al JSON
           org_id = COALESCE(
             data->>'orgId',
             data->'state'->'org'->>'id'
           ),
+          -- Extreu user_name de diverses ubicacions possibles
           user_name = COALESCE(
             data->>'userName',
             data->>'user_name',
             data->'user'->>'name'
           ),
+          -- Extreu tool_name
           tool_name = COALESCE(
             data->>'toolName',
             data->>'tool'
+          ),
+          -- Extreu company_name dels nous formats
+          company_name = COALESCE(
+            data->'state'->'org'->'companyDetails'->>'Name',
+            data->'companyDetails'->>'Name'
           )
         WHERE (org_id IS NULL OR user_name IS NULL OR tool_name IS NULL)
           AND data IS NOT NULL
       `);
 		}
 
-		console.log('Finished populating denormalized columns');
+		console.log('S\'ha acabat d\'emplenar les columnes denormalitzades');
 	} catch (error) {
-		console.error('Error populating denormalized columns:', error);
+		console.error('Error emplenant columnes denormalitzades:', error);
 	}
 }
 
