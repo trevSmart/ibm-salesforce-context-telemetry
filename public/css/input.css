@@ -40,6 +40,11 @@
   textarea {
     font-size: inherit;
   }
+
+  body {
+    text-rendering: geometricPrecision;
+    -webkit-font-smoothing: subpixel-antialiased;
+  }
 }
 
 /* Override font-semibold to use font-weight 500 */
@@ -191,7 +196,7 @@
     align-items: center;
     gap: 8px;
     text-decoration: none;
-    color: #3a485f;
+    color: #414a58;
     flex-shrink: 0;
   }
 

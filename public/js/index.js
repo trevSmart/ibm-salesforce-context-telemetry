@@ -2324,7 +2324,7 @@ async function loadChartData(days = currentDays) {
 			const TREND_Y_COMPRESSION = 0.92;
 			const denseTrend = compressYAroundMean(denseTrendRaw, TREND_Y_COMPRESSION);
 
-			const BASE_OPACITY = 0.23;
+			const BASE_OPACITY = 0.18;
 			const FADE_START = 0.78;
 			const trendLineGradient = new echarts.graphic.LinearGradient(0, 1, 1, 0, [
 				{ offset: 0, color: `rgba(142, 129, 234, ${BASE_OPACITY})` }, // toolEventsColor with opacity
@@ -2489,7 +2489,7 @@ async function loadChartData(days = currentDays) {
 			const TREND_Y_COMPRESSION = 0.88;
 			const denseTrend = compressYAroundMean(denseTrendRaw, TREND_Y_COMPRESSION);
 
-			const BASE_OPACITY = 0.23;
+			const BASE_OPACITY = 0.18;
 			const FADE_START = 0.78;
 			const trendLineGradient = makeRightFadeGradient(BASE_OPACITY, FADE_START);
 
