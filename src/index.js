@@ -1582,6 +1582,166 @@ app.get('/api/tool-usage-stats', auth.requireAuth, async (req, res) => {
 	}
 });
 
+// Temporary endpoint to run regularization script via API
+app.post('/api/admin/regularize-telemetry', auth.requireAuth, auth.requireRole('administrator'), async (req, res) => {
+	try {
+		console.log('🛠️ Starting telemetry regularization via API...');
+
+		const dbConn = db.getDbConnection();
+		const dbType = process.env.DB_TYPE || 'sqlite';
+
+		if (dbType === 'sqlite') {
+			// For SQLite, update all events in batches
+			const batchSize = 500;
+			let offset = 0;
+			let totalUpdated = 0;
+
+			while (true) {
+				const events = dbConn.prepare(`
+					SELECT id, data
+					FROM telemetry_events
+					WHERE data IS NOT NULL AND data != ''
+					LIMIT ? OFFSET ?
+				`).all(batchSize, offset);
+
+				if (events.length === 0) break;
+
+				const updateStmt = dbConn.prepare(`
+					UPDATE telemetry_events
+					SET org_id = ?, user_name = ?, tool_name = ?
+					WHERE id = ?
+				`);
+
+				let batchUpdated = 0;
+				for (const event of events) {
+					try {
+						const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+						const orgId = db.extractOrgId({ data });
+						const userName = db.extractUserDisplayName(data);
+						const toolName = db.extractToolName({ data });
+
+						updateStmt.run(orgId, userName, toolName, event.id);
+						batchUpdated++;
+					} catch (error) {
+						// Skip events with invalid JSON
+					}
+				}
+
+				totalUpdated += batchUpdated;
+				offset += batchSize;
+
+				if (events.length < batchSize) break;
+			}
+
+			console.log(`   ✅ Updated ${totalUpdated} events in SQLite database`);
+		} else {
+			// For PostgreSQL, use a single UPDATE query
+			const result = await dbConn.query(`
+				UPDATE telemetry_events
+				SET
+					org_id = COALESCE(data->'state'->'org'->>'id', data->>'orgId'),
+					user_name = COALESCE(data->>'userDisplayName', data->>'userName'),
+					tool_name = COALESCE(data->>'toolName', data->>'tool')
+				WHERE data IS NOT NULL
+			`);
+
+			console.log(`   ✅ Updated ${result.rowCount} events in PostgreSQL database`);
+		}
+
+		// Update company names
+		await updateCompanyNamesForAPI();
+
+		res.json({
+			status: 'success',
+			message: 'Telemetry regularization completed successfully'
+		});
+
+	} catch (error) {
+		console.error('❌ Error during regularization:', error);
+		res.status(500).json({
+			status: 'error',
+			message: 'Failed to regularize telemetry data',
+			error: error.message
+		});
+	}
+});
+
+async function updateCompanyNamesForAPI() {
+	const dbConn = db.getDbConnection();
+	const dbType = process.env.DB_TYPE || 'sqlite';
+	let updated = 0;
+
+	if (dbType === 'sqlite') {
+		// Get all unique server_ids
+		const serverIds = dbConn.prepare(`
+			SELECT DISTINCT server_id
+			FROM telemetry_events
+			WHERE server_id IS NOT NULL
+		`).all().map(row => row.server_id);
+
+		for (const serverId of serverIds) {
+			// Get the latest event for this server that might have company details
+			const event = dbConn.prepare(`
+				SELECT data
+				FROM telemetry_events
+				WHERE server_id = ?
+					AND data IS NOT NULL
+					AND data != ''
+				ORDER BY timestamp DESC
+				LIMIT 1
+			`).get(serverId);
+
+			if (event) {
+				try {
+					const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+					const companyName = db.extractCompanyName({ data });
+
+					if (companyName) {
+						await db.upsertOrgCompanyName(serverId, companyName);
+						updated++;
+					}
+				} catch (error) {
+					// Skip events with invalid JSON
+				}
+			}
+		}
+	} else {
+		// For PostgreSQL, use a simpler approach
+		const result = await dbConn.query(`
+			SELECT DISTINCT server_id
+			FROM telemetry_events
+			WHERE server_id IS NOT NULL
+		`);
+
+		for (const row of result.rows) {
+			const serverId = row.server_id;
+
+			// Get latest event for this server
+			const eventResult = await dbConn.query(`
+				SELECT data
+				FROM telemetry_events
+				WHERE server_id = $1
+					AND data IS NOT NULL
+				ORDER BY timestamp DESC
+				LIMIT 1
+			`, [serverId]);
+
+			if (eventResult.rows.length > 0) {
+				const data = eventResult.rows[0].data;
+				const companyName = db.extractCompanyName({ data });
+
+				if (companyName) {
+					await db.upsertOrgCompanyName(serverId, companyName);
+					updated++;
+				}
+			}
+		}
+	}
+
+	console.log(`   ✅ Updated ${updated} company names`);
+	return { updated };
+}
+
 app.get('/api/team-stats', auth.requireAuth, auth.requireRole('advanced'), apiReadLimiter, async (_req, res) => {
 	try {
 		const mappingsJson = await db.getSetting('org_team_mappings');
