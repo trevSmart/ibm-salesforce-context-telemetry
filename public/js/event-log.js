@@ -3968,7 +3968,7 @@ if (window.__EVENT_LOG_LOADED__) {
 			const scrollableHeight = scrollContainer.scrollHeight - scrollContainer.clientHeight;
 			if (scrollableHeight > 0) {
 				const distanceFromBottom = scrollContainer.scrollHeight - scrollContainer.scrollTop - scrollContainer.clientHeight;
-				if (distanceFromBottom < 200) {
+				if (distanceFromBottom < 50) {
 					return true;
 				}
 			}
@@ -3976,7 +3976,7 @@ if (window.__EVENT_LOG_LOADED__) {
 
 		// Fallback to page scroll (when the table container does not create its own scroll)
 		const distanceFromBottomPage = document.documentElement.scrollHeight - window.pageYOffset - window.innerHeight;
-		return distanceFromBottomPage < 200;
+		return distanceFromBottomPage < 50;
 	}
 
 	function handleScroll() {

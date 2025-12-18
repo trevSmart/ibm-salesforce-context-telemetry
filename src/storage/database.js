@@ -823,6 +823,7 @@ async function getEvents(options = {}) {
 	const shouldComputeTotal = offset === 0 || limit <= MAX_LIMIT_FOR_TOTAL_COMPUTATION;
 
 	if (shouldComputeTotal) {
+		// Count from telemetry_events only, not the joined query, to avoid incorrect counts
 		let countQuery = `SELECT COUNT(*) as total FROM telemetry_events ${whereClause}`;
 		if (dbType === 'sqlite') {
 			total = db.prepare(countQuery).get(...params).total;

@@ -123,6 +123,8 @@ When extending the telemetry server:
 4. **Scalability**: Consider performance implications for high-volume scenarios
 5. **Documentation**: Update this file and README.md when adding features
 
+NEVER RESTART THE SERVER AFTER CHANGES. IT HAS AUTO-RELOADING FEATURE.
+
 ### Data Storage and Environment Configuration
 
 The project uses a dual-database setup driven by environment variables:
