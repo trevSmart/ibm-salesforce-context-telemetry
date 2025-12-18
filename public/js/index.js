@@ -2326,7 +2326,11 @@ async function loadChartData(days = currentDays) {
 
 			const BASE_OPACITY = 0.40;
 			const FADE_START = 0.78;
-			const trendLineGradient = makeRightFadeGradient(BASE_OPACITY, FADE_START);
+			const trendLineGradient = new echarts.graphic.LinearGradient(0, 1, 1, 0, [
+				{ offset: 0, color: `rgba(142, 129, 234, ${BASE_OPACITY})` }, // toolEventsColor with opacity
+				{ offset: FADE_START, color: `rgba(142, 129, 234, ${BASE_OPACITY})` },
+				{ offset: 1, color: 'rgba(142, 129, 234, 0)' }
+			]);
 
 			series.push({
 				name: 'Trend',
@@ -2341,7 +2345,104 @@ async function loadChartData(days = currentDays) {
 					width: 1,
 					type: 'solid',
 					color: trendLineGradient,
-					shadowColor: 'rgba(249, 115, 22, 0.35)',
+					shadowColor: 'rgba(142, 129, 234, 0.35)', // toolEventsColor shadow
+					shadowBlur: 8,
+					shadowOffsetY: 4
+				},
+				emphasis: {
+					focus: 'series',
+					lineStyle: { width: 3, opacity: 0.9 }
+				},
+				blur: {
+					lineStyle: { opacity: TREND_BLUR_OPACITY }
+				}
+			});
+
+			// Add trend line for Start Sessions (blue series)
+			const trimmedStartSessions = trimTrailingZeros(startSessionsData);
+			const startSessionsTrendLineSource = trimmedStartSessions.length >= 2 ? trimmedStartSessions : startSessionsData;
+			const startSessionsTrendLine = generateTrendLine(startSessionsTrendLineSource, FUTURE_POINTS, 'exponential');
+
+			const startSessionsDenseTrendRaw = buildDenseTrendSeries(
+				startSessionsData,
+				extendedLabels.length,
+				startSessionsTrendLine,
+				30
+			);
+
+			// Scale Y values by 3x for Start Sessions trend line
+			const startSessionsDenseTrendScaled = startSessionsDenseTrendRaw.map(([x, y]) => [x, y * 3]);
+
+			const startSessionsDenseTrend = compressYAroundMean(startSessionsDenseTrendScaled, TREND_Y_COMPRESSION);
+
+			const startSessionsBaseOpacity = 0.35;
+			const startSessionsTrendLineGradient = new echarts.graphic.LinearGradient(0, 1, 1, 0, [
+				{ offset: 0, color: `rgba(33, 149, 207, ${startSessionsBaseOpacity})` },
+				{ offset: FADE_START, color: `rgba(33, 149, 207, ${startSessionsBaseOpacity})` },
+				{ offset: 1, color: 'rgba(33, 149, 207, 0)' }
+			]);
+
+			series.push({
+				name: 'Start Sessions Trend',
+				type: 'line',
+				xAxisIndex: 1,
+				data: startSessionsDenseTrend,
+				smooth: false,
+				symbol: 'none',
+				zlevel: 0,
+				z: -2,
+				lineStyle: {
+					width: 1,
+					type: 'solid',
+					color: startSessionsTrendLineGradient,
+					shadowColor: 'rgba(33, 149, 207, 0.35)',
+					shadowBlur: 8,
+					shadowOffsetY: 4
+				},
+				emphasis: {
+					focus: 'series',
+					lineStyle: { width: 3, opacity: 0.9 }
+				},
+				blur: {
+					lineStyle: { opacity: TREND_BLUR_OPACITY }
+				}
+			});
+
+			// Add trend line for Errors (red series)
+			const trimmedErrorEvents = trimTrailingZeros(errorEventsData);
+			const errorEventsTrendLineSource = trimmedErrorEvents.length >= 2 ? trimmedErrorEvents : errorEventsData;
+			const errorEventsTrendLine = generateTrendLine(errorEventsTrendLineSource, FUTURE_POINTS, 'exponential');
+
+			const errorEventsDenseTrendRaw = buildDenseTrendSeries(
+				errorEventsData,
+				extendedLabels.length,
+				errorEventsTrendLine,
+				30
+			);
+
+			const errorEventsDenseTrend = compressYAroundMean(errorEventsDenseTrendRaw, TREND_Y_COMPRESSION);
+
+			const errorEventsBaseOpacity = 0.35;
+			const errorEventsTrendLineGradient = new echarts.graphic.LinearGradient(0, 1, 1, 0, [
+				{ offset: 0, color: `rgba(239, 68, 68, ${errorEventsBaseOpacity})` },
+				{ offset: FADE_START, color: `rgba(239, 68, 68, ${errorEventsBaseOpacity})` },
+				{ offset: 1, color: 'rgba(239, 68, 68, 0)' }
+			]);
+
+			series.push({
+				name: 'Errors Trend',
+				type: 'line',
+				xAxisIndex: 1,
+				data: errorEventsDenseTrend,
+				smooth: false,
+				symbol: 'none',
+				zlevel: 0,
+				z: -3,
+				lineStyle: {
+					width: 1,
+					type: 'solid',
+					color: errorEventsTrendLineGradient,
+					shadowColor: 'rgba(239, 68, 68, 0.35)',
 					shadowBlur: 8,
 					shadowOffsetY: 4
 				},
@@ -2358,7 +2459,9 @@ async function loadChartData(days = currentDays) {
 				{ name: 'Start Sessions', icon: 'circle', itemStyle: { color: startSessionsColor } },
 				{ name: 'Tool Events', icon: 'circle', itemStyle: { color: toolEventsColor } },
 				{ name: 'Errors', icon: 'circle', itemStyle: { color: errorEventsColor } },
-				{ name: 'Trend', icon: 'line', itemStyle: { color: '#ff6900' } }
+				{ name: 'Trend', icon: 'line', itemStyle: { color: '#8e81ea' } },
+				{ name: 'Start Sessions Trend', icon: 'line', itemStyle: { color: startSessionsColor } },
+				{ name: 'Errors Trend', icon: 'line', itemStyle: { color: errorEventsColor } }
 			];
 		} else {
 			const totalEventsData = data.map(item => Number(item.count ?? item.total ?? 0));

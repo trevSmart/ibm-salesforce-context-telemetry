@@ -802,7 +802,8 @@ async function getEvents(options = {}) {
 		startDate,
 		endDate,
 		orderBy = 'created_at',
-		order = 'DESC'
+		order = 'DESC',
+		excludeData = true
 	} = options;
 
 	let whereClause = 'WHERE 1=1';
@@ -822,7 +823,8 @@ async function getEvents(options = {}) {
 		}
 	}
 	if (serverId) {
-		whereClause += dbType === 'sqlite' ? ' AND server_id = ?' : ` AND server_id = $${paramIndex++}`;
+		// Disambiguate join with orgs by qualifying the server_id column
+		whereClause += dbType === 'sqlite' ? ' AND telemetry_events.server_id = ?' : ` AND telemetry_events.server_id = $${paramIndex++}`;
 		params.push(serverId);
 	}
 	if (sessionId) {
@@ -836,11 +838,11 @@ async function getEvents(options = {}) {
 		paramIndex += dbType === 'sqlite' ? 0 : 2;
 	}
 	if (startDate) {
-		whereClause += dbType === 'sqlite' ? ' AND created_at >= ?' : ` AND created_at >= $${paramIndex++}`;
+		whereClause += dbType === 'sqlite' ? ' AND telemetry_events.created_at >= ?' : ` AND telemetry_events.created_at >= $${paramIndex++}`;
 		params.push(startDate);
 	}
 	if (endDate) {
-		whereClause += dbType === 'sqlite' ? ' AND created_at <= ?' : ` AND created_at <= $${paramIndex++}`;
+		whereClause += dbType === 'sqlite' ? ' AND telemetry_events.created_at <= ?' : ` AND telemetry_events.created_at <= $${paramIndex++}`;
 		params.push(endDate);
 	}
 	if (options.userIds && Array.isArray(options.userIds) && options.userIds.length > 0) {
@@ -860,7 +862,7 @@ async function getEvents(options = {}) {
 	const shouldComputeTotal = offset === 0 || limit <= MAX_LIMIT_FOR_TOTAL_COMPUTATION;
 
 	if (shouldComputeTotal) {
-		let countQuery = `SELECT COUNT(*) as total FROM telemetry_events ${whereClause}`;
+		let countQuery = `SELECT COUNT(*) as total FROM telemetry_events LEFT JOIN orgs ON telemetry_events.server_id = orgs.server_id ${whereClause}`;
 		if (dbType === 'sqlite') {
 			total = db.prepare(countQuery).get(...params).total;
 		} else {
@@ -882,11 +884,19 @@ async function getEvents(options = {}) {
 		safeOrder = order.toUpperCase();
 	}
 
+	// Build select fields - exclude data field if requested for performance
+	// Always include denormalized columns (org_id, user_name, tool_name) for display
+	// Qualify server_id to avoid ambiguity with orgs join
+	const selectFields = excludeData
+		? 'id, event, timestamp, telemetry_events.server_id AS server_id, version, session_id, user_id, org_id, user_name, tool_name, received_at, telemetry_events.created_at AS created_at'
+		: 'id, event, timestamp, telemetry_events.server_id AS server_id, version, session_id, user_id, org_id, user_name, tool_name, data, received_at, telemetry_events.created_at AS created_at';
+
 	let eventsQuery = `
-		SELECT id, event, timestamp, server_id, version, session_id, user_id, data, received_at, created_at
+		SELECT ${selectFields}, orgs.company_name
 		FROM telemetry_events
+		LEFT JOIN orgs ON telemetry_events.server_id = orgs.server_id
 		${whereClause}
-		ORDER BY ${safeOrderBy} ${safeOrder}
+		ORDER BY telemetry_events.${safeOrderBy} ${safeOrder}
 		LIMIT ${dbType === 'sqlite' ? '?' : `$${paramIndex++}`}
 		OFFSET ${dbType === 'sqlite' ? '?' : `$${paramIndex++}`}
 	`;
@@ -896,11 +906,13 @@ async function getEvents(options = {}) {
 
 	if (dbType === 'sqlite') {
 		events = db.prepare(eventsQuery).all(...queryParams);
-		// Parse JSON data for SQLite
-		events = events.map(event => ({
-			...event,
-			data: JSON.parse(event.data)
-		}));
+		// Parse JSON data for SQLite only if data field is included
+		if (!excludeData) {
+			events = events.map(event => ({
+				...event,
+				data: JSON.parse(event.data)
+			}));
+		}
 	} else {
 		const result = await db.query(eventsQuery, queryParams);
 		events = result.rows;

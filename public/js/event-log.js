@@ -3692,7 +3692,7 @@ if (window.__EVENT_LOG_LOADED__) {
 			const description = formatDescription(event);
 			const descriptionPretty = formatDescriptionPretty(event);
 			const eventData = normalizeEventData(event.data);
-			const clientName = extractClientName(eventData);
+			const clientName = event.company_name || '';
 			const userLabel = extractUserLabelFromEvent(event, eventData);
 			const dataStatus = typeof eventData.status === 'string'
 				? eventData.status.toLowerCase()
@@ -3709,9 +3709,10 @@ if (window.__EVENT_LOG_LOADED__) {
 
 			// Extract tool name for tool events (tool_call or tool_error)
 			const isToolEvent = event.event === 'tool_call' || event.event === 'tool_error';
-			const toolName = isToolEvent && eventData.toolName
-				? escapeHtml(String(eventData.toolName))
+			const rawToolName = isToolEvent
+				? (event.tool_name || event.toolName || '')
 				: '';
+			const toolName = rawToolName ? escapeHtml(String(rawToolName)) : '';
 
 			// Main row
 			const row = document.createElement('tr');
