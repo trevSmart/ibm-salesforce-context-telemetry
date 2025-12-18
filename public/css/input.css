@@ -328,7 +328,7 @@
 
   .top-nav-link.active {
     color: #3a485f;
-    font-weight: 300;
+    font-weight: 400;
   }
 
   .top-nav-link.active::after {
