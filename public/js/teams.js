@@ -8,7 +8,7 @@ let _currentTeamId = null;
 let teams = [];
 let _allOrgs = [];
 let _allUsers = [];
-let hasLoadedTeamsOnce = false;
+let _hasLoadedTeamsOnce = false;
 
 // Utility functions
 async function buildCsrfHeaders(includeJson = true) {
@@ -210,7 +210,7 @@ async function fetchEventUsers() {
 	}
 }
 
-async function createTeam(name, color) {
+async function _createTeam(name, color) {
 	try {
 		const headers = await buildCsrfHeaders(true);
 		const response = await fetch('/api/teams', {
@@ -265,7 +265,7 @@ async function createTeamWithLogo(name, color, logoFile) {
 	}
 }
 
-async function updateTeam(teamId, updates) {
+async function _updateTeam(teamId, updates) {
 	try {
 		const headers = await buildCsrfHeaders(true);
 		const response = await fetch(`/api/teams/${teamId}`, {

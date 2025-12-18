@@ -1,5 +1,4 @@
 // @ts-nocheck
-/* eslint-env browser */
 // Prevent double execution when soft navigation re-injects the script
 if (window.__EVENT_LOG_LOADED__) {
 	console.info('[Telemetry Viewer] Event log script already loaded; skipping duplicate execution.');
@@ -3518,7 +3517,7 @@ if (window.__EVENT_LOG_LOADED__) {
 		}
 	}
 
-	function extractClientName(eventData) {
+	function _extractClientName(eventData) {
 		if (!eventData || typeof eventData !== 'object') {
 			return '';
 		}

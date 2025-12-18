@@ -1687,7 +1687,7 @@ async function getToolUsageStats(days = 30) {
 							}
 						}
 					}
-				} catch (parseError) {
+				} catch (_parseError) {
 					// Skip malformed JSON
 				}
 			});

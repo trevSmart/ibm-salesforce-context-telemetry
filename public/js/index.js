@@ -10,7 +10,7 @@ const REFRESH_ICON_ANIMATION_DURATION_MS = 700;
 const DEFAULT_DASHBOARD_TIME_RANGE_DAYS = 30;
 let serverStatsLastFetchTime = null;
 let serverStatsUpdateIntervalId = null;
-let autoRefreshEnabledState = false;
+let _autoRefreshEnabledState = false;
 let autoRefreshIntervalMinutes = '';
 let currentDays = DEFAULT_DASHBOARD_TIME_RANGE_DAYS;
 
@@ -728,7 +728,7 @@ async function openSettingsModal() {
 				interval = '';
 			}
 			autoRefreshIntervalMinutes = interval;
-			autoRefreshEnabledState = interval !== '';
+			_autoRefreshEnabledState = interval !== '';
 		};
 		autoRefreshIntervalInput.addEventListener('change', handleAutoRefreshChange);
 		autoRefreshIntervalInput.addEventListener('input', handleAutoRefreshChange);
@@ -1804,7 +1804,7 @@ function renderTopTeams(teams) {
 	const items = teams.map((team, index) => {
 		const teamName = team.label || team.id || 'Unknown team';
 		const eventCount = Number(team.eventCount) || 0;
-		const countLabel = eventCount === 1 ? '1 event last 30 days' : `${eventCount} events last 30 days`;
+		const _countLabel = eventCount === 1 ? '1 event last 30 days' : `${eventCount} events last 30 days`;
 		const clientName = team.clientName ? team.clientName : '';
 		const orgNames = Array.isArray(team.orgs)
 			? team.orgs

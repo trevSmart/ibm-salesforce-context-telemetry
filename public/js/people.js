@@ -159,7 +159,7 @@ async function handleCreatePerson(event) {
 			throw new Error(errorData.message || 'Failed to create person');
 		}
 
-		const result = await response.json();
+		const _result = await response.json();
 
 		// Clear form
 		event.target.reset();

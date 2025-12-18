@@ -1,5 +1,4 @@
 // @ts-nocheck
-/* eslint-env browser */
 
 /**
  * Shared CSRF token helper module
