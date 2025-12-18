@@ -101,15 +101,15 @@ async function loadToolUsageChart(days = TOOL_USAGE_DEFAULT_DAYS) {
 				trigger: 'axis',
 				axisPointer: { type: 'shadow' }
 			},
-			legend: {
-				data: ['Successful', 'Errors'],
-				textStyle: { color: theme.text }
-			},
+			// legend: {
+			// 	data: ['Successful', 'Errors'],
+			// 	textStyle: { color: theme.text }
+			// },
 			grid: {
 				left: '3%',
 				right: '4%',
 				bottom: '6%',
-				containLabel: true
+				containLabel: false
 			},
 			xAxis: {
 				type: 'value',
@@ -123,7 +123,7 @@ async function loadToolUsageChart(days = TOOL_USAGE_DEFAULT_DAYS) {
 			yAxis: {
 				type: 'category',
 				data: names,
-				axisTick: { alignWithLabel: true },
+				axisTick: { alignWithLabel: false },
 				axisLabel: { color: theme.text }
 			},
 			series: [

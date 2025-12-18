@@ -801,15 +801,29 @@
     display: inline-flex;
     align-items: center;
     opacity: 0;
-    transition: opacity 120ms ease;
+    will-change: opacity, visibility;
+    visibility: hidden;
+    transition: opacity 150ms ease, visibility 150ms ease;
+  }
+
+  .dashboard-chart-card .chart-floating-header .chart-header h1 {
+    opacity: 1;
+    visibility: visible;
   }
 
   .dashboard-chart-card .chart-floating-header .chart-header #timeRangeSelect {
     backdrop-filter: blur(15px);
+    pointer-events: auto;
+    top: -5px;
+  }
+
+  .dashboard-chart-card:hover .chart-floating-header .chart-header h1 {
+    opacity: 0;
   }
 
   .dashboard-chart-card:hover .chart-floating-header .chart-header #timeRangeSelect {
     opacity: 1;
+    visibility: visible;
   }
 
   html.dark .dashboard-chart-card .chart-floating-header .chart-header h1,
@@ -855,9 +869,9 @@
 
   .chart-legend-overlay {
     position: absolute;
-    left: 50%;
-    bottom: 18px;
-    transform: translate(-50%, 9px);
+    /* left: 50%; */
+    margin: 0 0 4px 0;
+    transform: translateY(-1px);
     display: inline-flex;
     gap: 16px;
     align-items: center;
@@ -871,11 +885,12 @@
     pointer-events: none;
     opacity: 0;
     visibility: hidden;
+    will-change: opacity, visibility, transform;
     transition:
-      opacity 150ms ease,
-      visibility 150ms ease,
-      transform 150ms ease;
-    backdrop-filter: blur(8px);
+      opacity 170ms ease,
+      visibility 170ms ease,
+      transform 170ms ease;
+    /* backdrop-filter: blur(8px); */
   }
 
   .chart-legend-overlay[data-state="empty"] {
@@ -888,10 +903,10 @@
     box-shadow: 0 10px 35px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.35);
   }
 
-  .chart-body:hover .chart-legend-overlay {
+  .dashboard-chart-card:hover .chart-legend-overlay {
     opacity: 0.9;
     visibility: visible;
-    transform: translate(-50%, 2px);
+    transform: translateY(15px);
   }
 
   .chart-legend-overlay::before {
@@ -983,7 +998,8 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    transition: opacity 0.2s ease;
+    transform: translateY(-1px);
+    transition: opacity 220ms ease, transform 220ms ease;
   }
 
   .log-viewer-title:hover {
