@@ -1972,7 +1972,7 @@ async function loadChartData(days = currentDays) {
 		const isDark = document.documentElement.classList.contains('dark');
 		const textColor = isDark ? '#a1a1aa' : '#52525b';
 		const gridColor = isDark ? '#50515c' : '#eaecf2';
-		const faintGridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)';
+		const faintGridColor = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)';
 		const axisPointerBg = isDark ? '#27272a' : '#ffffff';
 
 		const startSessionsColor = SESSION_START_SERIES_COLOR;
@@ -2324,7 +2324,7 @@ async function loadChartData(days = currentDays) {
 			const TREND_Y_COMPRESSION = 0.92;
 			const denseTrend = compressYAroundMean(denseTrendRaw, TREND_Y_COMPRESSION);
 
-			const BASE_OPACITY = 0.40;
+			const BASE_OPACITY = 0.23;
 			const FADE_START = 0.78;
 			const trendLineGradient = new echarts.graphic.LinearGradient(0, 1, 1, 0, [
 				{ offset: 0, color: `rgba(142, 129, 234, ${BASE_OPACITY})` }, // toolEventsColor with opacity
@@ -2375,7 +2375,7 @@ async function loadChartData(days = currentDays) {
 
 			const startSessionsDenseTrend = compressYAroundMean(startSessionsDenseTrendScaled, TREND_Y_COMPRESSION);
 
-			const startSessionsBaseOpacity = 0.35;
+			const startSessionsBaseOpacity = 0.50;
 			const startSessionsTrendLineGradient = new echarts.graphic.LinearGradient(0, 1, 1, 0, [
 				{ offset: 0, color: `rgba(33, 149, 207, ${startSessionsBaseOpacity})` },
 				{ offset: FADE_START, color: `rgba(33, 149, 207, ${startSessionsBaseOpacity})` },
@@ -2395,6 +2395,7 @@ async function loadChartData(days = currentDays) {
 					width: 1,
 					type: 'solid',
 					color: startSessionsTrendLineGradient,
+					opacity: startSessionsBaseOpacity,
 					shadowColor: 'rgba(33, 149, 207, 0.35)',
 					shadowBlur: 8,
 					shadowOffsetY: 4
@@ -2488,7 +2489,7 @@ async function loadChartData(days = currentDays) {
 			const TREND_Y_COMPRESSION = 0.88;
 			const denseTrend = compressYAroundMean(denseTrendRaw, TREND_Y_COMPRESSION);
 
-			const BASE_OPACITY = 0.30;
+			const BASE_OPACITY = 0.23;
 			const FADE_START = 0.78;
 			const trendLineGradient = makeRightFadeGradient(BASE_OPACITY, FADE_START);
 
