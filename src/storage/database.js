@@ -2016,6 +2016,27 @@ async function getUniqueUserIds() {
 }
 
 /**
+ * Execute raw SQL query
+ */
+async function executeSql(sql, params = []) {
+	try {
+		if (dbType === 'postgresql') {
+			return await db.query(sql, params);
+		} else {
+			// For SQLite, use the appropriate method based on the query type
+			if (sql.toUpperCase().trim().startsWith('SELECT') || sql.toUpperCase().trim().startsWith('PRAGMA')) {
+				return db.prepare(sql).all(params);
+			} else {
+				return db.prepare(sql).run(params);
+			}
+		}
+	} catch (error) {
+		console.error('Error executing SQL:', sql, error);
+		throw error;
+	}
+}
+
+/**
  * Get PostgreSQL pool if using PostgreSQL, null otherwise
  * Used for session store configuration
  */
@@ -5259,5 +5280,7 @@ module.exports = {
 	getNormalizedUserId,
 	// Database export/import
 	exportDatabase,
-	importDatabase
+	importDatabase,
+	// Raw SQL execution
+	executeSql
 };

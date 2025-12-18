@@ -55,7 +55,7 @@ async function optimizeDatabaseIndexes() {
         for (const indexName of duplicateIndexes) {
             try {
                 console.log(`Dropping duplicate index: ${indexName}`);
-                await db.query(`DROP INDEX IF EXISTS ${indexName}`);
+                await db.executeSql(`DROP INDEX IF EXISTS ${indexName}`);
                 console.log(`✓ Dropped ${indexName}`);
             } catch (error) {
                 console.log(`⚠ Could not drop ${indexName}: ${error.message}`);
@@ -71,14 +71,14 @@ async function optimizeDatabaseIndexes() {
         // and the MIN/MAX timestamp operations
         try {
             console.log('Creating index for session aggregates query...');
-            await db.query('CREATE INDEX IF NOT EXISTS idx_session_logical ON telemetry_events (COALESCE(parent_session_id, session_id), timestamp)');
+            await db.executeSql('CREATE INDEX IF NOT EXISTS idx_session_logical ON telemetry_events (COALESCE(parent_session_id, session_id), timestamp)');
             console.log('✓ Created idx_session_logical');
         } catch (error) {
             console.log(`⚠ Could not create idx_session_logical: ${error.message}`);
             // Fallback: create separate indexes for parent_session_id and session_id with timestamp
             try {
-                await db.query('CREATE INDEX IF NOT EXISTS idx_parent_session_timestamp ON telemetry_events (parent_session_id, timestamp) WHERE parent_session_id IS NOT NULL');
-                await db.query('CREATE INDEX IF NOT EXISTS idx_session_timestamp ON telemetry_events (session_id, timestamp) WHERE session_id IS NOT NULL');
+                await db.executeSql('CREATE INDEX IF NOT EXISTS idx_parent_session_timestamp ON telemetry_events (parent_session_id, timestamp) WHERE parent_session_id IS NOT NULL');
+                await db.executeSql('CREATE INDEX IF NOT EXISTS idx_session_timestamp ON telemetry_events (session_id, timestamp) WHERE session_id IS NOT NULL');
                 console.log('✓ Created fallback indexes: idx_parent_session_timestamp, idx_session_timestamp');
             } catch (fallbackError) {
                 console.log(`⚠ Fallback indexes also failed: ${fallbackError.message}`);
@@ -88,7 +88,7 @@ async function optimizeDatabaseIndexes() {
         // Index for the correlated subquery in session aggregates that finds user_id
         try {
             console.log('Creating index for session user lookup...');
-            await db.query('CREATE INDEX IF NOT EXISTS idx_session_user_timestamp ON telemetry_events (COALESCE(parent_session_id, session_id), timestamp, user_id)');
+            await db.executeSql('CREATE INDEX IF NOT EXISTS idx_session_user_timestamp ON telemetry_events (COALESCE(parent_session_id, session_id), timestamp, user_id)');
             console.log('✓ Created idx_session_user_timestamp');
         } catch (error) {
             console.log(`⚠ Could not create idx_session_user_timestamp: ${error.message}`);
@@ -97,7 +97,7 @@ async function optimizeDatabaseIndexes() {
         // Index for the session_start_data lookup
         try {
             console.log('Creating index for session start data lookup...');
-            await db.query('CREATE INDEX IF NOT EXISTS idx_session_event_timestamp ON telemetry_events (COALESCE(parent_session_id, session_id), event, timestamp)');
+            await db.executeSql('CREATE INDEX IF NOT EXISTS idx_session_event_timestamp ON telemetry_events (COALESCE(parent_session_id, session_id), event, timestamp)');
             console.log('✓ Created idx_session_event_timestamp');
         } catch (error) {
             console.log(`⚠ Could not create idx_session_event_timestamp: ${error.message}`);
@@ -107,7 +107,7 @@ async function optimizeDatabaseIndexes() {
         // (This should already exist as idx_created_at_org_id, but let's make sure)
         try {
             console.log('Ensuring pagination query optimization...');
-            await db.query('CREATE INDEX IF NOT EXISTS idx_pagination_created_at ON telemetry_events (created_at)');
+            await db.executeSql('CREATE INDEX IF NOT EXISTS idx_pagination_created_at ON telemetry_events (created_at)');
             console.log('✓ Ensured idx_pagination_created_at exists');
         } catch (error) {
             console.log(`⚠ Could not create idx_pagination_created_at: ${error.message}`);
