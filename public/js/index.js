@@ -205,7 +205,6 @@ async function initializeDashboardPage({ resetState = false } = {}) {
 		await loadChartData();
 		await loadTopUsersToday();
 		await loadTopTeamsToday();
-		await loadToolUsageStats(currentDays);
 		await loadDashboardDatabaseSize();
 
 		// Set up time range selector (guard against duplicate listeners)
@@ -217,7 +216,6 @@ async function initializeDashboardPage({ resetState = false } = {}) {
 				// Save selected time range to localStorage
 				localStorage.setItem('dashboardTimeRange', resolvedDays.toString());
 				loadChartData(resolvedDays);
-				loadToolUsageStats(resolvedDays);
 			};
 			timeRangeSelect.addEventListener('change', handleTimeRangeChange);
 			timeRangeSelect.addEventListener('input', handleTimeRangeChange);
@@ -234,7 +232,6 @@ async function initializeDashboardPage({ resetState = false } = {}) {
 
 
 let deleteAllConfirmed = false;
-let toolUsageChart = null;
 
 function confirmDeleteAll() {
 	if (!deleteAllConfirmed) {
@@ -1452,7 +1449,6 @@ async function refreshDashboard(event) {
 			loadChartData(currentDays),
 			loadTopUsersToday(),
 			loadTopTeamsToday(),
-			loadToolUsageStats(currentDays),
 			loadDashboardDatabaseSize()
 		]);
 	} catch (error) {
@@ -1692,6 +1688,31 @@ function initChart() {
 	return chart;
 }
 
+function updateChartLegendOverlay(legendItems) {
+	const overlay = document.getElementById('chartLegendOverlay');
+	if (!overlay) {
+		return;
+	}
+
+	if (!Array.isArray(legendItems) || legendItems.length === 0) {
+		overlay.innerHTML = '';
+		overlay.setAttribute('data-state', 'empty');
+		return;
+	}
+
+	const itemsMarkup = legendItems.map((item) => {
+		const name = escapeHtml(item?.name || '');
+		const color = escapeHtml(item?.itemStyle?.color || '#94a3b8');
+		const icon = item?.icon === 'line' ? 'line' : 'circle';
+		const markerClass = icon === 'line'
+			? 'chart-legend-overlay-marker chart-legend-overlay-marker--line'
+			: 'chart-legend-overlay-marker';
+		return `<span class="chart-legend-overlay-item"><span class="${markerClass}" style="background:${color};"></span>${name}</span>`;
+	}).join('');
+
+	overlay.innerHTML = itemsMarkup;
+	overlay.setAttribute('data-state', 'ready');
+}
 
 function renderTopUsersPlaceholder(message) {
 	const list = document.getElementById('topUsersList');
@@ -1843,141 +1864,6 @@ function renderTopTeams(teams) {
 	list.innerHTML = items;
 }
 
-function renderToolUsageChart(stats) {
-	const chartEl = document.getElementById('toolUsageChart');
-	if (!chartEl) {
-		return;
-	}
-
-	// Wait for ECharts to load if not available yet
-	if (typeof echarts === 'undefined') {
-		window.addEventListener('echartsLoaded', () => renderToolUsageChart(stats), { once: true });
-		return;
-	}
-
-	// Initialize chart if not already done
-	if (!toolUsageChart) {
-		toolUsageChart = echarts.init(chartEl);
-		window.addEventListener('resize', () => {
-			toolUsageChart?.resize();
-		});
-	}
-
-	const isDark = document.documentElement.classList.contains('dark');
-	const textColor = isDark ? '#a1a1aa' : '#52525b';
-
-	if (!stats || stats.length === 0) {
-		// Show empty state
-		const option = {
-			title: {
-				text: 'No tool usage data',
-				left: 'center',
-				top: 'center',
-				textStyle: {
-					color: textColor,
-					fontSize: 14
-				}
-			},
-			graphic: {
-				type: 'text',
-				left: 'center',
-				top: '55%',
-				style: {
-					text: 'Tool usage statistics will appear here once you start using tools',
-					fontSize: 12,
-					fill: isDark ? '#71717a' : '#9ca3af'
-				}
-			}
-		};
-		toolUsageChart.setOption(option);
-		return;
-	}
-
-	// Prepare data for the chart - top 6 tools (sorted by total usage ascending)
-	const topStats = stats.slice(0, 6).reverse();
-
-	const option = {
-		textStyle: {
-			fontFamily: 'Inter, \'Manrope\', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, \'Helvetica Neue\', Arial, sans-serif'
-		},
-		animation: true,
-		animationDuration: 350,
-		tooltip: {
-			trigger: 'axis',
-			axisPointer: {
-				type: 'shadow'
-			},
-			formatter: (params) => {
-				const toolName = params[0].name;
-				const successful = params.find(p => p.seriesName === 'Successful')?.value || 0;
-				const errors = params.find(p => p.seriesName === 'Errors')?.value || 0;
-				const total = successful + errors;
-				const errorRate = total > 0 ? ((errors / total) * 100).toFixed(1) : 0;
-				return `${toolName}<br/>Successful: ${successful}<br/>Errors: ${errors}<br/>Error Rate: ${errorRate}%`;
-			}
-		},
-		legend: {
-			data: ['Successful', 'Errors'],
-			textStyle: {
-				color: textColor
-			}
-		},
-		grid: {
-			left: '3%',
-			right: '4%',
-			bottom: '3%',
-			containLabel: true
-		},
-		xAxis: {
-			type: 'category',
-			data: topStats.map(stat => stat.tool || 'Unknown'),
-			axisLabel: {
-				color: textColor,
-				formatter: (value) => {
-					// Truncate long tool names
-					return value.length > 15 ? value.substring(0, 15) + '...' : value;
-				}
-			}
-		},
-		yAxis: {
-			type: 'value',
-			axisLabel: {
-				color: textColor
-			},
-			splitLine: {
-				lineStyle: {
-					color: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'
-				}
-			}
-		},
-		series: [
-			{
-				name: 'Successful',
-				type: 'bar',
-				data: topStats.map(stat => stat.successful || 0),
-				itemStyle: {
-					color: '#3B82F6', // blue for ok
-					borderRadius: [0, 0, 4, 4] // rounded bottom corners for the bottom bar
-				},
-				stack: 'total'
-			},
-			{
-				name: 'Errors',
-				type: 'bar',
-				data: topStats.map(stat => stat.errors || 0),
-				itemStyle: {
-					color: '#EF4444', // red for ko
-					borderRadius: [4, 4, 0, 0] // rounded top corners for the top bar
-				},
-				stack: 'total'
-			}
-		]
-	};
-
-	toolUsageChart.setOption(option, true);
-	toolUsageChart.resize();
-}
-
 async function loadTopUsersToday() {
 	const list = document.getElementById('topUsersList');
 	if (!list) {
@@ -2042,30 +1928,6 @@ async function loadTopTeamsToday() {
 	} catch (error) {
 		console.error('Error loading top teams:', error);
 		renderTopTeamsPlaceholder('Unable to load top teams right now.');
-	}
-}
-
-async function loadToolUsageStats(days = 30) {
-	try {
-		const response = await fetch(`/api/tool-usage-stats?days=${days}`, {
-			credentials: 'include'
-		});
-
-		if (response.status === 401) {
-			window.location.href = '/login';
-			return;
-		}
-
-		if (!response.ok) {
-			throw new Error(`HTTP error! status: ${response.status}`);
-		}
-
-		const stats = await response.json();
-		renderToolUsageChart(stats);
-	} catch (error) {
-		console.error('Error loading tool usage stats:', error);
-		// Show empty chart or error state
-		renderToolUsageChart([]);
 	}
 }
 
@@ -2272,6 +2134,7 @@ async function loadChartData(days = currentDays) {
 		const TREND_BLUR_OPACITY = 0.18; // trend no desapareix
 
 		let series = [];
+		let legendData = [];
 
 		if (hasBreakdown) {
 			const startSessionsData = data.map(item => {
@@ -2463,11 +2326,7 @@ async function loadChartData(days = currentDays) {
 
 			const BASE_OPACITY = 0.40;
 			const FADE_START = 0.78;
-			const trendLineGradient = new echarts.graphic.LinearGradient(0, 1, 1, 0, [
-				{ offset: 0, color: `rgba(142, 129, 234, ${BASE_OPACITY})` }, // toolEventsColor with opacity
-				{ offset: FADE_START, color: `rgba(142, 129, 234, ${BASE_OPACITY})` },
-				{ offset: 1, color: 'rgba(142, 129, 234, 0)' }
-			]);
+			const trendLineGradient = makeRightFadeGradient(BASE_OPACITY, FADE_START);
 
 			series.push({
 				name: 'Trend',
@@ -2482,7 +2341,7 @@ async function loadChartData(days = currentDays) {
 					width: 1,
 					type: 'solid',
 					color: trendLineGradient,
-					shadowColor: 'rgba(142, 129, 234, 0.35)', // toolEventsColor shadow
+					shadowColor: 'rgba(249, 115, 22, 0.35)',
 					shadowBlur: 8,
 					shadowOffsetY: 4
 				},
@@ -2495,56 +2354,12 @@ async function loadChartData(days = currentDays) {
 				}
 			});
 
-			// Add trend line for Start Sessions (blue series)
-			const trimmedStartSessions = trimTrailingZeros(startSessionsData);
-			const startSessionsTrendLineSource = trimmedStartSessions.length >= 2 ? trimmedStartSessions : startSessionsData;
-			const startSessionsTrendLine = generateTrendLine(startSessionsTrendLineSource, FUTURE_POINTS, 'exponential');
-
-			const startSessionsDenseTrendRaw = buildDenseTrendSeries(
-				startSessionsData,
-				extendedLabels.length,
-				startSessionsTrendLine,
-				30
-			);
-
-			// Scale Y values by 3x for Start Sessions trend line
-			const startSessionsDenseTrendScaled = startSessionsDenseTrendRaw.map(([x, y]) => [x, y * 3]);
-
-			const startSessionsDenseTrend = compressYAroundMean(startSessionsDenseTrendScaled, TREND_Y_COMPRESSION);
-
-			const startSessionsBaseOpacity = 0.35;
-			const startSessionsTrendLineGradient = new echarts.graphic.LinearGradient(0, 1, 1, 0, [
-				{ offset: 0, color: `rgba(33, 149, 207, ${startSessionsBaseOpacity})` },
-				{ offset: FADE_START, color: `rgba(33, 149, 207, ${startSessionsBaseOpacity})` },
-				{ offset: 1, color: 'rgba(33, 149, 207, 0)' }
-			]);
-
-			series.push({
-				name: 'Start Sessions Trend',
-				type: 'line',
-				xAxisIndex: 1,
-				data: startSessionsDenseTrend,
-				smooth: false,
-				symbol: 'none',
-				zlevel: 0,
-				z: -2,
-				lineStyle: {
-					width: 1,
-					type: 'solid',
-					color: startSessionsTrendLineGradient,
-					shadowColor: 'rgba(33, 149, 207, 0.35)',
-					shadowBlur: 8,
-					shadowOffsetY: 4
-				},
-				emphasis: {
-					focus: 'series',
-					lineStyle: { width: 3, opacity: 0.9 }
-				},
-				blur: {
-					lineStyle: { opacity: TREND_BLUR_OPACITY }
-				}
-			});
-
+			legendData = [
+				{ name: 'Start Sessions', icon: 'circle', itemStyle: { color: startSessionsColor } },
+				{ name: 'Tool Events', icon: 'circle', itemStyle: { color: toolEventsColor } },
+				{ name: 'Errors', icon: 'circle', itemStyle: { color: errorEventsColor } },
+				{ name: 'Trend', icon: 'line', itemStyle: { color: '#ff6900' } }
+			];
 		} else {
 			const totalEventsData = data.map(item => Number(item.count ?? item.total ?? 0));
 			const totalEventsDataWithZeroes = totalEventsData.map(v => (Number.isFinite(Number(v)) ? Number(v) : 0));
@@ -2648,7 +2463,13 @@ async function loadChartData(days = currentDays) {
 				}
 			});
 
+			legendData = [
+				{ name: 'Events', icon: 'circle', itemStyle: { color: totalEventsColor } },
+				{ name: 'Trend', icon: 'line', itemStyle: { color: '#ff6900' } }
+			];
 		}
+
+		updateChartLegendOverlay(legendData);
 
 		// Calculate label interval based on number of days to prevent overlapping
 		let labelInterval = 0;
@@ -2673,13 +2494,13 @@ async function loadChartData(days = currentDays) {
 				left: '3%',
 				right: '0%',
 				bottom: '14%',
-				top: '2%',
+				top: '5%',
 				containLabel: false,
 				width: 'auto',
 				height: 'auto'
 			},
 			tooltip: { show: false },
-			legend: { show: false },
+			legend: { show: false, data: legendData },
 
 			xAxis: [
 				{
@@ -2788,12 +2609,6 @@ function pauseDashboardPage() {
 		}
 		chart = null;
 	}
-	if (toolUsageChart) {
-		if (typeof toolUsageChart.dispose === 'function') {
-			toolUsageChart.dispose();
-		}
-		toolUsageChart = null;
-	}
 }
 
 async function resumeDashboardPage() {
@@ -2831,9 +2646,6 @@ async function resumeDashboardPage() {
 		// No saved option, load chart data normally
 		await loadChartData();
 	}
-
-	// Always reload tool usage stats
-	await loadToolUsageStats(currentDays);
 }
 
 // Expose pause/resume hooks

@@ -2588,11 +2588,167 @@ app.post('/api/database/import', auth.requireAuth, auth.requireRole('administrat
 	}
 });
 
+// Telemetry regularization function for production startup
+async function runTelemetryRegularization() {
+	const dbConn = db.getDbConnection();
+	const dbType = process.env.DB_TYPE || 'sqlite';
+
+	if (dbType === 'sqlite') {
+		// For SQLite, update all events in batches
+		const batchSize = 500;
+		let offset = 0;
+		let totalUpdated = 0;
+
+		while (true) {
+			const events = dbConn.prepare(`
+				SELECT id, data
+				FROM telemetry_events
+				WHERE data IS NOT NULL AND data != ''
+				LIMIT ? OFFSET ?
+			`).all(batchSize, offset);
+
+			if (events.length === 0) break;
+
+			const updateStmt = dbConn.prepare(`
+				UPDATE telemetry_events
+				SET org_id = ?, user_name = ?, tool_name = ?
+				WHERE id = ?
+			`);
+
+			let batchUpdated = 0;
+			for (const event of events) {
+				try {
+					const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+					const orgId = db.extractOrgId({ data });
+					const userName = db.extractUserDisplayName(data);
+					const toolName = db.extractToolName({ data });
+
+					updateStmt.run(orgId, userName, toolName, event.id);
+					batchUpdated++;
+				} catch (error) {
+					// Skip events with invalid JSON
+				}
+			}
+
+			totalUpdated += batchUpdated;
+			offset += batchSize;
+
+			if (events.length < batchSize) break;
+		}
+
+		console.log(`   ✅ Updated ${totalUpdated} events in SQLite database`);
+	} else {
+		// For PostgreSQL, use a single UPDATE query
+		const result = await dbConn.query(`
+			UPDATE telemetry_events
+			SET
+				org_id = COALESCE(data->'state'->'org'->>'id', data->>'orgId'),
+				user_name = COALESCE(data->>'userDisplayName', data->>'userName'),
+				tool_name = COALESCE(data->>'toolName', data->>'tool')
+			WHERE data IS NOT NULL
+		`);
+
+		console.log(`   ✅ Updated ${result.rowCount} events in PostgreSQL database`);
+	}
+
+	// Update company names
+	await updateCompanyNamesForStartup();
+
+	return true;
+}
+
+async function updateCompanyNamesForStartup() {
+	const dbConn = db.getDbConnection();
+	const dbType = process.env.DB_TYPE || 'sqlite';
+	let updated = 0;
+
+	if (dbType === 'sqlite') {
+		// Get all unique server_ids
+		const serverIds = dbConn.prepare(`
+			SELECT DISTINCT server_id
+			FROM telemetry_events
+			WHERE server_id IS NOT NULL
+		`).all().map(row => row.server_id);
+
+		for (const serverId of serverIds) {
+			// Get the latest event for this server that might have company details
+			const event = dbConn.prepare(`
+				SELECT data
+				FROM telemetry_events
+				WHERE server_id = ?
+					AND data IS NOT NULL
+					AND data != ''
+				ORDER BY timestamp DESC
+				LIMIT 1
+			`).get(serverId);
+
+			if (event) {
+				try {
+					const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+					const companyName = db.extractCompanyName({ data });
+
+					if (companyName) {
+						await db.upsertOrgCompanyName(serverId, companyName);
+						updated++;
+					}
+				} catch (error) {
+					// Skip events with invalid JSON
+				}
+			}
+		}
+	} else {
+		// For PostgreSQL, use a simpler approach
+		const result = await dbConn.query(`
+			SELECT DISTINCT server_id
+			FROM telemetry_events
+			WHERE server_id IS NOT NULL
+		`);
+
+		for (const row of result.rows) {
+			const serverId = row.server_id;
+
+			// Get latest event for this server
+			const eventResult = await dbConn.query(`
+				SELECT data
+				FROM telemetry_events
+				WHERE server_id = $1
+					AND data IS NOT NULL
+				ORDER BY timestamp DESC
+				LIMIT 1
+			`, [serverId]);
+
+			if (eventResult.rows.length > 0) {
+				const data = eventResult.rows[0].data;
+				const companyName = db.extractCompanyName({ data });
+
+				if (companyName) {
+					await db.upsertOrgCompanyName(serverId, companyName);
+					updated++;
+				}
+			}
+		}
+	}
+
+	console.log(`   ✅ Updated ${updated} company names`);
+	return { updated };
+}
+
 // Initialize database and start server
 async function startServer() {
 	try {
 		await db.init();
 		console.log('Database initialized successfully');
+
+		// Run telemetry regularization on production startup (one-time)
+		if (process.env.NODE_ENV === 'production' || process.env.RENDER) {
+			try {
+				console.log('🔄 Running telemetry regularization on production startup...');
+				await runTelemetryRegularization();
+				console.log('✅ Telemetry regularization completed');
+			} catch (error) {
+				console.warn('⚠️ Telemetry regularization failed:', error.message);
+			}
+		}
 
 		// Initialize authentication with database
 		auth.init(db);
