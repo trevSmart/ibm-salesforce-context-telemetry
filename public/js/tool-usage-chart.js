@@ -6,6 +6,18 @@ const TOOL_USAGE_DEFAULT_DAYS = 30;
 let toolUsageChartInstance = null;
 let toolUsageChartInitialized = false;
 
+function cleanupToolUsageChart() {
+	if (toolUsageChartInstance) {
+		try {
+			toolUsageChartInstance.dispose();
+		} catch (error) {
+			console.warn('Error disposing tool usage chart:', error);
+		}
+		toolUsageChartInstance = null;
+	}
+	toolUsageChartInitialized = false;
+}
+
 function getToolUsageChartTheme() {
 	const isDark = document.documentElement.classList.contains('dark');
 	return {
@@ -52,6 +64,9 @@ function setToolUsageLoading(isLoading) {
 }
 
 async function loadToolUsageChart(days = TOOL_USAGE_DEFAULT_DAYS) {
+	// Clean up any existing chart first
+	cleanupToolUsageChart();
+
 	const chart = initToolUsageChart();
 	if (!chart) return;
 
@@ -152,11 +167,26 @@ window.addEventListener('DOMContentLoaded', () => {
 	}
 });
 
+// Also listen for soft navigation back to dashboard
+window.addEventListener('softNav:pageMounted', (event) => {
+	if (event.detail.path === '/') {
+		// Clean up existing chart and reload
+		cleanupToolUsageChart();
+		// Wait for echarts to be ready
+		if (typeof echarts === 'undefined') {
+			window.addEventListener('echartsLoaded', () => loadToolUsageChart(), { once: true });
+		} else {
+			loadToolUsageChart();
+		}
+	}
+});
+
 // Handle theme toggles (class on html)
 const observer = new MutationObserver((mutations) => {
 	if (!toolUsageChartInitialized || !toolUsageChartInstance) return;
 	for (const mutation of mutations) {
 		if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+			cleanupToolUsageChart();
 			loadToolUsageChart();
 			break;
 		}

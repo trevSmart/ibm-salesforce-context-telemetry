@@ -3890,55 +3890,38 @@ if (window.__EVENT_LOG_LOADED__) {
 		return iconMap[eventType] || 'ℹ️';
 	}
 
+	function buildEventPayload(event) {
+		const payload = {
+			event: event.event,
+			timestamp: event.timestamp,
+			serverId: event.server_id || null,
+			version: event.version || null,
+			sessionId: event.session_id || null,
+			userId: event.user_id || null,
+			data: event.data || {}
+		};
+
+		// Remove null values to keep the JSON clean
+		Object.keys(payload).forEach(key => {
+			if (payload[key] === null) {
+				delete payload[key];
+			}
+		});
+
+		return payload;
+	}
+
 	function formatDescription(event) {
 		// If event doesn't have data field (payload not loaded), return special marker
 		if (!event.hasOwnProperty('data')) {
 			return '__VIEW_PAYLOAD_BUTTON__';
 		}
 
-		// Reconstruct the full payload as it was received
-		const payload = {
-			event: event.event,
-			timestamp: event.timestamp,
-			serverId: event.server_id || null,
-			version: event.version || null,
-			sessionId: event.session_id || null,
-			userId: event.user_id || null,
-			data: event.data || {}
-		};
-
-		// Remove null values to keep the JSON clean
-		Object.keys(payload).forEach(key => {
-			if (payload[key] === null) {
-				delete payload[key];
-			}
-		});
-
-		// Return as single line JSON (no indentation)
-		return JSON.stringify(payload);
+		return JSON.stringify(buildEventPayload(event));
 	}
 
 	function formatDescriptionPretty(event) {
-		// Reconstruct the full payload as it was received
-		const payload = {
-			event: event.event,
-			timestamp: event.timestamp,
-			serverId: event.server_id || null,
-			version: event.version || null,
-			sessionId: event.session_id || null,
-			userId: event.user_id || null,
-			data: event.data || {}
-		};
-
-		// Remove null values to keep the JSON clean
-		Object.keys(payload).forEach(key => {
-			if (payload[key] === null) {
-				delete payload[key];
-			}
-		});
-
-		// Return as pretty formatted JSON (with indentation)
-		return JSON.stringify(payload, null, 2);
+		return JSON.stringify(buildEventPayload(event), null, 2);
 	}
 
 	function toggleRowExpand(eventId) {
@@ -3977,19 +3960,31 @@ if (window.__EVENT_LOG_LOADED__) {
 	}
 
 	// Infinite scroll handler
-	function handleScroll() {
+	function shouldLoadMoreOnScroll() {
 		const scrollContainer = document.getElementById('logsTableScroll');
-		if (!scrollContainer || isLoadingMore || !hasMoreEvents) {
+
+		// Prefer the table scroll container if it can scroll
+		if (scrollContainer) {
+			const scrollableHeight = scrollContainer.scrollHeight - scrollContainer.clientHeight;
+			if (scrollableHeight > 0) {
+				const distanceFromBottom = scrollContainer.scrollHeight - scrollContainer.scrollTop - scrollContainer.clientHeight;
+				if (distanceFromBottom < 200) {
+					return true;
+				}
+			}
+		}
+
+		// Fallback to page scroll (when the table container does not create its own scroll)
+		const distanceFromBottomPage = document.documentElement.scrollHeight - window.pageYOffset - window.innerHeight;
+		return distanceFromBottomPage < 200;
+	}
+
+	function handleScroll() {
+		if (isLoadingMore || !hasMoreEvents) {
 			return;
 		}
 
-		// Check if user is near the bottom (within 200px)
-		const scrollTop = scrollContainer.scrollTop;
-		const scrollHeight = scrollContainer.scrollHeight;
-		const clientHeight = scrollContainer.clientHeight;
-		const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
-
-		if (distanceFromBottom < 200) {
+		if (shouldLoadMoreOnScroll()) {
 			loadEvents({ append: true });
 		}
 	}
@@ -4418,24 +4413,40 @@ if (window.__EVENT_LOG_LOADED__) {
 		handleInitializationError('sort button binding', new Error('Sort button not found'));
 	}
 
-	// Infinite scroll setup
-	const scrollContainer = document.getElementById('logsTableScroll');
-	if (scrollContainer) {
-		// Use throttling to improve performance
-		let scrollTimeout;
-		const throttledHandleScroll = () => {
-			if (scrollTimeout) {
+	function setupInfiniteScroll() {
+		// Remove any existing scroll listeners to avoid duplicates
+		if (window._eventLogScrollHandler) {
+			const scrollContainer = document.getElementById('logsTableScroll');
+			if (scrollContainer) {
+				scrollContainer.removeEventListener('scroll', window._eventLogScrollHandler, { passive: true });
+			}
+			window.removeEventListener('scroll', window._eventLogScrollHandler, { passive: true });
+		}
+
+		// Create new scroll handler
+		window._eventLogScrollHandler = () => {
+			if (window._eventLogScrollTimeout) {
 				return;
 			}
-			scrollTimeout = setTimeout(() => {
+			window._eventLogScrollTimeout = setTimeout(() => {
 				handleScroll();
-				scrollTimeout = null;
+				window._eventLogScrollTimeout = null;
 			}, 100);
 		};
-		scrollContainer.addEventListener('scroll', throttledHandleScroll);
-	} else {
-		handleInitializationError('scroll container binding', new Error('Scroll container not found'));
+
+		const scrollContainer = document.getElementById('logsTableScroll');
+		if (scrollContainer) {
+			scrollContainer.addEventListener('scroll', window._eventLogScrollHandler, { passive: true });
+		} else {
+			handleInitializationError('scroll container binding', new Error('Scroll container not found'));
+		}
+
+		// Also listen to page scroll to support layouts where the table container is not scrollable
+		window.addEventListener('scroll', window._eventLogScrollHandler, { passive: true });
 	}
+
+	// Setup infinite scroll
+	setupInfiniteScroll();
 
 	// Function to clear all filters
 	function clearAllFilters() {
@@ -4863,38 +4874,17 @@ if (window.__EVENT_LOG_LOADED__) {
 	// eslint-disable-next-line no-unused-vars
 	async function copyEventPayload(eventId) {
 		try {
-			// Get event data from the DOM element (already loaded, no API call needed)
-			const row = document.querySelector(`tr[data-event-id="${eventId}"]`);
-			if (!row) {
-				alert('Event not found');
-				return;
+			// Fetch the complete event (including payload) from the API
+			const response = await fetch(`/api/events/${eventId}`);
+			if (!response.ok) {
+				throw new Error(`HTTP ${response.status}: ${response.statusText || 'Unable to load event'}`);
+			}
+			const data = await response.json();
+			if (!data?.event) {
+				throw new Error('Event payload not available');
 			}
 
-			const eventDataStr = row.getAttribute('data-event');
-			if (!eventDataStr) {
-				alert('Event data not available');
-				return;
-			}
-
-			const event = JSON.parse(eventDataStr);
-
-			// Reconstruct the full payload as it was received
-			const payload = {
-				event: event.event,
-				timestamp: event.timestamp,
-				serverId: event.server_id || null,
-				version: event.version || null,
-				sessionId: event.session_id || null,
-				userId: event.user_id || null,
-				data: event.data || {}
-			};
-
-			// Remove null values to keep the JSON clean
-			Object.keys(payload).forEach(key => {
-				if (payload[key] === null) {
-					delete payload[key];
-				}
-			});
+			const payload = buildEventPayload(data.event);
 
 			// Format as beautified JSON with proper indentation (2 spaces)
 			const beautifiedPayload = JSON.stringify(payload, null, 2);
@@ -5763,6 +5753,11 @@ if (window.__EVENT_LOG_LOADED__) {
 			clearTimeout(hoverTimeoutId);
 			hoverTimeoutId = null;
 		}
+		// Clear scroll timeout for infinite scroll
+		if (window._eventLogScrollTimeout) {
+			clearTimeout(window._eventLogScrollTimeout);
+			window._eventLogScrollTimeout = null;
+		}
 		// Save chart option before disposing to restore it later
 		if (sessionActivityChart && typeof sessionActivityChart.getOption === 'function') {
 			try {
@@ -5849,6 +5844,7 @@ if (window.__EVENT_LOG_LOADED__) {
 		runSafeAsyncInitStep('users list', () => loadUsersList());
 		runSafeAsyncInitStep('teams list', () => loadTeamsList());
 		runSafeAsyncInitStep('auto refresh', () => updateAutoRefreshInterval());
+		runSafeInitStep('infinite scroll', () => setupInfiniteScroll());
 
 		// Listen for chart rendering completion
 		window.addEventListener('chartRenderComplete', (event) => {
@@ -6022,14 +6018,19 @@ if (window.__EVENT_LOG_LOADED__) {
 	// Load and display event payload in a modal
 	async function loadEventPayload(eventId) {
 		try {
-			const response = await fetch(`/api/events/${eventId}/payload`);
+			// Fetch the complete event (including payload) from the API
+			const response = await fetch(`/api/events/${eventId}`);
 			if (!response.ok) {
-				throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+				throw new Error(`HTTP ${response.status}: ${response.statusText || 'Unable to load event'}`);
 			}
 			const data = await response.json();
+			if (!data?.event) {
+				throw new Error('Event payload not available');
+			}
+			const payload = buildEventPayload(data.event);
 
 			// Show payload in modal
-			showPayloadModal(data.payload, eventId);
+			showPayloadModal(payload, eventId);
 		} catch (error) {
 			console.error('Error loading event payload:', error);
 			alert('Error loading event payload: ' + error.message);

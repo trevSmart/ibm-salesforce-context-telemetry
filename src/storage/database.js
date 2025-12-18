@@ -71,25 +71,6 @@ async function init() {
 				last_login TEXT
 			);
 
-			CREATE TABLE IF NOT EXISTS people (
-				id INTEGER PRIMARY KEY AUTOINCREMENT,
-				name TEXT NOT NULL,
-				email TEXT,
-				notes TEXT,
-				created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-				updated_at TEXT DEFAULT CURRENT_TIMESTAMP
-			);
-
-			CREATE TABLE IF NOT EXISTS person_usernames (
-				person_id INTEGER NOT NULL,
-				username TEXT NOT NULL,
-				org_id TEXT,
-				is_primary BOOLEAN DEFAULT FALSE,
-				created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-				FOREIGN KEY (person_id) REFERENCES people(id) ON DELETE CASCADE,
-				UNIQUE(person_id, username)
-			);
-
 			CREATE TABLE IF NOT EXISTS orgs (
 				server_id TEXT PRIMARY KEY,
 				company_name TEXT,
@@ -157,24 +138,6 @@ async function init() {
 				role TEXT NOT NULL DEFAULT 'basic',
 				created_at TIMESTAMPTZ DEFAULT NOW(),
 				last_login TIMESTAMPTZ
-			);
-
-			CREATE TABLE IF NOT EXISTS people (
-				id SERIAL PRIMARY KEY,
-				name TEXT NOT NULL,
-				email TEXT,
-				notes TEXT,
-				created_at TIMESTAMPTZ DEFAULT NOW(),
-				updated_at TIMESTAMPTZ DEFAULT NOW()
-			);
-
-			CREATE TABLE IF NOT EXISTS person_usernames (
-				person_id INTEGER NOT NULL REFERENCES people(id) ON DELETE CASCADE,
-				username TEXT NOT NULL,
-				org_id TEXT,
-				is_primary BOOLEAN DEFAULT FALSE,
-				created_at TIMESTAMPTZ DEFAULT NOW(),
-				UNIQUE(person_id, username)
 			);
 
 			CREATE TABLE IF NOT EXISTS orgs (
@@ -802,8 +765,7 @@ async function getEvents(options = {}) {
 		startDate,
 		endDate,
 		orderBy = 'created_at',
-		order = 'DESC',
-		excludeData = true
+		order = 'DESC'
 	} = options;
 
 	let whereClause = 'WHERE 1=1';
@@ -823,8 +785,7 @@ async function getEvents(options = {}) {
 		}
 	}
 	if (serverId) {
-		// Disambiguate join with orgs by qualifying the server_id column
-		whereClause += dbType === 'sqlite' ? ' AND telemetry_events.server_id = ?' : ` AND telemetry_events.server_id = $${paramIndex++}`;
+		whereClause += dbType === 'sqlite' ? ' AND server_id = ?' : ` AND server_id = $${paramIndex++}`;
 		params.push(serverId);
 	}
 	if (sessionId) {
@@ -838,11 +799,11 @@ async function getEvents(options = {}) {
 		paramIndex += dbType === 'sqlite' ? 0 : 2;
 	}
 	if (startDate) {
-		whereClause += dbType === 'sqlite' ? ' AND telemetry_events.created_at >= ?' : ` AND telemetry_events.created_at >= $${paramIndex++}`;
+		whereClause += dbType === 'sqlite' ? ' AND created_at >= ?' : ` AND created_at >= $${paramIndex++}`;
 		params.push(startDate);
 	}
 	if (endDate) {
-		whereClause += dbType === 'sqlite' ? ' AND telemetry_events.created_at <= ?' : ` AND telemetry_events.created_at <= $${paramIndex++}`;
+		whereClause += dbType === 'sqlite' ? ' AND created_at <= ?' : ` AND created_at <= $${paramIndex++}`;
 		params.push(endDate);
 	}
 	if (options.userIds && Array.isArray(options.userIds) && options.userIds.length > 0) {
@@ -862,7 +823,7 @@ async function getEvents(options = {}) {
 	const shouldComputeTotal = offset === 0 || limit <= MAX_LIMIT_FOR_TOTAL_COMPUTATION;
 
 	if (shouldComputeTotal) {
-		let countQuery = `SELECT COUNT(*) as total FROM telemetry_events LEFT JOIN orgs ON telemetry_events.server_id = orgs.server_id ${whereClause}`;
+		let countQuery = `SELECT COUNT(*) as total FROM telemetry_events ${whereClause}`;
 		if (dbType === 'sqlite') {
 			total = db.prepare(countQuery).get(...params).total;
 		} else {
@@ -875,28 +836,24 @@ async function getEvents(options = {}) {
 	const validOrderBy = ['id', 'event', 'timestamp', 'created_at', 'server_id'];
 	const validOrder = ['ASC', 'DESC'];
 	// Only select orderBy and order values from predefined lists without using user data directly
-	let safeOrderBy = 'created_at';
+	let safeOrderBy = 'e.created_at';
 	if (validOrderBy.includes(orderBy)) {
-		safeOrderBy = orderBy;
+		safeOrderBy = 'e.' + orderBy;
 	}
 	let safeOrder = 'DESC';
 	if (typeof order === 'string' && validOrder.includes(order.toUpperCase())) {
 		safeOrder = order.toUpperCase();
 	}
 
-	// Build select fields - exclude data field if requested for performance
-	// Always include denormalized columns (org_id, user_name, tool_name) for display
-	// Qualify server_id to avoid ambiguity with orgs join
-	const selectFields = excludeData
-		? 'id, event, timestamp, telemetry_events.server_id AS server_id, version, session_id, user_id, org_id, user_name, tool_name, received_at, telemetry_events.created_at AS created_at'
-		: 'id, event, timestamp, telemetry_events.server_id AS server_id, version, session_id, user_id, org_id, user_name, tool_name, data, received_at, telemetry_events.created_at AS created_at';
-
 	let eventsQuery = `
-		SELECT ${selectFields}, orgs.company_name
-		FROM telemetry_events
-		LEFT JOIN orgs ON telemetry_events.server_id = orgs.server_id
+		SELECT
+			e.id, e.event, e.timestamp, e.server_id, e.version, e.session_id, e.parent_session_id,
+			e.user_id, e.received_at, e.created_at, e.tool_name,
+			COALESCE(o.company_name, '') AS company_name
+		FROM telemetry_events e
+		LEFT JOIN orgs o ON e.server_id = o.server_id
 		${whereClause}
-		ORDER BY telemetry_events.${safeOrderBy} ${safeOrder}
+		ORDER BY ${safeOrderBy} ${safeOrder}
 		LIMIT ${dbType === 'sqlite' ? '?' : `$${paramIndex++}`}
 		OFFSET ${dbType === 'sqlite' ? '?' : `$${paramIndex++}`}
 	`;
@@ -906,13 +863,6 @@ async function getEvents(options = {}) {
 
 	if (dbType === 'sqlite') {
 		events = db.prepare(eventsQuery).all(...queryParams);
-		// Parse JSON data for SQLite only if data field is included
-		if (!excludeData) {
-			events = events.map(event => ({
-				...event,
-				data: JSON.parse(event.data)
-			}));
-		}
 	} else {
 		const result = await db.query(eventsQuery, queryParams);
 		events = result.rows;
@@ -938,7 +888,7 @@ async function getEventById(id) {
 	}
 
 	if (dbType === 'sqlite') {
-		const event = db.prepare('SELECT id, event, timestamp, server_id, version, session_id, user_id, data, received_at, created_at FROM telemetry_events WHERE id = ?').get(id);
+		const event = db.prepare('SELECT id, event, timestamp, server_id, version, session_id, parent_session_id, user_id, data, received_at, created_at FROM telemetry_events WHERE id = ?').get(id);
 		if (!event) {
 			return null;
 		}
@@ -947,7 +897,7 @@ async function getEventById(id) {
 			data: JSON.parse(event.data)
 		};
 	} else {
-		const result = await db.query('SELECT id, event, timestamp, server_id, version, session_id, user_id, data, received_at, created_at FROM telemetry_events WHERE id = $1', [id]);
+		const result = await db.query('SELECT id, event, timestamp, server_id, version, session_id, parent_session_id, user_id, data, received_at, created_at FROM telemetry_events WHERE id = $1', [id]);
 		if (result.rows.length === 0) {
 			return null;
 		}
@@ -1553,161 +1503,6 @@ async function getDailyStatsByEventType(days = 30) {
 }
 
 /**
- * Get tool usage statistics for the dashboard chart
- * @param {number} days - Number of days to look back
- * @returns {Promise<Array<{tool: string, successful: number, errors: number}>>} Tool usage stats
- */
-async function getToolUsageStats(days = 30) {
-	if (!db) {
-		throw new Error('Database not initialized. Call init() first.');
-	}
-
-	// Always include today's data by building the range backwards from today (UTC)
-	const rangeDays = Math.max(1, Number.isFinite(days) ? Math.floor(days) : 30);
-	const now = new Date();
-	const startDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-	startDate.setUTCDate(startDate.getUTCDate() - (rangeDays - 1));
-	const startDateISO = startDate.toISOString();
-
-	try {
-		if (dbType === 'sqlite') {
-			// Try to use the tool_name column first (more efficient)
-			const toolStats = db.prepare(`
-				SELECT
-					tool_name as tool,
-					SUM(CASE WHEN event = 'tool_call' THEN 1 ELSE 0 END) as successful,
-					SUM(CASE WHEN event = 'tool_error' THEN 1 ELSE 0 END) as errors
-				FROM telemetry_events
-				WHERE timestamp >= ?
-					AND event IN ('tool_call', 'tool_error')
-					AND tool_name IS NOT NULL
-					AND tool_name != ''
-				GROUP BY tool_name
-				ORDER BY (successful + errors) DESC
-				LIMIT 6
-			`).all(startDateISO);
-
-			return toolStats.map(row => ({
-				tool: row.tool,
-				successful: parseInt(row.successful) || 0,
-				errors: parseInt(row.errors) || 0
-			}));
-		} else if (dbType === 'postgresql') {
-			// Try to use the tool_name column first (more efficient)
-			const result = await db.query(`
-				SELECT
-					tool_name as tool,
-					SUM(CASE WHEN event = 'tool_call' THEN 1 ELSE 0 END) as successful,
-					SUM(CASE WHEN event = 'tool_error' THEN 1 ELSE 0 END) as errors
-				FROM telemetry_events
-				WHERE timestamp >= $1
-					AND event IN ('tool_call', 'tool_error')
-					AND tool_name IS NOT NULL
-					AND tool_name != ''
-				GROUP BY tool_name
-				ORDER BY (successful + errors) DESC
-				LIMIT 6
-			`, [startDateISO]);
-
-			return result.rows.map(row => ({
-				tool: row.tool,
-				successful: parseInt(row.successful) || 0,
-				errors: parseInt(row.errors) || 0
-			}));
-		}
-	} catch (error) {
-		console.warn('Error querying tool_name column, falling back to JSON extraction:', error.message);
-
-		// Fallback: extract tool names from JSON data
-		if (dbType === 'sqlite') {
-			const toolEvents = db.prepare(`
-				SELECT
-					json_extract(data, '$.toolName') as tool_name,
-					event,
-					COUNT(*) as count
-				FROM telemetry_events
-				WHERE timestamp >= ? AND event IN ('tool_call', 'tool_error')
-					AND json_extract(data, '$.toolName') IS NOT NULL
-					AND json_extract(data, '$.toolName') != ''
-				GROUP BY json_extract(data, '$.toolName'), event
-			`).all(startDateISO);
-
-			// Aggregate by tool name
-			const toolStats = new Map();
-			toolEvents.forEach(row => {
-				const toolName = String(row.tool_name).trim();
-				if (!toolName) return;
-
-				if (!toolStats.has(toolName)) {
-					toolStats.set(toolName, {
-						tool: toolName,
-						successful: 0,
-						errors: 0
-					});
-				}
-
-				const stat = toolStats.get(toolName);
-				const count = parseInt(row.count) || 0;
-
-				if (row.event === 'tool_call') {
-					stat.successful += count;
-				} else if (row.event === 'tool_error') {
-					stat.errors += count;
-				}
-			});
-
-			// Convert to array and sort by total usage
-			return Array.from(toolStats.values())
-				.sort((a, b) => (b.successful + b.errors) - (a.successful + a.errors))
-				.slice(0, 6);
-		} else if (dbType === 'postgresql') {
-			const result = await db.query(`
-				SELECT
-					COALESCE(data->>'toolName', data->>'tool') as tool_name,
-					event,
-					COUNT(*) as count
-				FROM telemetry_events
-				WHERE timestamp >= $1 AND event IN ('tool_call', 'tool_error')
-					AND (data->>'toolName' IS NOT NULL OR data->>'tool' IS NOT NULL)
-					AND (data->>'toolName' != '' OR data->>'tool' != '')
-				GROUP BY COALESCE(data->>'toolName', data->>'tool'), event
-			`, [startDateISO]);
-
-			// Aggregate by tool name
-			const toolStats = new Map();
-			result.rows.forEach(row => {
-				const toolName = String(row.tool_name).trim();
-				if (!toolName) return;
-
-				if (!toolStats.has(toolName)) {
-					toolStats.set(toolName, {
-						tool: toolName,
-						successful: 0,
-						errors: 0
-					});
-				}
-
-				const stat = toolStats.get(toolName);
-				const count = parseInt(row.count) || 0;
-
-				if (row.event === 'tool_call') {
-					stat.successful += count;
-				} else if (row.event === 'tool_error') {
-					stat.errors += count;
-				}
-			});
-
-			// Convert to array and sort by total usage
-			return Array.from(toolStats.values())
-				.sort((a, b) => (b.successful + b.errors) - (a.successful + a.errors))
-				.slice(0, 6);
-		}
-	}
-
-	return [];
-}
-
-/**
  * Get database size in bytes
  * @returns {Promise<{size: number, maxSize: number|null}|null>} Database size info, or null if not available
  */
@@ -1791,6 +1586,160 @@ async function close() {
 		}
 		db = null;
 	}
+}
+
+/**
+ * Get tool usage statistics
+ * @param {number} days - Number of days to look back (default: 30)
+ * @returns {Promise<Array>} Array of tool usage statistics with successful calls and errors
+ */
+async function getToolUsageStats(days = 30) {
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
+
+	const rangeDays = Math.min(Math.max(1, Number.isFinite(days) ? days : 30), 365);
+	const startDate = new Date();
+	startDate.setUTCDate(startDate.getUTCDate() - (rangeDays - 1));
+	const startDateISO = startDate.toISOString();
+
+	try {
+		if (dbType === 'sqlite') {
+			// Try to use the tool_name column first (more efficient)
+			const toolStats = db.prepare(`
+				SELECT
+					tool_name as tool,
+					SUM(CASE WHEN event = 'tool_call' THEN 1 ELSE 0 END) as successful,
+					SUM(CASE WHEN event = 'tool_error' THEN 1 ELSE 0 END) as errors
+				FROM telemetry_events
+				WHERE timestamp >= ?
+					AND event IN ('tool_call', 'tool_error')
+					AND tool_name IS NOT NULL
+					AND tool_name != ''
+				GROUP BY tool_name
+				ORDER BY (successful + errors) DESC
+				LIMIT 6
+			`).all(startDateISO);
+
+			return toolStats.map(row => ({
+				tool: row.tool,
+				successful: parseInt(row.successful) || 0,
+				errors: parseInt(row.errors) || 0
+			}));
+		} else if (dbType === 'postgresql') {
+			// Try to use the tool_name column first (more efficient)
+			const result = await db.query(`
+				SELECT
+					tool_name as tool,
+					SUM(CASE WHEN event = 'tool_call' THEN 1 ELSE 0 END) as successful,
+					SUM(CASE WHEN event = 'tool_error' THEN 1 ELSE 0 END) as errors
+				FROM telemetry_events
+				WHERE timestamp >= $1
+					AND event IN ('tool_call', 'tool_error')
+					AND tool_name IS NOT NULL
+					AND tool_name != ''
+				GROUP BY tool_name
+				ORDER BY (successful + errors) DESC
+				LIMIT 6
+			`, [startDateISO]);
+
+			return result.rows.map(row => ({
+				tool: row.tool,
+				successful: parseInt(row.successful) || 0,
+				errors: parseInt(row.errors) || 0
+			}));
+		}
+	} catch (error) {
+		console.warn('Error querying tool_name column, falling back to JSON extraction:', error.message);
+
+		// Fallback: extract tool names from JSON data
+		if (dbType === 'sqlite') {
+			const result = db.prepare(`
+				SELECT data
+				FROM telemetry_events
+				WHERE timestamp >= ?
+					AND event IN ('tool_call', 'tool_error')
+			`).all(startDateISO);
+
+			// Aggregate by tool name
+			const toolStats = new Map();
+			result.forEach(row => {
+				try {
+					const eventData = JSON.parse(row.data);
+					const toolName = eventData.toolName || eventData.tool;
+					if (toolName && typeof toolName === 'string') {
+						const trimmedName = toolName.trim();
+						if (trimmedName) {
+							if (!toolStats.has(trimmedName)) {
+								toolStats.set(trimmedName, {
+									tool: trimmedName,
+									successful: 0,
+									errors: 0
+								});
+							}
+
+							const stat = toolStats.get(trimmedName);
+							if (row.event === 'tool_call') {
+								stat.successful++;
+							} else if (row.event === 'tool_error') {
+								stat.errors++;
+							}
+						}
+					}
+				} catch (parseError) {
+					// Skip malformed JSON
+				}
+			});
+
+			// Convert to array and sort by total usage
+			return Array.from(toolStats.values())
+				.sort((a, b) => (b.successful + b.errors) - (a.successful + a.errors))
+				.slice(0, 6);
+		} else if (dbType === 'postgresql') {
+			const result = await db.query(`
+				SELECT
+					COALESCE(data->>'toolName', data->>'tool') as tool_name,
+					event,
+					COUNT(*) as count
+				FROM telemetry_events
+				WHERE timestamp >= $1 AND event IN ('tool_call', 'tool_error')
+					AND (data->>'toolName' IS NOT NULL OR data->>'tool' IS NOT NULL)
+					AND (data->>'toolName' != '' OR data->>'tool' != '')
+				GROUP BY COALESCE(data->>'toolName', data->>'tool'), event
+			`, [startDateISO]);
+
+			// Aggregate by tool name
+			const toolStats = new Map();
+			result.rows.forEach(row => {
+				const toolName = String(row.tool_name).trim();
+				if (!toolName) return;
+
+				if (!toolStats.has(toolName)) {
+					toolStats.set(toolName, {
+						tool: toolName,
+						successful: 0,
+						errors: 0
+					});
+				}
+
+				const stat = toolStats.get(toolName);
+				const count = parseInt(row.count) || 0;
+
+				if (row.event === 'tool_call') {
+					stat.successful += count;
+				} else if (row.event === 'tool_error') {
+					stat.errors += count;
+				}
+			});
+
+			// Convert to array and sort by total usage
+			return Array.from(toolStats.values())
+				.sort((a, b) => (b.successful + b.errors) - (a.successful + a.errors))
+				.slice(0, 6);
+		}
+	}
+
+	return [];
 }
 
 /**
@@ -2115,27 +2064,6 @@ async function getUniqueUserIds() {
 	});
 
 	return Array.from(userMap.values()).sort((a, b) => a.label.localeCompare(b.label));
-}
-
-/**
- * Execute raw SQL query
- */
-async function executeSql(sql, params = []) {
-	try {
-		if (dbType === 'postgresql') {
-			return await db.query(sql, params);
-		} else {
-			// For SQLite, use the appropriate method based on the query type
-			if (sql.toUpperCase().trim().startsWith('SELECT') || sql.toUpperCase().trim().startsWith('PRAGMA')) {
-				return db.prepare(sql).all(params);
-			} else {
-				return db.prepare(sql).run(params);
-			}
-		}
-	} catch (error) {
-		console.error('Error executing SQL:', sql, error);
-		throw error;
-	}
 }
 
 /**
@@ -5095,218 +5023,6 @@ async function importDatabase(importData) {
 	}
 }
 
-// People management functions
-async function getAllPeople() {
-	try {
-		if (dbType === 'sqlite') {
-			const stmt = db.prepare('SELECT id, name, email, notes, created_at, updated_at FROM people ORDER BY name');
-			return stmt.all().map(person => ({
-				...person,
-				created_at: person.created_at,
-				updated_at: person.updated_at
-			}));
-		} else {
-			const result = await db.query('SELECT id, name, email, notes, created_at, updated_at FROM people ORDER BY name');
-			return result.rows;
-		}
-	} catch (error) {
-		console.error('Error fetching people:', error);
-		throw error;
-	}
-}
-
-async function getPersonById(id) {
-	try {
-		if (dbType === 'sqlite') {
-			const stmt = db.prepare('SELECT id, name, email, notes, created_at, updated_at FROM people WHERE id = ?');
-			return stmt.get(id);
-		} else {
-			const result = await db.query('SELECT id, name, email, notes, created_at, updated_at FROM people WHERE id = $1', [id]);
-			return result.rows[0];
-		}
-	} catch (error) {
-		console.error('Error fetching person by id:', error);
-		throw error;
-	}
-}
-
-async function createPerson(name, email = null, notes = null) {
-	try {
-		const now = new Date().toISOString();
-
-		if (dbType === 'sqlite') {
-			const stmt = db.prepare('INSERT INTO people (name, email, notes, created_at, updated_at) VALUES (?, ?, ?, ?, ?)');
-			const result = stmt.run(name, email, notes, now, now);
-			return result.lastInsertRowid;
-		} else {
-			const result = await db.query(
-				'INSERT INTO people (name, email, notes, created_at, updated_at) VALUES ($1, $2, $3, $4, $5) RETURNING id',
-				[name, email, notes, now, now]
-			);
-			return result.rows[0].id;
-		}
-	} catch (error) {
-		console.error('Error creating person:', error);
-		throw error;
-	}
-}
-
-async function updatePerson(id, updates) {
-	try {
-		const { name, email, notes } = updates;
-		const now = new Date().toISOString();
-
-		const updatesList = [];
-		const params = [];
-
-		if (name !== undefined) {
-			updatesList.push(dbType === 'sqlite' ? 'name = ?' : 'name = $' + (params.length + 1));
-			params.push(name);
-		}
-		if (email !== undefined) {
-			updatesList.push(dbType === 'sqlite' ? 'email = ?' : 'email = $' + (params.length + 1));
-			params.push(email);
-		}
-		if (notes !== undefined) {
-			updatesList.push(dbType === 'sqlite' ? 'notes = ?' : 'notes = $' + (params.length + 1));
-			params.push(notes);
-		}
-
-		if (updatesList.length === 0) {
-			return false; // Nothing to update
-		}
-
-		updatesList.push(dbType === 'sqlite' ? 'updated_at = ?' : 'updated_at = $' + (params.length + 1));
-		params.push(now);
-
-		params.push(id); // Add id at the end
-
-		const query = `UPDATE people SET ${updatesList.join(', ')} WHERE id = ${dbType === 'sqlite' ? '?' : '$' + params.length}`;
-
-		if (dbType === 'sqlite') {
-			const stmt = db.prepare(query);
-			const result = stmt.run(...params);
-			return result.changes > 0;
-		} else {
-			const result = await db.query(query, params);
-			return result.rowCount > 0;
-		}
-	} catch (error) {
-		console.error('Error updating person:', error);
-		throw error;
-	}
-}
-
-async function deletePerson(id) {
-	try {
-		if (dbType === 'sqlite') {
-			const stmt = db.prepare('DELETE FROM people WHERE id = ?');
-			const result = stmt.run(id);
-			return result.changes > 0;
-		} else {
-			const result = await db.query('DELETE FROM people WHERE id = $1', [id]);
-			return result.rowCount > 0;
-		}
-	} catch (error) {
-		console.error('Error deleting person:', error);
-		throw error;
-	}
-}
-
-function getDbConnection() {
-	return db;
-}
-
-async function getPersonUsernames(personId) {
-	try {
-		if (dbType === 'sqlite') {
-			const stmt = db.prepare(`
-				SELECT pu.username, pu.org_id, pu.is_primary, pu.created_at,
-					   o.company_name as org_name
-				FROM person_usernames pu
-				LEFT JOIN orgs o ON pu.org_id = o.server_id
-				WHERE pu.person_id = ?
-				ORDER BY pu.is_primary DESC, pu.created_at DESC
-			`);
-			return stmt.all(personId);
-		} else {
-			const result = await db.query(`
-				SELECT pu.username, pu.org_id, pu.is_primary, pu.created_at,
-					   o.company_name as org_name
-				FROM person_usernames pu
-				LEFT JOIN orgs o ON pu.org_id = o.server_id
-				WHERE pu.person_id = $1
-				ORDER BY pu.is_primary DESC, pu.created_at DESC
-			`, [personId]);
-			return result.rows;
-		}
-	} catch (error) {
-		console.error('Error fetching person usernames:', error);
-		throw error;
-	}
-}
-
-async function addPersonUsername(personId, username, orgId = null, isPrimary = false) {
-	try {
-		const now = new Date().toISOString();
-
-		if (dbType === 'sqlite') {
-			const stmt = db.prepare('INSERT INTO person_usernames (person_id, username, org_id, is_primary, created_at) VALUES (?, ?, ?, ?, ?)');
-			stmt.run(personId, username, orgId, isPrimary ? 1 : 0, now);
-		} else {
-			await db.query(
-				'INSERT INTO person_usernames (person_id, username, org_id, is_primary, created_at) VALUES ($1, $2, $3, $4, $5)',
-				[personId, username, orgId, isPrimary, now]
-			);
-		}
-	} catch (error) {
-		console.error('Error adding person username:', error);
-		throw error;
-	}
-}
-
-async function removePersonUsername(personId, username) {
-	try {
-		if (dbType === 'sqlite') {
-			const stmt = db.prepare('DELETE FROM person_usernames WHERE person_id = ? AND username = ?');
-			const result = stmt.run(personId, username);
-			return result.changes > 0;
-		} else {
-			const result = await db.query('DELETE FROM person_usernames WHERE person_id = $1 AND username = $2', [personId, username]);
-			return result.rowCount > 0;
-		}
-	} catch (error) {
-		console.error('Error removing person username:', error);
-		throw error;
-	}
-}
-
-async function setPrimaryUsername(personId, username) {
-	try {
-		// First, set all usernames for this person to non-primary
-		if (dbType === 'sqlite') {
-			const resetStmt = db.prepare('UPDATE person_usernames SET is_primary = 0 WHERE person_id = ?');
-			resetStmt.run(personId);
-
-			// Then set the specified username as primary
-			const setStmt = db.prepare('UPDATE person_usernames SET is_primary = 1 WHERE person_id = ? AND username = ?');
-			const result = setStmt.run(personId, username);
-			return result.changes > 0;
-		} else {
-			await db.query('UPDATE person_usernames SET is_primary = false WHERE person_id = $1', [personId]);
-
-			const result = await db.query(
-				'UPDATE person_usernames SET is_primary = true WHERE person_id = $1 AND username = $2',
-				[personId, username]
-			);
-			return result.rowCount > 0;
-		}
-	} catch (error) {
-		console.error('Error setting primary username:', error);
-		throw error;
-	}
-}
-
 module.exports = {
 	init,
 	storeEvent,
@@ -5317,7 +5033,6 @@ module.exports = {
 	getSessions,
 	getDailyStats,
 	getDailyStatsByEventType,
-	getToolUsageStats,
 	getTopUsersLastDays,
 	getTopTeamsLastDays,
 	getUserEventStats,
@@ -5355,16 +5070,6 @@ module.exports = {
 	addEventUserToTeam,
 	removeEventUserFromTeam,
 	getEventUserNames,
-	// People management
-	getAllPeople,
-	getPersonById,
-	createPerson,
-	updatePerson,
-	deletePerson,
-	getPersonUsernames,
-	addPersonUsername,
-	removePersonUsername,
-	setPrimaryUsername,
 	// Event updates
 	updateEventData,
 	// User filtering
@@ -5384,10 +5089,9 @@ module.exports = {
 	getActiveRememberTokensCount,
 	// Utilities
 	getNormalizedUserId,
-	getDbConnection,
+	// Tool usage statistics
+	getToolUsageStats,
 	// Database export/import
 	exportDatabase,
-	importDatabase,
-	// Raw SQL execution
-	executeSql
+	importDatabase
 };
