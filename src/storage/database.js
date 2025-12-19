@@ -415,6 +415,107 @@ function extractToolName(eventData = {}) {
 }
 
 /**
+ * Extract all normalized fields from telemetry event data in a single pass
+ * @param {object} eventData - The telemetry event data
+ * @returns {object} Object containing all extracted fields: {orgId, userName, toolName, companyName, errorMessage}
+ */
+function extractNormalizedFields(eventData = {}) {
+	const result = {
+		orgId: null,
+		userName: null,
+		toolName: null,
+		companyName: null,
+		errorMessage: null
+	};
+
+	if (!eventData || !eventData.data) {
+		return result;
+	}
+
+	const data = eventData.data;
+
+	// Extract orgId (new format: data.state.org.id, legacy: data.orgId)
+	if (data.state && data.state.org && data.state.org.id) {
+		const orgId = data.state.org.id;
+		if (typeof orgId === 'string' && orgId.trim() !== '') {
+			result.orgId = orgId.trim();
+		}
+	} else if (data.orgId && typeof data.orgId === 'string') {
+		const orgId = data.orgId.trim();
+		if (orgId !== '') {
+			result.orgId = orgId;
+		}
+	}
+
+	// Extract userName (from data, prioritizing different formats)
+	result.userName = extractUserDisplayName(data);
+
+	// Extract toolName (data.toolName first, then data.tool)
+	if (data.toolName && typeof data.toolName === 'string') {
+		const toolName = data.toolName.trim();
+		if (toolName !== '') {
+			result.toolName = toolName;
+		}
+	} else if (data.tool && typeof data.tool === 'string') {
+		const toolName = data.tool.trim();
+		if (toolName !== '') {
+			result.toolName = toolName;
+		}
+	}
+	// For error events, also check data.error.toolName and data.error.tool
+	if (!result.toolName && data.error && typeof data.error === 'object') {
+		if (data.error.toolName && typeof data.error.toolName === 'string') {
+			const toolName = data.error.toolName.trim();
+			if (toolName !== '') {
+				result.toolName = toolName;
+			}
+		} else if (data.error.tool && typeof data.error.tool === 'string') {
+			const toolName = data.error.tool.trim();
+			if (toolName !== '') {
+				result.toolName = toolName;
+			}
+		}
+	}
+
+	// Extract companyName (new format: data.state.org.companyDetails.Name, legacy: data.companyDetails.Name)
+	if (data.state && data.state.org && data.state.org.companyDetails) {
+		const companyName = data.state.org.companyDetails.Name;
+		if (typeof companyName === 'string' && companyName.trim() !== '') {
+			result.companyName = companyName.trim();
+		}
+	} else if (data.companyDetails && typeof data.companyDetails.Name === 'string') {
+		const companyName = data.companyDetails.Name.trim();
+		if (companyName !== '') {
+			result.companyName = companyName;
+		}
+	}
+
+	// Extract errorMessage (for tool_error events: data.errorMessage, fallback: data.error.message)
+	if (data.errorMessage && typeof data.errorMessage === 'string') {
+		const errorMessage = data.errorMessage.trim();
+		if (errorMessage !== '') {
+			result.errorMessage = errorMessage;
+		}
+	} else if (data.error && typeof data.error === 'object' && data.error.message && typeof data.error.message === 'string') {
+		const errorMessage = data.error.message.trim();
+		if (errorMessage !== '') {
+			result.errorMessage = errorMessage;
+		}
+	}
+
+	return result;
+}
+
+/**
+ * Extract error message from tool_error events (legacy function, kept for backward compatibility)
+ * @param {object} eventData - The event data object
+ * @returns {string|null} - The error message or null if not found
+ */
+function extractErrorMessage(eventData = {}) {
+	return extractNormalizedFields(eventData).errorMessage;
+}
+
+/**
  * Update or insert organization company name
  * @param {string} serverId - Server ID (org identifier)
  * @param {string} companyName - Company name
@@ -634,17 +735,15 @@ async function storeEvent(eventData, receivedAt) {
 			normalizedUserId
 		);
 
-		// Extract denormalized fields for faster queries
-		const orgId = extractOrgId(eventData);
-		const userName = extractUserDisplayName(eventData.data || {});
-		const toolName = extractToolName(eventData);
-		const companyName = extractCompanyName(eventData);
+		// Extract denormalized fields for faster queries (single pass optimization)
+		const normalizedFields = extractNormalizedFields(eventData);
+		const { orgId, userName, toolName, companyName, errorMessage } = normalizedFields;
 
 		if (dbType === 'sqlite') {
 			const stmt = getPreparedStatement('insertEvent', `
 				INSERT INTO telemetry_events
-				(event, timestamp, server_id, version, session_id, parent_session_id, user_id, data, received_at, org_id, user_name, tool_name, company_name)
-				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+				(event, timestamp, server_id, version, session_id, parent_session_id, user_id, data, received_at, org_id, user_name, tool_name, company_name, error_message)
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 			`);
 
 			stmt.run(
@@ -660,13 +759,14 @@ async function storeEvent(eventData, receivedAt) {
 				orgId,
 				userName,
 				toolName,
-				companyName
+				companyName,
+				errorMessage
 			);
 		} else if (dbType === 'postgresql') {
 			await db.query(
 				`INSERT INTO telemetry_events
-				(event, timestamp, server_id, version, session_id, parent_session_id, user_id, data, received_at, org_id, user_name, tool_name, company_name)
-				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+				(event, timestamp, server_id, version, session_id, parent_session_id, user_id, data, received_at, org_id, user_name, tool_name, company_name, error_message)
+				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
 				[
 					eventData.event,
 					eventData.timestamp,
@@ -680,7 +780,8 @@ async function storeEvent(eventData, receivedAt) {
 					orgId,
 					userName,
 					toolName,
-					companyName
+					companyName,
+					errorMessage
 				]
 			);
 		}
@@ -2560,7 +2661,7 @@ async function populateDenormalizedColumns() {
 			const result = db.prepare(`
         SELECT COUNT(*) as count
         FROM telemetry_events
-        WHERE (org_id IS NULL OR user_name IS NULL OR tool_name IS NULL)
+        WHERE (org_id IS NULL OR user_name IS NULL OR tool_name IS NULL OR error_message IS NULL)
           AND data IS NOT NULL
           AND data != ''
         LIMIT 1
@@ -2608,7 +2709,7 @@ async function populateDenormalizedColumns() {
 				// Prepara la consulta d'actualització
 				const updateStmt = db.prepare(`
           UPDATE telemetry_events
-          SET org_id = ?, user_name = ?, tool_name = ?, company_name = ?
+          SET org_id = ?, user_name = ?, tool_name = ?, company_name = ?, error_message = ?
           WHERE id = ?
         `);
 
@@ -2619,14 +2720,12 @@ async function populateDenormalizedColumns() {
 						const data = typeof row.data === 'string' ? JSON.parse(row.data) : row.data;
 						const eventData = { data };
 
-						// Extreu els valors denormalitzats usant les funcions d'extracció
-						const orgId = extractOrgId(eventData);
-						const userName = extractUserDisplayName(data);
-						const toolName = extractToolName(eventData);
-						const companyName = extractCompanyName(eventData);
+						// Extreu els valors denormalitzats usant la funció consolidada (optimització)
+						const normalizedFields = extractNormalizedFields(eventData);
+						const { orgId, userName, toolName, companyName, errorMessage } = normalizedFields;
 
 						// Actualitza el registre amb els valors extrets
-						updateStmt.run(orgId, userName, toolName, companyName, row.id);
+						updateStmt.run(orgId, userName, toolName, companyName, errorMessage, row.id);
 					} catch (error) {
 						// Salta registres amb JSON invàlid (els deixa sense emplenar)
 						// Això evita aturar tot el procés per un sol registre corrupte
@@ -2665,8 +2764,13 @@ async function populateDenormalizedColumns() {
           company_name = COALESCE(
             data->'state'->'org'->'companyDetails'->>'Name',
             data->'companyDetails'->>'Name'
+          ),
+          -- Extreu error_message per events tool_error
+          error_message = COALESCE(
+            data->>'errorMessage',
+            data->'error'->>'message'
           )
-        WHERE (org_id IS NULL OR user_name IS NULL OR tool_name IS NULL)
+        WHERE (org_id IS NULL OR user_name IS NULL OR tool_name IS NULL OR error_message IS NULL)
           AND data IS NOT NULL
       `);
 		}

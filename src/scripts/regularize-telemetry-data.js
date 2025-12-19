@@ -154,6 +154,37 @@ function extractOrgId(eventData = {}) {
 }
 
 /**
+ * Extract error message from tool_error events
+ * @param {object} eventData - The event data object
+ * @returns {string|null} - The error message or null if not found
+ */
+function extractErrorMessage(eventData = {}) {
+	if (!eventData || !eventData.data) {
+		return null;
+	}
+
+	const data = eventData.data;
+
+	// For tool_error events, check data.errorMessage first
+	if (data.errorMessage && typeof data.errorMessage === 'string') {
+		const errorMessage = data.errorMessage.trim();
+		if (errorMessage !== '') {
+			return errorMessage;
+		}
+	}
+
+	// Also check data.error.message as fallback
+	if (data.error && typeof data.error === 'object' && data.error.message && typeof data.error.message === 'string') {
+		const errorMessage = data.error.message.trim();
+		if (errorMessage !== '') {
+			return errorMessage;
+		}
+	}
+
+	return null;
+}
+
+/**
  * Force populate denormalized columns for all events
  */
 async function forcePopulateDenormalizedColumns() {
@@ -184,7 +215,7 @@ async function forcePopulateDenormalizedColumns() {
 
 			const updateStmt = db.prepare(`
 				UPDATE telemetry_events
-				SET org_id = ?, user_name = ?, tool_name = ?
+				SET org_id = ?, user_name = ?, tool_name = ?, company_name = ?, error_message = ?
 				WHERE id = ?
 			`);
 
@@ -193,12 +224,12 @@ async function forcePopulateDenormalizedColumns() {
 					const data = typeof row.data === 'string' ? JSON.parse(row.data) : row.data;
 					const eventData = { data, server_id: row.server_id };
 
-					const orgId = extractOrgId(eventData);
-					// user_name comes from user_id column, not from JSON data
-					const userName = row.user_id || extractUserDisplayName(data);
-					const toolName = extractToolName(eventData);
+					const normalizedFields = extractNormalizedFields(eventData);
+					// user_name comes from user_id column, not from JSON data (override if needed)
+					const userName = row.user_id || normalizedFields.userName;
+					const { orgId, toolName, companyName, errorMessage } = normalizedFields;
 
-					updateStmt.run(orgId, userName, toolName, row.id);
+					updateStmt.run(orgId, userName, toolName, companyName, errorMessage, row.id);
 					totalProcessed++;
 				} catch (error) {
 					// Skip invalid JSON
@@ -234,6 +265,14 @@ async function forcePopulateDenormalizedColumns() {
 				tool_name = COALESCE(
 					data->>'toolName',
 					data->>'tool'
+				),
+				company_name = COALESCE(
+					data->'state'->'org'->'companyDetails'->>'Name',
+					data->'companyDetails'->>'Name'
+				),
+				error_message = COALESCE(
+					data->>'errorMessage',
+					data->'error'->>'message'
 				)
 			WHERE data IS NOT NULL
 		`);
@@ -330,7 +369,7 @@ async function main() {
 		console.log(`📊 Database type: ${dbType}\n`);
 
 		// Force population of denormalized columns for all events
-		console.log('🔄 Regularizing denormalized columns (org_id, user_name, tool_name)...');
+		console.log('🔄 Regularizing denormalized columns (org_id, user_name, tool_name, error_message)...');
 		await forcePopulateDenormalizedColumns();
 		console.log('✅ Denormalized columns regularized\n');
 
@@ -368,5 +407,6 @@ module.exports = {
 	extractCompanyName,
 	extractToolName,
 	extractUserDisplayName,
-	extractOrgId
+	extractOrgId,
+	extractErrorMessage
 };

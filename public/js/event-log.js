@@ -6084,38 +6084,70 @@ if (window.__EVENT_LOG_LOADED__) {
 
 		// Create backdrop
 		const backdrop = document.createElement('div');
-		backdrop.className = 'payload-modal-backdrop fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50';
+		backdrop.className = 'confirm-modal-backdrop payload-modal-backdrop';
 
 		// Create modal
 		const modal = document.createElement('div');
-		modal.className = 'payload-modal relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white dark:bg-gray-800';
+		modal.className = 'confirm-modal payload-modal';
 
 		// Format payload as pretty JSON
 		const formattedPayload = JSON.stringify(payload, null, 2);
 
 		modal.innerHTML = `
-			<div class="mt-3">
-				<div class="flex items-center justify-between mb-4">
-					<h3 class="text-lg font-medium text-gray-900 dark:text-white">Event Payload - ID ${eventId}</h3>
-					<button onclick="closePayloadModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-						<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-						</svg>
-					</button>
-				</div>
-				<div class="mt-2 px-7 py-3">
-					<pre class="bg-gray-100 dark:bg-gray-700 p-4 rounded text-sm overflow-x-auto max-h-96 overflow-y-auto">${escapeHtml(formattedPayload)}</pre>
-				</div>
-				<div class="flex items-center justify-end px-7 py-3 bg-gray-50 dark:bg-gray-700 rounded-b-md">
-					<button onclick="closePayloadModal()" class="px-4 py-2 bg-blue-500 text-white text-base font-medium rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-300">
-						Close
-					</button>
+			<div class="payload-modal-header">
+				<div class="confirm-modal-title">Event Payload - ID ${eventId}</div>
+				<button type="button" class="payload-modal-close" aria-label="Close payload modal">
+					<svg viewBox="0 0 24 24" aria-hidden="true">
+						<path d="M6 18L18 6M6 6l12 12"></path>
+					</svg>
+				</button>
+			</div>
+			<div class="payload-modal-content">
+				<textarea class="payload-modal-textarea" readonly aria-label="Event payload JSON"></textarea>
+			</div>
+			<div class="payload-modal-footer">
+				<div class="confirm-modal-actions">
+					<button type="button" class="confirm-modal-btn" data-action="copy-json">Copy JSON</button>
+					<button type="button" class="confirm-modal-btn confirm-modal-btn-confirm" data-action="close-modal">Close</button>
 				</div>
 			</div>
 		`;
 
 		backdrop.appendChild(modal);
 		document.body.appendChild(backdrop);
+		requestAnimationFrame(() => {
+			backdrop.classList.add('visible');
+		});
+
+		const textarea = modal.querySelector('.payload-modal-textarea');
+		if (textarea) {
+			textarea.value = formattedPayload;
+		}
+
+		const closeBtn = modal.querySelector('.payload-modal-close');
+		const closeAction = modal.querySelector('[data-action="close-modal"]');
+		const copyBtn = modal.querySelector('[data-action="copy-json"]');
+
+		const handleClose = () => closePayloadModal();
+		if (closeBtn) closeBtn.addEventListener('click', handleClose);
+		if (closeAction) closeAction.addEventListener('click', handleClose);
+		if (copyBtn) {
+			copyBtn.addEventListener('click', async () => {
+				try {
+					await navigator.clipboard.writeText(formattedPayload);
+					const originalLabel = copyBtn.textContent;
+					copyBtn.textContent = 'Copied!';
+					copyBtn.disabled = true;
+					setTimeout(() => {
+						copyBtn.textContent = originalLabel || 'Copy JSON';
+						copyBtn.disabled = false;
+					}, 1600);
+				} catch (error) {
+					console.error('Error copying payload:', error);
+					alert('Error copying payload: ' + error.message);
+				}
+			});
+		}
 
 		// Close modal when clicking backdrop
 		backdrop.addEventListener('click', function(e) {
@@ -6125,17 +6157,23 @@ if (window.__EVENT_LOG_LOADED__) {
 		});
 
 		// Close modal on Escape key
-		document.addEventListener('keydown', function(e) {
+		const handleKeydown = function(e) {
 			if (e.key === 'Escape') {
 				closePayloadModal();
 			}
-		});
+		};
+		modal._payloadKeydownHandler = handleKeydown;
+		document.addEventListener('keydown', handleKeydown);
 	}
 
 	// Close payload modal
 	function closePayloadModal() {
 		const modal = document.querySelector('.payload-modal-backdrop');
 		if (modal) {
+			const dialog = modal.querySelector('.payload-modal');
+			if (dialog?._payloadKeydownHandler) {
+				document.removeEventListener('keydown', dialog._payloadKeydownHandler);
+			}
 			modal.remove();
 		}
 	}
