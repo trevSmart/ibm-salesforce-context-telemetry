@@ -313,6 +313,7 @@ async function loadTrashInfo() {
 	try {
 		const response = await fetch('/api/events/deleted?limit=0', {
 			method: 'GET',
+			headers: window.getRequestHeaders ? window.getRequestHeaders(false) : {},
 			credentials: 'include'
 		});
 
@@ -344,6 +345,7 @@ async function emptyTrash() {
 	try {
 		const response = await fetch('/api/events/deleted', {
 			method: 'DELETE',
+			headers: window.getRequestHeaders ? window.getRequestHeaders(false) : {},
 			credentials: 'include' // Ensure cookies are sent
 		});
 
@@ -844,8 +846,10 @@ async function openSettingsModal() {
 		});
 	}
 
-	// Load trash info when settings modal opens
-	loadTrashInfo();
+	// Load trash info when settings modal opens (only for users with delete permissions)
+	if (canDeleteAllEvents) {
+		loadTrashInfo();
+	}
 
 	// Export/Import database functionality (only for administrators)
 	if (isAdministrator) {

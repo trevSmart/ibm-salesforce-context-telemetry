@@ -843,8 +843,10 @@ if (window.__EVENT_LOG_LOADED__) {
 			});
 		}
 
-		// Load trash info when settings modal opens
-		loadTrashInfo();
+		// Load trash info when settings modal opens (only for users with delete permissions)
+		if (canDeleteAllEvents) {
+			loadTrashInfo();
+		}
 
 		document.addEventListener(
 			'keydown',
