@@ -98,6 +98,10 @@ async function init() {
 		`);
 
 		console.log(`SQLite database initialized at: ${dbPath}`);
+
+		// Run migrations after database initialization
+		await runMigrations();
+
 	} else if (dbType === 'postgresql') {
 		const { Pool } = require('pg');
 
@@ -175,9 +179,37 @@ async function init() {
 	await ensureUserRoleColumn();
 	await ensureTelemetryParentSessionColumn();
 	await ensureDenormalizedColumns();
+	await ensureErrorMessageColumn();
 	await ensureEventStatsTables();
 	await ensureTeamsAndOrgsTables();
 	await ensureRememberTokensTable();
+}
+
+async function ensureErrorMessageColumn() {
+	if (!db) {
+		return;
+	}
+
+	try {
+		if (dbType === 'sqlite') {
+			const columns = db.prepare('PRAGMA table_info(telemetry_events)').all();
+			const columnNames = columns.map(col => col.name);
+
+			// Add error_message column if it doesn't exist
+			if (!columnNames.includes('error_message')) {
+				db.exec('ALTER TABLE telemetry_events ADD COLUMN error_message TEXT');
+				db.exec('CREATE INDEX IF NOT EXISTS idx_error_message ON telemetry_events(error_message)');
+				console.log('Added error_message column to telemetry_events');
+			}
+		} else if (dbType === 'postgresql') {
+			// PostgreSQL supports IF NOT EXISTS in ALTER TABLE
+			await db.query('ALTER TABLE IF EXISTS telemetry_events ADD COLUMN IF NOT EXISTS error_message TEXT');
+			await db.query('CREATE INDEX IF NOT EXISTS idx_error_message ON telemetry_events(error_message)');
+			console.log('Ensured error_message column in telemetry_events');
+		}
+	} catch (error) {
+		console.error('Error ensuring error_message column:', error);
+	}
 }
 
 /**
@@ -975,7 +1007,8 @@ async function getEvents(options = {}) {
 	let eventsQuery = `
 		SELECT
 			e.id, e.event, e.timestamp, e.server_id, e.version, e.session_id, e.parent_session_id,
-			e.user_id, e.received_at, e.created_at, e.user_name, e.tool_name, e.company_name, e.error_message
+			e.user_id, e.received_at, e.created_at, e.user_name, e.tool_name, e.company_name
+			${dbType === 'sqlite' ? ', e.error_message' : ', e.error_message'}
 		FROM telemetry_events e
 		${whereClause}
 		ORDER BY ${safeOrderBy} ${safeOrder}
