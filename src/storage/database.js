@@ -785,12 +785,18 @@ async function getEvents(options = {}) {
 		startDate,
 		endDate,
 		orderBy = 'created_at',
-		order = 'DESC'
+		order = 'DESC',
+		includeDeleted = false
 	} = options;
 
 	let whereClause = 'WHERE 1=1';
 	const params = [];
 	let paramIndex = 1;
+
+	// Exclude soft deleted events by default unless explicitly requested
+	if (!includeDeleted) {
+		whereClause += ' AND deleted_at IS NULL';
+	}
 
 	if (eventTypes && Array.isArray(eventTypes) && eventTypes.length > 0) {
 		if (eventTypes.length === 1) {
@@ -1164,41 +1170,32 @@ async function deleteEvent(id) {
 		throw new Error('Database not initialized. Call init() first.');
 	}
 
-	let eventInfo = null;
+	// Check if event exists and is not already deleted
+	let existingEvent = null;
 	if (dbType === 'sqlite') {
-		eventInfo = db.prepare('SELECT user_id, org_id FROM telemetry_events WHERE id = ?').get(id);
+		existingEvent = db.prepare('SELECT id FROM telemetry_events WHERE id = ? AND deleted_at IS NULL').get(id);
 	} else if (dbType === 'postgresql') {
-		const result = await db.query('SELECT user_id, org_id FROM telemetry_events WHERE id = $1', [id]);
-		eventInfo = result.rows[0];
+		const result = await db.query('SELECT id FROM telemetry_events WHERE id = $1 AND deleted_at IS NULL', [id]);
+		existingEvent = result.rows[0];
+	}
+
+	if (!existingEvent) {
+		return false; // Event not found or already deleted
 	}
 
 	if (dbType === 'sqlite') {
-		const stmt = db.prepare('DELETE FROM telemetry_events WHERE id = ?');
-		const result = stmt.run(id);
-		const deleted = result.changes > 0;
-		if (deleted && eventInfo) {
-			await Promise.all([
-				eventInfo?.user_id ? recomputeUserEventStats([eventInfo.user_id]) : Promise.resolve(),
-				eventInfo?.org_id ? recomputeOrgEventStats([eventInfo.org_id]) : Promise.resolve()
-			]);
-		}
-		return deleted;
+		const stmt = db.prepare('UPDATE telemetry_events SET deleted_at = ? WHERE id = ?');
+		const result = stmt.run(new Date().toISOString(), id);
+		return result.changes > 0;
 	} else if (dbType === 'postgresql') {
-		const result = await db.query('DELETE FROM telemetry_events WHERE id = $1', [id]);
-		const deleted = result.rowCount > 0;
-		if (deleted && eventInfo) {
-			await Promise.all([
-				eventInfo?.user_id ? recomputeUserEventStats([eventInfo.user_id]) : Promise.resolve(),
-				eventInfo?.org_id ? recomputeOrgEventStats([eventInfo.org_id]) : Promise.resolve()
-			]);
-		}
-		return deleted;
+		const result = await db.query('UPDATE telemetry_events SET deleted_at = NOW() WHERE id = $1', [id]);
+		return result.rowCount > 0;
 	}
 }
 
 /**
- * Delete all events from the database
- * @returns {Promise<number>} Number of deleted events
+ * Soft delete all events from the database (move to trash)
+ * @returns {Promise<number>} Number of soft deleted events
  */
 async function deleteAllEvents() {
 	if (!db) {
@@ -1206,25 +1203,19 @@ async function deleteAllEvents() {
 	}
 
 	if (dbType === 'sqlite') {
-		const stmt = db.prepare('DELETE FROM telemetry_events');
-		const result = stmt.run();
-		if (result.changes > 0) {
-			await resetEventStatsTables();
-		}
+		const stmt = db.prepare('UPDATE telemetry_events SET deleted_at = ? WHERE deleted_at IS NULL');
+		const result = stmt.run(new Date().toISOString());
 		return result.changes;
 	} else if (dbType === 'postgresql') {
-		const result = await db.query('DELETE FROM telemetry_events');
-		if (result.rowCount > 0) {
-			await resetEventStatsTables();
-		}
+		const result = await db.query('UPDATE telemetry_events SET deleted_at = NOW() WHERE deleted_at IS NULL');
 		return result.rowCount;
 	}
 }
 
 /**
- * Delete all events for a specific session
+ * Soft delete all events for a specific session (move to trash)
  * @param {string} sessionId - Session identifier
- * @returns {Promise<number>} Number of deleted events
+ * @returns {Promise<number>} Number of soft deleted events
  */
 async function deleteEventsBySession(sessionId) {
 	if (!db) {
@@ -1235,36 +1226,12 @@ async function deleteEventsBySession(sessionId) {
 		throw new Error('Session ID is required to delete events by session');
 	}
 
-	let impactedUsers = [];
-	let impactedOrgs = [];
 	if (dbType === 'sqlite') {
-		const rows = db.prepare('SELECT DISTINCT user_id, org_id FROM telemetry_events WHERE session_id = ?').all(sessionId);
-		impactedUsers = rows.map(row => row.user_id).filter(Boolean);
-		impactedOrgs = rows.map(row => row.org_id).filter(Boolean);
-	} else if (dbType === 'postgresql') {
-		const result = await db.query('SELECT DISTINCT user_id, org_id FROM telemetry_events WHERE session_id = $1', [sessionId]);
-		impactedUsers = result.rows.map(row => row.user_id).filter(Boolean);
-		impactedOrgs = result.rows.map(row => row.org_id).filter(Boolean);
-	}
-
-	if (dbType === 'sqlite') {
-		const stmt = db.prepare('DELETE FROM telemetry_events WHERE session_id = ?');
-		const result = stmt.run(sessionId);
-		if (result.changes > 0) {
-			await Promise.all([
-				impactedUsers.length ? recomputeUserEventStats(impactedUsers) : Promise.resolve(),
-				impactedOrgs.length ? recomputeOrgEventStats(impactedOrgs) : Promise.resolve()
-			]);
-		}
+		const stmt = db.prepare('UPDATE telemetry_events SET deleted_at = ? WHERE session_id = ? AND deleted_at IS NULL');
+		const result = stmt.run(new Date().toISOString(), sessionId);
 		return result.changes;
 	} else if (dbType === 'postgresql') {
-		const result = await db.query('DELETE FROM telemetry_events WHERE session_id = $1', [sessionId]);
-		if (result.rowCount > 0) {
-			await Promise.all([
-				impactedUsers.length ? recomputeUserEventStats(impactedUsers) : Promise.resolve(),
-				impactedOrgs.length ? recomputeOrgEventStats(impactedOrgs) : Promise.resolve()
-			]);
-		}
+		const result = await db.query('UPDATE telemetry_events SET deleted_at = NOW() WHERE session_id = $1 AND deleted_at IS NULL', [sessionId]);
 		return result.rowCount;
 	}
 }
@@ -2529,6 +2496,13 @@ async function ensureDenormalizedColumns() {
 				console.log('Added company_name column to telemetry_events');
 			}
 
+			// Add deleted_at column if it doesn't exist (for soft delete/trash functionality)
+			if (!columnNames.includes('deleted_at')) {
+				db.exec('ALTER TABLE telemetry_events ADD COLUMN deleted_at TEXT');
+				db.exec('CREATE INDEX IF NOT EXISTS idx_deleted_at ON telemetry_events(deleted_at)');
+				console.log('Added deleted_at column to telemetry_events');
+			}
+
 			// Create indexes for denormalized columns (if they don't exist)
 			db.exec('CREATE INDEX IF NOT EXISTS idx_user_name_created_at ON telemetry_events(user_name, created_at)');
 			db.exec('CREATE INDEX IF NOT EXISTS idx_org_id_created_at ON telemetry_events(org_id, created_at)');
@@ -2542,7 +2516,9 @@ async function ensureDenormalizedColumns() {
 			await db.query('ALTER TABLE IF EXISTS telemetry_events ADD COLUMN IF NOT EXISTS user_name TEXT');
 			await db.query('ALTER TABLE IF EXISTS telemetry_events ADD COLUMN IF NOT EXISTS tool_name TEXT');
 			await db.query('ALTER TABLE IF EXISTS telemetry_events ADD COLUMN IF NOT EXISTS company_name TEXT');
-			console.log('Ensured denormalized columns (org_id, user_name, tool_name, company_name) in telemetry_events');
+			await db.query('ALTER TABLE IF EXISTS telemetry_events ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ');
+			await db.query('CREATE INDEX IF NOT EXISTS idx_deleted_at ON telemetry_events(deleted_at)');
+			console.log('Ensured denormalized columns (org_id, user_name, tool_name, company_name, deleted_at) in telemetry_events');
 
 			// Create indexes for denormalized columns (if they don't exist)
 			await db.query('CREATE INDEX IF NOT EXISTS idx_user_name_created_at ON telemetry_events(user_name, created_at)');
@@ -5073,6 +5049,196 @@ async function importDatabase(importData) {
 	}
 }
 
+/**
+ * Recover a soft deleted event (restore from trash)
+ * @param {number} id - Event ID to recover
+ * @returns {Promise<boolean>} True if recovered successfully
+ */
+async function recoverEvent(id) {
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
+
+	if (dbType === 'sqlite') {
+		const stmt = db.prepare('UPDATE telemetry_events SET deleted_at = NULL WHERE id = ? AND deleted_at IS NOT NULL');
+		const result = stmt.run(id);
+		return result.changes > 0;
+	} else if (dbType === 'postgresql') {
+		const result = await db.query('UPDATE telemetry_events SET deleted_at = NULL WHERE id = $1 AND deleted_at IS NOT NULL', [id]);
+		return result.rowCount > 0;
+	}
+}
+
+/**
+ * Permanently delete a soft deleted event
+ * @param {number} id - Event ID to permanently delete
+ * @returns {Promise<boolean>} True if permanently deleted successfully
+ */
+async function permanentlyDeleteEvent(id) {
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
+
+	let eventInfo = null;
+	if (dbType === 'sqlite') {
+		eventInfo = db.prepare('SELECT user_id, org_id FROM telemetry_events WHERE id = ? AND deleted_at IS NOT NULL').get(id);
+	} else if (dbType === 'postgresql') {
+		const result = await db.query('SELECT user_id, org_id FROM telemetry_events WHERE id = $1 AND deleted_at IS NOT NULL', [id]);
+		eventInfo = result.rows[0];
+	}
+
+	if (dbType === 'sqlite') {
+		const stmt = db.prepare('DELETE FROM telemetry_events WHERE id = ? AND deleted_at IS NOT NULL');
+		const result = stmt.run(id);
+		const deleted = result.changes > 0;
+		if (deleted && eventInfo) {
+			await Promise.all([
+				eventInfo?.user_id ? recomputeUserEventStats([eventInfo.user_id]) : Promise.resolve(),
+				eventInfo?.org_id ? recomputeOrgEventStats([eventInfo.org_id]) : Promise.resolve()
+			]);
+		}
+		return deleted;
+	} else if (dbType === 'postgresql') {
+		const result = await db.query('DELETE FROM telemetry_events WHERE id = $1 AND deleted_at IS NOT NULL', [id]);
+		const deleted = result.rowCount > 0;
+		if (deleted && eventInfo) {
+			await Promise.all([
+				eventInfo?.user_id ? recomputeUserEventStats([eventInfo.user_id]) : Promise.resolve(),
+				eventInfo?.org_id ? recomputeOrgEventStats([eventInfo.org_id]) : Promise.resolve()
+			]);
+		}
+		return deleted;
+	}
+}
+
+/**
+ * Permanently delete all soft deleted events older than specified days
+ * @param {number} daysOld - Delete events soft deleted more than this many days ago (default: 30)
+ * @returns {Promise<number>} Number of permanently deleted events
+ */
+async function cleanupOldDeletedEvents(daysOld = 30) {
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
+
+	const cutoffDate = new Date();
+	cutoffDate.setDate(cutoffDate.getDate() - daysOld);
+
+	let impactedUsers = [];
+	let impactedOrgs = [];
+
+	if (dbType === 'sqlite') {
+		// First get affected users/orgs for stats recomputation
+		const rows = db.prepare(`
+			SELECT DISTINCT user_id, org_id
+			FROM telemetry_events
+			WHERE deleted_at IS NOT NULL AND deleted_at < ?
+		`).all(cutoffDate.toISOString());
+		impactedUsers = rows.map(row => row.user_id).filter(Boolean);
+		impactedOrgs = rows.map(row => row.org_id).filter(Boolean);
+
+		// Then delete the events
+		const stmt = db.prepare('DELETE FROM telemetry_events WHERE deleted_at IS NOT NULL AND deleted_at < ?');
+		const result = stmt.run(cutoffDate.toISOString());
+
+		if (result.changes > 0) {
+			await Promise.all([
+				impactedUsers.length ? recomputeUserEventStats(impactedUsers) : Promise.resolve(),
+				impactedOrgs.length ? recomputeOrgEventStats(impactedOrgs) : Promise.resolve()
+			]);
+		}
+		return result.changes;
+	} else if (dbType === 'postgresql') {
+		// First get affected users/orgs for stats recomputation
+		const result = await db.query(`
+			SELECT DISTINCT user_id, org_id
+			FROM telemetry_events
+			WHERE deleted_at IS NOT NULL AND deleted_at < $1
+		`, [cutoffDate]);
+		impactedUsers = result.rows.map(row => row.user_id).filter(Boolean);
+		impactedOrgs = result.rows.map(row => row.org_id).filter(Boolean);
+
+		// Then delete the events
+		const deleteResult = await db.query('DELETE FROM telemetry_events WHERE deleted_at IS NOT NULL AND deleted_at < $1', [cutoffDate]);
+
+		if (deleteResult.rowCount > 0) {
+			await Promise.all([
+				impactedUsers.length ? recomputeUserEventStats(impactedUsers) : Promise.resolve(),
+				impactedOrgs.length ? recomputeOrgEventStats(impactedOrgs) : Promise.resolve()
+			]);
+		}
+		return deleteResult.rowCount;
+	}
+}
+
+/**
+ * Get soft deleted events (trashed events)
+ * @param {Object} options - Query options
+ * @param {number} options.limit - Maximum number of events to return (default: 50)
+ * @param {number} options.offset - Offset for pagination (default: 0)
+ * @param {string} options.orderBy - Column to order by (default: 'deleted_at')
+ * @param {string} options.order - Sort order 'ASC' or 'DESC' (default: 'DESC')
+ * @returns {Promise<Object>} Object with events array and total count
+ */
+async function getDeletedEvents(options = {}) {
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
+
+	const limit = Math.min(options.limit || 50, 1000); // Max 1000 for safety
+	const offset = options.offset || 0;
+	const orderBy = options.orderBy || 'deleted_at';
+	const order = (options.order || 'DESC').toUpperCase();
+
+	const validOrderBy = ['id', 'event', 'timestamp', 'deleted_at', 'user_id', 'server_id'];
+	if (!validOrderBy.includes(orderBy)) {
+		throw new Error(`Invalid orderBy column: ${orderBy}`);
+	}
+
+	if (!['ASC', 'DESC'].includes(order)) {
+		throw new Error(`Invalid order: ${order}`);
+	}
+
+	let events = [];
+	let total = 0;
+
+	if (dbType === 'sqlite') {
+		const countStmt = db.prepare('SELECT COUNT(*) as count FROM telemetry_events WHERE deleted_at IS NOT NULL');
+		total = countStmt.get().count;
+
+		const stmt = db.prepare(`
+			SELECT id, event, timestamp, server_id, version, session_id, parent_session_id, user_id, data, received_at, created_at, deleted_at
+			FROM telemetry_events
+			WHERE deleted_at IS NOT NULL
+			ORDER BY ${orderBy} ${order}
+			LIMIT ? OFFSET ?
+		`);
+		events = stmt.all(limit, offset);
+	} else if (dbType === 'postgresql') {
+		const countResult = await db.query('SELECT COUNT(*) as count FROM telemetry_events WHERE deleted_at IS NOT NULL');
+		total = parseInt(countResult.rows[0].count);
+
+		const result = await db.query(`
+			SELECT id, event, timestamp, server_id, version, session_id, parent_session_id, user_id, data, received_at, created_at, deleted_at
+			FROM telemetry_events
+			WHERE deleted_at IS NOT NULL
+			ORDER BY ${orderBy} ${order}
+			LIMIT $1 OFFSET $2
+		`, [limit, offset]);
+		events = result.rows;
+	}
+
+	return {
+		events: events.map(event => ({
+			...event,
+			data: dbType === 'postgresql' ? event.data : JSON.parse(event.data || '{}')
+		})),
+		total,
+		limit,
+		offset
+	};
+}
+
 module.exports = {
 	init,
 	storeEvent,
@@ -5090,6 +5256,10 @@ module.exports = {
 	deleteEvent,
 	deleteAllEvents,
 	deleteEventsBySession,
+	recoverEvent,
+	permanentlyDeleteEvent,
+	cleanupOldDeletedEvents,
+	getDeletedEvents,
 	getDatabaseSize,
 	close,
 	DEFAULT_MAX_DB_SIZE,

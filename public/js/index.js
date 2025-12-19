@@ -1700,6 +1700,8 @@ function updateChartLegendOverlay(legendItems) {
 		return;
 	}
 
+	const legendSelected = chart?.getOption()?.legend?.[0]?.selected || {};
+
 	const itemsMarkup = legendItems.map((item) => {
 		const name = escapeHtml(item?.name || '');
 		const color = escapeHtml(item?.itemStyle?.color || '#94a3b8');
@@ -1707,11 +1709,29 @@ function updateChartLegendOverlay(legendItems) {
 		const markerClass = icon === 'line'
 			? 'chart-legend-overlay-marker chart-legend-overlay-marker--line'
 			: 'chart-legend-overlay-marker';
-		return `<span class="chart-legend-overlay-item"><span class="${markerClass}" style="background:${color};"></span>${name}</span>`;
+		const isSelected = legendSelected[item?.name] !== false; // default true when undefined
+		const disabledClass = isSelected ? '' : ' is-disabled';
+		return `<span class="chart-legend-overlay-item${disabledClass}" data-series-name="${name}"><span class="${markerClass}" style="background:${color};"></span>${name}</span>`;
 	}).join('');
 
 	overlay.innerHTML = itemsMarkup;
 	overlay.setAttribute('data-state', 'ready');
+
+	// Attach click handlers for toggling series visibility
+	overlay.querySelectorAll('.chart-legend-overlay-item').forEach((itemEl) => {
+		itemEl.addEventListener('click', (event) => {
+			event.preventDefault();
+			event.stopPropagation();
+			const seriesName = itemEl.getAttribute('data-series-name');
+			if (!seriesName || !chart) return;
+
+			chart.dispatchAction({ type: 'legendToggleSelect', name: seriesName });
+
+			const selectedMap = chart.getOption()?.legend?.[0]?.selected || {};
+			const isSelected = selectedMap[seriesName] !== false;
+			itemEl.classList.toggle('is-disabled', !isSelected);
+		});
+	});
 }
 
 function renderTopUsersPlaceholder(message) {
@@ -2152,7 +2172,7 @@ async function loadChartData(days = currentDays) {
 
 			series = [
 				{
-					name: 'Start Sessions',
+					name: 'New Sessions',
 					type: 'bar',
 					barWidth: 2,
 					barGap: '2px',
@@ -2204,7 +2224,7 @@ async function loadChartData(days = currentDays) {
 					}
 				},
 				{
-					name: 'Tool Events',
+					name: 'Tool Calls',
 					type: 'bar',
 					barWidth: 2,
 					barGap: '2px',
@@ -2374,7 +2394,7 @@ async function loadChartData(days = currentDays) {
 
 			const startSessionsDenseTrend = compressYAroundMean(startSessionsDenseTrendScaled, TREND_Y_COMPRESSION);
 
-			const startSessionsBaseOpacity = 0.50;
+			const startSessionsBaseOpacity = 0.35;
 			const startSessionsTrendLineGradient = new echarts.graphic.LinearGradient(0, 1, 1, 0, [
 				{ offset: 0, color: `rgba(33, 149, 207, ${startSessionsBaseOpacity})` },
 				{ offset: FADE_START, color: `rgba(33, 149, 207, ${startSessionsBaseOpacity})` },
@@ -2382,7 +2402,7 @@ async function loadChartData(days = currentDays) {
 			]);
 
 			series.push({
-				name: 'Start Sessions Trend',
+				name: 'New Sessions Trend',
 				type: 'line',
 				xAxisIndex: 1,
 				data: startSessionsDenseTrend,
@@ -2408,12 +2428,64 @@ async function loadChartData(days = currentDays) {
 				}
 			});
 
+			// Add trend line for Errors (red series)
+			const trimmedErrors = trimTrailingZeros(errorEventsData);
+			const errorsTrendLineSource = trimmedErrors.length >= 2 ? trimmedErrors : errorEventsData;
+			const errorsTrendLine = generateTrendLine(errorsTrendLineSource, FUTURE_POINTS, 'exponential');
+
+			const errorsDenseTrend = buildDenseTrendSeries(
+				errorEventsData,
+				extendedLabels.length,
+				errorsTrendLine,
+				30
+			);
+
+			// Triple the Y values for errors trend line visibility
+			const errorsDenseTrendScaled = errorsDenseTrend.map(([x, y]) => {
+				const scaled = (y || 0) * 3;
+				return [x, isFinite(scaled) ? scaled : 0];
+			});
+			const errorsDenseTrendCompressed = compressYAroundMean(errorsDenseTrendScaled, TREND_Y_COMPRESSION);
+			console.log('Errors trend - original:', errorsDenseTrend.slice(0, 5), 'scaled:', errorsDenseTrendScaled.slice(0, 5));
+
+			const ERRORS_BASE_OPACITY = 0.36;
+			const errorsTrendLineGradient = new echarts.graphic.LinearGradient(0, 1, 1, 0, [
+				{ offset: 0, color: `rgba(239, 68, 68, ${ERRORS_BASE_OPACITY})` }, // errorEventsColor with opacity
+				{ offset: 0.78, color: `rgba(239, 68, 68, ${ERRORS_BASE_OPACITY})` },
+				{ offset: 1, color: 'rgba(239, 68, 68, 0)' }
+			]);
+
+			series.push({
+				name: 'Errors Trend',
+				type: 'line',
+				xAxisIndex: 1,
+				data: errorsDenseTrendCompressed,
+				smooth: false,
+				symbol: 'none',
+				zlevel: 0,
+				z: -1,
+				lineStyle: {
+					width: 1,
+					type: 'solid',
+					color: errorsTrendLineGradient,
+					opacity: ERRORS_BASE_OPACITY,
+					shadowColor: 'rgba(239, 68, 68, 0.35)', // errorEventsColor shadow
+					shadowBlur: 8,
+					shadowOffsetY: 4
+				},
+				emphasis: {
+					focus: 'series',
+					lineStyle: { width: 3, opacity: 0.9 }
+				},
+				blur: {
+					lineStyle: { opacity: TREND_BLUR_OPACITY }
+				}
+			});
+
 			legendData = [
-				{ name: 'Start Sessions', icon: 'circle', itemStyle: { color: startSessionsColor } },
-				{ name: 'Tool Events', icon: 'circle', itemStyle: { color: toolEventsColor } },
-				{ name: 'Errors', icon: 'circle', itemStyle: { color: errorEventsColor } },
-				{ name: 'Trend', icon: 'line', itemStyle: { color: '#8e81ea' } },
-				{ name: 'Start Sessions Trend', icon: 'line', itemStyle: { color: startSessionsColor } }
+				{ name: 'New Sessions', icon: 'circle', itemStyle: { color: startSessionsColor } },
+				{ name: 'Tool Calls', icon: 'circle', itemStyle: { color: toolEventsColor } },
+				{ name: 'Errors', icon: 'circle', itemStyle: { color: errorEventsColor } }
 			];
 		} else {
 			const totalEventsData = data.map(item => Number(item.count ?? item.total ?? 0));
@@ -2519,8 +2591,7 @@ async function loadChartData(days = currentDays) {
 			});
 
 			legendData = [
-				{ name: 'Events', icon: 'circle', itemStyle: { color: totalEventsColor } },
-				{ name: 'Trend', icon: 'line', itemStyle: { color: '#ff6900' } }
+				{ name: 'Events', icon: 'circle', itemStyle: { color: totalEventsColor } }
 			];
 		}
 

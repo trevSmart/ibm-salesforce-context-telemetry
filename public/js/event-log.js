@@ -38,6 +38,8 @@ if (window.__EVENT_LOG_LOADED__) {
 
 
 	// Check authentication status on page load
+	// Cache auth data to avoid redundant API calls
+	let cachedAuthData = null;
 	(async () => {
 		try {
 			const response = await fetch('/api/auth/status', {
@@ -54,6 +56,9 @@ if (window.__EVENT_LOG_LOADED__) {
 			}
 			// Store CSRF token
 			window.setCsrfToken(data.csrfToken);
+			// Cache auth data for reuse by other components
+			cachedAuthData = data;
+			window.__cachedAuthData = cachedAuthData;
 		} catch (error) {
 			console.error('Auth check failed:', error);
 			window.location.href = '/login';
@@ -84,13 +89,23 @@ if (window.__EVENT_LOG_LOADED__) {
 		}
 
 		// Check user role to determine if admin-only sections should be shown
+		// Reuse cached auth data if available to avoid redundant API call
 		let userRole = 'basic';
 		try {
-			const authResponse = await fetch('/api/auth/status', {
-				credentials: 'include'
-			});
-			if (authResponse.ok) {
-				const authData = await authResponse.json();
+			let authData = null;
+			if (window.__cachedAuthData) {
+				authData = window.__cachedAuthData;
+			} else {
+				const authResponse = await fetch('/api/auth/status', {
+					credentials: 'include'
+				});
+				if (authResponse.ok) {
+					authData = await authResponse.json();
+					// Cache for future use
+					window.__cachedAuthData = authData;
+				}
+			}
+			if (authData) {
 				userRole = authData.role || 'basic';
 			}
 		} catch (error) {
@@ -3308,10 +3323,12 @@ if (window.__EVENT_LOG_LOADED__) {
 		const sessionsTab = document.getElementById('sessionsTab');
 		const usersTab = document.getElementById('usersTab');
 		const teamsTab = document.getElementById('teamsTab');
+		const trashTab = document.getElementById('trashTab');
 		const sessionsContainer = document.getElementById('sessionsContainer');
 		const sessionList = document.getElementById('sessionList');
 		const userList = document.getElementById('userList');
 		const teamList = document.getElementById('teamList');
+		const trashContainer = document.getElementById('trashContainer');
 
 		// Clear session selection and exit selection mode when switching tabs
 		if (tab !== 'sessions') {
@@ -3332,14 +3349,25 @@ if (window.__EVENT_LOG_LOADED__) {
 			const teamItems = document.querySelectorAll('#teamList .session-item');
 			teamItems.forEach((item) => item.classList.remove('active'));
 			// Reload events without team filter if we're moving to a tab that shows events
+			if (tab !== 'trash') {
+				loadEvents();
+			}
+		}
+
+		// Load deleted events when switching to trash tab
+		if (tab === 'trash') {
+			loadDeletedEvents();
+		} else if (activeTab === 'trash') {
+			// Switching away from trash, reload regular events
 			loadEvents();
 		}
 
 		// Update tab buttons
-		if (sessionsTab && usersTab && teamsTab) {
+		if (sessionsTab && usersTab && teamsTab && trashTab) {
 			sessionsTab.classList.toggle('active', tab === 'sessions');
 			usersTab.classList.toggle('active', tab === 'users');
 			teamsTab.classList.toggle('active', tab === 'teams');
+			trashTab.classList.toggle('active', tab === 'trash');
 		}
 
 		// Update indicator position
@@ -3357,6 +3385,9 @@ if (window.__EVENT_LOG_LOADED__) {
 		}
 		if (teamList) {
 			teamList.style.display = tab === 'teams' ? 'block' : 'none';
+		}
+		if (trashContainer) {
+			trashContainer.style.display = tab === 'trash' ? 'block' : 'none';
 		}
 	}
 
@@ -3516,6 +3547,13 @@ if (window.__EVENT_LOG_LOADED__) {
 		} catch (_error) {
 			return {};
 		}
+	}
+
+	function buildStatusIcon(isError) {
+		const statusClass = isError ? 'ko' : 'ok';
+		const statusLabel = isError ? 'KO' : 'OK';
+		const src = isError ? '/resources/ko.png' : '/resources/ok.png';
+		return `<img src="${src}" alt="${statusLabel}" class="status-indicator ${statusClass}" loading="lazy">`;
 	}
 
 	function extractClientName(eventData) {
@@ -3704,8 +3742,7 @@ if (window.__EVENT_LOG_LOADED__) {
 				Boolean(eventData.error)
 			);
 			const isError = event.event === 'tool_error' || event.event === 'error' || isToolFailure;
-			const statusClass = isError ? 'ko' : 'ok';
-			const statusLabel = isError ? 'KO' : 'OK';
+			const statusIcon = buildStatusIcon(isError);
 
 			// Extract tool name for tool events (tool_call or tool_error)
 			const isToolEvent = event.event === 'tool_call' || event.event === 'tool_error';
@@ -3731,7 +3768,7 @@ if (window.__EVENT_LOG_LOADED__) {
 					</button>
 				</td>
 				<td class="border-b border-gray-200 py-4 pr-3 text-sm font-medium text-gray-900 whitespace-nowrap" style="text-align: center;">
-					<span class="status-indicator ${statusClass}">${statusLabel}</span>
+					${statusIcon}
 				</td>
 				<td class="border-b border-gray-200 py-4 pr-3 text-sm font-medium text-gray-900 log-time whitespace-nowrap">${formatDate(event.timestamp)}
 				</td>
@@ -3757,7 +3794,7 @@ if (window.__EVENT_LOG_LOADED__) {
 							<span>Copy payload</span>
 						</div>
 						<div class="actions-dropdown-item delete" onclick="confirmDeleteEvent(${event.id})">
-							<span>Delete</span>
+							<span>Move to trash</span>
 						</div>
 					</div>
 				</td>
@@ -3867,20 +3904,8 @@ if (window.__EVENT_LOG_LOADED__) {
 	}
 
 	function getLevelBadgeClass(eventType) {
-		const baseClasses = 'inline-flex items-center rounded-md px-2 py-1 text-xs font-medium whitespace-nowrap';
-		const colorMap = {
-			'debug': 'bg-gray-100 text-gray-600',
-			'tool_call': 'bg-indigo-100 text-indigo-700',
-			'info': 'bg-blue-100 text-blue-700',
-			'session_start': 'bg-blue-100 text-blue-700',
-			'session_end': 'bg-gray-100 text-gray-600',
-			'tool_error': 'bg-red-100 text-red-700',
-			'error': 'bg-red-100 text-red-700',
-			'custom': 'bg-yellow-100 text-yellow-800',
-			'success': 'bg-green-100 text-green-700'
-		};
-		const fallbackClasses = 'bg-gray-100 text-gray-600';
-		return `${baseClasses} ${colorMap[eventType] || fallbackClasses}`;
+		const levelClass = getLevelClass(eventType);
+		return `level-badge ${levelClass}`;
 	}
 
 	function _getLevelIcon(eventType) {
@@ -4918,9 +4943,9 @@ if (window.__EVENT_LOG_LOADED__) {
 	// eslint-disable-next-line no-unused-vars
 	function confirmDeleteEvent(eventId) {
 		openConfirmModal({
-			title: 'Delete event',
-			message: 'Are you sure you want to delete this event? This action cannot be undone.',
-			confirmLabel: 'Delete event',
+			title: 'Move event to trash',
+			message: 'Are you sure you want to move this event to the trash? You can recover it later from the trash bin.',
+			confirmLabel: 'Move to trash',
 			destructive: true
 		}).then((confirmed) => {
 			if (!confirmed) {
@@ -5845,8 +5870,15 @@ if (window.__EVENT_LOG_LOADED__) {
 		runSafeAsyncInitStep('event type stats', () => loadEventTypeStats(selectedSession));
 		runSafeAsyncInitStep('sessions list', () => loadSessions());
 		runSafeAsyncInitStep('events table', () => loadEvents());
-		runSafeAsyncInitStep('database size', () => loadDatabaseSize());
-		runSafeAsyncInitStep('users list', () => loadUsersList());
+		// Lazy load database size and users list - they're not critical for initial render
+		runSafeAsyncInitStep('database size', () => {
+			// Delay database size load slightly to prioritize critical data
+			setTimeout(() => loadDatabaseSize(), 500);
+		});
+		runSafeAsyncInitStep('users list', () => {
+			// Delay users list load slightly to prioritize critical data
+			setTimeout(() => loadUsersList(), 300);
+		});
 		runSafeAsyncInitStep('teams list', () => loadTeamsList());
 		runSafeAsyncInitStep('auto refresh', () => updateAutoRefreshInterval());
 		runSafeInitStep('infinite scroll', () => setupInfiniteScroll());
@@ -6108,6 +6140,248 @@ if (window.__EVENT_LOG_LOADED__) {
 		}
 	}
 
+	// Load deleted events for trash tab
+	async function loadDeletedEvents() {
+		try {
+			const response = await fetch('/api/events/deleted?limit=100', {
+				headers: getCsrfHeaders(false),
+				credentials: 'include'
+			});
+			const validResponse = await handleApiResponse(response);
+			if (!validResponse) return;
+
+			const data = await validResponse.json();
+			renderDeletedEvents(data.events);
+		} catch (error) {
+			console.error('Error loading deleted events:', error);
+			alert('Error loading deleted events: ' + error.message);
+		}
+	}
+
+	// Render deleted events in the table
+	function renderDeletedEvents(events) {
+		const tbody = document.getElementById('logsBody');
+		if (!tbody) return;
+
+		if (!events || events.length === 0) {
+			tbody.innerHTML = `
+				<tr>
+					<td colspan="9" class="py-8 text-center text-sm text-gray-500 dark:text-gray-400">
+						<i class="fa-solid fa-trash text-2xl mb-2 text-gray-300 dark:text-gray-600"></i><br>
+						Trash is empty
+					</td>
+				</tr>
+			`;
+			return;
+		}
+
+		tbody.innerHTML = events.map(event => {
+			const eventData = normalizeEventData(event.data);
+			const dataStatus = typeof eventData?.status === 'string' ? eventData.status.toLowerCase() : null;
+			const isToolFailure = event.event === 'tool_call' && (
+				dataStatus === 'error' ||
+				dataStatus === 'failed' ||
+				eventData?.success === false ||
+				Boolean(eventData?.error)
+			);
+			const isError = event.event === 'tool_error' || event.event === 'error' || isToolFailure;
+			const statusIcon = buildStatusIcon(isError);
+			const formattedTime = formatEventTime(event);
+			const userDisplay = buildUserDisplayName(event);
+			const companyDisplay = event.company_name || '';
+
+			return `
+			<tr class="deleted-event-row" data-event-id="${event.id}">
+				<td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-0">
+					<button type="button" class="expand-btn" onclick="toggleEventExpansion(${event.id})">
+						<i class="fa-solid fa-chevron-right expand-icon"></i>
+					</button>
+				</td>
+				<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+					${statusIcon}
+				</td>
+				<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+					${formattedTime}
+				</td>
+				<td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 dark:text-white user-column">
+					${userDisplay}
+				</td>
+				<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+					${escapeHtml(event.event)}
+				</td>
+				<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 hidden md:table-cell">
+					${escapeHtml(companyDisplay)}
+				</td>
+				<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 hidden lg:table-cell">
+					${escapeHtml(event.tool_name || '')}
+				</td>
+				<td class="whitespace-nowrap px-3 py-4 text-sm text-center">
+					<button type="button" class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300" onclick="loadEventPayload(${event.id})">
+						<i class="fa-solid fa-eye"></i>
+					</button>
+				</td>
+				<td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-0">
+					<div class="actions-dropdown">
+						<button type="button" class="actions-dropdown-trigger" onclick="toggleActionsDropdown(event, ${event.id})">
+							<i class="fa-solid fa-ellipsis-vertical"></i>
+						</button>
+						<div class="actions-dropdown-menu">
+							<div class="actions-dropdown-item recover" onclick="confirmRecoverEvent(${event.id})">
+								<span>Recover</span>
+							</div>
+							<div class="actions-dropdown-item delete-permanent" onclick="confirmPermanentlyDeleteEvent(${event.id})">
+								<span>Delete permanently</span>
+							</div>
+						</div>
+					</div>
+				</td>
+			</tr>
+			<tr class="event-expansion-row" id="expansion-${event.id}" style="display: none;">
+				<td colspan="9" class="px-6 py-4 bg-gray-50 dark:bg-gray-800/50">
+					<div class="event-details">
+						<pre class="text-xs text-gray-600 dark:text-gray-400 whitespace-pre-wrap">${JSON.stringify(event.data, null, 2)}</pre>
+					</div>
+				</td>
+			</tr>
+			`;
+		}).join('');
+	}
+
+	// Confirm recover event
+	function confirmRecoverEvent(eventId) {
+		openConfirmModal({
+			title: 'Recover event',
+			message: 'Are you sure you want to recover this event from the trash?',
+			confirmLabel: 'Recover event',
+			destructive: false,
+			onConfirm: () => recoverEvent(eventId)
+		});
+	}
+
+	// Recover event from trash
+	async function recoverEvent(eventId) {
+		try {
+			const response = await fetch(`/api/events/${eventId}/recover`, {
+				method: 'PATCH',
+				headers: getCsrfHeaders(false),
+				credentials: 'include'
+			});
+			const validResponse = await handleApiResponse(response);
+			if (!validResponse) return;
+
+			// Refresh deleted events
+			loadDeletedEvents();
+			// Also refresh regular events if we're not in trash tab
+			if (activeTab !== 'trash') {
+				loadEvents();
+			}
+		} catch (error) {
+			console.error('Error recovering event:', error);
+			alert('Error recovering event: ' + error.message);
+		}
+	}
+
+	// Confirm permanent delete
+	function confirmPermanentlyDeleteEvent(eventId) {
+		openConfirmModal({
+			title: 'Permanently delete event',
+			message: 'Are you sure you want to permanently delete this event? This action cannot be undone.',
+			confirmLabel: 'Delete permanently',
+			destructive: true,
+			onConfirm: () => permanentlyDeleteEvent(eventId)
+		});
+	}
+
+	// Permanently delete event
+	async function permanentlyDeleteEvent(eventId) {
+		try {
+			const response = await fetch(`/api/events/${eventId}/permanent`, {
+				method: 'DELETE',
+				headers: getCsrfHeaders(false),
+				credentials: 'include'
+			});
+			const validResponse = await handleApiResponse(response);
+			if (!validResponse) return;
+
+			// Refresh deleted events
+			loadDeletedEvents();
+		} catch (error) {
+			console.error('Error permanently deleting event:', error);
+			alert('Error permanently deleting event: ' + error.message);
+		}
+	}
+
+	// Confirm empty trash
+	function confirmEmptyTrash() {
+		openConfirmModal({
+			title: 'Empty trash',
+			message: 'Are you sure you want to permanently delete ALL events in the trash? This action cannot be undone.',
+			confirmLabel: 'Empty trash',
+			destructive: true,
+			onConfirm: () => emptyTrash()
+		});
+	}
+
+	// Empty trash (delete all deleted events)
+	async function emptyTrash() {
+		try {
+			const response = await fetch('/api/events/deleted', {
+				method: 'DELETE',
+				headers: getCsrfHeaders(false),
+				credentials: 'include'
+			});
+			const validResponse = await handleApiResponse(response);
+			if (!validResponse) return;
+
+			const data = await validResponse.json();
+			alert(`Successfully deleted ${data.deletedCount || 0} events from trash.`);
+
+			// Refresh deleted events
+			loadDeletedEvents();
+		} catch (error) {
+			console.error('Error emptying trash:', error);
+			alert('Error emptying trash: ' + error.message);
+		}
+	}
+
+	// Confirm cleanup old deleted events
+	function confirmCleanupTrash() {
+		const days = prompt('Enter number of days (events deleted more than this many days ago will be permanently removed):', '30');
+		if (!days || isNaN(days) || days < 1) {
+			return;
+		}
+
+		openConfirmModal({
+			title: 'Cleanup old deleted events',
+			message: `Are you sure you want to permanently delete all events that have been in trash for more than ${days} days?`,
+			confirmLabel: `Cleanup ${days} days old`,
+			destructive: true,
+			onConfirm: () => cleanupTrash(days)
+		});
+	}
+
+	// Cleanup old deleted events
+	async function cleanupTrash(days) {
+		try {
+			const response = await fetch(`/api/events/deleted/cleanup?days=${days}`, {
+				method: 'DELETE',
+				headers: getCsrfHeaders(false),
+				credentials: 'include'
+			});
+			const validResponse = await handleApiResponse(response);
+			if (!validResponse) return;
+
+			const data = await validResponse.json();
+			alert(`Successfully cleaned up ${data.deletedCount || 0} events older than ${days} days.`);
+
+			// Refresh deleted events
+			loadDeletedEvents();
+		} catch (error) {
+			console.error('Error cleaning up trash:', error);
+			alert('Error cleaning up trash: ' + error.message);
+		}
+	}
+
 	window.confirmDeleteSelectedSessions = confirmDeleteSelectedSessions;
 	window.toggleMobileSidebar = toggleMobileSidebar;
 	window.navigateToPreviousDay = navigateToPreviousDay;
@@ -6115,5 +6389,9 @@ if (window.__EVENT_LOG_LOADED__) {
 	window.scrollToEvent = scrollToEvent;
 	window.loadEventPayload = loadEventPayload;
 	window.closePayloadModal = closePayloadModal;
+	window.confirmRecoverEvent = confirmRecoverEvent;
+	window.confirmPermanentlyDeleteEvent = confirmPermanentlyDeleteEvent;
+	window.confirmEmptyTrash = confirmEmptyTrash;
+	window.confirmCleanupTrash = confirmCleanupTrash;
 
 } // end guard to avoid duplicate execution

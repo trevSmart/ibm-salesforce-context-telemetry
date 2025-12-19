@@ -171,11 +171,22 @@
 		if (!userMenu.classList.contains('show')) {
 			userMenu.classList.add('show');
 			setPopoverVisibility(userMenu, true);
-			// Load user info
-			fetch('/api/auth/status', {
-				credentials: 'include' // Ensure cookies are sent
-			})
-				.then(response => response.json())
+			// Load user info - reuse cached auth data if available
+			const getAuthData = async () => {
+				// Check for cached auth data first
+				if (window.__cachedAuthData) {
+					return window.__cachedAuthData;
+				}
+				// Fallback to API call if cache not available
+				const response = await fetch('/api/auth/status', {
+					credentials: 'include' // Ensure cookies are sent
+				});
+				const data = await response.json();
+				// Cache for future use
+				window.__cachedAuthData = data;
+				return data;
+			};
+			getAuthData()
 				.then(data => {
 					const usernameElement = document.getElementById('userMenuUsername');
 					if (usernameElement) {

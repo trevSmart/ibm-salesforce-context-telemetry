@@ -89,6 +89,9 @@
 							<button class="tab-btn" id="teamsTab" data-tab="teams">
 								<span class="text-xs font-semibold uppercase tracking-wider">Teams</span>
 							</button>
+							<button class="tab-btn" id="trashTab" data-tab="trash">
+								<span class="text-xs font-semibold uppercase tracking-wider">Trash</span>
+							</button>
 							<div class="tab-indicator" id="tabIndicator"></div>
 						</div>
 						<div class="all-sessions-container" id="sessionsContainer">
@@ -117,6 +120,24 @@
 						</ul>
 						<ul class="session-list list-none sessions-scrollable" id="teamList" style="display: none;">
 						</ul>
+						<div id="trashContainer" style="display: none;">
+							<div class="trash-header" style="padding: 16px; border-bottom: 1px solid #e5e7eb; dark:border-gray-700;">
+								<div class="font-semibold text-sm text-gray-900 dark:text-white mb-2">Deleted Events</div>
+								<div class="text-xs text-gray-600 dark:text-gray-400 mb-4">
+									Events moved to trash can be recovered or permanently deleted.
+								</div>
+								<div class="flex gap-2">
+									<button id="emptyTrashBtn" class="btn btn-sm btn-outline btn-error" onclick="confirmEmptyTrash()">
+										<i class="fa-solid fa-trash-alt"></i>
+										Empty Trash
+									</button>
+									<button id="cleanupTrashBtn" class="btn btn-sm btn-outline" onclick="confirmCleanupTrash()">
+										<i class="fa-solid fa-clock"></i>
+										Cleanup Old
+									</button>
+								</div>
+							</div>
+						</div>
 					</div>
 				</div>
 
@@ -171,16 +192,16 @@
 						<div id="sessionActivityCard" class="session-activity-card overflow-hidden rounded-lg bg-white shadow-sm hidden" style="flex-direction: column;">
 							<div class="session-activity-header-floating px-4 py-3 sm:px-6">
 								<div class="session-activity-header">
-									<div style="display: flex; align-items: center; gap: 8px;">
+									<div style="display: flex; align-items: center; gap: 4px;">
 										<button class="date-nav-btn" id="prevDayBtn" onclick="navigateToPreviousDay()">
-											<i class="fa-solid fa-chevron-left"></i>
+											<i class="fa-solid fa-caret-left"></i>
 										</button>
 										<div>
 											<p id="sessionActivityTitle" class="label">Timeline</p>
 											<p id="sessionActivitySubtitle" class="subtitle">–</p>
 										</div>
 										<button class="date-nav-btn" id="nextDayBtn" onclick="navigateToNextDay()">
-											<i class="fa-solid fa-chevron-right"></i>
+											<i class="fa-solid fa-caret-right"></i>
 										</button>
 									</div>
 									<div class="session-activity-legend-wrapper">

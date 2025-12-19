@@ -25,8 +25,8 @@ function getToolUsageChartTheme() {
 		muted: isDark ? '#a1a1aa' : '#6b7280',
 		grid: isDark ? '#2f3340' : '#e5e7eb',
 		axis: isDark ? '#52525b' : '#d1d5db',
-		success: '#0ea5e9',
-		error: '#ef4444',
+		success: '#14becb',
+		error: '#dc2626',
 		bg: isDark ? '#111827' : '#ffffff'
 	};
 }
@@ -97,6 +97,10 @@ async function loadToolUsageChart(days = TOOL_USAGE_DEFAULT_DAYS) {
 
 		const option = {
 			backgroundColor: theme.bg,
+			textStyle: {
+				fontFamily:
+					'Inter, \'Manrope\', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, \'Helvetica Neue\', Arial, sans-serif'
+			},
 			tooltip: {
 				trigger: 'axis',
 				axisPointer: { type: 'shadow' }
@@ -106,41 +110,52 @@ async function loadToolUsageChart(days = TOOL_USAGE_DEFAULT_DAYS) {
 			// 	textStyle: { color: theme.text }
 			// },
 			grid: {
-				left: '3%',
+				left: '2%',
 				right: '4%',
 				bottom: '6%',
-				containLabel: false
+				top: 6,
+				containLabel: true
 			},
 			xAxis: {
 				type: 'value',
 				minInterval: 1,
-				axisLabel: { color: theme.muted },
-				splitLine: {
-					show: true,
-					lineStyle: { color: theme.grid }
-				}
+				show: false,
+				splitLine: { show: false }
 			},
 			yAxis: {
 				type: 'category',
 				data: names,
 				axisTick: { alignWithLabel: false },
-				axisLabel: { color: theme.text }
+				axisLine: { show: false },
+				axisLabel: { color: theme.text, fontSize: 10, fontWeight: 500, lineHeight: 14 }
 			},
 			series: [
 				{
 					name: 'Successful',
 					type: 'bar',
 					stack: 'total',
-					label: { show: true, color: theme.text },
-					itemStyle: { color: theme.success },
+					label: { show: false },
+					itemStyle: { color: theme.success, borderRadius: [0, 0, 0, 0] },
 					data: successData
 				},
 				{
 					name: 'Errors',
 					type: 'bar',
 					stack: 'total',
-					label: { show: true, color: theme.text },
-					itemStyle: { color: theme.error },
+					label: {
+						show: true,
+						position: 'right',
+						distance: 8,
+						formatter: (params) => {
+							const idx = params.dataIndex;
+							return `{success|${successData[idx]}}/{error|${errorData[idx]}}`;
+						},
+						rich: {
+							success: { color: theme.success, fontWeight: 600 },
+							error: { color: theme.error, fontWeight: 600 }
+						}
+					},
+					itemStyle: { color: theme.error, borderRadius: [0, 10, 10, 0] },
 					data: errorData
 				}
 			]

@@ -17,12 +17,19 @@ async function getCsrfToken() {
 	if (csrfToken) {
 		return csrfToken;
 	}
+	// Check for cached auth data first to avoid redundant API call
+	if (window.__cachedAuthData && window.__cachedAuthData.csrfToken) {
+		csrfToken = window.__cachedAuthData.csrfToken;
+		return csrfToken;
+	}
 	try {
 		const response = await fetch('/api/auth/status', {
 			credentials: 'include'
 		});
 		const data = await response.json();
 		csrfToken = data.csrfToken;
+		// Cache auth data for reuse
+		window.__cachedAuthData = data;
 		return csrfToken;
 	} catch (error) {
 		console.error('Failed to get CSRF token:', error);

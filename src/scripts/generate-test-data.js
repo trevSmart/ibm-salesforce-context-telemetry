@@ -3,7 +3,7 @@
 /**
  * Script to generate realistic test data for telemetry server
  *
- * Simulates 2 weeks of activity with:
+ * Simulates 6 weeks of activity with:
  * - 20 users working on 4 different projects
  * - Each project has its own Salesforce org
  * - Sessions start when IDE opens
@@ -11,15 +11,17 @@
  * - Some sessions without tool invocations
  * - Some sessions end abruptly without session_end event
  * - Activity mainly during office hours (9-18h, Mon-Fri)
+ * - Very low activity on weekends (5% vs 60% on weekdays)
  */
 
+require('dotenv').config();
 const db = require('../storage/database');
 const { v4: uuidv4 } = require('uuid');
 
 // Configuration
 const NUM_USERS = 20;
 const NUM_PROJECTS = 4;
-const WEEKS = 2;
+const WEEKS = 6; // Increased to cover more weeks
 const OFFICE_HOURS_START = 9; // 9 AM
 const OFFICE_HOURS_END = 18; // 6 PM
 
@@ -334,7 +336,7 @@ async function generateTestData(targetDay, shouldDeleteExisting) {
 	console.log('📊 Generating test data...');
 	console.log(`   Users: ${NUM_USERS}`);
 	console.log(`   Projects: ${NUM_PROJECTS}`);
-	console.log(`   Period: ${WEEKS} weeks\n`);
+	console.log(`   Period: ${WEEKS} weeks (with reduced weekend activity)\n`);
 
 	// Base day for data generation (center of the period)
 	const baseDate = targetDay ? new Date(targetDay) : new Date();
@@ -360,17 +362,18 @@ async function generateTestData(targetDay, shouldDeleteExisting) {
 	const currentDate = new Date(startDate);
 
 	while (currentDate <= endDate) {
-		// Only generate sessions on weekdays
-		if (isWeekday(currentDate)) {
-			// Each user has a 60% chance of opening IDE on a given day
-			for (const project of PROJECTS) {
-				for (const userIndex of project.users) {
-					if (Math.random() < 0.6) {
-						const userId = USER_IDS[userIndex];
-						const sessionEvents = generateSession(userId, project, currentDate, endDate);
-						allEvents.push(...sessionEvents);
-						totalSessions++;
-					}
+		const isWeekend = !isWeekday(currentDate);
+
+		// Each user has different chance of opening IDE based on weekday/weekend
+		const workProbability = isWeekend ? 0.05 : 0.6; // Much lower activity on weekends
+
+		for (const project of PROJECTS) {
+			for (const userIndex of project.users) {
+				if (Math.random() < workProbability) {
+					const userId = USER_IDS[userIndex];
+					const sessionEvents = generateSession(userId, project, currentDate, endDate);
+					allEvents.push(...sessionEvents);
+					totalSessions++;
 				}
 			}
 		}
@@ -429,6 +432,22 @@ async function generateTestData(targetDay, shouldDeleteExisting) {
 // Run the script
 (async () => {
 	try {
+		// Check ENVIRONMENT variable
+		const environment = process.env.ENVIRONMENT;
+		const hasDisableEnvCheckFlag = process.argv.includes('--disable-env-check');
+
+		if (environment === 'pro') {
+			console.error('❌ This script cannot run in production environment (ENVIRONMENT=pro)');
+			process.exit(1);
+		} else if (environment === 'dev') {
+			// Continue with script execution
+		} else if (!environment || environment.trim() === '') {
+			if (!hasDisableEnvCheckFlag) {
+				console.error('❌ ENVIRONMENT variable not set. Use --disable-env-check flag to bypass this check in development.');
+				process.exit(1);
+			}
+		}
+
 		const dayArg = process.argv[2];
 		const deleteArg = process.argv[3];
 		let targetDay = null;

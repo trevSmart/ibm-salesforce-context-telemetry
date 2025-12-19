@@ -127,6 +127,16 @@ const settingsLimiter = createLimiter({
 	}
 });
 
+// Rate limit for general API write operations: max 500 requests per 10 minutes per IP
+const apiWriteLimiter = createLimiter({
+	windowMs: 10 * 60 * 1000, // 10 minutes
+	max: 500, // lower than read operations for write safety
+	message: {
+		status: 'error',
+		message: 'Too many API write requests. Please try again later.'
+	}
+});
+
 // Import Sharp for image processing
 const sharp = require('sharp');
 
@@ -2061,6 +2071,139 @@ app.delete('/api/events', auth.requireAuth, auth.requireRole('advanced'), delete
 		res.status(500).json({
 			status: 'error',
 			message: 'Failed to delete events'
+		});
+	}
+});
+
+// Recover a soft deleted event
+app.patch('/api/events/:id/recover', auth.requireAuth, auth.requireRole('advanced'), apiWriteLimiter, async (req, res) => {
+	try {
+		const eventId = parseInt(req.params.id, 10);
+		if (isNaN(eventId)) {
+			return res.status(400).json({
+				status: 'error',
+				message: 'Invalid event ID'
+			});
+		}
+
+		const recovered = await db.recoverEvent(eventId);
+		if (!recovered) {
+			return res.status(404).json({
+				status: 'error',
+				message: 'Event not found or not deleted'
+			});
+		}
+
+		statsCache.clear();
+		sessionsCache.clear();
+		userIdsCache.clear();
+		res.json({
+			status: 'ok',
+			message: 'Event recovered successfully',
+			eventId
+		});
+	} catch (error) {
+		console.error('Error recovering event:', error);
+		res.status(500).json({
+			status: 'error',
+			message: 'Failed to recover event'
+		});
+	}
+});
+
+// Permanently delete a soft deleted event
+app.delete('/api/events/:id/permanent', auth.requireAuth, auth.requireRole('administrator'), deleteEventsLimiter, async (req, res) => {
+	try {
+		const eventId = parseInt(req.params.id, 10);
+		if (isNaN(eventId)) {
+			return res.status(400).json({
+				status: 'error',
+				message: 'Invalid event ID'
+			});
+		}
+
+		const deleted = await db.permanentlyDeleteEvent(eventId);
+		if (!deleted) {
+			return res.status(404).json({
+				status: 'error',
+				message: 'Event not found or not deleted'
+			});
+		}
+
+		statsCache.clear();
+		sessionsCache.clear();
+		userIdsCache.clear();
+		res.json({
+			status: 'ok',
+			message: 'Event permanently deleted',
+			eventId
+		});
+	} catch (error) {
+		console.error('Error permanently deleting event:', error);
+		res.status(500).json({
+			status: 'error',
+			message: 'Failed to permanently delete event'
+		});
+	}
+});
+
+// Get deleted events (trash bin)
+app.get('/api/events/deleted', auth.requireAuth, auth.requireRole('advanced'), apiReadLimiter, async (req, res) => {
+	try {
+		const limit = Math.min(parseInt(req.query.limit) || 50, 100);
+		const offset = parseInt(req.query.offset) || 0;
+		const orderBy = req.query.orderBy || 'deleted_at';
+		const order = req.query.order || 'DESC';
+
+		const result = await db.getDeletedEvents({
+			limit,
+			offset,
+			orderBy,
+			order
+		});
+
+		res.json({
+			status: 'ok',
+			events: result.events,
+			total: result.total,
+			limit: result.limit,
+			offset: result.offset
+		});
+	} catch (error) {
+		console.error('Error getting deleted events:', error);
+		res.status(500).json({
+			status: 'error',
+			message: 'Failed to get deleted events'
+		});
+	}
+});
+
+// Cleanup old deleted events (permanent deletion of events deleted more than X days ago)
+app.delete('/api/events/deleted/cleanup', auth.requireAuth, auth.requireRole('administrator'), deleteEventsLimiter, async (req, res) => {
+	try {
+		const daysOld = parseInt(req.query.days) || 30;
+		if (daysOld < 1 || daysOld > 365) {
+			return res.status(400).json({
+				status: 'error',
+				message: 'Days must be between 1 and 365'
+			});
+		}
+
+		const deletedCount = await db.cleanupOldDeletedEvents(daysOld);
+		statsCache.clear();
+		sessionsCache.clear();
+		userIdsCache.clear();
+		res.json({
+			status: 'ok',
+			message: `Successfully permanently deleted ${deletedCount} events older than ${daysOld} days`,
+			deletedCount,
+			daysOld
+		});
+	} catch (error) {
+		console.error('Error cleaning up deleted events:', error);
+		res.status(500).json({
+			status: 'error',
+			message: 'Failed to cleanup deleted events'
 		});
 	}
 });

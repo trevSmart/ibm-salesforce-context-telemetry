@@ -795,11 +795,10 @@
     background: none;
     padding: 0;
     gap: 12px;
+    align-items: flex-start !important; /* override inline align center to align legend and range select tops */
   }
 
-  .dashboard-chart-card .chart-floating-header .chart-header h1,
-  .dashboard-chart-card .chart-floating-header .chart-header #timeRangeSelect {
-    /* background: linear -gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(255, 255, 255, 0.72) 60%, rgba(255, 255, 255, 0.3)); */
+  .dashboard-chart-card .chart-floating-header .chart-header h1 {
     background-color: rgba(255, 255, 255, 0.9);
     border-radius: 12px;
     padding: 12px 16px;
@@ -809,6 +808,16 @@
     will-change: opacity, visibility;
     visibility: hidden;
     transition: opacity 150ms ease, visibility 150ms ease;
+  }
+
+  .dashboard-chart-card .chart-floating-header .chart-header #timeRangeSelect {
+    padding: 6px 14px;
+    font-size: 11.5px;
+    font-weight: 500;
+    background: rgba(255, 255, 255, 0.92);
+    border-radius: 999px;
+    box-shadow: 0 10px 35px rgba(15, 23, 42, 0.1), 0 2px 6px rgba(15, 23, 42, 0.08);
+    color: #374151;
   }
 
   .dashboard-chart-card .chart-floating-header .chart-header h1 {
@@ -876,7 +885,7 @@
     position: absolute;
     /* left: 50%; */
     margin: 0 0 4px 0;
-    transform: translateY(-1px);
+    transform: translateY(10px);
     display: inline-flex;
     gap: 16px;
     align-items: center;
@@ -890,7 +899,7 @@
     pointer-events: none;
     opacity: 0;
     visibility: hidden;
-    will-change: opacity, visibility, transform;
+    will-change: opacity, visibility;
     transition:
       opacity 170ms ease,
       visibility 170ms ease,
@@ -911,7 +920,8 @@
   .dashboard-chart-card:hover .chart-legend-overlay {
     opacity: 0.9;
     visibility: visible;
-    transform: translateY(15px);
+    transform: none;
+    pointer-events: auto;
   }
 
   .chart-legend-overlay::before {
@@ -926,6 +936,15 @@
     letter-spacing: 0.2px;
     text-transform: capitalize;
     white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+    transition: opacity 120ms ease, transform 120ms ease;
+  }
+
+  .chart-legend-overlay-item.is-disabled {
+    opacity: 0.35;
+    text-decoration: line-through;
+    transform: translateY(-1px);
   }
 
   .chart-legend-overlay-marker {
@@ -1057,10 +1076,13 @@
     position: relative;
     display: inline-flex;
     align-items: center;
-    height: 100%;
+    height: 28px;
   }
 
-  /* Tailwind UI combobox button styles are now handled by inline classes */
+  .user-filter-dropdown-container button {
+    height: 100%;
+    min-height: 28px;
+  }
 
   .user-filter-dropdown-btn > i {
     font-size: 12px;
@@ -1648,12 +1670,11 @@
   .top-users-badge {
     background: #ee6d6d;
     color: #ffffff;
-    font-size: 9.1px;
+    font-size: 9.4px;
     padding: 2px 6px;
     border-radius: 999px;
-    font-weight: 300;
+    font-weight: 400;
     white-space: nowrap;
-    letter-spacing: 0.02em;
     margin-left: 5px;
   }
 
@@ -2284,7 +2305,7 @@
 
   .session-item {
     padding: 9px 4px 9px 12px;
-    margin-bottom: 6px;
+    margin-bottom: 2px;
     border-radius: 2px;
     cursor: pointer;
     transition: background-color 0.2s ease, border-color 0.2s ease;
@@ -2724,7 +2745,7 @@
   }
 
   .main-content-header {
-    padding: 20px 10px;
+    padding: 20px 10px 13px;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -2807,12 +2828,27 @@
   }
 
   .session-activity-header {
-    display: flex;
-    gap: 12px;
+    position: relative;
     margin-bottom: 0;
-    justify-content: space-between;
+    min-height: 2.5rem;
+    display: flex;
     align-items: center;
-    flex-wrap: wrap;
+  }
+
+  .session-activity-header > div:first-child {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .session-activity-legend-wrapper {
+    position: absolute;
+    right: 0;
+    display: flex;
+    align-items: center;
   }
 
   .session-activity-chart-body {
@@ -2848,10 +2884,10 @@
     background: transparent;
     border: none;
     cursor: pointer;
-    padding: 4px 8px;
+    padding: 2px 4px;
     border-radius: 4px;
     color: var(--text-secondary);
-    font-size: 0.875rem;
+    font-size: 1rem;
     transition: background-color 0.2s ease, color 0.2s ease;
     display: flex;
     align-items: center;
@@ -3200,14 +3236,14 @@
     align-items: center;
     justify-content: flex-start;
     gap: 6px;
-    padding: 4px 10px;
-    border-radius: 6px;
+    padding: 3px 7px;
+    border-radius: 5px;
     border: none;
     transition: opacity 0.2s ease, transform 0.15s ease;
-    font-size: 0.64375rem;
+    font-size: 0.75rem;
     line-height: 1rem;
-    font-weight: 400;
-    text-transform: uppercase;
+    font-weight: 500;
+    text-transform: none;
     width: auto;
     min-width: fit-content;
     white-space: nowrap;
@@ -3219,23 +3255,51 @@
   }
 
   .level-badge.debug {
-    background: #8e81ea;
-    color: white;
+    background: #ecfdf3;
+    color: #15803d;
+    box-shadow: inset 0 0 0 1px rgba(74, 222, 128, 0.32);
+  }
+
+  html.dark .level-badge.debug {
+    background: rgba(74, 222, 128, 0.15);
+    color: #bbf7d0;
+    box-shadow: inset 0 0 0 1px rgba(190, 242, 200, 0.28);
   }
 
   .level-badge.info {
-    background: #89c5e3;
-    color: white;
+    background: #eff6ff;
+    color: #1d4ed8;
+    box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.3);
+  }
+
+  html.dark .level-badge.info {
+    background: rgba(59, 130, 246, 0.12);
+    color: #93c5fd;
+    box-shadow: inset 0 0 0 1px rgba(147, 197, 253, 0.28);
   }
 
   .level-badge.warning {
-    background: #DB9139;
-    color: white;
+    background: #fffbeb;
+    color: #92400e;
+    box-shadow: inset 0 0 0 1px rgba(234, 179, 8, 0.32);
+  }
+
+  html.dark .level-badge.warning {
+    background: rgba(234, 179, 8, 0.12);
+    color: #facc15;
+    box-shadow: inset 0 0 0 1px rgba(250, 204, 21, 0.28);
   }
 
   .level-badge.error {
-    background: #ea6280;
-    color: white;
+    background: #fef2f2;
+    color: #b91c1c;
+    box-shadow: inset 0 0 0 1px rgba(248, 113, 113, 0.32);
+  }
+
+  html.dark .level-badge.error {
+    background: rgba(248, 113, 113, 0.15);
+    color: #fecdd3;
+    box-shadow: inset 0 0 0 1px rgba(252, 165, 165, 0.28);
   }
 
   .level-badge.success {
@@ -3416,34 +3480,15 @@
   }
 
   .status-indicator {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+    display: inline-block;
     width: 22px;
     height: 22px;
-    border-radius: 50%;
     flex-shrink: 0;
-    font-size: 0.6rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    color: white;
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.15);
-  }
-
-  .status-indicator.ok {
-    background-color: #10b981;
-  }
-
-  html.dark .status-indicator.ok {
-    background-color: #00af76;
-  }
-
-  .status-indicator.ko {
-    background-color: #dc2626;
-  }
-
-  html.dark .status-indicator.ko {
-    background-color: #c64545;
+    object-fit: contain;
+    background: transparent;
+    border-radius: 0;
+    padding: 0;
+    box-shadow: none;
   }
 
   .pagination {
@@ -4991,8 +5036,8 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 4px 10px;
-  border-radius: 8px;
+  padding: 4px 8px;
+  border-radius: 7px;
   font-size: 0.75rem;
   line-height: 1rem;
   font-weight: 500;
@@ -5039,7 +5084,7 @@ html.dark .level-filters .level-filter-btn .level-count {
   }
 
   .level-filters .level-filter-btn {
-    padding: 4px 8px;
+    padding: 4px 7px;
     min-width: auto;
   }
 }
@@ -5117,7 +5162,7 @@ html.dark .level-filters .level-filter-btn.level-error {
 }
 
 .bg-white19 {
-  background-color: #ffffff30;
+  background-color: #ffffff34;
 }
 
 .shadow-xs {
