@@ -3768,7 +3768,7 @@ if (window.__EVENT_LOG_LOADED__) {
 				: '';
 
 			row.innerHTML = `
-				<td class="border-b border-gray-200 py-4 pr-3 pl-4 text-sm font-medium text-gray-900 sm:pl-6 lg:pl-8 whitespace-nowrap" style="text-align: center;">
+				<td class="border-b border-gray-200 py-4 px-2 text-sm font-medium text-gray-900 whitespace-nowrap" style="text-align: center;">
 					<button class="expand-btn" type="button" id="expand-btn-${event.id}" style="background: none; border: none; cursor: pointer; padding: 4px;">
 						<i class="fa-solid fa-chevron-right"></i>
 					</button>
