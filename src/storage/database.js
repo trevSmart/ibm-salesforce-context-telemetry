@@ -975,7 +975,7 @@ async function getEvents(options = {}) {
 	let eventsQuery = `
 		SELECT
 			e.id, e.event, e.timestamp, e.server_id, e.version, e.session_id, e.parent_session_id,
-			e.user_id, e.received_at, e.created_at, e.user_name, e.tool_name, e.company_name
+			e.user_id, e.received_at, e.created_at, e.user_name, e.tool_name, e.company_name, e.error_message
 		FROM telemetry_events e
 		${whereClause}
 		ORDER BY ${safeOrderBy} ${safeOrder}
@@ -1013,7 +1013,7 @@ async function getEventById(id) {
 	}
 
 	if (dbType === 'sqlite') {
-		const event = db.prepare('SELECT id, event, timestamp, server_id, version, session_id, user_id, data, received_at, created_at, org_id, user_name, tool_name, company_name FROM telemetry_events WHERE id = ?').get(id);
+		const event = db.prepare('SELECT id, event, timestamp, server_id, version, session_id, user_id, data, received_at, created_at, org_id, user_name, tool_name, company_name, error_message FROM telemetry_events WHERE id = ?').get(id);
 		if (!event) {
 			return null;
 		}
@@ -1022,7 +1022,7 @@ async function getEventById(id) {
 			data: JSON.parse(event.data)
 		};
 	} else {
-		const result = await db.query('SELECT id, event, timestamp, server_id, version, session_id, user_id, data, received_at, created_at, org_id, user_name, tool_name, company_name FROM telemetry_events WHERE id = $1', [id]);
+		const result = await db.query('SELECT id, event, timestamp, server_id, version, session_id, user_id, data, received_at, created_at, org_id, user_name, tool_name, company_name, error_message FROM telemetry_events WHERE id = $1', [id]);
 		if (result.rows.length === 0) {
 			return null;
 		}
