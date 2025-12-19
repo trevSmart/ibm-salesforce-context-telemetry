@@ -250,7 +250,7 @@ if (window.__EVENT_LOG_LOADED__) {
 									<div class="settings-toggle-text">
 										<div class="settings-toggle-title">Delete all events</div>
 										<div class="settings-toggle-description">
-											Permanently delete all telemetry events from the server database. This action cannot be undone.
+											Move all telemetry events to trash. Events can be restored or permanently deleted later.
 										</div>
 									</div>
                 <div class="settings-toggle-actions">
@@ -261,6 +261,24 @@ if (window.__EVENT_LOG_LOADED__) {
                     </button>
                   ` : `
                     <div class="settings-toggle-description">Only advanced or administrator users can delete all events.</div>
+                  `}
+                </div>
+								</div>
+								<div class="settings-toggle-row" style="align-items: flex-start; margin-top: 8px;">
+									<div class="settings-toggle-text">
+										<div class="settings-toggle-title">Empty trash</div>
+										<div class="settings-toggle-description" id="trashInfo">
+											Permanently delete all events currently in the trash. This action cannot be undone.
+										</div>
+									</div>
+                <div class="settings-toggle-actions">
+                  ${canDeleteAllEvents ? `
+                    <button type="button" class="confirm-modal-btn confirm-modal-btn-destructive" id="emptyTrashBtn">
+                      <i class="fa-solid fa-dumpster-fire"></i>
+                      Empty trash
+                    </button>
+                  ` : `
+                    <div class="settings-toggle-description">Only advanced or administrator users can empty trash.</div>
                   `}
                 </div>
 								</div>
@@ -817,6 +835,16 @@ if (window.__EVENT_LOG_LOADED__) {
 				confirmDeleteAll();
 			});
 		}
+
+		const emptyTrashBtn = modal.querySelector('#emptyTrashBtn');
+		if (emptyTrashBtn) {
+			emptyTrashBtn.addEventListener('click', () => {
+				confirmEmptyTrash();
+			});
+		}
+
+		// Load trash info when settings modal opens
+		loadTrashInfo();
 
 		document.addEventListener(
 			'keydown',
@@ -6367,6 +6395,45 @@ if (window.__EVENT_LOG_LOADED__) {
 		});
 	}
 
+	// Load trash information
+	async function loadTrashInfo() {
+		try {
+			const response = await fetch('/api/events/deleted?limit=0', {
+				method: 'GET',
+				headers: getCsrfHeaders(false),
+				credentials: 'include'
+			});
+
+			if (!response.ok) {
+				console.warn('Could not load trash info:', response.status);
+				return;
+			}
+
+			const data = await response.json();
+			const trashInfo = document.getElementById('trashInfo');
+			if (trashInfo && data.total !== undefined) {
+				if (data.total > 0) {
+					trashInfo.textContent = `Permanently delete all ${data.total} events currently in the trash. This action cannot be undone.`;
+				} else {
+					trashInfo.textContent = 'Permanently delete all events currently in the trash. This action cannot be undone.';
+				}
+			}
+		} catch (error) {
+			console.warn('Error loading trash info:', error);
+			// Don't show error to user, just leave default text
+		}
+	}
+
+	function confirmEmptyTrash() {
+		openConfirmModal({
+			title: 'Empty trash',
+			message: 'Are you sure you want to permanently delete ALL events in the trash? This action cannot be undone.',
+			confirmLabel: 'Empty trash',
+			destructive: true,
+			onConfirm: () => emptyTrash()
+		});
+	}
+
 	// Empty trash (delete all deleted events)
 	async function emptyTrash() {
 		try {
@@ -6381,8 +6448,9 @@ if (window.__EVENT_LOG_LOADED__) {
 			const data = await validResponse.json();
 			alert(`Successfully deleted ${data.deletedCount || 0} events from trash.`);
 
-			// Refresh deleted events
+			// Refresh deleted events and trash info
 			loadDeletedEvents();
+			loadTrashInfo();
 		} catch (error) {
 			console.error('Error emptying trash:', error);
 			alert('Error emptying trash: ' + error.message);

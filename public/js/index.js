@@ -728,7 +728,7 @@ async function openSettingsModal() {
 								<div class="settings-toggle-text">
 									<div class="settings-toggle-title">Delete all events</div>
 									<div class="settings-toggle-description">
-										Permanently delete all telemetry events from the server database. This action cannot be undone.
+										Move all telemetry events to trash. Events can be restored or permanently deleted later.
 									</div>
 								</div>
                 <div class="settings-toggle-actions">
