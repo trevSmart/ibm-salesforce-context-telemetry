@@ -851,11 +851,11 @@ async function getStats(options = {}) {
 	if (dbType === 'sqlite') {
 		// Use prepared statement for common case (no filters)
 		if (!startDate && !endDate && !eventType) {
-			const stmt = getPreparedStatement('getStatsTotal', 'SELECT COUNT(*) as total FROM telemetry_events');
+			const stmt = getPreparedStatement('getStatsTotal', 'SELECT COUNT(*) as total FROM telemetry_events WHERE deleted_at IS NULL');
 			return { total: stmt.get().total };
 		}
 
-		let query = 'SELECT COUNT(*) as total FROM telemetry_events WHERE 1=1';
+		let query = 'SELECT COUNT(*) as total FROM telemetry_events WHERE deleted_at IS NULL';
 		const params = [];
 
 		if (startDate) {
@@ -874,7 +874,7 @@ async function getStats(options = {}) {
 		const result = db.prepare(query).get(...params);
 		return { total: result.total };
 	} else if (dbType === 'postgresql') {
-		let query = 'SELECT COUNT(*) as total FROM telemetry_events WHERE 1=1';
+		let query = 'SELECT COUNT(*) as total FROM telemetry_events WHERE deleted_at IS NULL';
 		const params = [];
 		let paramIndex = 1;
 
@@ -1043,7 +1043,7 @@ async function getEventById(id) {
 	}
 
 	if (dbType === 'sqlite') {
-		const event = db.prepare('SELECT id, event, timestamp, server_id, version, session_id, user_id, data, received_at, created_at, org_id, user_name, tool_name, company_name, error_message FROM telemetry_events WHERE id = ?').get(id);
+		const event = db.prepare('SELECT id, event, timestamp, server_id, version, session_id, user_id, data, received_at, created_at, org_id, user_name, tool_name, company_name, error_message FROM telemetry_events WHERE id = ? AND deleted_at IS NULL').get(id);
 		if (!event) {
 			return null;
 		}
@@ -1052,7 +1052,7 @@ async function getEventById(id) {
 			data: JSON.parse(event.data)
 		};
 	} else {
-		const result = await db.query('SELECT id, event, timestamp, server_id, version, session_id, user_id, data, received_at, created_at, org_id, user_name, tool_name, company_name, error_message FROM telemetry_events WHERE id = $1', [id]);
+		const result = await db.query('SELECT id, event, timestamp, server_id, version, session_id, user_id, data, received_at, created_at, org_id, user_name, tool_name, company_name, error_message FROM telemetry_events WHERE id = $1 AND deleted_at IS NULL', [id]);
 		if (result.rows.length === 0) {
 			return null;
 		}
@@ -1077,6 +1077,10 @@ async function getEventTypeStats(options = {}) {
 		`;
 		const params = [];
 		const conditions = [];
+
+		// Always exclude soft deleted events
+		conditions.push('deleted_at IS NULL');
+
 		if (sessionId) {
 			// Logical session filter
 			conditions.push('(parent_session_id = ? OR (parent_session_id IS NULL AND session_id = ?))');
@@ -1105,6 +1109,10 @@ async function getEventTypeStats(options = {}) {
 		const params = [];
 		const conditions = [];
 		let paramIndex = 1;
+
+		// Always exclude soft deleted events
+		conditions.push(`deleted_at IS NULL`);
+
 		if (sessionId) {
 			conditions.push(`(parent_session_id = $${paramIndex} OR (parent_session_id IS NULL AND session_id = $${paramIndex + 1}))`);
 			params.push(sessionId, sessionId);
@@ -1144,7 +1152,7 @@ async function getSessions(options = {}) {
 	if (dbType === 'sqlite') {
 		// Group by logical session: parent_session_id when available, otherwise session_id
 		// Use optimized query with CTEs and aggregations instead of correlated subqueries
-		let whereClause = 'WHERE session_id IS NOT NULL OR parent_session_id IS NOT NULL';
+		let whereClause = 'WHERE (session_id IS NOT NULL OR parent_session_id IS NOT NULL) AND deleted_at IS NULL';
 		const params = [];
 		if (userIds && Array.isArray(userIds) && userIds.length > 0) {
 			const placeholders = userIds.map(() => '?').join(', ');
@@ -1171,10 +1179,12 @@ async function getSessions(options = {}) {
 				sa.last_event,
 				(SELECT user_id FROM telemetry_events
 				 WHERE COALESCE(parent_session_id, session_id) = sa.logical_session_id
+				   AND deleted_at IS NULL
 				 ORDER BY timestamp ASC LIMIT 1) as user_id,
 				(SELECT data FROM telemetry_events
 				 WHERE COALESCE(parent_session_id, session_id) = sa.logical_session_id
 				   AND event = 'session_start'
+				   AND deleted_at IS NULL
 				 ORDER BY timestamp ASC LIMIT 1) as session_start_data,
 				sa.has_start,
 				sa.has_end
@@ -1244,10 +1254,12 @@ async function getSessions(options = {}) {
 				sa.last_event,
 				(SELECT user_id FROM telemetry_events
 				 WHERE COALESCE(parent_session_id, session_id) = sa.logical_session_id
+				   AND deleted_at IS NULL
 				 ORDER BY timestamp ASC LIMIT 1) as user_id,
 				(SELECT data FROM telemetry_events
 				 WHERE COALESCE(parent_session_id, session_id) = sa.logical_session_id
 				   AND event = 'session_start'
+				   AND deleted_at IS NULL
 				 ORDER BY timestamp ASC LIMIT 1) as session_start_data,
 				sa.has_start,
 				sa.has_end

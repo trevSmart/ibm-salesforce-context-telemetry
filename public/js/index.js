@@ -296,6 +296,77 @@ async function deleteAllEvents() {
 	}
 }
 
+function confirmEmptyTrash() {
+	openConfirmModal({
+		title: 'Empty trash',
+		message: 'Are you sure you want to permanently delete ALL events in the trash? This action cannot be undone.',
+		confirmLabel: 'Empty trash',
+		destructive: true
+	}).then((confirmed) => {
+		if (confirmed) {
+			emptyTrash();
+		}
+	});
+}
+
+async function loadTrashInfo() {
+	try {
+		const response = await fetch('/api/events/deleted?limit=0', {
+			method: 'GET',
+			credentials: 'include'
+		});
+
+		if (response.status === 401) {
+			// User doesn't have permission, hide the trash info
+			return;
+		}
+		if (!response.ok) {
+			console.warn('Could not load trash info:', response.status);
+			return;
+		}
+
+		const data = await response.json();
+		const trashInfo = document.getElementById('trashInfo');
+		if (trashInfo && data.total !== undefined) {
+			if (data.total > 0) {
+				trashInfo.textContent = `Permanently delete all ${data.total} events currently in the trash. This action cannot be undone.`;
+			} else {
+				trashInfo.textContent = 'Permanently delete all events currently in the trash. This action cannot be undone.';
+			}
+		}
+	} catch (error) {
+		console.warn('Error loading trash info:', error);
+		// Don't show error to user, just leave default text
+	}
+}
+
+async function emptyTrash() {
+	try {
+		const response = await fetch('/api/events/deleted', {
+			method: 'DELETE',
+			credentials: 'include' // Ensure cookies are sent
+		});
+
+		if (response.status === 401) {
+			window.location.href = '/login';
+			return;
+		}
+		if (!response.ok) {
+			throw new Error(`HTTP error! status: ${response.status}`);
+		}
+
+		const data = await response.json();
+		alert(`Successfully deleted ${data.deletedCount || 0} events from trash.`);
+
+		// Refresh chart data and trash info
+		loadChartData(currentDays);
+		loadTrashInfo();
+	} catch (error) {
+		console.error('Error emptying trash:', error);
+		alert('Error emptying trash: ' + error.message);
+	}
+}
+
 function applyTheme(theme) {
 	if (theme === 'dark') {
 		document.documentElement.classList.add('dark');
@@ -671,6 +742,24 @@ async function openSettingsModal() {
                   `}
                 </div>
 							</div>
+							<div class="settings-toggle-row" style="align-items: flex-start; margin-top: 8px;">
+								<div class="settings-toggle-text">
+									<div class="settings-toggle-title">Empty trash</div>
+									<div class="settings-toggle-description" id="trashInfo">
+										Permanently delete all events currently in the trash. This action cannot be undone.
+									</div>
+								</div>
+                <div class="settings-toggle-actions">
+                  ${canDeleteAllEvents ? `
+                    <button type="button" class="confirm-modal-btn confirm-modal-btn-destructive" id="emptyTrashBtn">
+                      <i class="fa-solid fa-dumpster-fire"></i>
+                      Empty trash
+                    </button>
+                  ` : `
+                    <div class="settings-toggle-description">Only advanced or administrator users can empty trash.</div>
+                  `}
+                </div>
+							</div>
 						</div>
 					</section>
 				</div>
@@ -747,6 +836,16 @@ async function openSettingsModal() {
 			confirmDeleteAll();
 		});
 	}
+
+	const emptyTrashBtn = modal.querySelector('#emptyTrashBtn');
+	if (emptyTrashBtn) {
+		emptyTrashBtn.addEventListener('click', () => {
+			confirmEmptyTrash();
+		});
+	}
+
+	// Load trash info when settings modal opens
+	loadTrashInfo();
 
 	// Export/Import database functionality (only for administrators)
 	if (isAdministrator) {
