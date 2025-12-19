@@ -3768,7 +3768,7 @@ if (window.__EVENT_LOG_LOADED__) {
 				: '';
 
 			row.innerHTML = `
-				<td class="border-b border-gray-200 py-4 px-2 text-sm font-medium text-gray-900 whitespace-nowrap" style="text-align: center;">
+				<td class="expand-column border-b border-gray-200 py-4 px-2 text-sm font-medium text-gray-900 whitespace-nowrap" style="text-align: center;">
 					<button class="expand-btn" type="button" id="expand-btn-${event.id}" style="background: none; border: none; cursor: pointer; padding: 4px;">
 						<i class="fa-solid fa-chevron-right"></i>
 					</button>
@@ -6237,7 +6237,7 @@ if (window.__EVENT_LOG_LOADED__) {
 
 			return `
 			<tr class="deleted-event-row" data-event-id="${event.id}">
-				<td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-0">
+				<td class="expand-column relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-0">
 					<button type="button" class="expand-btn" onclick="toggleEventExpansion(${event.id})">
 						<i class="fa-solid fa-chevron-right expand-icon"></i>
 					</button>

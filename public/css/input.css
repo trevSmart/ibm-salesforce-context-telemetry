@@ -3152,6 +3152,35 @@
     transition: background-color 0.15s ease;
   }
 
+  .logs-table th.expand-column,
+  .logs-table td.expand-column {
+    width: 36px;
+    min-width: 36px;
+    padding-left: 8px;
+    padding-right: 4px;
+    text-align: center;
+  }
+
+  .logs-table th:nth-child(2),
+  .logs-table td:nth-child(2) {
+    width: 56px;
+    min-width: 56px;
+    text-align: center;
+  }
+
+  .logs-table th:nth-child(9),
+  .logs-table td:nth-child(9) {
+    width: 120px;
+    min-width: 120px;
+  }
+
+  .logs-table th:nth-child(10),
+  .logs-table td:nth-child(10) {
+    width: 52px;
+    min-width: 52px;
+    text-align: right;
+  }
+
   html.dark .logs-table td {
     color: var(--text-secondary);
     border-bottom: 1px solid #27272a;
