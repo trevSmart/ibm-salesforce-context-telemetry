@@ -99,9 +99,6 @@ async function init() {
 
 		console.log(`SQLite database initialized at: ${dbPath}`);
 
-		// Run migrations after database initialization
-		await runMigrations();
-
 	} else if (dbType === 'postgresql') {
 		const { Pool } = require('pg');
 
