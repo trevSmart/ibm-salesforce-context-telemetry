@@ -1146,7 +1146,15 @@ if (window.__EVENT_LOG_LOADED__) {
 		});
 	}
 
-	function openConfirmModal({ title, message, confirmLabel = 'Confirm', cancelLabel = 'Cancel', destructive = false }) {
+	function openConfirmModal({
+		title,
+		message,
+		confirmLabel = 'Confirm',
+		cancelLabel = 'Cancel',
+		destructive = false,
+		onConfirm,
+		onCancel
+	}) {
 		return new Promise((resolve) => {
 			const existing = document.querySelector('.confirm-dialog-backdrop');
 			if (existing) {
@@ -1206,12 +1214,32 @@ if (window.__EVENT_LOG_LOADED__) {
 			}
 
 			const [cancelBtn, confirmBtn] = modal.querySelectorAll('.confirm-modal-btn');
-			cancelBtn.addEventListener('click', () => animateAndResolve(false));
-			confirmBtn.addEventListener('click', () => animateAndResolve(true));
+			const handleCancel = () => {
+				if (typeof onCancel === 'function') {
+					try {
+						onCancel();
+					} catch (error) {
+						console.error('Confirm modal cancel handler failed:', error);
+					}
+				}
+				animateAndResolve(false);
+			};
+			const handleConfirm = () => {
+				if (typeof onConfirm === 'function') {
+					try {
+						onConfirm();
+					} catch (error) {
+						console.error('Confirm modal confirm handler failed:', error);
+					}
+				}
+				animateAndResolve(true);
+			};
+			cancelBtn.addEventListener('click', handleCancel);
+			confirmBtn.addEventListener('click', handleConfirm);
 
 			backdrop.addEventListener('click', (e) => {
 				if (e.target === backdrop) {
-					animateAndResolve(false);
+					handleCancel();
 				}
 			});
 
@@ -1223,7 +1251,7 @@ if (window.__EVENT_LOG_LOADED__) {
 						e.preventDefault();
 						document.removeEventListener('keydown', handleKeydown);
 						if (document.body.contains(backdrop)) {
-							animateAndResolve(false);
+							handleCancel();
 						}
 					}
 				}
@@ -6406,6 +6434,13 @@ if (window.__EVENT_LOG_LOADED__) {
 				credentials: 'include'
 			});
 
+			if (response.status === 401) {
+				window.location.href = '/login';
+				return;
+			}
+			if (response.status === 403) {
+				return;
+			}
 			if (!response.ok) {
 				console.warn('Could not load trash info:', response.status);
 				return;

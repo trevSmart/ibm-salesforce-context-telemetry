@@ -1225,7 +1225,7 @@ async function getSessions(options = {}) {
 			};
 		});
 	} else {
-		let whereClause = 'WHERE session_id IS NOT NULL OR parent_session_id IS NOT NULL';
+		let whereClause = 'WHERE (session_id IS NOT NULL OR parent_session_id IS NOT NULL) AND deleted_at IS NULL';
 		const params = [];
 		let paramIndex = 1;
 		if (userIds && Array.isArray(userIds) && userIds.length > 0) {
