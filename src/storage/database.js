@@ -1111,7 +1111,7 @@ async function getEventTypeStats(options = {}) {
 		let paramIndex = 1;
 
 		// Always exclude soft deleted events
-		conditions.push(`deleted_at IS NULL`);
+		conditions.push('deleted_at IS NULL');
 
 		if (sessionId) {
 			conditions.push(`(parent_session_id = $${paramIndex} OR (parent_session_id IS NULL AND session_id = $${paramIndex + 1}))`);
@@ -1372,11 +1372,11 @@ async function deleteEventsBySession(sessionId) {
 	}
 
 	if (dbType === 'sqlite') {
-		const stmt = db.prepare('UPDATE telemetry_events SET deleted_at = ? WHERE session_id = ? AND deleted_at IS NULL');
-		const result = stmt.run(new Date().toISOString(), sessionId);
+		const stmt = db.prepare('UPDATE telemetry_events SET deleted_at = ? WHERE (parent_session_id = ? OR (parent_session_id IS NULL AND session_id = ?)) AND deleted_at IS NULL');
+		const result = stmt.run(new Date().toISOString(), sessionId, sessionId);
 		return result.changes;
 	} else if (dbType === 'postgresql') {
-		const result = await db.query('UPDATE telemetry_events SET deleted_at = NOW() WHERE session_id = $1 AND deleted_at IS NULL', [sessionId]);
+		const result = await db.query('UPDATE telemetry_events SET deleted_at = NOW() WHERE (parent_session_id = $1 OR (parent_session_id IS NULL AND session_id = $1)) AND deleted_at IS NULL', [sessionId]);
 		return result.rowCount;
 	}
 }
