@@ -2178,6 +2178,24 @@ app.get('/api/events/deleted', auth.requireAuth, auth.requireRole('advanced'), a
 	}
 });
 
+// Empty trash (permanently delete all events in trash)
+app.delete('/api/events/deleted', auth.requireAuth, auth.requireRole('advanced'), deleteEventsLimiter, async (req, res) => {
+	try {
+		const deletedCount = await db.emptyTrash();
+		res.json({
+			status: 'ok',
+			message: `Successfully deleted ${deletedCount} events from trash`,
+			deletedCount
+		});
+	} catch (error) {
+		console.error('Error emptying trash:', error);
+		res.status(500).json({
+			status: 'error',
+			message: 'Failed to empty trash'
+		});
+	}
+});
+
 // Cleanup old deleted events (permanent deletion of events deleted more than X days ago)
 app.delete('/api/events/deleted/cleanup', auth.requireAuth, auth.requireRole('administrator'), deleteEventsLimiter, async (req, res) => {
 	try {

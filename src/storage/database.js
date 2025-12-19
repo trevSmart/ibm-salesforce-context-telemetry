@@ -1189,6 +1189,7 @@ async function getSessions(options = {}) {
 				sa.has_start,
 				sa.has_end
 			FROM session_aggregates sa
+			WHERE sa.count > 0
 			ORDER BY sa.last_event DESC
 		`).all(...params);
 		return result.map(row => {
@@ -1264,6 +1265,7 @@ async function getSessions(options = {}) {
 				sa.has_start,
 				sa.has_end
 			FROM session_aggregates sa
+			WHERE sa.count > 0
 			ORDER BY sa.last_event DESC
 		`, params);
 		return result.rows.map(row => {
@@ -5258,6 +5260,62 @@ async function permanentlyDeleteEvent(id) {
 }
 
 /**
+ * Permanently delete all events in the trash (all soft deleted events)
+ * @returns {Promise<number>} Number of permanently deleted events
+ */
+async function emptyTrash() {
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
+
+	let impactedUsers = [];
+	let impactedOrgs = [];
+
+	if (dbType === 'sqlite') {
+		// First get affected users/orgs for stats recomputation
+		const rows = db.prepare(`
+			SELECT DISTINCT user_id, org_id
+			FROM telemetry_events
+			WHERE deleted_at IS NOT NULL
+		`).all();
+		impactedUsers = rows.map(row => row.user_id).filter(Boolean);
+		impactedOrgs = rows.map(row => row.org_id).filter(Boolean);
+
+		// Then delete all events in trash
+		const stmt = db.prepare('DELETE FROM telemetry_events WHERE deleted_at IS NOT NULL');
+		const result = stmt.run();
+
+		if (result.changes > 0) {
+			await Promise.all([
+				impactedUsers.length ? recomputeUserEventStats(impactedUsers) : Promise.resolve(),
+				impactedOrgs.length ? recomputeOrgEventStats(impactedOrgs) : Promise.resolve()
+			]);
+		}
+		return result.changes;
+	} else if (dbType === 'postgresql') {
+		// First get affected users/orgs for stats recomputation
+		const result = await db.query(`
+			SELECT DISTINCT user_id, org_id
+			FROM telemetry_events
+			WHERE deleted_at IS NOT NULL
+		`);
+		impactedUsers = result.rows.map(row => row.user_id).filter(Boolean);
+		impactedOrgs = result.rows.map(row => row.org_id).filter(Boolean);
+
+		// Then delete all events in trash
+		const deleteResult = await db.query('DELETE FROM telemetry_events WHERE deleted_at IS NOT NULL');
+
+		if (deleteResult.rowCount > 0) {
+			await Promise.all([
+				impactedUsers.length ? recomputeUserEventStats(impactedUsers) : Promise.resolve(),
+				impactedOrgs.length ? recomputeOrgEventStats(impactedOrgs) : Promise.resolve()
+			]);
+		}
+		return deleteResult.rowCount;
+	}
+}
+
+/**
  * Permanently delete all soft deleted events older than specified days
  * @param {number} daysOld - Delete events soft deleted more than this many days ago (default: 30)
  * @returns {Promise<number>} Number of permanently deleted events
@@ -5404,6 +5462,7 @@ module.exports = {
 	deleteEventsBySession,
 	recoverEvent,
 	permanentlyDeleteEvent,
+	emptyTrash,
 	cleanupOldDeletedEvents,
 	getDeletedEvents,
 	getDatabaseSize,
