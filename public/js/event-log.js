@@ -3751,6 +3751,12 @@ if (window.__EVENT_LOG_LOADED__) {
 				: '';
 			const toolName = rawToolName ? escapeHtml(String(rawToolName)) : '';
 
+			// Extract error message for tool_error events
+			const errorMessage = event.event === 'tool_error'
+				? (event.error_message || '')
+				: '';
+			const escapedErrorMessage = errorMessage ? escapeHtml(String(errorMessage)) : '';
+
 			// Main row
 			const row = document.createElement('tr');
 			row.className = `log-item-${levelClass}`;
@@ -3780,6 +3786,7 @@ if (window.__EVENT_LOG_LOADED__) {
 				</td>
 				<td class="hidden border-b border-gray-200 px-3 py-4 text-sm text-gray-500 md:table-cell log-client whitespace-nowrap">${escapeHtml(clientName)}</td>
 				<td class="hidden border-b border-gray-200 px-3 py-4 text-sm text-gray-500 lg:table-cell log-tool-name whitespace-nowrap">${toolName}</td>
+				<td class="hidden border-b border-gray-200 px-3 py-4 text-sm text-gray-500 xl:table-cell log-error-message whitespace-nowrap overflow-hidden text-ellipsis max-w-xs" title="${escapedErrorMessage}">${escapedErrorMessage}</td>
 				<td class="border-b border-gray-200 px-3 py-4 text-sm text-gray-500 text-center log-description">${description}</td>
 				<td class="border-b border-gray-200 py-4 pr-4 pl-3 text-right text-sm font-medium actions-cell whitespace-nowrap sm:pr-8 lg:pr-8">
 					<button class="actions-btn text-indigo-600 hover:text-indigo-900" onclick="toggleActionsDropdown(event, ${event.id})" style="background: none; border: none; cursor: pointer; padding: 4px;">
@@ -3838,7 +3845,7 @@ if (window.__EVENT_LOG_LOADED__) {
 			expandedRow.id = `expanded-${event.id}`;
 
 			const expandedTd = document.createElement('td');
-			expandedTd.colSpan = showUserColumn ? 9 : 8;
+			expandedTd.colSpan = showUserColumn ? 10 : 9;
 			expandedTd.className = 'log-description-expanded border-b border-gray-200 px-3 py-4';
 
 			const pre = document.createElement('pre');

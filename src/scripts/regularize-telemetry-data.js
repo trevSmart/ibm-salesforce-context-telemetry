@@ -13,6 +13,7 @@
  */
 
 const dbModule = require('../storage/database');
+const { extractNormalizedFields } = dbModule;
 
 // Access internal database instance (hack for bulk operations)
 let dbInstance = null;
@@ -31,158 +32,6 @@ const getDbInstance = () => {
 	return dbInstance;
 };
 
-/**
- * Extract company name from event data (same logic as in database.js)
- */
-function extractCompanyName(eventData = {}) {
-	if (!eventData || !eventData.data) {
-		return null;
-	}
-
-	const data = eventData.data;
-
-	// New format: data.state.org.companyDetails.Name
-	if (data.state && data.state.org && data.state.org.companyDetails) {
-		const companyName = data.state.org.companyDetails.Name;
-		if (typeof companyName === 'string' && companyName.trim() !== '') {
-			return companyName.trim();
-		}
-	}
-
-	// Legacy format: data.companyDetails.Name
-	if (data.companyDetails && typeof data.companyDetails.Name === 'string') {
-		const companyName = data.companyDetails.Name.trim();
-		if (companyName !== '') {
-			return companyName;
-		}
-	}
-
-	return null;
-}
-
-/**
- * Extract tool name from event data (same logic as in database.js)
- */
-function extractToolName(eventData = {}) {
-	if (!eventData || !eventData.data) {
-		return null;
-	}
-
-	const data = eventData.data;
-
-	// Check for toolName field (new format)
-	if (data.toolName && typeof data.toolName === 'string') {
-		const toolName = data.toolName.trim();
-		if (toolName !== '') {
-			return toolName;
-		}
-	}
-
-	// Check for tool field (legacy format)
-	if (data.tool && typeof data.tool === 'string') {
-		const toolName = data.tool.trim();
-		if (toolName !== '') {
-			return toolName;
-		}
-	}
-
-	return null;
-}
-
-/**
- * Extract user display name from event data (same logic as in database.js)
- */
-function extractUserDisplayName(data = {}) {
-	if (!data) {
-		return null;
-	}
-
-	// Check for userName field
-	if (data.userName && typeof data.userName === 'string') {
-		const userName = data.userName.trim();
-		if (userName !== '') {
-			return userName;
-		}
-	}
-
-	// Check for user_name field (legacy)
-	if (data.user_name && typeof data.user_name === 'string') {
-		const userName = data.user_name.trim();
-		if (userName !== '') {
-			return userName;
-		}
-	}
-
-	// Check for nested user.name field
-	if (data.user && data.user.name && typeof data.user.name === 'string') {
-		const userName = data.user.name.trim();
-		if (userName !== '') {
-			return userName;
-		}
-	}
-
-	return null;
-}
-
-/**
- * Extract org ID from event data (same logic as in database.js)
- */
-function extractOrgId(eventData = {}) {
-	if (!eventData || !eventData.data) {
-		return null;
-	}
-
-	const data = eventData.data;
-
-	// Check for orgId field
-	if (data.orgId && typeof data.orgId === 'string') {
-		const orgId = data.orgId.trim();
-		if (orgId !== '') {
-			return orgId;
-		}
-	}
-
-	// Check for nested state.org.id field
-	if (data.state && data.state.org && data.state.org.id && typeof data.state.org.id === 'string') {
-		const orgId = data.state.org.id.trim();
-		if (orgId !== '') {
-			return orgId;
-		}
-	}
-
-	return null;
-}
-
-/**
- * Extract error message from tool_error events
- * @param {object} eventData - The event data object
- * @returns {string|null} - The error message or null if not found
- */
-function extractErrorMessage(eventData = {}) {
-	if (!eventData || !eventData.data) {
-		return null;
-	}
-
-	const data = eventData.data;
-
-	// For tool_error events, check data.errorMessage first
-	if (data.errorMessage && typeof data.errorMessage === 'string') {
-		const errorMessage = data.errorMessage.trim();
-		if (errorMessage !== '') {
-			return errorMessage;
-		}
-	}
-
-	// Also check data.error.message as fallback
-	if (data.error && typeof data.error === 'object' && data.error.message && typeof data.error.message === 'string') {
-		const errorMessage = data.error.message.trim();
-		if (errorMessage !== '') {
-			return errorMessage;
-		}
-	}
-
-	return null;
-}
 
 /**
  * Force populate denormalized columns for all events
@@ -313,7 +162,7 @@ async function updateCompanyNames() {
 			if (event) {
 				try {
 					const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
-					const companyName = extractCompanyName({ data });
+					const companyName = extractNormalizedFields({ data }).companyName;
 
 					if (companyName) {
 						// Update or insert in orgs table
@@ -404,9 +253,5 @@ if (require.main === module) {
 }
 
 module.exports = {
-	extractCompanyName,
-	extractToolName,
-	extractUserDisplayName,
-	extractOrgId,
-	extractErrorMessage
+	// Functions are now imported from database.js module
 };

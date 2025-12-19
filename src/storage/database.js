@@ -5366,6 +5366,8 @@ module.exports = {
 	getDeletedEvents,
 	getDatabaseSize,
 	close,
+	// Utility functions
+	extractNormalizedFields,
 	DEFAULT_MAX_DB_SIZE,
 	// User management
 	getUserByUsername,
