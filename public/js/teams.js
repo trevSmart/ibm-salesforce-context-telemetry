@@ -121,17 +121,13 @@ function clearLocalData() {
 	}
 }
 
-async function openSettingsModal() {
-	// For now, just show a simple message since settings modal is complex
-	// In the future, this could be extracted to a shared module
-	alert('Settings modal is not yet available on the Teams page. Please use the Dashboard or Logs page to access settings.');
-}
+// Settings modal is now in settings-modal.js and will be available globally
 
 // Make functions available globally
 // Note: showUserMenu and handleLogout are now exposed by user-menu.js
+// Note: openSettingsModal is now exposed by settings-modal.js
 window.toggleTheme = toggleTheme;
 window.clearLocalData = clearLocalData;
-window.openSettingsModal = openSettingsModal;
 
 // API functions
 async function fetchTeams() {
@@ -470,7 +466,7 @@ function renderTeamsList() {
          </span>`;
 
 		return `
-      <div class="group relative bg-white p-6 transition hover:bg-gray-50 focus:outline-none focus-visible:outline-none" role="button" tabindex="0" onclick="viewTeamDetail(${team.id})" onkeypress="if(event.key==='Enter'||event.key===' '){event.preventDefault();viewTeamDetail(${team.id});}">
+      <div class="group relative bg-white dark:bg-gray-800/50 dark:outline dark:-outline-offset-1 dark:outline-white/10 p-6 transition hover:bg-gray-50 dark:hover:bg-gray-700/50 focus:outline-none focus-visible:outline-none" role="button" tabindex="0" onclick="viewTeamDetail(${team.id})" onkeypress="if(event.key==='Enter'||event.key===' '){event.preventDefault();viewTeamDetail(${team.id});}">
         <div>
           ${logoOrAvatar}
         </div>
@@ -548,7 +544,7 @@ async function renderTeamDetail(teamId) {
 	const detailContent = document.getElementById('teamDetailContent');
 	detailContent.innerHTML = `
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
-      <div class="divide-y divide-gray-200 overflow-hidden rounded-lg bg-white shadow-sm">
+      <div class="divide-y divide-gray-200 dark:divide-gray-700 overflow-hidden rounded-lg bg-white dark:bg-gray-800/50 dark:outline dark:-outline-offset-1 dark:outline-white/10 shadow-sm">
         <div class="px-4 py-5 sm:px-6" style="display: flex; justify-content: space-between; align-items: center;">
           <h2 style="margin: 0; font-size: 1.1rem; font-weight: 600;">Organizations</h2>
           <button id="addOrgBtn" class="confirm-modal-btn confirm-modal-btn-cancel" onclick="showAddOrgModalForTeam(${teamId})">
@@ -561,7 +557,7 @@ async function renderTeamDetail(teamId) {
           </div>
         </div>
       </div>
-      <div class="divide-y divide-gray-200 overflow-hidden rounded-lg bg-white shadow-sm">
+      <div class="divide-y divide-gray-200 dark:divide-gray-700 overflow-hidden rounded-lg bg-white dark:bg-gray-800/50 dark:outline dark:-outline-offset-1 dark:outline-white/10 shadow-sm">
         <div class="px-4 py-5 sm:px-6" style="display: flex; justify-content: space-between; align-items: center;">
           <h2 style="margin: 0; font-size: 1.1rem; font-weight: 600;">Users</h2>
           <button id="addUserBtn" class="confirm-modal-btn confirm-modal-btn-cancel" onclick="showAddUserModalForTeam(${teamId})">
@@ -585,7 +581,7 @@ async function renderTeamDetail(teamId) {
 			const sanitizedOrgColor = sanitizeCssColor(org.color);
 			const colorDot = sanitizedOrgColor ? `<span style="display: inline-block; width: 10px; height: 10px; border-radius: 999px; background: ${sanitizedOrgColor}; margin-right: 6px; border: 1px solid var(--border-color);"></span>` : '';
 			return `
-        <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-secondary);">
+        <div class="bg-gray-50 dark:bg-gray-700/50" style="display: flex; justify-content: space-between; align-items: center; padding: 10px; border: 1px solid var(--border-color); border-radius: 6px;">
           <div>
             <div style="font-weight: 500;">${colorDot}${escapeHtml(org.alias || org.id)}</div>
             <div style="font-size: 0.85rem; color: var(--text-secondary);">${escapeHtml(org.id)}</div>
@@ -603,7 +599,7 @@ async function renderTeamDetail(teamId) {
 	if (team.users.length > 0) {
 		usersList.innerHTML = team.users.map(user => {
 			return `
-        <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-secondary);">
+        <div class="bg-gray-50 dark:bg-gray-700/50" style="display: flex; justify-content: space-between; align-items: center; padding: 10px; border: 1px solid var(--border-color); border-radius: 6px;">
           <div>
             <div style="font-weight: 500;">${escapeHtml(user.user_name)}</div>
             <div style="font-size: 0.85rem; color: var(--text-secondary);">Event log user</div>
@@ -645,18 +641,18 @@ function showTeamFormModal(team = null) {
         <label>
           <div style="margin-bottom: 4px; font-weight: 500;">Team Name *</div>
           <input type="text" id="teamNameInput" value="${team ? escapeHtml(team.name) : ''}"
-                 style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary);">
+                 class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-gray-100">
         </label>
         <label>
           <div style="margin-bottom: 4px; font-weight: 500;">Color</div>
           <input type="text" id="teamColorInput" value="${team ? escapeHtml(team.color || '') : ''}" placeholder="#2195cf"
-                 style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary);">
+                 class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-gray-100">
         </label>
         <label>
           <div style="margin-bottom: 4px; font-weight: 500;">Logo</div>
           <div style="display: flex; flex-direction: column; gap: 8px;">
             ${logoPreviewUrl ? `
-              <div style="display: flex; align-items: center; gap: 12px; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-secondary);">
+              <div class="bg-gray-50 dark:bg-gray-700/50 flex items-center gap-3 p-2 border border-gray-300 dark:border-gray-600 rounded-md"
                 <img id="logoPreview" src="${logoPreviewUrl}" alt="Current logo" style="width: 48px; height: 48px; object-fit: contain; border-radius: 4px; background: white;">
                 <div style="flex: 1;">
                   <div style="font-size: 0.875rem; color: var(--text-secondary);">Current logo</div>
@@ -665,7 +661,7 @@ function showTeamFormModal(team = null) {
               </div>
             ` : ''}
             <input type="file" id="teamLogoInput" accept="image/png,image/jpeg,image/jpg,image/webp"
-                   style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary);">
+                   class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-gray-100">
             <div style="font-size: 0.75rem; color: var(--text-secondary);">PNG, JPEG, or WebP (max 500KB)</div>
             <div id="logoPreviewNew" style="display: none; margin-top: 8px;">
               <img id="logoPreviewImg" src="" alt="Logo preview" style="width: 48px; height: 48px; object-fit: contain; border-radius: 4px; background: white; border: 1px solid var(--border-color);">
@@ -847,21 +843,21 @@ async function showAddOrgModal(teamId) {
       <label>
         <div style="margin-bottom: 4px; font-weight: 500;">Org ID *</div>
         <input type="text" id="newOrgIdInput" placeholder="Enter org identifier"
-               style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary);">
+               style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); class="bg-gray-50 dark:bg-gray-700/50" color: var(--text-primary);">
       </label>
     </div>
     <div style="margin-bottom: 16px;">
       <label>
         <div style="margin-bottom: 4px; font-weight: 500;">Alias (optional)</div>
         <input type="text" id="newOrgAliasInput" placeholder="Friendly name for this org"
-               style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary);">
+               style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); class="bg-gray-50 dark:bg-gray-700/50" color: var(--text-primary);">
       </label>
     </div>
     <div style="margin-bottom: 16px;">
       <label>
         <div style="margin-bottom: 4px; font-weight: 500;">Color (optional)</div>
         <input type="text" id="newOrgColorInput" placeholder="#2195cf"
-               style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary);">
+               style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); class="bg-gray-50 dark:bg-gray-700/50" color: var(--text-primary);">
       </label>
     </div>
     ${unassignedOrgs.length > 0 ? `
@@ -869,16 +865,16 @@ async function showAddOrgModal(teamId) {
         <div style="margin-bottom: 8px; font-weight: 500;">Or select existing org:</div>
         <el-autocomplete class="relative existing-org-combo">
           <input id="existingOrgSelect" name="existingOrgSelect" type="text" value=""
-            class="block w-full rounded-md bg-white py-1.5 pr-12 pl-3 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6"
+            class="block w-full rounded-md bg-white dark:bg-white/5 py-1.5 pr-12 pl-3 text-base text-gray-900 dark:text-white outline-1 -outline-offset-1 outline-gray-300 dark:outline-white/10 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 dark:focus:outline-indigo-500 sm:text-sm/6"
             placeholder="-- Select an org --">
           <button type="button" class="absolute inset-y-0 right-0 flex items-center rounded-r-md px-2">
             <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5 text-gray-400">
               <path d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" fill-rule="evenodd" />
             </svg>
           </button>
-          <el-options anchor="bottom end" popover class="max-h-60 w-(--input-width) overflow-auto rounded-md bg-white py-1 text-base shadow-lg outline outline-black/5 transition-discrete [--anchor-gap:--spacing(1)] data-leave:transition data-leave:duration-100 data-leave:ease-in data-closed:data-leave:opacity-0 sm:text-sm">
-            <el-option value="" class="block truncate px-3 py-2 text-gray-900 select-none aria-selected:bg-indigo-600 aria-selected:text-white">-- Select an org --</el-option>
-            ${unassignedOrgs.map(org => `<el-option value="${escapeHtml(org.id)}" class="block truncate px-3 py-2 text-gray-900 select-none aria-selected:bg-indigo-600 aria-selected:text-white">${escapeHtml(org.alias || org.id)}</el-option>`).join('')}
+          <el-options anchor="bottom end" popover class="max-h-60 w-(--input-width) overflow-auto rounded-md bg-white dark:bg-gray-800 py-1 text-base shadow-lg outline outline-black/5 dark:outline dark:-outline-offset-1 dark:outline-white/10 transition-discrete [--anchor-gap:--spacing(1)] data-leave:transition data-leave:duration-100 data-leave:ease-in data-closed:data-leave:opacity-0 sm:text-sm">
+            <el-option value="" class="block truncate px-3 py-2 text-gray-900 dark:text-gray-300 select-none aria-selected:bg-indigo-600 dark:aria-selected:bg-indigo-500 aria-selected:text-white">-- Select an org --</el-option>
+            ${unassignedOrgs.map(org => `<el-option value="${escapeHtml(org.id)}" class="block truncate px-3 py-2 text-gray-900 dark:text-gray-300 select-none aria-selected:bg-indigo-600 dark:aria-selected:bg-indigo-500 aria-selected:text-white">${escapeHtml(org.alias || org.id)}</el-option>`).join('')}
           </el-options>
         </el-autocomplete>
       </div>
@@ -989,7 +985,7 @@ async function showAddUserModal(teamId) {
       <label>
         <div style="margin-bottom: 4px; font-weight: 500;">Select User</div>
         <select id="userSelect" name="userSelect"
-          class="block w-full rounded-md bg-white py-2 pr-3 pl-3 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6">
+          class="block w-full rounded-md bg-white dark:bg-white/5 py-2 pr-3 pl-3 text-base text-gray-900 dark:text-white outline-1 -outline-offset-1 outline-gray-300 dark:outline-white/10 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 dark:focus:outline-indigo-500 sm:text-sm/6">
           <option value="">-- Select a user --</option>
           ${availableUsers.map(userName => `<option value="${escapeHtml(userName)}">${escapeHtml(userName)}</option>`).join('')}
         </select>

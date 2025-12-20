@@ -1704,7 +1704,9 @@ async function close() {
 			// Finalize all prepared statements before clearing the cache
 			for (const stmt of Object.values(preparedStatements)) {
 				try {
-					stmt.finalize();
+					if (stmt && typeof stmt.finalize === 'function') {
+						stmt.finalize();
+					}
 				} catch (err) {
 					console.error('Error finalizing prepared statement:', err);
 				}

@@ -182,7 +182,7 @@
   .top-nav {
     position: relative;
     height: 60px;
-    background: #e8eaec;
+    /* background: #e8eaec; */
     display: flex;
     align-items: center;
     gap: 24px;
@@ -342,11 +342,6 @@
     border-radius: 1px;
   }
 
-  html.dark .top-nav {
-    background: #27272a;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-  }
-
   html.dark .top-nav-logo {
     color: #e4e4e7;
   }
@@ -360,7 +355,8 @@
     color: #e4e4e7;
   }
 
-  html.dark .top-nav-search-input {
+  html.dark .top-nav-search-input,
+  html.dark .icon-btn {
     background: #27272a;
     color: #e4e4e7;
     border: 1px solid #3f3f46;
@@ -747,35 +743,6 @@
   }
 
 
-  .dashboard-card {
-    margin: 0;
-    position: relative;
-    width: 100%;
-    height: 100%;
-    background: var(--bg-primary);
-    border-radius: 20px;
-    padding: 20px;
-    box-sizing: border-box;
-    box-shadow: 0px 14px 10px 9px rgb(0 0 0 / 2%), 0 0 1px rgba(0, 0, 0, 0.01), 0 2px 3px rgba(0, 0, 0, 0.03);
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-    overflow: hidden;
-    font-size: 13px;
-  }
-
-  .promo-card {
-    background: #d5dbe4;
-  }
-
-  html.dark .promo-card {
-    background: #1f1f23;
-    border: 1px solid var(--border-color);
-  }
-
-  .dashboard-card .log-viewer-title {
-    margin-bottom: 16px;
-  }
 
   .dashboard-chart-card {
     position: relative;
@@ -799,7 +766,7 @@
   }
 
   .dashboard-chart-card .chart-floating-header .chart-header h1 {
-    background-color: rgba(255, 255, 255, 0.9);
+    /* background-color: rgba(255, 255, 255, 0.9); */
     border-radius: 12px;
     padding: 12px 16px;
     display: inline-flex;
@@ -1632,7 +1599,6 @@
     background: #d8ebff;
     letter-spacing: 0.03em;
     order: solid 1px #4169e108;
-    box-shadow: 0 1px 2px 0px #ededed;
   }
 
   .top-users-avatar--team {
@@ -1990,7 +1956,6 @@
   }
 
   html.dark .icon-btn {
-    background: var(--button-bg);
     color: var(--text-primary);
   }
 
@@ -2002,7 +1967,6 @@
   }
 
   html.dark .icon-btn:hover:not(.delete-all-btn):not(.notification-toggle.active):not(.auto-refresh-active) {
-    background: var(--button-bg);
     color: var(--text-primary);
     transform: none;
   }
@@ -3815,16 +3779,6 @@
     }
 
 
-    .dashboard-card {
-      height: 300px;
-      padding: 16px;
-    }
-
-    .dashboard-card .log-viewer-title {
-      margin-bottom: 12px;
-      font-size: 1.375rem;
-      font-weight: 400;
-    }
 
     #eventsChart {
       flex: 1;
@@ -4509,12 +4463,12 @@
   }
 
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-md px-2.5 py-1.5 text-sm text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 bg-white hover:bg-gray-50 transition-colors duration-150;
+    @apply inline-flex items-center justify-center gap-2 rounded-sm px-2 py-1 text-xs font-semibold text-gray-900 shadow-xs inset-ring inset-ring-gray-300 bg-white hover:bg-gray-50 transition-colors duration-150;
     line-height: 1.25;
   }
 
   html.dark .btn {
-    @apply bg-zinc-900 text-gray-100 ring-gray-700 hover:bg-zinc-800;
+    @apply bg-white/10 text-white inset-ring inset-ring-white/5 hover:bg-white/20;
   }
 
   .btn:disabled {
@@ -4548,42 +4502,61 @@
   }
 
   .confirm-modal-btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-md px-2.5 py-1.5 text-sm text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 bg-white hover:bg-gray-50 transition-colors duration-150;
+    @apply inline-flex items-center justify-center gap-2 rounded-sm px-2 py-1 text-xs font-semibold text-gray-900 shadow-xs inset-ring inset-ring-gray-300 bg-white hover:bg-gray-50 transition-colors duration-150;
     line-height: 1.25;
     min-width: 90px;
   }
 
+  html.dark .confirm-modal-btn {
+    @apply bg-white/10 text-white inset-ring inset-ring-white/5 hover:bg-white/20;
+  }
+
   .confirm-modal-btn-cancel {
-    @apply inline-flex items-center justify-center gap-2 rounded-md px-2.5 py-1.5 text-sm text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 bg-white hover:bg-gray-50 transition-colors duration-150;
+    @apply inline-flex items-center justify-center gap-2 rounded-sm px-2 py-1 text-xs font-semibold text-gray-900 shadow-xs inset-ring inset-ring-gray-300 bg-white hover:bg-gray-50 transition-colors duration-150;
     line-height: 1.25;
   }
 
+  html.dark .confirm-modal-btn-cancel {
+    @apply bg-white/10 text-white inset-ring inset-ring-white/5 hover:bg-white/20;
+  }
+
   .confirm-modal-btn-confirm {
-    @apply inline-flex items-center justify-center gap-2 rounded-md px-2.5 py-1.5 text-sm text-white shadow-sm ring-1 ring-inset;
+    @apply inline-flex items-center justify-center gap-2 rounded-sm px-2 py-1 text-xs font-semibold text-white shadow-xs inset-ring inset-ring-white/5 bg-white/10 hover:bg-white/20 transition-colors duration-150;
     line-height: 1.25;
+  }
+
+  html:not(.dark) .confirm-modal-btn-confirm {
     background-color: #2c95cf;
     border-color: #2c95cf;
     --tw-ring-color: #2c95cf;
   }
 
-  .confirm-modal-btn-confirm:hover {
+  html:not(.dark) .confirm-modal-btn-confirm:hover {
     background-color: #2385b9;
   }
 
   .confirm-modal-btn-destructive {
-    @apply inline-flex items-center justify-center gap-2 rounded-md px-2.5 py-1.5 text-sm shadow-sm ring-1 ring-inset;
+    @apply inline-flex items-center justify-center gap-2 rounded-sm px-2 py-1 text-xs font-semibold shadow-xs inset-ring inset-ring-white/5 bg-white/10 hover:bg-white/20 transition-colors duration-150;
     line-height: 1.25;
+    color: #dc2626;
+  }
+
+  html:not(.dark) .confirm-modal-btn-destructive {
     background-color: transparent;
     color: #dc2626;
     border-color: #dc2626;
     --tw-ring-color: #dc2626;
   }
 
-  .confirm-modal-btn-destructive:hover {
+  html:not(.dark) .confirm-modal-btn-destructive:hover {
     background-color: #fef2f2;
     color: #b91c1c;
     border-color: #b91c1c;
     --tw-ring-color: #b91c1c;
+  }
+
+  html.dark .confirm-modal-btn-destructive {
+    color: #ef4444;
   }
 
   .org-team-actions {
@@ -5269,10 +5242,6 @@ html.dark .level-filters .level-filter-btn.level-error {
 
 #teamsList > .group {
   cursor: pointer;
-}
-
-.bg-white19 {
-  background-color: #ffffff34;
 }
 
 .shadow-xs {
