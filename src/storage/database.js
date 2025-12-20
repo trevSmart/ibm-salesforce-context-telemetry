@@ -586,7 +586,7 @@ async function upsertOrgCompanyName(serverId, companyName) {
  *
  * Rules:
  * - Key is user (user_id) + org (server_id)
- * - If another START SESSION exists for same user+org within 3 hours, reuse that
+ * - If another START SESSION exists for same user+org within 4 hours, reuse that
  *   session as the logical parent.
  * - Otherwise, the current sessionId becomes the new logical parent.
  *
@@ -676,7 +676,7 @@ async function computeParentSessionId(eventData, normalizedSessionId, normalized
 		return normalizedSessionId;
 	}
 
-	const THREE_HOURS_MS = 3 * 60 * 60 * 1000;
+	const FOUR_HOURS_MS = 4 * 60 * 60 * 1000;
 
 	if (dbType === 'sqlite') {
 		const lastStart = db.prepare(`
@@ -699,7 +699,7 @@ async function computeParentSessionId(eventData, normalizedSessionId, normalized
 		}
 
 		const diffMs = currentTs - lastTs;
-		if (diffMs <= THREE_HOURS_MS) {
+		if (diffMs <= FOUR_HOURS_MS) {
 			// Same logical session as the previous START SESSION
 			return lastStart.parent_session_id || lastStart.session_id || normalizedSessionId;
 		}
@@ -730,7 +730,7 @@ async function computeParentSessionId(eventData, normalizedSessionId, normalized
 	}
 
 	const diffMs = currentTs - lastTs;
-	if (diffMs <= THREE_HOURS_MS) {
+	if (diffMs <= FOUR_HOURS_MS) {
 		return row.parent_session_id || row.session_id || normalizedSessionId;
 	}
 

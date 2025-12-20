@@ -1101,8 +1101,11 @@ app.get('/api/events', auth.requireAuth, auth.requireRole('advanced'), apiReadLi
 	}
 });
 
-app.get('/api/events/:id', auth.requireAuth, auth.requireRole('advanced'), apiReadLimiter, async (req, res) => {
+app.get('/api/events/:id', auth.requireAuth, auth.requireRole('advanced'), apiReadLimiter, async (req, res, next) => {
 	try {
+		if (req.params.id === 'deleted') {
+			return next();
+		}
 		const eventId = parseInt(req.params.id, 10);
 		if (isNaN(eventId)) {
 			return res.status(400).json({
@@ -2005,8 +2008,11 @@ app.get('/api/export/logs', auth.requireAuth, auth.requireRole('advanced'), apiR
 });
 
 // Delete a single event by ID
-app.delete('/api/events/:id', auth.requireAuth, auth.requireRole('advanced'), deleteEventsLimiter, async (req, res) => {
+app.delete('/api/events/:id', auth.requireAuth, auth.requireRole('advanced'), deleteEventsLimiter, async (req, res, next) => {
 	try {
+		if (req.params.id === 'deleted') {
+			return next();
+		}
 		const eventId = parseInt(req.params.id, 10);
 		if (isNaN(eventId)) {
 			return res.status(400).json({
