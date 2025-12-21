@@ -516,18 +516,37 @@ app.post('/telemetry', telemetryLimiter, (req, res) => {
 			});
 		}
 
-		// Validate against JSON schema
-		const valid = validate(telemetryData);
-		if (!valid) {
-			const errors = validate.errors.map(err => ({
-				field: err.instancePath || err.params?.missingProperty || 'root',
-				message: err.message
-			}));
+		// Validate against JSON schema with different strictness based on event type
+		let validationErrors = [];
+		let valid = false;
 
+		if (telemetryData.event === 'tool_error' || telemetryData.event === 'error') {
+			// For error events, be more permissive - only validate basic structure
+			const basicValid = telemetryData.event && telemetryData.timestamp;
+			valid = basicValid;
+
+			if (!basicValid) {
+				validationErrors = [{
+					field: 'event|timestamp',
+					message: 'Error events must include event type and timestamp'
+				}];
+			}
+		} else {
+			// For normal events, use full schema validation
+			valid = validate(telemetryData);
+			if (!valid) {
+				validationErrors = validate.errors.map(err => ({
+					field: err.instancePath || err.params?.missingProperty || 'root',
+					message: err.message
+				}));
+			}
+		}
+
+		if (!valid) {
 			return res.status(400).json({
 				status: 'error',
 				message: 'Validation failed',
-				errors: errors
+				errors: validationErrors
 			});
 		}
 

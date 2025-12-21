@@ -4702,6 +4702,34 @@ function safeShowToast(message, type = 'info') {
 		}
 	}
 
+	function setupUserFilterLabel() {
+		const userFilterInput = document.getElementById('autocomplete');
+		if (!userFilterInput) {
+			return;
+		}
+
+		const enforceUsersLabel = () => {
+			if (userFilterInput.value !== 'Users') {
+				userFilterInput.value = 'Users';
+			}
+		};
+
+		enforceUsersLabel();
+		userFilterInput.addEventListener('change', enforceUsersLabel);
+		userFilterInput.addEventListener('blur', enforceUsersLabel);
+
+		const optionsContainer = document.getElementById('userFilterOptions');
+		if (optionsContainer) {
+			optionsContainer.addEventListener('click', (event) => {
+				if (event.target.closest('el-option')) {
+					requestAnimationFrame(() => {
+						enforceUsersLabel();
+					});
+				}
+			});
+		}
+	}
+
 	// Show user filter dropdown (used by both click and hover)
 	function showUserFilterDropdown() {
 		const dropdown = document.getElementById('userFilterDropdown');
@@ -4961,6 +4989,7 @@ function safeShowToast(message, type = 'info') {
 		runSafeInitStep('horizontal resizer setup', setupHorizontalResizer);
 		runSafeInitStep('session legend hover', setupSessionLegendHover);
 		runSafeInitStep('tabs setup', setupTabs);
+		runSafeInitStep('user filter label', setupUserFilterLabel);
 		runSafeAsyncInitStep('event type stats', () => loadEventTypeStats(selectedSession));
 		runSafeAsyncInitStep('sessions list', () => loadSessions());
 		runSafeAsyncInitStep('events table', () => loadEvents());
