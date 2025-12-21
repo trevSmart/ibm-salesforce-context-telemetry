@@ -973,6 +973,50 @@ app.put('/api/users/:username/role', auth.requireAuth, auth.requireRole('adminis
 	}
 });
 
+// People API endpoints
+app.get('/api/people', auth.requireAuth, auth.requireRole('administrator'), apiReadLimiter, async (req, res) => {
+	try {
+		const people = await db.getAllPeople();
+		res.json({
+			status: 'ok',
+			people: people
+		});
+	} catch (error) {
+		console.error('Error fetching people:', error);
+		res.status(500).json({
+			status: 'error',
+			message: 'Failed to fetch people'
+		});
+	}
+});
+
+app.post('/api/people', auth.requireAuth, auth.requireRole('administrator'), userManagementLimiter, async (req, res) => {
+	try {
+		const {name, email} = req.body;
+
+		if (!name || name.trim() === '') {
+			return res.status(400).json({
+				status: 'error',
+				message: 'Name is required'
+			});
+		}
+
+		const person = await db.createPerson(name, email || null);
+
+		res.status(201).json({
+			status: 'ok',
+			person: person,
+			message: 'Person created successfully'
+		});
+	} catch (error) {
+		console.error('Error creating person:', error);
+		res.status(500).json({
+			status: 'error',
+			message: error.message || 'Failed to create person'
+		});
+	}
+});
+
 // Settings API endpoints
 app.get('/api/settings/org-team-mappings', auth.requireAuth, async (req, res) => {
 	try {

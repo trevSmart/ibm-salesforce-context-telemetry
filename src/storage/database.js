@@ -9,6 +9,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import {fileURLToPath} from 'node:url';
+import {dirname} from 'node:path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // Database configuration constants
 const DEFAULT_MAX_DB_SIZE = 1024 * 1024 * 1024; // 1 GB in bytes
@@ -86,6 +91,13 @@ async function init() {
 				created_at TEXT DEFAULT CURRENT_TIMESTAMP
 			);
 
+			CREATE TABLE IF NOT EXISTS people (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				name TEXT NOT NULL,
+				email TEXT,
+				created_at TEXT DEFAULT CURRENT_TIMESTAMP
+			);
+
 			CREATE INDEX IF NOT EXISTS idx_event ON telemetry_events(event);
 			CREATE INDEX IF NOT EXISTS idx_timestamp ON telemetry_events(timestamp);
 			CREATE INDEX IF NOT EXISTS idx_server_id ON telemetry_events(server_id);
@@ -153,6 +165,13 @@ async function init() {
 				key TEXT PRIMARY KEY,
 				value TEXT NOT NULL,
 				updated_at TIMESTAMPTZ DEFAULT NOW(),
+				created_at TIMESTAMPTZ DEFAULT NOW()
+			);
+
+			CREATE TABLE IF NOT EXISTS people (
+				id SERIAL PRIMARY KEY,
+				name TEXT NOT NULL,
+				email TEXT,
 				created_at TIMESTAMPTZ DEFAULT NOW()
 			);
 
@@ -3893,6 +3912,65 @@ async function getEventUserNames(limit = 1000) {
 }
 
 /**
+ * Get all people
+ * @returns {Promise<Array>} Array of people
+ */
+async function getAllPeople() {
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
+
+	try {
+		if (dbType === 'sqlite') {
+			const stmt = db.prepare('SELECT id, name, email, created_at FROM people ORDER BY name ASC');
+			return stmt.all();
+		} else if (dbType === 'postgresql') {
+			const result = await db.query('SELECT id, name, email, created_at FROM people ORDER BY name ASC');
+			return result.rows;
+		}
+	} catch (error) {
+		console.error('Error getting all people:', error);
+		throw error;
+	}
+}
+
+/**
+ * Create a new person
+ * @param {string} name - Person's name
+ * @param {string|null} email - Person's email (optional)
+ * @returns {Promise<object>} Created person object
+ */
+async function createPerson(name, email = null) {
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
+
+	if (!name || name.trim() === '') {
+		throw new Error('Name is required');
+	}
+
+	try {
+		if (dbType === 'sqlite') {
+			const stmt = db.prepare('INSERT INTO people (name, email) VALUES (?, ?)');
+			const result = stmt.run(name.trim(), email);
+			
+			// Get the created person
+			const person = db.prepare('SELECT id, name, email, created_at FROM people WHERE id = ?').get(result.lastInsertRowid);
+			return person;
+		} else if (dbType === 'postgresql') {
+			const result = await db.query(
+				'INSERT INTO people (name, email) VALUES ($1, $2) RETURNING id, name, email, created_at',
+				[name.trim(), email]
+			);
+			return result.rows[0];
+		}
+	} catch (error) {
+		console.error('Error creating person:', error);
+		throw error;
+	}
+}
+
+/**
  * Create a new team
  * @param {string} name - Team name (must be unique)
  * @param {string} color - Team color (hex or CSS color)
@@ -5391,6 +5469,9 @@ export {
 	addEventUserToTeam,
 	removeEventUserFromTeam,
 	getEventUserNames,
+	// People management
+	getAllPeople,
+	createPerson,
 	// Event updates
 	updateEventData,
 	// User filtering
