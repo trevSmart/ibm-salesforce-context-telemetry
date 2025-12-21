@@ -348,19 +348,19 @@ function openConfirmModal({title, message, confirmLabel = 'Confirm', cancelLabel
 		modal.className = 'confirm-modal confirm-dialog';
 		modal.innerHTML = `
 			<div class="confirm-dialog-header">
-				<div class="confirm-dialog-icon ${destructive ? 'destructive' : ''}">
-					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" focusable="false">
-						<path d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" stroke-linecap="round" stroke-linejoin="round" />
+				${destructive ? `<div class="mx-auto flex size-12 shrink-0 items-center justify-center rounded-full bg-red-100 sm:mx-0 sm:size-10">
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" data-slot="icon" aria-hidden="true" class="size-6 text-red-600">
+						<path d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" stroke-linecap="round" stroke-linejoin="round"></path>
 					</svg>
-				</div>
-				<div class="confirm-dialog-text">
+				</div>` : ''}
+				<div>
 					<div class="confirm-modal-title">${escapeHtml(title || 'Confirm action')}</div>
-					<div class="confirm-modal-message">${escapeHtml(message || '')}</div>
+					<div>${escapeHtml(message || '')}</div>
 				</div>
 			</div>
 			<div class="confirm-dialog-actions">
-				<button type="button" class="confirm-modal-btn confirm-modal-btn-cancel">${escapeHtml(cancelLabel)}</button>
-				<button type="button" class="confirm-modal-btn ${destructive ? 'confirm-modal-btn-destructive' : 'confirm-modal-btn-confirm'}">${escapeHtml(confirmLabel)}</button>
+				<button type="button" class="text-sm confirm-modal-btn confirm-modal-btn-cancel">${escapeHtml(cancelLabel)}</button>
+				<button type="button" class="confirm-modal-btn ${destructive ? 'inline-flex w-full justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-red-500 sm:ml-3 sm:w-auto' : 'confirm-modal-btn-confirm'}">${escapeHtml(confirmLabel)}</button>
 			</div>
 		`;
 
@@ -1563,7 +1563,6 @@ async function loadChartData(days = currentDays) {
 				return [x, isFinite(scaled) ? scaled : 0];
 			});
 			const errorsDenseTrendCompressed = compressYAroundMean(errorsDenseTrendScaled, TREND_Y_COMPRESSION);
-			console.log('Errors trend - original:', errorsDenseTrend.slice(0, 5), 'scaled:', errorsDenseTrendScaled.slice(0, 5));
 
 			const ERRORS_BASE_OPACITY = 0.36;
 			const errorsTrendLineGradient = new echarts.graphic.LinearGradient(0, 1, 1, 0, [

@@ -1,11 +1,26 @@
 // @ts-nocheck
+
+
 // Prevent double execution when soft navigation re-injects the script
 if (window.__EVENT_LOG_LOADED__) {
 	console.info('[Telemetry Viewer] Event log script already loaded; skipping duplicate execution.');
 } else {
 	window.__EVENT_LOG_LOADED__ = true;
 
-	// Utility to escape HTML special characters for safe output in innerHTML
+
+// Safe wrapper for showToast function
+
+function safeShowToast(message, type = 'info') {
+	if (typeof window.showToast === 'function') {
+		window.showToast(message, type);
+	} else {
+		console.warn('showToast not available, falling back to console:', message);
+		console[type === 'error' ? 'error' : 'log'](message);
+	}
+}
+
+
+// Utility to escape HTML special characters for safe output in innerHTML
 	function escapeHtml(unsafe) {
 		return String(unsafe)
 			.replace(/&/g, '&amp;')
@@ -367,19 +382,19 @@ if (window.__EVENT_LOG_LOADED__) {
 			modal.className = 'confirm-modal confirm-dialog';
 			modal.innerHTML = `
 				<div class="confirm-dialog-header">
-					<div class="confirm-dialog-icon ${destructive ? 'destructive' : ''}">
-						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" focusable="false">
-							<path d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" stroke-linecap="round" stroke-linejoin="round" />
+					${destructive ? `<div class="mx-auto flex size-12 shrink-0 items-center justify-center rounded-full bg-red-100 sm:mx-0 sm:size-10">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" data-slot="icon" aria-hidden="true" class="size-6 text-red-600">
+							<path d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" stroke-linecap="round" stroke-linejoin="round"></path>
 						</svg>
-					</div>
-					<div class="confirm-dialog-text">
+					</div>` : ''}
+					<div>
 						<div class="confirm-modal-title">${escapeHtml(title || 'Confirm action')}</div>
-						<div class="confirm-modal-message">${escapeHtml(message || '')}</div>
+						<div>${escapeHtml(message || '')}</div>
 					</div>
 				</div>
 				<div class="confirm-dialog-actions">
 					<button type="button" class="confirm-modal-btn confirm-modal-btn-cancel">${escapeHtml(cancelLabel)}</button>
-					<button type="button" class="confirm-modal-btn ${destructive ? 'confirm-modal-btn-destructive' : 'confirm-modal-btn-confirm'}">${escapeHtml(confirmLabel)}</button>
+					<button type="button" class="confirm-modal-btn ${destructive ? 'text-sm inline-flex w-full justify-center rounded-md bg-red-600 px-3 py-2 font-semibold text-white shadow-xs hover:bg-red-500 sm:ml-3 sm:w-auto' : 'confirm-modal-btn-confirm'}">${escapeHtml(confirmLabel)}</button>
 				</div>
 			`;
 
@@ -3259,7 +3274,7 @@ if (window.__EVENT_LOG_LOADED__) {
 
 	async function enableNotificationMode() {
 		if (!('Notification' in window)) {
-			showToast('Your browser does not support desktop notifications.', 'error');
+			safeShowToast('Your browser does not support desktop notifications.', 'error');
 			return;
 		}
 
@@ -3274,7 +3289,7 @@ if (window.__EVENT_LOG_LOADED__) {
 		}
 
 		if (permission !== 'granted') {
-			showToast('You must allow browser notifications to enable this mode.', 'error');
+			safeShowToast('You must allow browser notifications to enable this mode.', 'error');
 			return;
 		}
 
@@ -4056,7 +4071,7 @@ if (window.__EVENT_LOG_LOADED__) {
 			}
 		} catch (error) {
 			console.error('Error copying payload:', error);
-			showToast(`Error copying payload: ${  error.message}`, 'error');
+			safeShowToast(`Error copying payload: ${  error.message}`, 'error');
 		}
 	}
 
@@ -4094,7 +4109,7 @@ if (window.__EVENT_LOG_LOADED__) {
 			loadEvents();
 		} catch (error) {
 			console.error('Error deleting event:', error);
-			showToast(`Error deleting the event: ${  error.message}`, 'error');
+			safeShowToast(`Error deleting the event: ${  error.message}`, 'error');
 		}
 	}
 
@@ -4398,7 +4413,7 @@ if (window.__EVENT_LOG_LOADED__) {
 			loadEvents();
 		} catch (error) {
 			console.error('Error deleting session:', error);
-			showToast(`Error deleting the session: ${  error.message}`, 'error');
+			safeShowToast(`Error deleting the session: ${  error.message}`, 'error');
 		}
 	}
 
@@ -4452,7 +4467,7 @@ if (window.__EVENT_LOG_LOADED__) {
 			loadEvents();
 		} catch (error) {
 			console.error('Error deleting selected sessions:', error);
-			showToast(`Error deleting sessions: ${  error.message}`, 'error');
+			safeShowToast(`Error deleting sessions: ${  error.message}`, 'error');
 		}
 	}
 
@@ -5189,7 +5204,7 @@ if (window.__EVENT_LOG_LOADED__) {
 			showPayloadModal(payload, eventId);
 		} catch (error) {
 			console.error('Error loading event payload:', error);
-			showToast(`Error loading event payload: ${  error.message}`, 'error');
+			safeShowToast(`Error loading event payload: ${  error.message}`, 'error');
 		}
 	}
 
@@ -5263,7 +5278,7 @@ if (window.__EVENT_LOG_LOADED__) {
 					}, 1600);
 				} catch (error) {
 					console.error('Error copying payload:', error);
-					showToast(`Error copying payload: ${  error.message}`, 'error');
+					safeShowToast(`Error copying payload: ${  error.message}`, 'error');
 				}
 			});
 		}
