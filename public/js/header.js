@@ -2,6 +2,49 @@
 // Global header component - single source of truth for the navigation header
 (function initGlobalHeader() {
 	/**
+	 * Unified refresh handler - fetches latest event data
+	 * This is the same handler used across all pages
+	 */
+	async function refreshEvents(event) {
+		if (event?.preventDefault) {
+			event.preventDefault();
+		}
+
+		// Get the refresh button and icon
+		const button = event?.target?.closest('.icon-btn') || event?.currentTarget || document.getElementById('refreshButton');
+		const refreshIcon = button?.querySelector('.refresh-icon');
+
+		// Start rotation animation
+		if (refreshIcon) {
+			refreshIcon.classList.add('rotating');
+		}
+
+		try {
+			// Fetch latest events from the API
+			const response = await fetch('/api/events?limit=100');
+			if (!response.ok) {
+				throw new Error('Failed to fetch events');
+			}
+			const data = await response.json();
+			console.log('Events refreshed:', data.events?.length || 0, 'events');
+
+			// Dispatch a custom event that pages can listen to if they want to update their UI
+			window.dispatchEvent(new CustomEvent('eventsRefreshed', { detail: data }));
+		} catch (error) {
+			console.error('Error refreshing events:', error);
+		} finally {
+			// Stop rotation with smooth finish animation
+			if (refreshIcon) {
+				refreshIcon.classList.remove('rotating');
+				refreshIcon.classList.add('rotating-finish');
+				setTimeout(() => {
+					refreshIcon.classList.remove('rotating-finish');
+				}, 700); // REFRESH_ICON_ANIMATION_DURATION_MS
+			}
+		}
+	}
+
+	/**
    * Build the global header HTML - automatically detects page context
    * @returns {string} Header HTML
    */
@@ -14,20 +57,11 @@
 		                  currentPath.startsWith('/people') ? '/people' :
 		                  currentPath.startsWith('/users') ? '/users' : '/';
 
-		// Auto-detect refresh function based on page
-		const refreshOnClick = currentPath.startsWith('/logs') ? 'refreshLogs(event)' :
-		                      currentPath.startsWith('/teams') ? 'refreshTeams(event)' :
-		                      currentPath.startsWith('/people') || currentPath.startsWith('/users') ? 'refreshUsers(event)' :
-		                      'refreshDashboard(event)';
-
-		// Auto-detect refresh button properties
+		// Refresh button properties - same handler for all pages
 		const showBadge = currentPath.startsWith('/logs');
 		const refreshId = currentPath.startsWith('/logs') ? 'refreshButton' : '';
-		const refreshAriaLabel = currentPath.startsWith('/logs') ? 'Refresh now' :
-		                        currentPath.startsWith('/teams') ? 'Refresh teams' :
-		                        currentPath.startsWith('/people') || currentPath.startsWith('/users') ? 'Refresh users' :
-		                        'Refresh dashboard';
-		const refreshTitle = refreshAriaLabel;
+		const refreshAriaLabel = 'Refresh';
+		const refreshTitle = 'Refresh';
 
 		const refreshButtonId = refreshId ? `id="${refreshId}"` : '';
 		const refreshBadge = showBadge
@@ -62,7 +96,7 @@
           <input type="text" class="top-nav-search-input" placeholder="Search" id="searchInput">
         </div>
         <div class="top-nav-actions">
-          <button type="button" class="icon-btn" ${refreshButtonId} aria-label="${refreshAriaLabel}" title="${refreshTitle}" onclick="${refreshOnClick}">
+          <button type="button" class="icon-btn" ${refreshButtonId} aria-label="${refreshAriaLabel}" title="${refreshTitle}" onclick="refreshEvents(event)">
             <svg class="refresh-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="18" height="18" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 12c0-1.232-.046-2.453-.138-3.662a4.006 4.006 0 0 0-3.7-3.7 48.678 48.678 0 0 0-7.324 0 4.006 4.006 0 0 0-3.7 3.7c-.017.22-.032.441-.046.662M19.5 12l3-3m-3 3-3-3m-12 3c0 1.232.046 2.453.138 3.662a4.006 4.006 0 0 0 3.7 3.7 48.656 48.656 0 0 0 7.324 0 4.006 4.006 0 0 0 3.7-3.7c.017-.22.032-.441.046-.662M4.5 12l3 3m-3-3-3 3" />
             </svg>
@@ -107,4 +141,5 @@
 	// Expose globally
 	window.initGlobalHeader = initHeader;
 	window.buildGlobalHeaderHTML = buildHeaderHTML;
+	window.refreshEvents = refreshEvents;
 })();
