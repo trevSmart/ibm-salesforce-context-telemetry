@@ -843,21 +843,24 @@ async function showAddOrgModal(teamId) {
       <label>
         <div style="margin-bottom: 4px; font-weight: 500;">Org ID *</div>
         <input type="text" id="newOrgIdInput" placeholder="Enter org identifier"
-               style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); class="bg-gray-50 dark:bg-gray-700/50" color: var(--text-primary);">
+               class="bg-gray-50 dark:bg-gray-700/50"
+               style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); color: var(--text-primary);">
       </label>
     </div>
     <div style="margin-bottom: 16px;">
       <label>
         <div style="margin-bottom: 4px; font-weight: 500;">Alias (optional)</div>
         <input type="text" id="newOrgAliasInput" placeholder="Friendly name for this org"
-               style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); class="bg-gray-50 dark:bg-gray-700/50" color: var(--text-primary);">
+               class="bg-gray-50 dark:bg-gray-700/50"
+               style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); color: var(--text-primary);">
       </label>
     </div>
     <div style="margin-bottom: 16px;">
       <label>
         <div style="margin-bottom: 4px; font-weight: 500;">Color (optional)</div>
         <input type="text" id="newOrgColorInput" placeholder="#2195cf"
-               style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); class="bg-gray-50 dark:bg-gray-700/50" color: var(--text-primary);">
+               class="bg-gray-50 dark:bg-gray-700/50"
+               style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); color: var(--text-primary);">
       </label>
     </div>
     ${unassignedOrgs.length > 0 ? `
