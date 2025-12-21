@@ -1,0 +1,12 @@
+{
+  "outputStyle": "Explanatory",
+  "permissions": {
+    "allow": [
+      "sed",
+      "Bash(npm start)",
+      "Bash(curl:*)",
+      "Bash(node -c:*)",
+      "Bash(grep:*)"
+    ]
+  }
+}
