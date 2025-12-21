@@ -157,6 +157,8 @@ function showConfirmDialog({title, message, confirmText = 'Confirm', cancelText 
 		const confirmBtn = dialog.querySelector('[data-action="confirm"]');
 		const cancelBtn = dialog.querySelector('[data-action="cancel"]');
 
+		let resolved = false;
+
 		// Cleanup function to remove dialog and all event listeners
 		const cleanup = () => {
 			// Wait for dialog close animation to complete
@@ -165,24 +167,30 @@ function showConfirmDialog({title, message, confirmText = 'Confirm', cancelText 
 			}, 250); // Slightly less than the 300ms animation duration
 		};
 
+		// Resolve helper to prevent multiple resolutions
+		const resolveOnce = (value) => {
+			if (!resolved) {
+				resolved = true;
+				cleanup();
+				resolve(value);
+			}
+		};
+
 		// Handle confirm
 		confirmBtn.addEventListener('click', () => {
 			dialog.close();
-			cleanup();
-			resolve(true);
+			resolveOnce(true);
 		});
 
 		// Handle cancel
 		cancelBtn.addEventListener('click', () => {
 			dialog.close();
-			cleanup();
-			resolve(false);
+			resolveOnce(false);
 		});
 
 		// Handle dialog close (ESC key or backdrop click)
 		dialog.addEventListener('close', () => {
-			cleanup();
-			resolve(false);
+			resolveOnce(false);
 		});
 
 		// Show the dialog
