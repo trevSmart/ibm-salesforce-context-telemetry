@@ -1014,7 +1014,7 @@ app.put('/api/users/:username/role', auth.requireAuth, auth.requireRole('adminis
 });
 
 // Settings API endpoints
-app.get('/api/settings/org-team-mappings', auth.requireAuth, apiReadLimiter, async (req, res) => {
+app.get('/api/settings/org-team-mappings', apiReadLimiter, auth.requireAuth, async (req, res) => {
 	try {
 		const mappingsJson = await db.getSetting('org_team_mappings');
 		let mappings = [];
@@ -1178,7 +1178,7 @@ app.get('/api/events/:id', auth.requireAuth, auth.requireRole('advanced'), apiRe
 	}
 });
 
-app.get('/api/stats', auth.requireAuth, dashboardStatsLimiter, async (req, res) => {
+app.get('/api/stats', dashboardStatsLimiter, auth.requireAuth, async (req, res) => {
 	try {
 		const {startDate, endDate, eventType} = req.query;
 
@@ -1264,7 +1264,7 @@ app.get('/api/sessions', auth.requireAuth, auth.requireRole('advanced'), apiRead
 	}
 });
 
-app.get('/api/daily-stats', auth.requireAuth, dashboardStatsLimiter, async (req, res) => {
+app.get('/api/daily-stats', dashboardStatsLimiter, auth.requireAuth, async (req, res) => {
 	try {
 		const days = Number.parseInt(req.query.days, 10) || 30;
 		const byEventTypeRaw = String(req.query.byEventType || '').toLowerCase();
@@ -1282,7 +1282,7 @@ app.get('/api/daily-stats', auth.requireAuth, dashboardStatsLimiter, async (req,
 	}
 });
 
-app.get('/api/tool-usage-stats', auth.requireAuth, dashboardStatsLimiter, async (req, res) => {
+app.get('/api/tool-usage-stats', dashboardStatsLimiter, auth.requireAuth, async (req, res) => {
 	try {
 		const daysRaw = Number.parseInt(req.query.days, 10);
 		const days = Math.min(Math.max(1, Number.isFinite(daysRaw) ? daysRaw : 30), 365);
@@ -1297,7 +1297,7 @@ app.get('/api/tool-usage-stats', auth.requireAuth, dashboardStatsLimiter, async 
 	}
 });
 
-app.get('/api/top-users-today', auth.requireAuth, dashboardStatsLimiter, async (req, res) => {
+app.get('/api/top-users-today', dashboardStatsLimiter, auth.requireAuth, async (req, res) => {
 	try {
 		const limitRaw = Number.parseInt(req.query.limit, 10);
 		const daysRaw = Number.parseInt(req.query.days, 10);
@@ -1314,7 +1314,7 @@ app.get('/api/top-users-today', auth.requireAuth, dashboardStatsLimiter, async (
 	}
 });
 
-app.get('/api/top-teams-today', auth.requireAuth, dashboardStatsLimiter, async (req, res) => {
+app.get('/api/top-teams-today', dashboardStatsLimiter, auth.requireAuth, async (req, res) => {
 	try {
 		const limitRaw = Number.parseInt(req.query.limit, 10);
 		const daysRaw = Number.parseInt(req.query.days, 10);
