@@ -524,7 +524,6 @@ async function openSettingsModal() {
 			const activeElement = document.activeElement;
 			const isInputWithText = activeElement && 
 				(activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA') && 
-				activeElement.value && 
 				activeElement.value.trim() !== '';
 
 			// Check if there's an open dropdown/combobox
