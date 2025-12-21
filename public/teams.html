@@ -40,17 +40,7 @@
 		<script>
 			// Initialize header for teams page after scripts are parsed
 			window.addEventListener('DOMContentLoaded', () => {
-				initGlobalHeader({
-					activePage: '/teams',
-					refreshButton: {
-						onClick: 'refreshTeams(event)',
-						ariaLabel: 'Refresh teams',
-						title: 'Refresh teams'
-					},
-					secondaryButton: {
-						type: 'settings'
-					}
-				});
+				initGlobalHeader();
 			});
 		</script>
 		<div class="container-content">

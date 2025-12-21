@@ -57,17 +57,7 @@
 		<script>
 			// Initialize header for dashboard page after scripts are parsed
 			window.addEventListener('DOMContentLoaded', () => {
-				initGlobalHeader({
-					activePage: '/',
-					refreshButton: {
-						onClick: 'refreshDashboard(event)',
-						ariaLabel: 'Refresh dashboard',
-						title: 'Refresh dashboard'
-					},
-					secondaryButton: {
-						type: 'settings'
-					}
-				});
+				initGlobalHeader();
 			});
 		</script>
 		<div class="container-content">

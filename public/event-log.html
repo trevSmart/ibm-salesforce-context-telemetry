@@ -54,19 +54,7 @@
 		<script>
 			// Initialize header for event log page after scripts are parsed
 			window.addEventListener('DOMContentLoaded', () => {
-				initGlobalHeader({
-					activePage: '/logs',
-					refreshButton: {
-						onClick: 'refreshLogs(event)',
-						id: 'refreshButton',
-						showBadge: true,
-						ariaLabel: 'Refresh now',
-						title: 'Refresh now'
-					},
-					secondaryButton: {
-						type: 'settings'
-					}
-				});
+				initGlobalHeader();
 			});
 		</script>
 		<div class="container-content">
@@ -269,7 +257,7 @@
 											</th>
 										</tr>
 									</thead>
-								<tbody class="divide-y divide-gray-200 dark:divide-white/10" id="logsBody">
+								<tbody class="" id="logsBody">
 									<tr>
 										<td colspan="10" class="py-8 text-center text-gray-500 dark:text-gray-400">
 											Loading recent events...
