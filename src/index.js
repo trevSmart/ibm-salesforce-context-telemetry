@@ -1946,6 +1946,15 @@ app.get('/logs', auth.requireAuth, auth.requireRole('advanced'), (_req, res) => 
 	}
 });
 
+app.get('/people', auth.requireAuth, auth.requireRole('administrator'), (_req, res) => {
+	const peoplePath = path.join(__dirname, '..', 'public', 'people.html');
+	if (fs.existsSync(peoplePath)) {
+		res.sendFile(peoplePath);
+	} else {
+		res.status(404).send('People page not found');
+	}
+});
+
 // Serve OpenAPI specification
 app.get('/api-spec', auth.requireAuth, (_req, res) => {
 	const specPath = path.join(__dirname, 'api', 'api-spec.yaml');
