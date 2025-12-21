@@ -522,7 +522,10 @@ async function openSettingsModal() {
 		if (e.key === 'Escape' && document.body.contains(backdrop)) {
 			// Check if focus is on an input field with text
 			const activeElement = document.activeElement;
-			const isInputWithText = activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA') && activeElement.value.trim() !== '';
+			const isInputWithText = activeElement && 
+				(activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA') && 
+				activeElement.value && 
+				activeElement.value.trim() !== '';
 
 			// Check if there's an open dropdown/combobox
 			const hasOpenDropdown = document.querySelector('[role="listbox"]:not([hidden]), .combobox-dropdown:not([hidden]), [data-open="true"]');
