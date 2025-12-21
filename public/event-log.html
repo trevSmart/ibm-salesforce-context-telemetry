@@ -90,11 +90,15 @@
 									</div>
 								</li>
 							</ul>
+							<div class="session-item">
+								<button id="toggleSelectionModeBtn" class="toggle-selection-mode-btn" onclick="toggleSelectionMode()">
+									<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-5">
+										<path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+									</svg>
+								</button>
+							</div>
 						</div>
 						<div class="selection-buttons-container">
-							<button id="toggleSelectionModeBtn" class="toggle-selection-mode-btn" onclick="toggleSelectionMode()">
-								<i class="fa-solid fa-list-check"></i>
-							</button>
 							<button id="deleteSelectedSessionsBtn" class="delete-selected-sessions-btn" onclick="confirmDeleteSelectedSessions()" style="display: none;">
 								<i class="fa-solid fa-trash"></i> Delete
 							</button>
@@ -202,44 +206,44 @@
 								<div class="font-semibold mt-2.5">No events found</div>
 							</div>
 
-					<div class="logs-table-container" style="background-color: #ffffff;">
+					<div class="logs-table-container">
 						<div style="overflow-y: auto; max-height: calc(100vh - 300px);" id="logsTableScroll">
 							<table class="logs-table min-w-full divide-y divide-gray-300 dark:divide-white/10" id="logsTable">
 									<thead class="text-xs">
 										<tr>
-											<th scope="col" class="expand-column sticky top-0 z-10 border-b border-gray-300 bg-white py-3.5 px-2 text-left font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:border-zinc-700 dark:bg-zinc-900 dark:text-white uppercase">
+											<th scope="col" class="expand-column sticky top-0 z-10 bg-white py-3.5 px-2 text-left font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:border-zinc-700 dark:bg-zinc-900 dark:text-white uppercase">
 												<span class="sr-only">Expand</span>
 											</th>
-											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white px-3 py-3.5 text-left font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:border-zinc-700 dark:bg-zinc-900 dark:text-white uppercase">
+											<th scope="col" class="sticky top-0 z-10  bg-white py-3.5 text-left font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:border-zinc-700 dark:bg-zinc-900 dark:text-white uppercase">
 												Date
 											</th>
-											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white px-3 py-3.5 text-left font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:border-zinc-700 dark:bg-zinc-900 dark:text-white uppercase user-column">
+											<th scope="col" class="sticky top-0 z-10  bg-white py-3.5 text-left font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:border-zinc-700 dark:bg-zinc-900 dark:text-white uppercase user-column">
 												User
 											</th>
-											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white px-3 py-3.5 text-left font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:border-zinc-700 dark:bg-zinc-900 dark:text-white uppercase hidden md:table-cell">
+											<th scope="col" class="sticky top-0 z-10  bg-white py-3.5 text-left font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:border-zinc-700 dark:bg-zinc-900 dark:text-white uppercase hidden md:table-cell">
 												Company
 											</th>
-											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white px-3 py-3.5 text-left font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:border-zinc-700 dark:bg-zinc-900 dark:text-white uppercase">
+											<th scope="col" class="sticky top-0 z-10  bg-white py-3.5 text-left font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:border-zinc-700 dark:bg-zinc-900 dark:text-white uppercase">
 												Event
 											</th>
-											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white px-3 py-3.5 text-left font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:border-zinc-700 dark:bg-zinc-900 dark:text-white uppercase hidden lg:table-cell">
+											<th scope="col" class="sticky top-0 z-10  bg-white py-3.5 text-left font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:border-zinc-700 dark:bg-zinc-900 dark:text-white uppercase hidden lg:table-cell">
 												Tool
 											</th>
-											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white px-3 py-3.5 text-center font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:border-zinc-700 dark:bg-zinc-900 dark:text-white uppercase">
+											<th scope="col" class="sticky top-0 z-10  bg-white py-3.5 text-center font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:border-zinc-700 dark:bg-zinc-900 dark:text-white uppercase">
 												Status
 											</th>
-											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white px-3 py-3.5 text-left font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:border-zinc-700 dark:bg-zinc-900 dark:text-white uppercase hidden xl:table-cell">
+											<th scope="col" class="sticky top-0 z-10  bg-white py-3.5 text-left font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:border-zinc-700 dark:bg-zinc-900 dark:text-white uppercase hidden xl:table-cell">
 												Error
 											</th>
-											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white px-3 py-3.5 text-center font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:border-zinc-700 dark:bg-zinc-900 dark:text-white uppercase">
+											<th scope="col" class="sticky top-0 z-10  bg-white py-3.5 text-center font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:border-zinc-700 dark:bg-zinc-900 dark:text-white uppercase">
 												Payload
 											</th>
-											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white py-3.5 pl-3 pr-4 backdrop-blur-sm backdrop-filter dark:border-zinc-700 dark:bg-zinc-900 sm:pr-0">
+											<th scope="col" class="sticky top-0 z-10  bg-white py-3.5 pl-3 pr-4 backdrop-blur-sm backdrop-filter dark:border-zinc-700 dark:bg-zinc-900 sm:pr-0">
 												<span class="sr-only">Actions</span>
 											</th>
 										</tr>
 									</thead>
-								<tbody class="" id="logsBody">
+								<tbody class="text-sm" id="logsBody">
 									<tr>
 										<td colspan="10" class="py-8 text-center text-gray-500 dark:text-gray-400">
 											Loading recent events...

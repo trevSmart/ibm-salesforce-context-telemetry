@@ -41,6 +41,10 @@
     font-size: inherit;
   }
 
+  pre {
+    font-size: inherit;
+  }
+
   body {
     text-rendering: geometricPrecision;
     -webkit-font-smoothing: subpixel-antialiased;
@@ -245,7 +249,7 @@
   }
 
   .top-nav-search-input {
-    padding: 8px 16px;
+    padding: 7px 16px;
     border: none;
     border-radius: 22px;
     font-size: 0.875rem;
@@ -2186,12 +2190,33 @@
   }
 
   .all-sessions-container {
+    display: flex;
+    gap: 6px;
     flex-shrink: 0;
     margin-bottom: 0;
   }
 
-  .all-sessions-container .session-item:last-child {
-    margin-bottom: 8px;
+  .all-sessions-container .session-list {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .all-sessions-container .session-item:has(.toggle-selection-mode-btn) {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 3px;
+    aspect-ratio: 1;
+    height: 100%;
+    border-radius: 4px;
+  }
+
+  .all-sessions-container .toggle-selection-mode-btn {
+    flex-shrink: 0;
+  }
+
+  .all-sessions-container .session-item {
+    margin-bottom: 0;
   }
 
   .sessions-scrollable {
@@ -3058,8 +3083,8 @@
     width: 100%;
     table-layout: fixed;
     border-collapse: separate;
-    border-spacing: 0;
-    font-size: 0.875rem;
+    border-spacing: 0 2px;
+    font-size: 13px;
     line-height: 1.25rem;
     border: none;
     border-radius: 12px;
@@ -3071,7 +3096,6 @@
     position: sticky;
     top: 0;
     z-index: 10;
-    background: #DADDDE;
   }
 
   html.dark .logs-table thead {
@@ -3088,7 +3112,8 @@
   }
 
   .logs-table th {
-    padding: 8px 4px;
+    padding: 8px 0;
+    padding-left: 0;
     text-align: left;
     font-weight: 300;
     color: var(--text-secondary);
@@ -3105,10 +3130,9 @@
   }
 
   .logs-table td {
-    padding: 10px 4px;
-    color: #18181b;
-    font-size: 0.75rem;
-    line-height: 1.2;
+    font-weight: 300;
+    color: inherit;
+    flex-shrink: 0;
     transition: background-color 0.15s ease;
   }
 
@@ -3123,15 +3147,39 @@
 
   .logs-table th:nth-child(2),
   .logs-table td:nth-child(2) {
-    width: 56px;
-    min-width: 56px;
-    text-align: center;
+    width: 100px;
+    min-width: 100px;
+    text-align: left;
+  }
+
+  .logs-table td:nth-child(3) {
+    width: 260px;
+    min-width: 260px;
+    text-align: left;
+  }
+
+  .logs-table td:nth-child(4) {
+    width: 220px;
+    min-width: 220px;
+    text-align: left;
+  }
+
+  .logs-table td:nth-child(5) {
+    width: 150px;
+    min-width: 150px;
+    text-align: left;
+  }
+
+  .logs-table td:nth-child(9) {
+    width: 70px;
+    min-width: 70px;
+    text-align: left;
   }
 
   .logs-table th:nth-child(9),
   .logs-table td:nth-child(9) {
-    width: 120px;
-    min-width: 120px;
+    width: 70px;
+    min-width: 70px;
   }
 
   .logs-table th:nth-child(10),
@@ -3153,16 +3201,24 @@
     max-width: 180px;
   }
 
+  .logs-table tbody tr.log-item-expanded {
+    display: none;
+  }
+
+  .logs-table tbody tr.log-item-expanded.expanded {
+    display: table-row;
+  }
+
   .logs-table tbody tr {
     transition: background-color 0.15s ease;
-    background: white;
     cursor: pointer;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02), 0 0 1px rgba(0, 0, 0, 0.01), 0 2px 3px rgba(0, 0, 0, 0.03);
-    margin-bottom: 2px;
+    background: white;
+    display: table-row;
+    padding: 0 9px;
   }
 
   html.dark .logs-table tbody tr {
-    background: #212125;
+    background: transparent;
   }
 
   .logs-table tbody tr:hover {
@@ -3420,26 +3476,11 @@
   }
 
   .log-item-expanded {
-    background: var(--bg-secondary) !important;
     display: none;
   }
 
   .log-item-expanded.expanded {
     display: table-row;
-  }
-
-  html.dark .log-item-expanded {
-    background: #18181b !important;
-  }
-
-  .log-item-expanded.expanded td {
-    padding: 0 !important;
-    border: none !important;
-  }
-
-  .log-item-expanded.expanded .log-description-expanded {
-    padding: 12px 16px !important;
-    font-size: 0.75rem !important;
   }
 
   .log-description-expanded {
@@ -3451,15 +3492,16 @@
     margin: 0;
     padding: 0;
     line-height: 1.6;
-    font-size: 0.75rem;
+    font-size: 11.5px;
   }
 
   .json-pretty {
     font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
+    font-size: 11.5px;
     line-height: 1.6;
     color: var(--text-primary);
     margin: 0;
-    padding: 0;
+    padding: 0 0 0 18px;
     white-space: pre-wrap;
     word-break: break-word;
     overflow-x: auto;
@@ -3471,8 +3513,7 @@
 
   .status-indicator {
     display: inline-block;
-    width: 22px;
-    height: 22px;
+    width: 20px;
     flex-shrink: 0;
     object-fit: contain;
     background: transparent;
@@ -3938,11 +3979,6 @@
       width: 100%;
     }
 
-    /* Make table more compact on mobile */
-    .logs-table {
-      font-size: 0.75rem;
-    }
-
     .logs-table th,
     .logs-table td {
       padding: 6px 2px;
@@ -4059,11 +4095,6 @@
       width: 36px;
       height: 36px;
       flex: 0 0 36px;
-    }
-
-    /* Adjust table even more */
-    .logs-table {
-      font-size: 0.7rem;
     }
 
     /* Hide company column on very small screens */
@@ -4415,7 +4446,7 @@
     background: var(--bg-secondary);
     color: var(--text-primary);
     font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     line-height: 1.5;
     padding: 14px 16px;
   }

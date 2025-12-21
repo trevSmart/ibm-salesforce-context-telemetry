@@ -2052,7 +2052,9 @@ function safeShowToast(message, type = 'info') {
 								</button>
 								<div class="actions-dropdown" id="session-dropdown-${escapedSessionId}">
 									<div class="actions-dropdown-item delete" data-session-id="${escapedSessionId}">
-										<span>Delete</span>
+										<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
+											<path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+										</svg>
 									</div>
 								</div>
 							</div>
@@ -2965,30 +2967,30 @@ function safeShowToast(message, type = 'info') {
 			row.setAttribute('data-event-id', event.id);
 			// Store event data in the row element to avoid API call when copying payload
 			row.setAttribute('data-event', JSON.stringify(event));
-			const userCellHtml = showUserColumn? `<td class="hidden px-3 py-4 text-sm text-gray-500 sm:table-cell log-user whitespace-nowrap">${escapeHtml(userLabel)}</td>`: '';
+			const userCellHtml = showUserColumn? `<td class="hidden text-gray-500 sm:table-cell log-user whitespace-nowrap">${escapeHtml(userLabel)}</td>`: '';
 
 			row.innerHTML = `
-				<td class="expand-column py-4 px-2 text-sm font-medium text-gray-900 whitespace-nowrap" style="text-align: center;">
+				<td class="expand-column px-2 font-medium text-gray-900 whitespace-nowrap" style="text-align: center;">
 					<button class="expand-btn" type="button" id="expand-btn-${event.id}" style="background: none; border: none; cursor: pointer; padding: 4px;">
 						<i class="fa-solid fa-chevron-right"></i>
 					</button>
 				</td>
-				<td class="py-4 pr-3 text-sm font-medium text-gray-900 log-time whitespace-nowrap">${formatDate(event.timestamp)}
+				<td class="whitespace-nowrap">${formatDate(event.timestamp)}
 				</td>
 				${userCellHtml}
-				<td class="hidden px-3 py-4 text-sm text-gray-500 md:table-cell log-client whitespace-nowrap">${escapeHtml(clientName)}</td>
-				<td class="px-3 py-4 text-sm text-gray-500 whitespace-nowrap">
+				<td class="hidden text-gray-500 md:table-cell log-client whitespace-nowrap">${escapeHtml(clientName)}</td>
+				<td class="text-gray-500 whitespace-nowrap">
 					<span class="${levelBadgeClass}">
 						${event.event.replace('_', ' ')}
 					</span>
 				</td>
-				<td class="hidden px-3 py-4 text-sm text-gray-500 lg:table-cell log-tool-name whitespace-nowrap">${toolName}</td>
-				<td class="py-4 pr-3 text-sm font-medium text-gray-900 whitespace-nowrap" style="text-align: center;">
+				<td class="hidden text-gray-500 lg:table-cell log-tool-name whitespace-nowrap">${toolName}</td>
+				<td class="font-medium text-gray-900 whitespace-nowrap" style="text-align: center;">
 					${statusIcon}
 				</td>
-				<td class="hidden px-3 py-4 text-sm text-gray-500 xl:table-cell log-error-message whitespace-nowrap overflow-hidden text-ellipsis max-w-48" title="${escapedErrorMessage}">${escapedErrorMessage}</td>
-				<td class="px-3 py-4 text-sm text-gray-500 text-center log-description">${description}</td>
-				<td class="py-4 pr-4 pl-3 text-right text-sm font-medium actions-cell whitespace-nowrap sm:pr-8 lg:pr-8">
+				<td class="hidden text-gray-500 xl:table-cell log-error-message whitespace-nowrap overflow-hidden text-ellipsis max-w-48" title="${escapedErrorMessage}">${escapedErrorMessage}</td>
+				<td class="text-gray-500 text-center log-description">${description}</td>
+				<td class="pr-4 pl-3 text-right font-medium actions-cell whitespace-nowrap sm:pr-8 lg:pr-8">
 					<button class="actions-btn text-indigo-600 hover:text-indigo-900" onclick="toggleActionsDropdown(event, ${event.id})" style="background: none; border: none; cursor: pointer; padding: 4px;">
 						<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
 							<circle cx="8" cy="3" r="1.5"/>
@@ -4443,6 +4445,11 @@ function safeShowToast(message, type = 'info') {
 			// Clear selection
 			selectedSessionsForDeletion.clear();
 			lastSelectedSessionId = null;
+
+			// Exit selection mode if active
+			if (selectionMode) {
+				toggleSelectionMode();
+			}
 
 			// If we were viewing one of the deleted sessions, switch to "all"
 			if (sessionsToDelete.includes(selectedSession)) {
