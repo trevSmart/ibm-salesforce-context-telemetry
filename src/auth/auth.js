@@ -66,7 +66,9 @@ function initSessionMiddleware() {
 		const postgresPool = db.getPostgresPool ? db.getPostgresPool() : null;
 		if (postgresPool) {
 			// Use PostgreSQL store for sessions
-			store = new pgSession({
+			// connect-pg-simple is a factory function that needs to be called with the session module
+			const PgSession = pgSession(session);
+			store = new PgSession({
 				pool: postgresPool,
 				tableName: 'session', // Table name for sessions
 				createTableIfMissing: true // Automatically create session table if it doesn't exist
