@@ -327,8 +327,8 @@
   }
 
   .top-nav-link.active {
-    color: #573030;
-    font-weight: 400;
+    color: #352424;
+    font-weight: 500;
   }
 
   .top-nav-link.active::after {
