@@ -2703,10 +2703,6 @@
     min-width: 0;
   }
 
-  html.dark .main-content {
-    background: #19181a;
-  }
-
   .main-content-header {
     padding: 20px 10px 13px;
     display: flex;
