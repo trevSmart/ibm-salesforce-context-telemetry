@@ -22,6 +22,7 @@ export default [
 				...globals.es2021,
 				...globals.browser,
 				echarts: 'readonly',
+				showToast: 'readonly',
 			},
 		},
 		rules: {

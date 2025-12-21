@@ -75,6 +75,129 @@ function hexToRgba(hex, alpha = 0.12) {
 
 // User menu functions (showUserMenu, handleLogout) are now in user-menu.js
 
+/**
+ * Show a confirmation dialog using Tailwind modal
+ * @param {Object} options - Configuration options
+ * @param {string} options.title - Dialog title
+ * @param {string} options.message - Dialog message
+ * @param {string} options.confirmText - Confirm button text (default: "Confirm")
+ * @param {string} options.cancelText - Cancel button text (default: "Cancel")
+ * @param {boolean} options.destructive - Whether this is a destructive action (default: false)
+ * @returns {Promise<boolean>} - Resolves to true if confirmed, false if cancelled
+ */
+function showConfirmDialog({title, message, confirmText = 'Confirm', cancelText = 'Cancel', destructive = false}) {
+	return new Promise((resolve) => {
+		const isDark = document.documentElement.classList.contains('dark');
+		const dialogId = `confirm-dialog-${Date.now()}`;
+		
+		// Icon for destructive vs normal actions
+		const iconHtml = destructive ? `
+			<div class="mx-auto flex shrink-0 items-center justify-center rounded-full ${isDark ? 'bg-red-500/10' : 'bg-red-100'} sm:mx-0 sm:size-10" style="width: 3rem; height: 3rem;">
+				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" data-slot="icon" aria-hidden="true" class="size-6 ${isDark ? 'text-red-400' : 'text-red-600'}">
+					<path d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" stroke-linecap="round" stroke-linejoin="round" />
+				</svg>
+			</div>
+		` : `
+			<div class="mx-auto flex size-12 items-center justify-center rounded-full ${isDark ? 'bg-green-500/10' : 'bg-green-100'}">
+				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" data-slot="icon" aria-hidden="true" class="size-6 ${isDark ? 'text-green-400' : 'text-green-600'}">
+					<path d="m4.5 12.75 6 6 9-13.5" stroke-linecap="round" stroke-linejoin="round" />
+				</svg>
+			</div>
+		`;
+
+		// Create dialog HTML
+		const dialogHtml = `
+			<el-dialog>
+				<dialog id="${dialogId}" aria-labelledby="${dialogId}-title" class="fixed inset-0 size-auto max-h-none max-w-none overflow-y-auto bg-transparent backdrop:bg-transparent">
+					<el-dialog-backdrop class="fixed inset-0 ${isDark ? 'bg-gray-900/50' : 'bg-gray-500/75'} transition-opacity data-closed:opacity-0 data-enter:duration-300 data-enter:ease-out data-leave:duration-200 data-leave:ease-in"></el-dialog-backdrop>
+
+					<div tabindex="0" class="flex min-h-full items-end justify-center p-4 text-center focus:outline-none sm:items-center sm:p-0">
+						<el-dialog-panel class="relative transform overflow-hidden rounded-lg ${isDark ? 'bg-gray-800' : 'bg-white'} px-4 pt-5 pb-4 text-left shadow-xl ${isDark ? 'outline -outline-offset-1 outline-white/10' : ''} transition-all data-closed:translate-y-4 data-closed:opacity-0 data-enter:duration-300 data-enter:ease-out data-leave:duration-200 data-leave:ease-in sm:my-8 sm:w-full sm:max-w-lg sm:p-6 data-closed:sm:translate-y-0 data-closed:sm:scale-95">
+							${destructive ? `
+								<div class="sm:flex sm:items-start">
+									${iconHtml}
+									<div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+										<h3 id="${dialogId}-title" class="text-base font-semibold ${isDark ? 'text-white' : 'text-gray-900'}">${escapeHtml(title)}</h3>
+										<div class="mt-2">
+											<p class="text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}">${escapeHtml(message)}</p>
+										</div>
+									</div>
+								</div>
+								<div class="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
+									<button type="button" data-action="confirm" class="inline-flex w-full justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-red-500 sm:ml-3 sm:w-auto">${escapeHtml(confirmText)}</button>
+									<button type="button" data-action="cancel" class="mt-3 inline-flex w-full justify-center rounded-md ${isDark ? 'bg-white/10 hover:bg-white/20 text-white inset-ring-1 inset-ring-white/5' : 'bg-white hover:bg-gray-50 text-gray-900 shadow-xs inset-ring-1 inset-ring-gray-300'} px-3 py-2 text-sm font-semibold sm:mt-0 sm:w-auto">${escapeHtml(cancelText)}</button>
+								</div>
+							` : `
+								<div>
+									${iconHtml}
+									<div class="mt-3 text-center sm:mt-5">
+										<h3 id="${dialogId}-title" class="text-base font-semibold ${isDark ? 'text-white' : 'text-gray-900'}">${escapeHtml(title)}</h3>
+										<div class="mt-2">
+											<p class="text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}">${escapeHtml(message)}</p>
+										</div>
+									</div>
+								</div>
+								<div class="mt-5 sm:mt-6 sm:grid sm:grid-flow-row-dense sm:grid-cols-2 sm:gap-3">
+									<button type="button" data-action="confirm" class="inline-flex w-full justify-center rounded-md ${isDark ? 'bg-indigo-500 hover:bg-indigo-400 focus-visible:outline-indigo-500' : 'bg-indigo-600 hover:bg-indigo-500 focus-visible:outline-indigo-600'} px-3 py-2 text-sm font-semibold text-white focus-visible:outline-2 focus-visible:outline-offset-2 sm:col-start-2">${escapeHtml(confirmText)}</button>
+									<button type="button" data-action="cancel" class="mt-3 inline-flex w-full justify-center rounded-md ${isDark ? 'bg-white/10 hover:bg-white/20 text-white inset-ring-1 inset-ring-white/5' : 'bg-white hover:bg-gray-50 text-gray-900 shadow-xs inset-ring-1 inset-ring-gray-300'} px-3 py-2 text-sm font-semibold sm:col-start-1 sm:mt-0">${escapeHtml(cancelText)}</button>
+								</div>
+							`}
+						</el-dialog-panel>
+					</div>
+				</dialog>
+			</el-dialog>
+		`;
+
+		// Append to body
+		const container = document.createElement('div');
+		container.innerHTML = dialogHtml;
+		document.body.appendChild(container);
+
+		const dialog = document.getElementById(dialogId);
+		const confirmBtn = dialog.querySelector('[data-action="confirm"]');
+		const cancelBtn = dialog.querySelector('[data-action="cancel"]');
+
+		let resolved = false;
+
+		// Cleanup function to remove dialog and all event listeners
+		const cleanup = () => {
+			// Wait for dialog close animation to complete
+			setTimeout(() => {
+				container.remove();
+			}, 250); // Slightly less than the 300ms animation duration
+		};
+
+		// Resolve helper to prevent multiple resolutions
+		const resolveOnce = (value) => {
+			if (!resolved) {
+				resolved = true;
+				cleanup();
+				resolve(value);
+			}
+		};
+
+		// Handle confirm
+		confirmBtn.addEventListener('click', () => {
+			dialog.close();
+			resolveOnce(true);
+		});
+
+		// Handle cancel
+		cancelBtn.addEventListener('click', () => {
+			dialog.close();
+			resolveOnce(false);
+		});
+
+		// Handle dialog close (ESC key or backdrop click)
+		dialog.addEventListener('close', () => {
+			resolveOnce(false);
+		});
+
+		// Show the dialog
+		dialog.showModal();
+	});
+}
+
 function toggleTheme() {
 	const isDark = document.documentElement.classList.contains('dark');
 	const newTheme = isDark ? 'light' : 'dark';
@@ -104,8 +227,16 @@ function toggleTheme() {
 	}
 }
 
-function clearLocalData() {
-	if (confirm('Clear all local data stored in this browser for the telemetry UI (theme, filters, etc.)?')) {
+async function clearLocalData() {
+	const confirmed = await showConfirmDialog({
+		title: 'Clear local data',
+		message: 'Clear all local data stored in this browser for the telemetry UI (theme, filters, etc.)?',
+		confirmText: 'Clear data',
+		cancelText: 'Cancel',
+		destructive: false
+	});
+	
+	if (confirmed) {
 		localStorage.clear();
 		showToast('Local data cleared. Page will reload.', 'info');
 		window.location.reload();
@@ -709,8 +840,16 @@ function showTeamFormModal(team = null) {
 	// Handle remove logo button
 	const removeLogoBtn = document.getElementById('removeLogoBtn');
 	if (removeLogoBtn) {
-		removeLogoBtn.addEventListener('click', () => {
-			if (confirm('Remove the current logo?')) {
+		removeLogoBtn.addEventListener('click', async () => {
+			const confirmed = await showConfirmDialog({
+				title: 'Remove logo',
+				message: 'Remove the current logo?',
+				confirmText: 'Remove',
+				cancelText: 'Cancel',
+				destructive: false
+			});
+			
+			if (confirmed) {
 				removeLogo = true;
 				const logoPreview = document.getElementById('logoPreview');
 				const logoPreviewContainer = logoPreview?.closest('div');
@@ -756,8 +895,16 @@ function showTeamFormModal(team = null) {
 	});
 }
 
-function showDeleteTeamConfirm(team) {
-	if (!confirm(`Are you sure you want to delete "${team.name}"? This will unassign all orgs and users from this team.`)) {
+async function showDeleteTeamConfirm(team) {
+	const confirmed = await showConfirmDialog({
+		title: 'Delete team',
+		message: `Are you sure you want to delete "${team.name}"? This will unassign all orgs and users from this team.`,
+		confirmText: 'Delete team',
+		cancelText: 'Cancel',
+		destructive: true
+	});
+	
+	if (!confirmed) {
 		return;
 	}
 
@@ -1001,7 +1148,15 @@ async function showAddUserModal(teamId) {
 }
 
 async function removeOrgFromTeam(orgId, teamId) {
-	if (!confirm('Remove this organization from the team?')) {
+	const confirmed = await showConfirmDialog({
+		title: 'Remove organization',
+		message: 'Remove this organization from the team?',
+		confirmText: 'Remove',
+		cancelText: 'Cancel',
+		destructive: true
+	});
+	
+	if (!confirmed) {
 		return;
 	}
 
@@ -1015,7 +1170,15 @@ async function removeOrgFromTeam(orgId, teamId) {
 }
 
 async function removeUserFromTeam(userName, teamId) {
-	if (!confirm('Remove this user from the team?')) {
+	const confirmed = await showConfirmDialog({
+		title: 'Remove user',
+		message: 'Remove this user from the team?',
+		confirmText: 'Remove',
+		cancelText: 'Cancel',
+		destructive: true
+	});
+	
+	if (!confirmed) {
 		return;
 	}
 

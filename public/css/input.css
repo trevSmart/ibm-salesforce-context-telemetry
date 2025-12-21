@@ -4236,12 +4236,14 @@
 
   .confirm-modal {
     width: 100%;
+    font-size: var(--text-sm);
+    line-height: var(--tw-leading, var(--text-sm--line-height));
     max-width: 420px;
     margin: 0 16px;
     padding: 18px 20px 16px 20px;
     border-radius: 12px;
     background: var(--bg-primary);
-    color: var(--text-primary);
+    color: var(--color-gray-500);
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02), 0 0 1px rgba(0, 0, 0, 0.01), 0 2px 3px rgba(0, 0, 0, 0.03);
     border: 1px solid var(--border-color);
     opacity: 0;
@@ -4290,11 +4292,6 @@
   html.dark .confirm-dialog-icon {
     background: rgba(248, 113, 113, 0.12);
     box-shadow: inset 0 0 0 1px rgba(248, 113, 113, 0.18);
-  }
-
-  .confirm-dialog-text {
-    flex: 1;
-    min-width: 0;
   }
 
   .confirm-dialog-actions {
@@ -4447,13 +4444,6 @@
     margin-bottom: 6px;
   }
 
-  .confirm-modal-message {
-    font-size: 0.8125rem;
-    line-height: 1.4;
-    color: var(--text-secondary);
-    margin-bottom: 14px;
-  }
-
   .confirm-modal-actions {
     display: flex;
     justify-content: flex-end;
@@ -4531,30 +4521,6 @@
 
   html:not(.dark) .confirm-modal-btn-confirm:hover {
     background-color: #2385b9;
-  }
-
-  .confirm-modal-btn-destructive {
-    @apply inline-flex items-center justify-center gap-2 rounded-sm px-2 py-1 text-xs font-semibold shadow-xs inset-ring inset-ring-white/5 bg-white/10 hover:bg-white/20 transition-colors duration-150;
-    line-height: 1.25;
-    color: #dc2626;
-  }
-
-  html:not(.dark) .confirm-modal-btn-destructive {
-    background-color: transparent;
-    color: #dc2626;
-    border-color: #dc2626;
-    --tw-ring-color: #dc2626;
-  }
-
-  html:not(.dark) .confirm-modal-btn-destructive:hover {
-    background-color: #fef2f2;
-    color: #b91c1c;
-    border-color: #b91c1c;
-    --tw-ring-color: #b91c1c;
-  }
-
-  html.dark .confirm-modal-btn-destructive {
-    color: #ef4444;
   }
 
   .org-team-actions {
