@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Telemetry Event Schema",
-  "description": "JSON schema for telemetry events sent to the telemetry server",
+  "title": "Telemetry Event Schema v1.1",
+  "description": "JSON schema for telemetry events sent to the telemetry server (v1.1 - error events are more permissive)",
   "type": "object",
   "required": ["event", "timestamp"],
   "properties": {
@@ -45,7 +45,7 @@
       "properties": {
         "toolName": {
           "type": "string",
-          "description": "Name of the tool that was called"
+          "description": "Name of the tool that was called (may be null/undefined for error events)"
         },
         "success": {
           "type": "boolean",
@@ -58,7 +58,7 @@
         },
         "operation": {
           "type": "string",
-          "description": "Type of operation (e.g., 'query', 'create', 'update')"
+          "description": "Type of operation (e.g., 'query', 'create', 'update') - optional for error events"
         },
         "errorType": {
           "type": "string",
@@ -115,6 +115,18 @@
         "errorMessage": "Invalid object name",
         "success": false
       }
+    },
+    {
+      "event": "tool_error",
+      "timestamp": "2024-01-15T10:30:00.000Z",
+      "serverId": "server-instance-123",
+      "version": "1.0.0",
+      "data": {
+        "errorType": "UnknownError",
+        "errorMessage": "Unexpected error occurred",
+        "success": false
+      },
+      "_comment": "Error event with minimal required fields (v1.1+)"
     },
     {
       "event": "session_start",
