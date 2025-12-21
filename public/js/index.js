@@ -1873,10 +1873,10 @@ async function loadChartData(days = currentDays) {
 
 // Expose functions used by inline handlers / shared markup
 // Note: showUserMenu and handleLogout are now exposed by user-menu.js
+// Note: openSettingsModal is now exposed by settings-modal.js
 Object.assign(window, {
 	clearLocalData,
 	toggleTheme,
-	openSettingsModal,
 	refreshDashboard
 });
 
