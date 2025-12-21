@@ -5337,8 +5337,8 @@ if (window.__EVENT_LOG_LOADED__) {
 
 	// Expose handlers used by inline HTML attributes
 	// Note: showUserMenu and handleLogout are now exposed by user-menu.js
+	// Note: openSettingsModal is now exposed by settings-modal.js
 	window.refreshLogs = refreshLogs;
-	window.openSettingsModal = openSettingsModal;
 	window.toggleNotificationMode = toggleNotificationMode;
 	window.toggleSelectionMode = toggleSelectionMode;
 	// Load and display event payload in a modal
