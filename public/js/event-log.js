@@ -3351,68 +3351,14 @@ if (window.__EVENT_LOG_LOADED__) {
 		}
 	}
 
-	let deleteAllConfirmed = false;
-
-	function confirmDeleteAll() {
-		if (!deleteAllConfirmed) {
-			deleteAllConfirmed = true;
-			openConfirmModal({
-				title: 'Delete all events',
-				message: 'Are you sure you want to delete ALL events? This action cannot be undone.',
-				confirmLabel: 'Delete all events',
-				destructive: true
-			}).then((firstConfirmed) => {
-				if (!firstConfirmed) {
-					deleteAllConfirmed = false;
-					return;
-				}
-
-				openConfirmModal({
-					title: 'Final warning',
-					message: 'This will permanently delete ALL events from the database.\nAre you absolutely sure?',
-					confirmLabel: 'Yes, delete everything',
-					destructive: true
-				}).then((secondConfirmed) => {
-					if (!secondConfirmed) {
-						deleteAllConfirmed = false;
-						return;
-					}
-					// Perform deletion
-					deleteAllEvents();
-				});
-			});
-		} else {
-			deleteAllEvents();
-		}
-	}
-
-	async function deleteAllEvents() {
-		try {
-			const response = await fetch('/api/events', {
-				method: 'DELETE',
-				headers: getCsrfHeaders(false),
-				credentials: 'include' // Ensure cookies are sent
-			});
-			const validResponse = await handleApiResponse(response);
-			if (!validResponse) return;
-
-			const data = await validResponse.json();
-			alert(`Successfully deleted ${data.deletedCount || 0} events.`);
-
-			// Reset confirmation flag
-			deleteAllConfirmed = false;
-
-			// Refresh the view
-			currentOffset = 0;
-			loadEventTypeStats(selectedSession);
-			loadSessions();
-			loadEvents();
-		} catch (error) {
-			console.error('Error deleting events:', error);
-			alert('Error deleting events: ' + error.message);
-			deleteAllConfirmed = false;
-		}
-	}
+	// Page-specific refresh callback for when events are deleted
+	window.onEventsDeleted = function() {
+		// Refresh the view
+		currentOffset = 0;
+		loadEventTypeStats(selectedSession);
+		loadSessions();
+		loadEvents();
+	};
 
 
 	function toggleNotificationMode() {
@@ -5638,85 +5584,11 @@ if (window.__EVENT_LOG_LOADED__) {
 		}
 	}
 
-	// Confirm empty trash
-	function confirmEmptyTrash() {
-		openConfirmModal({
-			title: 'Empty trash',
-			message: 'Are you sure you want to permanently delete ALL events in the trash? This action cannot be undone.',
-			confirmLabel: 'Empty trash',
-			destructive: true,
-			onConfirm: () => emptyTrash()
-		});
-	}
-
-	// Load trash information
-	async function loadTrashInfo() {
-		try {
-			const response = await fetch('/api/events/deleted?limit=0', {
-				method: 'GET',
-				headers: getCsrfHeaders(false),
-				credentials: 'include'
-			});
-
-			if (response.status === 401) {
-				window.location.href = '/login';
-				return;
-			}
-			if (response.status === 403) {
-				return;
-			}
-			if (!response.ok) {
-				console.warn('Could not load trash info:', response.status);
-				return;
-			}
-
-			const data = await response.json();
-			const trashInfo = document.getElementById('trashInfo');
-			if (trashInfo && data.total !== undefined) {
-				if (data.total > 0) {
-					trashInfo.textContent = `Permanently delete all ${data.total} events currently in the trash. This action cannot be undone.`;
-				} else {
-					trashInfo.textContent = 'Permanently delete all events currently in the trash. This action cannot be undone.';
-				}
-			}
-		} catch (error) {
-			console.warn('Error loading trash info:', error);
-			// Don't show error to user, just leave default text
-		}
-	}
-
-	function confirmEmptyTrash() {
-		openConfirmModal({
-			title: 'Empty trash',
-			message: 'Are you sure you want to permanently delete ALL events in the trash? This action cannot be undone.',
-			confirmLabel: 'Empty trash',
-			destructive: true,
-			onConfirm: () => emptyTrash()
-		});
-	}
-
-	// Empty trash (delete all deleted events)
-	async function emptyTrash() {
-		try {
-			const response = await fetch('/api/events/deleted', {
-				method: 'DELETE',
-				headers: getCsrfHeaders(false),
-				credentials: 'include'
-			});
-			const validResponse = await handleApiResponse(response);
-			if (!validResponse) return;
-
-			const data = await validResponse.json();
-			alert(`Successfully deleted ${data.deletedCount || 0} events from trash.`);
-
-			// Refresh deleted events and trash info
-			loadDeletedEvents();
-			loadTrashInfo();
-		} catch (error) {
-			console.error('Error emptying trash:', error);
-			alert('Error emptying trash: ' + error.message);
-		}
-	}
+	// Page-specific refresh callback for when trash is emptied
+	window.onTrashEmptied = function() {
+		// Refresh deleted events
+		loadDeletedEvents();
+	};
 
 	// Confirm cleanup old deleted events
 	function confirmCleanupTrash() {
@@ -5765,7 +5637,6 @@ if (window.__EVENT_LOG_LOADED__) {
 	window.closePayloadModal = closePayloadModal;
 	window.confirmRecoverEvent = confirmRecoverEvent;
 	window.confirmPermanentlyDeleteEvent = confirmPermanentlyDeleteEvent;
-	window.confirmEmptyTrash = confirmEmptyTrash;
 	window.confirmCleanupTrash = confirmCleanupTrash;
 
 } // end guard to avoid duplicate execution
