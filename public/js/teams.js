@@ -652,7 +652,7 @@ function showTeamFormModal(team = null) {
           <div style="margin-bottom: 4px; font-weight: 500;">Logo</div>
           <div style="display: flex; flex-direction: column; gap: 8px;">
             ${logoPreviewUrl ? `
-              <div class="bg-gray-50 dark:bg-gray-700/50 flex items-center gap-3 p-2 border border-gray-300 dark:border-gray-600 rounded-md"
+              <div class="bg-gray-50 dark:bg-gray-700/50 flex items-center gap-3 p-2 border border-gray-300 dark:border-gray-600 rounded-md">
                 <img id="logoPreview" src="${logoPreviewUrl}" alt="Current logo" style="width: 48px; height: 48px; object-fit: contain; border-radius: 4px; background: white;">
                 <div style="flex: 1;">
                   <div style="font-size: 0.875rem; color: var(--text-secondary);">Current logo</div>
