@@ -39,17 +39,7 @@
 		<script src="/js/header.js"></script>
 		<script>
 			// Initialize header for users page
-			initGlobalHeader({
-				activePage: '/users',
-				refreshButton: {
-					onClick: 'refreshUsers(event)',
-					ariaLabel: 'Refresh users',
-					title: 'Refresh users'
-				},
-				secondaryButton: {
-					type: 'settings'
-				}
-			});
+			initGlobalHeader();
 		</script>
 		<div class="container-content">
 			<div class="users-header" style="display: flex; align-items: flex-end; justify-content: space-between; gap: 16px;">

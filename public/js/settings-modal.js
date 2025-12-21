@@ -147,10 +147,7 @@ async function deleteAllEvents() {
 		// Reset confirmation flag
 		deleteAllConfirmed = false;
 
-		// Call page-specific refresh callback if available
-		if (typeof window.onEventsDeleted === 'function') {
-			window.onEventsDeleted();
-		}
+		// Note: Events deleted - page may need to refresh its data
 	} catch (error) {
 		console.error('Error deleting events:', error);
 		alert('Error deleting events: ' + error.message);
@@ -194,10 +191,7 @@ async function emptyTrash() {
 		// Refresh trash info
 		loadTrashInfo();
 
-		// Call page-specific refresh callback if available
-		if (typeof window.onTrashEmptied === 'function') {
-			window.onTrashEmptied();
-		}
+		// Note: Trash emptied - page may need to refresh its data
 	} catch (error) {
 		console.error('Error emptying trash:', error);
 		alert('Error emptying trash: ' + error.message);
@@ -292,36 +286,45 @@ async function openSettingsModal() {
 	// Get current settings
 	const savedTheme = localStorage.getItem('theme') || 'light';
 	const isDarkTheme = savedTheme === 'dark';
-	const autoRefreshInterval = window.autoRefreshIntervalMinutes || '';
+	const autoRefreshInterval = localStorage.getItem('autoRefreshIntervalMinutes') || '';
 
 	const sidebarNav = `
     <a href="#settings-general" class="settings-sidebar-link flex items-center gap-2 rounded-md px-2 py-1.5 text-[color:var(--text-primary)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-secondary)]">
-      <span class="w-5 h-5 flex items-center justify-center rounded-full border border-(--border-color) bg-(--bg-secondary)">
-        <i class="fa-solid fa-gear text-[12px]"></i>
+      <span class="w-5 h-5 flex items-center justify-center">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z" />
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+        </svg>
       </span>
-      <span class="font-medium">General</span>
+      <span>General</span>
     </a>
     ${isAdministrator ? `
     <a href="#settings-users" class="settings-sidebar-link flex items-center gap-2 rounded-md px-2 py-1.5 text-[color:var(--text-primary)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-secondary)]">
-      <span class="w-5 h-5 flex items-center justify-center rounded-full border border-[color:var(--border-color)] bg-[color:var(--bg-secondary)]">
-        <i class="fa-solid fa-user-gear text-[12px]"></i>
+      <span class="w-5 h-5 flex items-center justify-center">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
+        </svg>
       </span>
-      <span class="font-medium">Users</span>
+      <span>Users</span>
     </a>
     ` : ''}
     ${isAdministrator ? `
-    <a href="#settings-import-export" class="settings-sidebar-link flex items-center gap-2 rounded-md px-2 py-1.5 text-[color:var(--text-primary)] hover:text-[color:var(--text-primary)] hover:bg-(--bg-secondary)">
-      <span class="w-5 h-5 flex items-center justify-center rounded-full border border-(--border-color) bg-[color:var(--bg-secondary)]">
-        <i class="fa-solid fa-database text-[12px]"></i>
+    <a href="#settings-import-export" class="settings-sidebar-link flex items-center gap-2 rounded-md px-2 py-1.5 text-[color:var(--text-primary)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-secondary)]">
+      <span class="w-5 h-5 flex items-center justify-center">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125" />
+        </svg>
       </span>
-      <span class="font-medium">Import/Export</span>
+      <span>Database</span>
     </a>
     ` : ''}
-    <a href="#settings-danger" class="settings-sidebar-link flex items-center gap-2 rounded-md px-2 py-1.5 text-(--text-primary) hover:text-(--text-primary) hover:bg-(--bg-secondary)">
-      <span class="w-5 h-5 flex items-center justify-center rounded-full border border-(--border-color) bg-(--bg-secondary)">
-        <i class="fa-solid fa-triangle-exclamation text-[12px]"></i>
+    <a href="#settings-danger" class="settings-sidebar-link flex items-center gap-2 rounded-md px-2 py-1.5 text-[color:var(--text-primary)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-secondary)]">
+      <span class="w-5 h-5 flex items-center justify-center">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m0-10.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.75c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.57-.598-3.75h-.152c-3.196 0-6.1-1.25-8.25-3.286Zm0 13.036h.008v.008H12v-.008Z" />
+        </svg>
       </span>
-      <span class="font-medium">Danger zone</span>
+      <span>Danger zone</span>
     </a>
   `;
 
@@ -331,7 +334,7 @@ async function openSettingsModal() {
 		</div>
 		<div class="settings-modal-content">
 			<div class="settings-layout flex flex-col md:flex-row md:gap-8 mt-2">
-				<aside class="settings-sidebar-nav md:w-56 border-b md:border-b-0 md:border-r border-(--border-color) pb-3 md:pb-0 md:pr-3">
+				<aside class="settings-sidebar-nav md:w-56 border-b md:border-b-0 md:border-r border-[color:var(--border-color)] pb-3 md:pb-0 md:pr-3">
 					<nav class="flex md:flex-col gap-2 text-sm" aria-label="Settings sections">
 						${sidebarNav}
 					</nav>
@@ -358,7 +361,7 @@ async function openSettingsModal() {
 								</div>
 								<div style="display: flex; align-items: center; gap: 8px;">
 									<select id="autoRefreshInterval" name="autoRefreshInterval"
-										class="auto-refresh-interval block w-full rounded-md bg-white py-1.5 pr-3 pl-3 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6">
+										class="auto-refresh-interval block w-full rounded-md bg-white dark:bg-white/5 py-1.5 pr-3 pl-3 text-base text-gray-900 dark:text-white outline-1 -outline-offset-1 outline-gray-300 dark:outline-white/10 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 dark:focus:outline-indigo-500 sm:text-sm/6">
 										<option value="" ${autoRefreshInterval === '' ? 'selected' : ''}>Off</option>
 										<option value="3" ${autoRefreshInterval === '3' ? 'selected' : ''}>3 minutes</option>
 										<option value="5" ${autoRefreshInterval === '5' ? 'selected' : ''}>5 minutes</option>
@@ -399,28 +402,28 @@ async function openSettingsModal() {
 						<section id="settings-import-export" class="settings-section" style="display: none;">
 							<div class="settings-modal-placeholder-title">Import/Export</div>
 							<div class="settings-modal-placeholder-text">
-								<div class="settings-toggle-row" style="align-items: flex-start;">
+								<div class="settings-toggle-row" style="flex-direction: column; align-items: flex-start; justify-content: flex-start;">
 									<div class="settings-toggle-text">
 										<div class="settings-toggle-title">Export database</div>
 										<div class="settings-toggle-description">
 											Download a complete backup of the database as a JSON file. This includes all telemetry events, users, teams, organizations, and settings.
 										</div>
 									</div>
-									<div class="settings-toggle-actions">
+									<div class="settings-toggle-actions" style="display: flex; width: 100%; justify-content: flex-start;">
 										<button type="button" class="confirm-modal-btn" id="exportDatabaseBtn">
 											<i class="fa-solid fa-download"></i>
 											Export database
 										</button>
 									</div>
 								</div>
-								<div class="settings-toggle-row" style="align-items: flex-start; margin-top: 8px;">
+								<div class="settings-toggle-row" style="flex-direction: column; align-items: flex-start; justify-content: flex-start; margin-top: 8px;">
 									<div class="settings-toggle-text">
 										<div class="settings-toggle-title">Import database</div>
 										<div class="settings-toggle-description">
 											Import data from a previously exported database JSON file. This will merge the imported data with the existing database. Existing records with the same ID will be replaced.
 										</div>
 									</div>
-									<div class="settings-toggle-actions">
+									<div class="settings-toggle-actions" style="display: flex; width: 100%; justify-content: flex-start;">
 										<input type="file" id="importDatabaseInput" accept=".json" style="display: none;">
 										<button type="button" class="confirm-modal-btn" id="importDatabaseBtn">
 											<i class="fa-solid fa-upload"></i>
@@ -451,7 +454,7 @@ async function openSettingsModal() {
 										</div>
 									</div>
 								<div class="settings-toggle-actions">
-									<button type="button" class="confirm-modal-btn confirm-modal-btn-destructive" id="clearLocalDataBtn">
+									<button type="button" class="confirm-modal-btn" id="clearLocalDataBtn">
 										<i class="fa-solid fa-broom"></i>
 										Clear local data
 									</button>
@@ -466,7 +469,7 @@ async function openSettingsModal() {
 									</div>
                 <div class="settings-toggle-actions">
                   ${canDeleteAllEvents ? `
-                    <button type="button" class="confirm-modal-btn confirm-modal-btn-destructive" id="deleteAllEventsBtn">
+                    <button type="button" class="confirm-modal-btn" id="deleteAllEventsBtn">
                       <i class="fa-solid fa-trash-can"></i>
                       Delete all events
                     </button>
@@ -484,7 +487,7 @@ async function openSettingsModal() {
 									</div>
                 <div class="settings-toggle-actions">
                   ${canDeleteAllEvents ? `
-                    <button type="button" class="confirm-modal-btn confirm-modal-btn-destructive" id="emptyTrashBtn">
+                    <button type="button" class="confirm-modal-btn" id="emptyTrashBtn">
                       <i class="fa-solid fa-dumpster-fire"></i>
                       Empty trash
                     </button>
@@ -514,7 +517,31 @@ async function openSettingsModal() {
 		backdrop.classList.add('visible');
 	});
 
+	// Define the ESC handler function first so it can be properly referenced by closeSettingsModal
+	const escHandler = function(e) {
+		if (e.key === 'Escape' && document.body.contains(backdrop)) {
+			// Check if focus is on an input field with text
+			const activeElement = document.activeElement;
+			const isInputWithText = activeElement && 
+				(activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA') && 
+				activeElement.value.trim() !== '';
+
+			// Check if there's an open dropdown/combobox
+			const hasOpenDropdown = document.querySelector('[role="listbox"]:not([hidden]), .combobox-dropdown:not([hidden]), [data-open="true"]');
+
+			// Don't close if focus is on input with text or dropdown is open
+			if (!isInputWithText && !hasOpenDropdown) {
+				e.preventDefault();
+				closeSettingsModal();
+			}
+		}
+	};
+
+	// Define closeSettingsModal after escHandler so it can remove the listener correctly
 	function closeSettingsModal() {
+		// Remove ESC key listener
+		document.removeEventListener('keydown', escHandler);
+
 		backdrop.classList.remove('visible');
 		backdrop.classList.add('hiding');
 		const handleTransitionEnd = () => {
@@ -530,18 +557,31 @@ async function openSettingsModal() {
 		}, 220);
 	}
 
+	// Add ESC key listener
+	document.addEventListener('keydown', escHandler);
+
 	const closeBtn = modal.querySelector('#settingsCloseBtn');
 	if (closeBtn) {
 		closeBtn.addEventListener('click', closeSettingsModal);
 	}
 
+	// ESC key handling is configured via `escHandler` earlier; no additional listener needed here.
 	const darkThemeToggle = modal.querySelector('#darkThemeToggle');
 	if (darkThemeToggle) {
 		darkThemeToggle.addEventListener('change', (e) => {
 			const newTheme = e.target.checked ? 'dark' : 'light';
 			localStorage.setItem('theme', newTheme);
-			if (typeof window.applyTheme === 'function') {
-				window.applyTheme(newTheme);
+
+			// Apply theme directly
+			if (newTheme === 'dark') {
+				document.documentElement.classList.add('dark');
+			} else {
+				document.documentElement.classList.remove('dark');
+			}
+
+			// Update theme menu item if it exists
+			if (typeof window.updateThemeMenuItem === 'function') {
+				window.updateThemeMenuItem(newTheme);
 			}
 		});
 	}
@@ -553,11 +593,22 @@ async function openSettingsModal() {
 			if (!interval) {
 				interval = '';
 			}
+
+			// Store in localStorage for persistence
+			localStorage.setItem('autoRefreshIntervalMinutes', interval);
+			localStorage.setItem('autoRefreshEnabledState', interval !== '' ? 'true' : 'false');
+
+			// Update global variables if they exist (for backward compatibility)
 			if (typeof window.autoRefreshIntervalMinutes !== 'undefined') {
 				window.autoRefreshIntervalMinutes = interval;
 			}
 			if (typeof window.autoRefreshEnabledState !== 'undefined') {
 				window.autoRefreshEnabledState = interval !== '';
+			}
+
+			// Notify page of auto-refresh change if callback exists
+			if (typeof window.onAutoRefreshChanged === 'function') {
+				window.onAutoRefreshChanged(interval !== '', interval);
 			}
 		};
 		autoRefreshIntervalInput.addEventListener('change', handleAutoRefreshChange);
@@ -709,25 +760,36 @@ async function openSettingsModal() {
 			function formatDate(dateString) {
 				if (!dateString) return '-';
 				const date = new Date(dateString);
-				return date.toLocaleDateString('en-US', {
-					year: 'numeric',
-					month: 'short',
-					day: 'numeric',
-					hour: '2-digit',
-					minute: '2-digit'
-				});
+
+				// Format: DD/MM/YY HH24:MM
+				const day = date.getDate().toString().padStart(2, '0');
+				const month = (date.getMonth() + 1).toString().padStart(2, '0');
+				const year = date.getFullYear().toString().slice(-2); // Last 2 digits of year
+				const hours = date.getHours().toString().padStart(2, '0');
+				const minutes = date.getMinutes().toString().padStart(2, '0');
+
+				return `${day}/${month}/${year} ${hours}:${minutes}`;
 			}
 
-			function getRoleBadgeColor(role) {
+			function getRoleBadgeClasses(role) {
+				const isDark = localStorage.getItem('theme') === 'dark';
 				switch (role) {
 				case 'administrator':
-					return '#dc2626';
+					return isDark
+						? 'inline-flex items-center rounded-md bg-red-400/10 px-1.5 py-0.5 text-xs font-medium text-red-400 inset-ring inset-ring-red-400/20'
+						: 'inline-flex items-center rounded-md bg-red-50 px-1.5 py-0.5 text-xs font-medium text-red-700 inset-ring inset-ring-red-600/10';
 				case 'advanced':
-					return '#2563eb';
+					return isDark
+						? 'inline-flex items-center rounded-md bg-blue-400/10 px-1.5 py-0.5 text-xs font-medium text-blue-400 inset-ring inset-ring-blue-400/30'
+						: 'inline-flex items-center rounded-md bg-blue-50 px-1.5 py-0.5 text-xs font-medium text-blue-700 inset-ring inset-ring-blue-700/10';
 				case 'basic':
-					return '#16a34a';
+					return isDark
+						? 'inline-flex items-center rounded-md bg-green-400/10 px-1.5 py-0.5 text-xs font-medium text-green-400 inset-ring inset-ring-green-500/20'
+						: 'inline-flex items-center rounded-md bg-green-50 px-1.5 py-0.5 text-xs font-medium text-green-700 inset-ring inset-ring-green-600/20';
 				default:
-					return '#6b7280';
+					return isDark
+						? 'inline-flex items-center rounded-md bg-gray-400/10 px-1.5 py-0.5 text-xs font-medium text-gray-400 inset-ring inset-ring-gray-400/20'
+						: 'inline-flex items-center rounded-md bg-gray-50 px-1.5 py-0.5 text-xs font-medium text-gray-600 inset-ring inset-ring-gray-500/10';
 				}
 			}
 
@@ -758,16 +820,16 @@ async function openSettingsModal() {
                   Role
                   <el-autocomplete class="relative" style="margin-top: 4px;">
                     <input id="createUserRole" name="role" type="text" value="basic"
-                      class="block w-full rounded-md bg-white py-1.5 pr-12 pl-3 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6">
+                      class="block w-full rounded-md bg-white dark:bg-white/5 py-1.5 pr-12 pl-3 text-base text-gray-900 dark:text-white outline-1 -outline-offset-1 outline-gray-300 dark:outline-white/10 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 dark:focus:outline-indigo-500 sm:text-sm/6">
                     <button type="button" class="absolute inset-y-0 right-0 flex items-center rounded-r-md px-2">
                       <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5 text-gray-400">
                         <path d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" fill-rule="evenodd" />
                       </svg>
                     </button>
-                    <el-options anchor="bottom end" popover class="max-h-60 w-(--input-width) overflow-auto rounded-md bg-white py-1 text-base shadow-lg outline outline-black/5 transition-discrete [--anchor-gap:--spacing(1)] data-leave:transition data-leave:duration-100 data-leave:ease-in data-closed:data-leave:opacity-0 sm:text-sm">
-                      <el-option value="basic" class="block truncate px-3 py-2 text-gray-900 select-none aria-selected:bg-indigo-600 aria-selected:text-white">Basic</el-option>
-                      <el-option value="advanced" class="block truncate px-3 py-2 text-gray-900 select-none aria-selected:bg-indigo-600 aria-selected:text-white">Advanced</el-option>
-                      <el-option value="administrator" class="block truncate px-3 py-2 text-gray-900 select-none aria-selected:bg-indigo-600 aria-selected:text-white">Administrator</el-option>
+                    <el-options anchor="bottom end" popover class="max-h-60 w-(--input-width) overflow-auto rounded-md bg-white dark:bg-gray-800 py-1 text-base shadow-lg outline outline-black/5 dark:outline dark:-outline-offset-1 dark:outline-white/10 transition-discrete [--anchor-gap:--spacing(1)] data-leave:transition data-leave:duration-100 data-leave:ease-in data-closed:data-leave:opacity-0 sm:text-sm">
+                      <el-option value="basic" class="block truncate px-3 py-2 text-gray-900 dark:text-gray-300 select-none aria-selected:bg-indigo-600 dark:aria-selected:bg-indigo-500 aria-selected:text-white">Basic</el-option>
+                      <el-option value="advanced" class="block truncate px-3 py-2 text-gray-900 dark:text-gray-300 select-none aria-selected:bg-indigo-600 dark:aria-selected:bg-indigo-500 aria-selected:text-white">Advanced</el-option>
+                      <el-option value="administrator" class="block truncate px-3 py-2 text-gray-900 dark:text-gray-300 select-none aria-selected:bg-indigo-600 dark:aria-selected:bg-indigo-500 aria-selected:text-white">Administrator</el-option>
                     </el-options>
                   </el-autocomplete>
                 </label>
@@ -852,16 +914,16 @@ async function openSettingsModal() {
                   Role
                   <el-autocomplete class="relative" style="margin-top: 4px;">
                     <input id="editUserRole" name="role" type="text" value="${currentRole}"
-                      class="block w-full rounded-md bg-white py-1.5 pr-12 pl-3 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6">
+                      class="block w-full rounded-md bg-white dark:bg-white/5 py-1.5 pr-12 pl-3 text-base text-gray-900 dark:text-white outline-1 -outline-offset-1 outline-gray-300 dark:outline-white/10 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 dark:focus:outline-indigo-500 sm:text-sm/6">
                     <button type="button" class="absolute inset-y-0 right-0 flex items-center rounded-r-md px-2">
                       <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5 text-gray-400">
                         <path d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" fill-rule="evenodd" />
                       </svg>
                     </button>
-                    <el-options anchor="bottom end" popover class="max-h-60 w-(--input-width) overflow-auto rounded-md bg-white py-1 text-base shadow-lg outline outline-black/5 transition-discrete [--anchor-gap:--spacing(1)] data-leave:transition data-leave:duration-100 data-leave:ease-in data-closed:data-leave:opacity-0 sm:text-sm">
-                      <el-option value="basic" class="block truncate px-3 py-2 text-gray-900 select-none aria-selected:bg-indigo-600 aria-selected:text-white">Basic</el-option>
-                      <el-option value="advanced" class="block truncate px-3 py-2 text-gray-900 select-none aria-selected:bg-indigo-600 aria-selected:text-white">Advanced</el-option>
-                      <el-option value="administrator" class="block truncate px-3 py-2 text-gray-900 select-none aria-selected:bg-indigo-600 aria-selected:text-white">Administrator</el-option>
+                    <el-options anchor="bottom end" popover class="max-h-60 w-(--input-width) overflow-auto rounded-md bg-white dark:bg-gray-800 py-1 text-base shadow-lg outline outline-black/5 dark:outline dark:-outline-offset-1 dark:outline-white/10 transition-discrete [--anchor-gap:--spacing(1)] data-leave:transition data-leave:duration-100 data-leave:ease-in data-closed:data-leave:opacity-0 sm:text-sm">
+                      <el-option value="basic" class="block truncate px-3 py-2 text-gray-900 dark:text-gray-300 select-none aria-selected:bg-indigo-600 dark:aria-selected:bg-indigo-500 aria-selected:text-white">Basic</el-option>
+                      <el-option value="advanced" class="block truncate px-3 py-2 text-gray-900 dark:text-gray-300 select-none aria-selected:bg-indigo-600 dark:aria-selected:bg-indigo-500 aria-selected:text-white">Advanced</el-option>
+                      <el-option value="administrator" class="block truncate px-3 py-2 text-gray-900 dark:text-gray-300 select-none aria-selected:bg-indigo-600 dark:aria-selected:bg-indigo-500 aria-selected:text-white">Administrator</el-option>
                     </el-options>
                   </el-autocomplete>
                 </label>
@@ -935,13 +997,13 @@ async function openSettingsModal() {
 				}
 
 				usersTableBody.innerHTML = users.map(user => {
-					const roleBadgeColor = getRoleBadgeColor(user.role);
+					const roleBadgeClasses = getRoleBadgeClasses(user.role);
 					return `
             <tr>
               <td>
                 <div style="display: flex; flex-direction: column; gap: 4px;">
                   <span style="font-weight: 500;">${escapeHtml(user.username)}</span>
-                  <span style="display: inline-block; padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 600; color: white; background-color: ${roleBadgeColor}; width: fit-content;">
+                  <span class="${roleBadgeClasses}" style="width: fit-content;">
                     ${escapeHtml(user.role)}
                   </span>
                 </div>
@@ -1170,7 +1232,5 @@ async function openSettingsModal() {
 }
 
 // Export settings modal opener to global scope for HTML and other scripts
+// The settings modal is now completely self-contained and can be used from any page
 window.openSettingsModal = openSettingsModal;
-
-// Export trash management functions to global scope for inline handlers in event-log.html
-window.confirmEmptyTrash = confirmEmptyTrash;

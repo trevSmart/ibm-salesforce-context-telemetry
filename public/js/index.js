@@ -1034,7 +1034,7 @@ async function loadChartData(days = currentDays) {
 		const isDark = document.documentElement.classList.contains('dark');
 		const textColor = isDark ? '#a1a1aa' : '#52525b';
 		const gridColor = isDark ? '#50515c' : '#eaecf2';
-		const faintGridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)';
+		const faintGridColor = isDark ? 'rgba(255,255,255,0.046)' : 'rgba(0,0,0,0.038)';
 		const axisPointerBg = isDark ? '#27272a' : '#ffffff';
 
 		const startSessionsColor = SESSION_START_SERIES_COLOR;
