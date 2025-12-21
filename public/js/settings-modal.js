@@ -517,27 +517,8 @@ async function openSettingsModal() {
 		backdrop.classList.add('visible');
 	});
 
-	function closeSettingsModal() {
-		// Remove ESC key listener
-		document.removeEventListener('keydown', handleEscKey);
-
-		backdrop.classList.remove('visible');
-		backdrop.classList.add('hiding');
-		const handleTransitionEnd = () => {
-			backdrop.removeEventListener('transitionend', handleTransitionEnd);
-			backdrop.remove();
-		};
-		backdrop.addEventListener('transitionend', handleTransitionEnd);
-		setTimeout(() => {
-			if (document.body.contains(backdrop)) {
-				backdrop.removeEventListener('transitionend', handleTransitionEnd);
-				backdrop.remove();
-			}
-		}, 220);
-	}
-
-	// Store the ESC handler function so we can remove it later
-	const escHandler = function handleEscKey(e) {
+	// Define the ESC handler function first so it can be properly referenced
+	const escHandler = function(e) {
 		if (e.key === 'Escape' && document.body.contains(backdrop)) {
 			// Check if focus is on an input field with text
 			const activeElement = document.activeElement;
@@ -554,15 +535,28 @@ async function openSettingsModal() {
 		}
 	};
 
+	// Define closeSettingsModal after escHandler so it can reference it correctly
+	function closeSettingsModal() {
+		// Remove ESC key listener
+		document.removeEventListener('keydown', escHandler);
+
+		backdrop.classList.remove('visible');
+		backdrop.classList.add('hiding');
+		const handleTransitionEnd = () => {
+			backdrop.removeEventListener('transitionend', handleTransitionEnd);
+			backdrop.remove();
+		};
+		backdrop.addEventListener('transitionend', handleTransitionEnd);
+		setTimeout(() => {
+			if (document.body.contains(backdrop)) {
+				backdrop.removeEventListener('transitionend', handleTransitionEnd);
+				backdrop.remove();
+			}
+		}, 220);
+	}
+
 	// Add ESC key listener
 	document.addEventListener('keydown', escHandler);
-
-	// Override closeSettingsModal to also remove the ESC listener
-	const originalCloseSettingsModal = closeSettingsModal;
-	closeSettingsModal = function() {
-		document.removeEventListener('keydown', escHandler);
-		originalCloseSettingsModal();
-	};
 
 	const closeBtn = modal.querySelector('#settingsCloseBtn');
 	if (closeBtn) {
