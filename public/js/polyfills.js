@@ -12,10 +12,10 @@
 	};
 
 	try {
-		Object.defineProperty(patched, 'name', { value: 'includes' });
+		Object.defineProperty(patched, 'name', {value: 'includes'});
 	} catch (_err) {
 		// ignore if redefining name fails
 	}
 
 	String.prototype.includes = patched;
-})();
+}());

@@ -11,9 +11,9 @@
 		'a[data-soft-nav]'
 	].join(',');
 	const PAGE_SCRIPTS = {
-		'/': [{ src: '/js/index.js', type: 'module' }],
-		'/logs': [{ src: '/js/event-log.js' }],
-		'/teams': [{ src: '/js/teams.js', type: 'module' }]
+		'/': [{src: '/js/index.js', type: 'module'}],
+		'/logs': [{src: '/js/event-log.js'}],
+		'/teams': [{src: '/js/teams.js', type: 'module'}]
 	};
 
 	// Crossfade transition duration in milliseconds
@@ -101,10 +101,10 @@
 					script.type = type;
 				}
 				script.async = true;
-				script.onload = () => {
+				script.addEventListener('load', () => {
 					loadedScripts.add(src);
 					resolve();
-				};
+				});
 				script.onerror = (err) => reject(err);
 				document.body.appendChild(script);
 			});
@@ -149,7 +149,7 @@
 
 		window.toggleNotificationMode = async function toggleNotificationMode() {
 			if (!('Notification' in window)) {
-				alert('Your browser does not support desktop notifications.');
+				showToast('Your browser does not support desktop notifications.', 'error');
 				return;
 			}
 
@@ -163,7 +163,7 @@
 			}
 
 			if (permission !== 'granted') {
-				alert('You must allow browser notifications to enable this mode.');
+				showToast('You must allow browser notifications to enable this mode.', 'error');
 				return;
 			}
 
@@ -207,7 +207,7 @@
 		}
 	}
 
-	async function softNavigate(targetPath, { replace = false } = {}) {
+	async function softNavigate(targetPath, {replace = false} = {}) {
 		if (isNavigating) {
 			return;
 		}
@@ -232,7 +232,7 @@
 			const currentPath = window.location.pathname;
 
 			// Notify current page to pause intervals/listeners before caching
-			window.dispatchEvent(new CustomEvent('softNav:pagePausing', { detail: { path: currentPath } }));
+			window.dispatchEvent(new CustomEvent('softNav:pagePausing', {detail: {path: currentPath}}));
 
 			// Cache the current container before removing it
 			if (currentPath && SUPPORTED_PATHS.includes(currentPath)) {
@@ -255,7 +255,7 @@
 					html = pageCache.get(targetPath);
 				} else {
 					const response = await fetch(targetPath, {
-						headers: { 'X-Requested-With': 'soft-nav' },
+						headers: {'X-Requested-With': 'soft-nav'},
 						credentials: 'include'
 					});
 					if (!response.ok) {
@@ -359,14 +359,14 @@
 			nextContent.style.pointerEvents = '';
 
 			// Notify pages that a soft navigation completed so they can resume
-			window.dispatchEvent(new CustomEvent('softNav:pageMounted', { detail: { path: targetPath, fromCache: !!cachedContainer } }));
+			window.dispatchEvent(new CustomEvent('softNav:pageMounted', {detail: {path: targetPath, fromCache: Boolean(cachedContainer)}}));
 
 			if (replace) {
-				window.history.replaceState({ softNav: true }, '', targetPath);
+				window.history.replaceState({softNav: true}, '', targetPath);
 			} else {
-				window.history.pushState({ softNav: true }, '', targetPath);
+				window.history.pushState({softNav: true}, '', targetPath);
 			}
-			window.scrollTo({ top: 0, behavior: 'auto' });
+			window.scrollTo({top: 0, behavior: 'auto'});
 		} catch (error) {
 			console.error('Soft navigation failed, falling back to full load:', error);
 			window.location.href = targetPath;
@@ -390,9 +390,9 @@
 	function initNav() {
 		primeInitialCache();
 		document.addEventListener('click', handleSoftNavClick);
-		window.history.replaceState({ softNav: true }, '', window.location.pathname);
+		window.history.replaceState({softNav: true}, '', window.location.pathname);
 		window.addEventListener('popstate', () => {
-			softNavigate(window.location.pathname, { replace: true });
+			softNavigate(window.location.pathname, {replace: true});
 		});
 	}
 

@@ -4,6 +4,8 @@
  * Used across all pages: Dashboard, Event Log, Teams
  */
 
+import {showToast} from './notifications.js';
+
 // Utility function to escape HTML and prevent XSS
 function escapeHtml(unsafe) {
 	return String(unsafe)
@@ -15,7 +17,7 @@ function escapeHtml(unsafe) {
 }
 
 // Confirm modal for dangerous operations
-function openConfirmModal({ title, message, confirmLabel = 'Confirm', cancelLabel = 'Cancel', destructive = false }) {
+function openConfirmModal({title, message, confirmLabel = 'Confirm', cancelLabel = 'Cancel', destructive = false}) {
 	return new Promise((resolve) => {
 		const existing = document.querySelector('.confirm-dialog-backdrop');
 		if (existing) {
@@ -62,7 +64,7 @@ function openConfirmModal({ title, message, confirmLabel = 'Confirm', cancelLabe
 				backdrop.remove();
 			};
 
-			backdrop.ontransitionend = handleTransitionEnd;
+			backdrop.addEventListener('transitionend', handleTransitionEnd);
 			backdrop.classList.remove('visible');
 			backdrop.classList.add('hiding');
 
@@ -142,7 +144,7 @@ async function deleteAllEvents() {
 		}
 
 		const data = await response.json();
-		alert(`Successfully deleted ${data.deletedCount || 0} events.`);
+		showToast(`Successfully deleted ${data.deletedCount || 0} events.`, 'success');
 
 		// Reset confirmation flag
 		deleteAllConfirmed = false;
@@ -150,7 +152,7 @@ async function deleteAllEvents() {
 		// Note: Events deleted - page may need to refresh its data
 	} catch (error) {
 		console.error('Error deleting events:', error);
-		alert('Error deleting events: ' + error.message);
+		showToast(`Error deleting events: ${  error.message}`, 'error');
 		deleteAllConfirmed = false;
 	}
 }
@@ -186,7 +188,7 @@ async function emptyTrash() {
 		}
 
 		const data = await response.json();
-		alert(`Successfully deleted ${data.deletedCount || 0} events from trash.`);
+		showToast(`Successfully deleted ${data.deletedCount || 0} events from trash.`, 'success');
 
 		// Refresh trash info
 		loadTrashInfo();
@@ -194,7 +196,7 @@ async function emptyTrash() {
 		// Note: Trash emptied - page may need to refresh its data
 	} catch (error) {
 		console.error('Error emptying trash:', error);
-		alert('Error emptying trash: ' + error.message);
+		showToast(`Error emptying trash: ${  error.message}`, 'error');
 	}
 }
 
@@ -289,7 +291,7 @@ async function openSettingsModal() {
 	const autoRefreshInterval = localStorage.getItem('autoRefreshIntervalMinutes') || '';
 
 	const sidebarNav = `
-    <a href="#settings-general" class="settings-sidebar-link flex items-center gap-2 rounded-md px-2 py-1.5 text-[color:var(--text-primary)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-secondary)]">
+    <a href="#settings-general" class="settings-sidebar-link flex items-center gap-2 rounded-md px-2 py-1.5 text-[color:var(--text-primary)] hover:text-[color:var(--text-primary)] hover:bg-(--bg-secondary)">
       <span class="w-5 h-5 flex items-center justify-center">
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
           <path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z" />
@@ -299,7 +301,7 @@ async function openSettingsModal() {
       <span>General</span>
     </a>
     ${isAdministrator ? `
-    <a href="#settings-users" class="settings-sidebar-link flex items-center gap-2 rounded-md px-2 py-1.5 text-[color:var(--text-primary)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-secondary)]">
+    <a href="#settings-users" class="settings-sidebar-link flex items-center gap-2 rounded-md px-2 py-1.5 text-(--text-primary) hover:text-(--text-primary) hover:bg-(--bg-secondary)">
       <span class="w-5 h-5 flex items-center justify-center">
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
           <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
@@ -309,7 +311,7 @@ async function openSettingsModal() {
     </a>
     ` : ''}
     ${isAdministrator ? `
-    <a href="#settings-import-export" class="settings-sidebar-link flex items-center gap-2 rounded-md px-2 py-1.5 text-[color:var(--text-primary)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-secondary)]">
+    <a href="#settings-import-export" class="settings-sidebar-link flex items-center gap-2 rounded-md px-2 py-1.5 text-[color:var(--text-primary)] hover:text-(--text-primary) hover:bg-[color:var(--bg-secondary)]">
       <span class="w-5 h-5 flex items-center justify-center">
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
           <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125" />
@@ -318,7 +320,7 @@ async function openSettingsModal() {
       <span>Database</span>
     </a>
     ` : ''}
-    <a href="#settings-danger" class="settings-sidebar-link flex items-center gap-2 rounded-md px-2 py-1.5 text-[color:var(--text-primary)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-secondary)]">
+    <a href="#settings-danger" class="settings-sidebar-link flex items-center gap-2 rounded-md px-2 py-1.5 text-[color:var(--text-primary)] hover:text-(--text-primary) hover:bg-(--bg-secondary)">
       <span class="w-5 h-5 flex items-center justify-center">
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
           <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m0-10.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.75c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.57-.598-3.75h-.152c-3.196 0-6.1-1.25-8.25-3.286Zm0 13.036h.008v.008H12v-.008Z" />
@@ -334,7 +336,7 @@ async function openSettingsModal() {
 		</div>
 		<div class="settings-modal-content">
 			<div class="settings-layout flex flex-col md:flex-row md:gap-8 mt-2">
-				<aside class="settings-sidebar-nav md:w-56 border-b md:border-b-0 md:border-r border-[color:var(--border-color)] pb-3 md:pb-0 md:pr-3">
+				<aside class="settings-sidebar-nav md:w-56 border-b md:border-b-0 md:border-r border-(--border-color) pb-3 md:pb-0 md:pr-3">
 					<nav class="flex md:flex-col gap-2 text-sm" aria-label="Settings sections">
 						${sidebarNav}
 					</nav>
@@ -345,7 +347,7 @@ async function openSettingsModal() {
 							<label class="flex items-center justify-between cursor-pointer py-2">
 								<div class="flex flex-col">
 									<span class="text-sm font-medium text-[color:var(--text-primary)]">Dark theme</span>
-									<span class="text-xs text-[color:var(--text-primary)]">Switch between light and dark color scheme.</span>
+									<span class="text-xs text-(--text-primary)">Switch between light and dark color scheme.</span>
 								</div>
 								<div class="group relative inline-flex w-11 shrink-0 rounded-full bg-gray-200 p-0.5 inset-ring inset-ring-gray-900/5 outline-offset-2 outline-indigo-600 transition-colors duration-200 ease-in-out has-checked:bg-indigo-600 has-focus-visible:outline-2">
 									<span class="size-5 rounded-full bg-white shadow-xs ring-1 ring-gray-900/5 transition-transform duration-200 ease-in-out group-has-checked:translate-x-5"></span>
@@ -522,8 +524,8 @@ async function openSettingsModal() {
 		if (e.key === 'Escape' && document.body.contains(backdrop)) {
 			// Check if focus is on an input field with text
 			const activeElement = document.activeElement;
-			const isInputWithText = activeElement && 
-				(activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA') && 
+			const isInputWithText = activeElement &&
+				(activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA') &&
 				activeElement.value.trim() !== '';
 
 			// Check if there's an open dropdown/combobox
@@ -658,13 +660,13 @@ async function openSettingsModal() {
 			const userFormContainer = modal.querySelector('#userFormContainer');
 
 			function closeUserForm() {
-				if (!userFormContainer) return;
+				if (!userFormContainer) {return;}
 				userFormContainer.innerHTML = '';
 				userFormContainer.style.display = 'none';
 			}
 
-			function renderUserForm({ title, description, fieldsHtml, submitLabel, onSubmit }) {
-				if (!userFormContainer) return;
+			function renderUserForm({title, description, fieldsHtml, submitLabel, onSubmit}) {
+				if (!userFormContainer) {return;}
 
 				userFormContainer.innerHTML = `
             <div class="settings-users-form-header" style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
@@ -694,7 +696,7 @@ async function openSettingsModal() {
 				const cancelButtons = userFormContainer.querySelectorAll('[data-action="cancel-user-form"]');
 
 				const setError = (message) => {
-					if (!errorDiv) return;
+					if (!errorDiv) {return;}
 					if (message) {
 						errorDiv.textContent = message;
 						errorDiv.style.display = 'block';
@@ -723,7 +725,7 @@ async function openSettingsModal() {
 					});
 				}
 
-				userFormContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+				userFormContainer.scrollIntoView({behavior: 'smooth', block: 'start'});
 			}
 
 			async function loadUsers() {
@@ -758,7 +760,7 @@ async function openSettingsModal() {
 			}
 
 			function formatDate(dateString) {
-				if (!dateString) return '-';
+				if (!dateString) {return '-';}
 				const date = new Date(dateString);
 
 				// Format: DD/MM/YY HH24:MM
@@ -775,21 +777,13 @@ async function openSettingsModal() {
 				const isDark = localStorage.getItem('theme') === 'dark';
 				switch (role) {
 				case 'administrator':
-					return isDark
-						? 'inline-flex items-center rounded-md bg-red-400/10 px-1.5 py-0.5 text-xs font-medium text-red-400 inset-ring inset-ring-red-400/20'
-						: 'inline-flex items-center rounded-md bg-red-50 px-1.5 py-0.5 text-xs font-medium text-red-700 inset-ring inset-ring-red-600/10';
+					return isDark? 'inline-flex items-center rounded-md bg-red-400/10 px-1.5 py-0.5 text-xs font-medium text-red-400 inset-ring inset-ring-red-400/20': 'inline-flex items-center rounded-md bg-red-50 px-1.5 py-0.5 text-xs font-medium text-red-700 inset-ring inset-ring-red-600/10';
 				case 'advanced':
-					return isDark
-						? 'inline-flex items-center rounded-md bg-blue-400/10 px-1.5 py-0.5 text-xs font-medium text-blue-400 inset-ring inset-ring-blue-400/30'
-						: 'inline-flex items-center rounded-md bg-blue-50 px-1.5 py-0.5 text-xs font-medium text-blue-700 inset-ring inset-ring-blue-700/10';
+					return isDark? 'inline-flex items-center rounded-md bg-blue-400/10 px-1.5 py-0.5 text-xs font-medium text-blue-400 inset-ring inset-ring-blue-400/30': 'inline-flex items-center rounded-md bg-blue-50 px-1.5 py-0.5 text-xs font-medium text-blue-700 inset-ring inset-ring-blue-700/10';
 				case 'basic':
-					return isDark
-						? 'inline-flex items-center rounded-md bg-green-400/10 px-1.5 py-0.5 text-xs font-medium text-green-400 inset-ring inset-ring-green-500/20'
-						: 'inline-flex items-center rounded-md bg-green-50 px-1.5 py-0.5 text-xs font-medium text-green-700 inset-ring inset-ring-green-600/20';
+					return isDark? 'inline-flex items-center rounded-md bg-green-400/10 px-1.5 py-0.5 text-xs font-medium text-green-400 inset-ring inset-ring-green-500/20': 'inline-flex items-center rounded-md bg-green-50 px-1.5 py-0.5 text-xs font-medium text-green-700 inset-ring inset-ring-green-600/20';
 				default:
-					return isDark
-						? 'inline-flex items-center rounded-md bg-gray-400/10 px-1.5 py-0.5 text-xs font-medium text-gray-400 inset-ring inset-ring-gray-400/20'
-						: 'inline-flex items-center rounded-md bg-gray-50 px-1.5 py-0.5 text-xs font-medium text-gray-600 inset-ring inset-ring-gray-500/10';
+					return isDark? 'inline-flex items-center rounded-md bg-gray-400/10 px-1.5 py-0.5 text-xs font-medium text-gray-400 inset-ring inset-ring-gray-400/20': 'inline-flex items-center rounded-md bg-gray-50 px-1.5 py-0.5 text-xs font-medium text-gray-600 inset-ring inset-ring-gray-500/10';
 				}
 			}
 
@@ -849,7 +843,7 @@ async function openSettingsModal() {
 							method: 'POST',
 							headers: window.getRequestHeaders(true),
 							credentials: 'include',
-							body: JSON.stringify({ username, password, role })
+							body: JSON.stringify({username, password, role})
 						});
 
 						const data = await response.json();
@@ -889,7 +883,7 @@ async function openSettingsModal() {
 							method: 'PUT',
 							headers: window.getRequestHeaders(true),
 							credentials: 'include',
-							body: JSON.stringify({ password })
+							body: JSON.stringify({password})
 						});
 
 						const data = await response.json();
@@ -940,7 +934,7 @@ async function openSettingsModal() {
 							method: 'PUT',
 							headers: window.getRequestHeaders(true),
 							credentials: 'include',
-							body: JSON.stringify({ role })
+							body: JSON.stringify({role})
 						});
 
 						const data = await response.json();
@@ -980,12 +974,12 @@ async function openSettingsModal() {
 					}
 				} catch (error) {
 					console.error('Error deleting user:', error);
-					alert('Error deleting user: ' + error.message);
+					showToast(`Error deleting user: ${  error.message}`, 'error');
 				}
 			}
 
 			async function renderUsers(users) {
-				if (!usersTableBody) return;
+				if (!usersTableBody) {return;}
 
 				if (!users || users.length === 0) {
 					usersTableBody.innerHTML = `
@@ -1094,7 +1088,7 @@ async function openSettingsModal() {
 				} catch (error) {
 					console.error('Error exporting database:', error);
 					if (typeof window.showToast === 'function') {
-						window.showToast('Failed to export database: ' + error.message, 'error');
+						window.showToast(`Failed to export database: ${  error.message}`, 'error');
 					}
 				} finally {
 					exportDatabaseBtn.disabled = false;
@@ -1112,7 +1106,7 @@ async function openSettingsModal() {
 
 			importDatabaseInput.addEventListener('change', async (e) => {
 				const file = e.target.files[0];
-				if (!file) return;
+				if (!file) {return;}
 
 				if (!file.name.endsWith('.json')) {
 					if (typeof window.showToast === 'function') {
@@ -1165,9 +1159,7 @@ async function openSettingsModal() {
 					progressBar.style.width = '100%';
 					progressText.textContent = 'Import completed!';
 
-					const errorMsg = result.errors && result.errors.length > 0
-						? ` (${result.errors.length} errors)`
-						: '';
+					const errorMsg = result.errors && result.errors.length > 0? ` (${result.errors.length} errors)`: '';
 					if (typeof window.showToast === 'function') {
 						window.showToast(`Database imported successfully: ${result.imported} records imported${errorMsg}`, 'success');
 					}
@@ -1187,7 +1179,7 @@ async function openSettingsModal() {
 				} catch (error) {
 					console.error('Error importing database:', error);
 					if (typeof window.showToast === 'function') {
-						window.showToast('Failed to import database: ' + error.message, 'error');
+						window.showToast(`Failed to import database: ${  error.message}`, 'error');
 					}
 					const progressContainer = modal.querySelector('#importProgressContainer');
 					if (progressContainer) {

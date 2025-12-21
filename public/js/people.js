@@ -1,9 +1,11 @@
 // @ts-nocheck
 // People management page
 
+import {showToast} from './notifications.js';
+
 // Get request headers with CSRF token
 async function getRequestHeaders(includeJson = true) {
-	const headers = includeJson ? { 'Content-Type': 'application/json' } : {};
+	const headers = includeJson ? {'Content-Type': 'application/json'} : {};
 
 	try {
 		// Add CSRF token if available
@@ -62,7 +64,7 @@ async function initPeoplePage() {
 // Render people list following the provided design
 function renderPeopleList(people) {
 	const peopleListElement = document.getElementById('peopleList');
-	if (!peopleListElement) return;
+	if (!peopleListElement) {return;}
 
 	if (people.length === 0) {
 		peopleListElement.innerHTML = `
@@ -140,7 +142,7 @@ async function handleCreatePerson(event) {
 	};
 
 	if (!personData.name) {
-		alert('Please enter a name');
+		showToast('Please enter a name', 'error');
 		return;
 	}
 
@@ -159,7 +161,7 @@ async function handleCreatePerson(event) {
 			throw new Error(errorData.message || 'Failed to create person');
 		}
 
-		const result = await response.json();
+		await response.json();
 
 		// Clear form
 		event.target.reset();
@@ -168,15 +170,11 @@ async function handleCreatePerson(event) {
 		await initPeoplePage();
 
 		// Show success message
-		if (window.showToast) {
-			window.showToast('Person added successfully', 'success');
-		} else {
-			alert('Person added successfully!');
-		}
+		showToast('Person added successfully', 'success');
 
 	} catch (error) {
 		console.error('Error creating person:', error);
-		alert('Error creating person: ' + error.message);
+		showToast(`Error creating person: ${  error.message}`, 'error');
 	}
 }
 
@@ -184,7 +182,7 @@ async function handleCreatePerson(event) {
 function showPersonDetails(personId) {
 	console.log('Show details for person:', personId);
 	// TODO: Implement person details modal with usernames
-	alert('Person details - feature coming soon!');
+	showToast('Person details - feature coming soon!', 'info');
 }
 
 // Export functions to window for global access

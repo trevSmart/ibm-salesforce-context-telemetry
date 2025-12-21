@@ -3,10 +3,10 @@
  * Handles user authentication and session management
  */
 
-const bcrypt = require('bcrypt');
-const session = require('express-session');
-const crypto = require('crypto');
-const pgSession = require('connect-pg-simple')(session);
+import bcrypt from 'bcrypt';
+import session from 'express-session';
+import crypto from 'node:crypto';
+import pgSession from 'connect-pg-simple';
 
 // Get credentials from environment variables (for backward compatibility)
 const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin';
@@ -52,7 +52,7 @@ function normalizeRole(role) {
 /**
  * Initialize session middleware
  * Uses PostgreSQL store if available, otherwise falls back to MemoryStore
- * 
+ *
  * NOTE: This function should be called AFTER the database is initialized
  * to properly support PostgreSQL session store. If called before database
  * initialization, it will fall back to MemoryStore.
@@ -111,14 +111,14 @@ function initSessionMiddleware() {
  */
 async function hashPassword(password) {
 	const saltRounds = 10;
-	return await bcrypt.hash(password, saltRounds);
+	return bcrypt.hash(password, saltRounds);
 }
 
 /**
  * Verify a password against a hash
  */
 async function verifyPassword(password, hash) {
-	return await bcrypt.compare(password, hash);
+	return bcrypt.compare(password, hash);
 }
 
 /**
@@ -127,7 +127,7 @@ async function verifyPassword(password, hash) {
  */
 async function authenticate(username, password) {
 	if (!username || !password) {
-		return { success: false };
+		return {success: false};
 	}
 
 	// First, try to authenticate from database
@@ -148,7 +148,7 @@ async function authenticate(username, password) {
 						}
 					};
 				}
-				return { success: false };
+				return {success: false};
 			}
 		} catch (error) {
 			console.error('Error authenticating from database:', error);
@@ -158,7 +158,7 @@ async function authenticate(username, password) {
 
 	// Fallback to environment variable authentication (backward compatibility)
 	if (username !== ADMIN_USERNAME) {
-		return { success: false };
+		return {success: false};
 	}
 
 	// If we have a plain password in env, hash it on first use
@@ -170,20 +170,18 @@ async function authenticate(username, password) {
 	// If no password is configured, deny access
 	if (!hashedPassword) {
 		console.error('❌ No password configured. Set ADMIN_PASSWORD or ADMIN_PASSWORD_HASH in environment variables, or create users in the database.');
-		return { success: false };
+		return {success: false};
 	}
 
 	// Verify password
 	const isValid = await verifyPassword(password, hashedPassword);
-	return isValid
-		? {
+	return isValid? {
 			success: true,
 			user: {
 				username: ADMIN_USERNAME,
 				role: 'administrator'
 			}
-		}
-		: { success: false };
+		}: {success: false};
 }
 
 /**
@@ -255,7 +253,7 @@ function requireRole(requiredRole) {
 	};
 }
 
-module.exports = {
+export {
 	initSessionMiddleware,
 	authenticate,
 	requireAuth,

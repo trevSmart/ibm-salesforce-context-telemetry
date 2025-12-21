@@ -5,7 +5,7 @@
  * This is a modern alternative to the deprecated csurf package.
  */
 
-const crypto = require('crypto');
+import crypto from 'node:crypto';
 
 /**
  * Generate a CSRF token
@@ -69,7 +69,7 @@ function csrfProtection(req, res, next) {
 				message: 'Invalid CSRF token'
 			});
 		}
-	} catch (_error) {
+	} catch {
 		return res.status(403).json({
 			status: 'error',
 			message: 'Invalid CSRF token'
@@ -103,7 +103,7 @@ function getToken(req) {
 	return req.cookies['csrf-token'] || null;
 }
 
-module.exports = {
+export {
 	csrfProtection,
 	setCsrfToken,
 	getToken,

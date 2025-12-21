@@ -29,7 +29,7 @@
 			console.log('Events refreshed:', data.events?.length || 0, 'events');
 
 			// Dispatch a custom event that pages can listen to if they want to update their UI
-			window.dispatchEvent(new CustomEvent('eventsRefreshed', { detail: data }));
+			window.dispatchEvent(new CustomEvent('eventsRefreshed', {detail: data}));
 		} catch (error) {
 			console.error('Error refreshing events:', error);
 		} finally {
@@ -51,11 +51,7 @@
 	function buildHeaderHTML() {
 		// Auto-detect active page from current URL
 		const currentPath = window.location.pathname;
-		const activePage = currentPath === '/' ? '/' :
-		                  currentPath.startsWith('/logs') ? '/logs' :
-		                  currentPath.startsWith('/teams') ? '/teams' :
-		                  currentPath.startsWith('/people') ? '/people' :
-		                  currentPath.startsWith('/users') ? '/users' : '/';
+		const activePage = currentPath === '/' ? '/' :currentPath.startsWith('/logs') ? '/logs' :currentPath.startsWith('/teams') ? '/teams' :currentPath.startsWith('/people') ? '/people' :currentPath.startsWith('/users') ? '/users' : '/';
 
 		// Refresh button properties - same handler for all pages
 		const showBadge = currentPath.startsWith('/logs');
@@ -63,10 +59,20 @@
 		const refreshAriaLabel = 'Refresh';
 		const refreshTitle = 'Refresh';
 
+		// Determine which refresh function to call based on current page
+		let refreshOnClick = '';
+		if (currentPath === '/' || currentPath.startsWith('/?')) {
+			refreshOnClick = 'refreshDashboard(event)';
+		} else if (currentPath.startsWith('/logs')) {
+			refreshOnClick = 'refreshLogs(event)';
+		} else if (currentPath.startsWith('/teams')) {
+			refreshOnClick = 'refreshTeams(event)';
+		} else if (currentPath.startsWith('/people')) {
+			refreshOnClick = 'refreshPeople(event)';
+		}
+
 		const refreshButtonId = refreshId ? `id="${refreshId}"` : '';
-		const refreshBadge = showBadge
-			? '<span class="refresh-badge" id="autoRefreshBadge" aria-hidden="true"></span>'
-			: '';
+		const refreshBadge = showBadge? '<span class="refresh-badge" id="autoRefreshBadge" aria-hidden="true"></span>': '';
 
 		// Secondary button content (always settings)
 		const secondaryButtonHTML = `
@@ -142,4 +148,4 @@
 	window.initGlobalHeader = initHeader;
 	window.buildGlobalHeaderHTML = buildHeaderHTML;
 	window.refreshEvents = refreshEvents;
-})();
+}());

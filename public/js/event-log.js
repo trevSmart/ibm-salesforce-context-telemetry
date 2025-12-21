@@ -104,7 +104,7 @@ if (window.__EVENT_LOG_LOADED__) {
 			return window.getRequestHeaders(includeJson);
 		}
 
-		const headers = includeJson ? { 'Content-Type': 'application/json' } : {};
+		const headers = includeJson ? {'Content-Type': 'application/json'} : {};
 		if (typeof window.getCsrfTokenFromCookie === 'function') {
 			const token = window.getCsrfTokenFromCookie();
 			if (token) {
@@ -174,7 +174,6 @@ if (window.__EVENT_LOG_LOADED__) {
 
 	let currentOffset = 0;
 	let limit = 50;
-	let _totalEvents = 0;
 	let hasMoreEvents = true;
 	let isLoadingMore = false;
 	let allLoadedEvents = []; // Accumulative array of all loaded events
@@ -193,12 +192,11 @@ if (window.__EVENT_LOG_LOADED__) {
 	let searchQuery = '';
 	let sortOrder = 'DESC';
 	let startTime = performance.now();
-	const _NOTIFICATION_REFRESH_INTERVAL = 5 * 60 * 1000;
 	let notificationModeEnabled = false;
 	let notificationRefreshIntervalId = null;
 	let autoRefreshIntervalId = null;
 	let autoRefreshEnabledState = false;
-	let autoRefreshIntervalMinutes = '';
+	const autoRefreshIntervalMinutes = '';
 	let isRefreshInProgress = false;
 	let lastKnownEventTimestamp = null;
 	let lastFetchTime = null; // Track when events were last fetched
@@ -231,7 +229,6 @@ if (window.__EVENT_LOG_LOADED__) {
 		}
 	}
 	const SESSION_ACTIVITY_SLOT_MINUTES = 10;
-	const _SESSION_ACTIVITY_MARGIN_MINUTES = 30;
 	const SESSION_SERIES_COLORS = [
 		'#53cf98',
 		'#38bdf8',
@@ -242,13 +239,13 @@ if (window.__EVENT_LOG_LOADED__) {
 		'#c084fc',
 		'#f472b6'
 	];
-	const OFFICE_START = { hour: 8, minute: 30 };
-	const OFFICE_END = { hour: 18, minute: 30 };
+	const OFFICE_START = {hour: 8, minute: 30};
+	const OFFICE_END = {hour: 18, minute: 30};
 	const logChartTrace = (message, details = {}) => {
 		try {
 			// Lightweight tracing to understand intermittent chart load issues
 			console.info('[LogsChart]', message, details);
-		} catch (_traceError) {
+		} catch {
 			// No-op: tracing should never break the UI
 		}
 	};
@@ -347,26 +344,6 @@ if (window.__EVENT_LOG_LOADED__) {
 	}
 
 
-	function clearLocalData() {
-		openConfirmModal({
-			title: 'Clear local data',
-			message: 'This will clear all local data stored in this browser for the telemetry UI (theme, filters, etc.).',
-			confirmLabel: 'Clear data',
-			destructive: true
-		}).then((confirmed) => {
-			if (!confirmed) {
-				return;
-			}
-
-			try {
-				localStorage.clear();
-			} catch (error) {
-				console.error('Error clearing local storage:', error);
-			}
-
-			window.location.reload();
-		});
-	}
 
 	function openConfirmModal({
 		title,
@@ -557,7 +534,7 @@ if (window.__EVENT_LOG_LOADED__) {
 		// Pointer events preferred to avoid duplicate mouse/touch firing
 		if (window.PointerEvent) {
 			const onPointerMove = (event) => {
-				if (!isResizingSidebar) return;
+				if (!isResizingSidebar) {return;}
 				handleResize(event.clientX);
 			};
 			const stopResize = (event) => {
@@ -572,7 +549,7 @@ if (window.__EVENT_LOG_LOADED__) {
 				if (event?.pointerId !== undefined && typeof resizer.releasePointerCapture === 'function') {
 					try {
 						resizer.releasePointerCapture(event.pointerId);
-					} catch (_releaseError) {
+					} catch {
 						/* ignore */
 					}
 				}
@@ -585,7 +562,7 @@ if (window.__EVENT_LOG_LOADED__) {
 				if (event.pointerId !== undefined && typeof resizer.setPointerCapture === 'function') {
 					try {
 						resizer.setPointerCapture(event.pointerId);
-					} catch (_captureError) {
+					} catch {
 						/* ignore */
 					}
 				}
@@ -598,11 +575,11 @@ if (window.__EVENT_LOG_LOADED__) {
 		} else {
 			// Fallback for older browsers: mouse + touch
 			const onMouseMove = (event) => {
-				if (!isResizingSidebar) return;
+				if (!isResizingSidebar) {return;}
 				handleResize(event.clientX);
 			};
 			const onTouchMove = (event) => {
-				if (!isResizingSidebar || !event.touches?.length) return;
+				if (!isResizingSidebar || !event.touches?.length) {return;}
 				handleResize(event.touches[0].clientX);
 			};
 			const stopResize = () => {
@@ -625,13 +602,13 @@ if (window.__EVENT_LOG_LOADED__) {
 				document.body.classList.add('sidebar-resizing');
 				document.addEventListener('mousemove', onMouseMove);
 				document.addEventListener('mouseup', stopResize);
-				document.addEventListener('touchmove', onTouchMove, { passive: false });
+				document.addEventListener('touchmove', onTouchMove, {passive: false});
 				document.addEventListener('touchend', stopResize);
 				document.addEventListener('touchcancel', stopResize);
 				event.preventDefault();
 			};
 			resizer.addEventListener('mousedown', startResize);
-			resizer.addEventListener('touchstart', startResize, { passive: false });
+			resizer.addEventListener('touchstart', startResize, {passive: false});
 		}
 	}
 
@@ -639,7 +616,7 @@ if (window.__EVENT_LOG_LOADED__) {
 		const resizer = document.getElementById('horizontalResizer');
 		const activityCard = document.getElementById('sessionActivityCard');
 		if (!resizer || !activityCard) {
-			console.warn('Horizontal resizer: resizer or activityCard not found', { resizer, activityCard });
+			console.warn('Horizontal resizer: resizer or activityCard not found', {resizer, activityCard});
 			return;
 		}
 
@@ -654,7 +631,7 @@ if (window.__EVENT_LOG_LOADED__) {
 
 		// Update visibility when card visibility changes
 		const observer = new MutationObserver(updateResizerVisibility);
-		observer.observe(activityCard, { attributes: true, attributeFilter: ['class'] });
+		observer.observe(activityCard, {attributes: true, attributeFilter: ['class']});
 		updateResizerVisibility();
 
 		const resizeActivityCard = (clientY) => {
@@ -669,7 +646,7 @@ if (window.__EVENT_LOG_LOADED__) {
 
 		if (window.PointerEvent) {
 			const onPointerMove = (event) => {
-				if (!isResizingActivity) return;
+				if (!isResizingActivity) {return;}
 				resizeActivityCard(event.clientY);
 			};
 			const stopResize = (event) => {
@@ -684,7 +661,7 @@ if (window.__EVENT_LOG_LOADED__) {
 				if (event?.pointerId !== undefined && typeof resizer.releasePointerCapture === 'function') {
 					try {
 						resizer.releasePointerCapture(event.pointerId);
-					} catch (_releaseError) {
+					} catch {
 						/* ignore */
 					}
 				}
@@ -702,7 +679,7 @@ if (window.__EVENT_LOG_LOADED__) {
 				if (event.pointerId !== undefined && typeof resizer.setPointerCapture === 'function') {
 					try {
 						resizer.setPointerCapture(event.pointerId);
-					} catch (_captureError) {
+					} catch {
 						/* ignore */
 					}
 				}
@@ -714,11 +691,11 @@ if (window.__EVENT_LOG_LOADED__) {
 			resizer.addEventListener('pointerdown', startResize);
 		} else {
 			const onMouseMove = (event) => {
-				if (!isResizingActivity) return;
+				if (!isResizingActivity) {return;}
 				resizeActivityCard(event.clientY);
 			};
 			const onTouchMove = (event) => {
-				if (!isResizingActivity || !event.touches?.length) return;
+				if (!isResizingActivity || !event.touches?.length) {return;}
 				resizeActivityCard(event.touches[0].clientY);
 			};
 			const stopResize = () => {
@@ -746,13 +723,13 @@ if (window.__EVENT_LOG_LOADED__) {
 				document.body.classList.add('activity-resizing');
 				document.addEventListener('mousemove', onMouseMove);
 				document.addEventListener('mouseup', stopResize);
-				document.addEventListener('touchmove', onTouchMove, { passive: false });
+				document.addEventListener('touchmove', onTouchMove, {passive: false});
 				document.addEventListener('touchend', stopResize);
 				document.addEventListener('touchcancel', stopResize);
 				event.preventDefault();
 			};
 			resizer.addEventListener('mousedown', startResize);
-			resizer.addEventListener('touchstart', startResize, { passive: false });
+			resizer.addEventListener('touchstart', startResize, {passive: false});
 		}
 	}
 
@@ -763,7 +740,7 @@ if (window.__EVENT_LOG_LOADED__) {
 		const chartEl = document.getElementById('sessionActivityChart');
 		if (!chartEl) {
 			logChartTrace('initSessionActivityChart: missing #sessionActivityChart element', {
-				sessionActivityCardPresent: !!document.getElementById('sessionActivityCard')
+				sessionActivityCardPresent: Boolean(document.getElementById('sessionActivityCard'))
 			});
 			return null;
 		}
@@ -782,13 +759,13 @@ if (window.__EVENT_LOG_LOADED__) {
 					});
 					renderSessionActivityChart(payload.events, payload.options || {});
 				}
-			}, { once: true });
+			}, {once: true});
 			return null;
 		}
 		sessionActivityChart = echarts.init(chartEl);
 		logChartTrace('initSessionActivityChart: chart initialized', {
-			chartElementReady: !!chartEl,
-			existingInstance: !!sessionActivityChart
+			chartElementReady: Boolean(chartEl),
+			existingInstance: Boolean(sessionActivityChart)
 		});
 		if (pendingChartRender) {
 			const payload = pendingChartRender;
@@ -839,13 +816,13 @@ if (window.__EVENT_LOG_LOADED__) {
 		});
 
 		const fetchUrl = `/api/events?${params}`;
-		logChartTrace('fetchAllSessionsActivityEvents: requesting', { url: fetchUrl });
+		logChartTrace('fetchAllSessionsActivityEvents: requesting', {url: fetchUrl});
 		try {
 			const response = await fetch(fetchUrl, {
 				credentials: 'include' // Ensure cookies are sent
 			});
 			const validResponse = await handleApiResponse(response);
-			if (!validResponse) return [];
+			if (!validResponse) {return [];}
 			const data = await validResponse.json();
 			logChartTrace('fetchAllSessionsActivityEvents: response', {
 				url: fetchUrl,
@@ -918,10 +895,10 @@ if (window.__EVENT_LOG_LOADED__) {
 
 		// Restore the chart with saved state
 		if (savedState.events && savedState.events.length > 0) {
-			renderSessionActivityChart(savedState.events, { sessionId: savedState.sessionId, activityDate: savedState.activityDate });
+			renderSessionActivityChart(savedState.events, {sessionId: savedState.sessionId, activityDate: savedState.activityDate});
 		} else {
 			// If no saved events, reload the chart for the saved session
-			updateSessionActivityChart({ sessionId: savedState.sessionId });
+			updateSessionActivityChart({sessionId: savedState.sessionId});
 		}
 	}
 
@@ -964,7 +941,7 @@ if (window.__EVENT_LOG_LOADED__) {
 				try {
 					const allEvents = await fetchAllSessionsActivityEvents();
 					if (allEvents.length > 0) {
-						renderSessionActivityChart(allEvents, { sessionId: 'all', activityDate: sessionDate, enableTransition: true });
+						renderSessionActivityChart(allEvents, {sessionId: 'all', activityDate: sessionDate, enableTransition: true});
 					}
 				} catch (error) {
 					console.error('Error loading hover preview for all sessions:', error);
@@ -989,7 +966,7 @@ if (window.__EVENT_LOG_LOADED__) {
 									sessionDate = firstEventDate;
 								}
 							}
-							renderSessionActivityChart(data.events, { sessionId: sessionId, activityDate: sessionDate, enableTransition: true });
+							renderSessionActivityChart(data.events, {sessionId: sessionId, activityDate: sessionDate, enableTransition: true});
 						}
 					}
 				} catch (error) {
@@ -1006,13 +983,13 @@ if (window.__EVENT_LOG_LOADED__) {
 		const targetSession = typeof options.sessionId !== 'undefined' ? options.sessionId : selectedSession;
 		logChartTrace('updateSessionActivityChart: start', {
 			targetSession,
-			hasEventsOverride: !!eventsOverride,
+			hasEventsOverride: Boolean(eventsOverride),
 			eventsOverrideCount: eventsOverride ? eventsOverride.length : 0
 		});
 
 		if (eventsOverride && eventsOverride.length > 0) {
-			logChartTrace('updateSessionActivityChart: using provided events', { count: eventsOverride.length, targetSession });
-			renderSessionActivityChart(eventsOverride, { sessionId: targetSession });
+			logChartTrace('updateSessionActivityChart: using provided events', {count: eventsOverride.length, targetSession});
+			renderSessionActivityChart(eventsOverride, {sessionId: targetSession});
 			return;
 		}
 
@@ -1031,7 +1008,7 @@ if (window.__EVENT_LOG_LOADED__) {
 					}
 					return;
 				}
-				renderSessionActivityChart(allEvents, { sessionId: 'all' });
+				renderSessionActivityChart(allEvents, {sessionId: 'all'});
 			} catch (error) {
 				handleInitializationError('all sessions activity chart', error);
 				hideSessionActivityCard();
@@ -1079,7 +1056,7 @@ if (window.__EVENT_LOG_LOADED__) {
 				}
 				return;
 			}
-			renderSessionActivityChart(data.events, { sessionId: targetSession });
+			renderSessionActivityChart(data.events, {sessionId: targetSession});
 		} catch (error) {
 			console.error('Error loading session activity chart:', error);
 			logChartTrace('updateSessionActivityChart: error', {
@@ -1115,7 +1092,7 @@ if (window.__EVENT_LOG_LOADED__) {
 			const targetSession = options.sessionId || selectedSession;
 			pendingChartRender = {
 				events: events.slice(),
-				options: { ...options, sessionId: targetSession }
+				options: {...options, sessionId: targetSession}
 			};
 			logChartTrace('renderSessionActivityChart: chart instance unavailable, storing pending render', {
 				targetSession,
@@ -1305,7 +1282,7 @@ if (window.__EVENT_LOG_LOADED__) {
 			textStyle: {
 				fontFamily: 'Inter, \'Manrope\', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, \'Helvetica Neue\', Arial, sans-serif'
 			},
-			grid: { left: 45, right: 10, top: 15, bottom: 30 },
+			grid: {left: 45, right: 10, top: 15, bottom: 30},
 			xAxis: {
 				type: 'time',
 				min: windowStart.getTime(),
@@ -1314,18 +1291,18 @@ if (window.__EVENT_LOG_LOADED__) {
 					color: axisColor,
 					formatter: value => formatChartTimeLabel(new Date(value))
 				},
-				axisLine: { lineStyle: { color: axisColor } },
-				splitLine: { show: true, lineStyle: { color: splitLineColor } },
-				axisTick: { show: false }
+				axisLine: {lineStyle: {color: axisColor}},
+				splitLine: {show: true, lineStyle: {color: splitLineColor}},
+				axisTick: {show: false}
 			},
 			yAxis: {
 				type: 'value',
 				min: 0,
 				max: yAxisMax,
 				minInterval: 1,
-				axisLabel: { color: axisColor },
-				axisLine: { show: false },
-				splitLine: { lineStyle: { color: splitLineColor } }
+				axisLabel: {color: axisColor},
+				axisLine: {show: false},
+				splitLine: {lineStyle: {color: splitLineColor}}
 			},
 			tooltip: {
 				trigger: 'axis',
@@ -1378,11 +1355,11 @@ if (window.__EVENT_LOG_LOADED__) {
 			},
 			series: chartSeries,
 			markArea: {
-				itemStyle: { color: 'rgba(16,185,129,0.12)' },
+				itemStyle: {color: 'rgba(16,185,129,0.12)'},
 				data: [
 					[
-						{ xAxis: officeStart.getTime() },
-						{ xAxis: officeEnd.getTime() }
+						{xAxis: officeStart.getTime()},
+						{xAxis: officeEnd.getTime()}
 					]
 				]
 			}
@@ -1469,14 +1446,14 @@ if (window.__EVENT_LOG_LOADED__) {
 			.filter(time => !Number.isNaN(time));
 		const minEventTime = eventTimes.length ? Math.min(...eventTimes) : null;
 		const maxEventTime = eventTimes.length ? Math.max(...eventTimes) : null;
-		const { start: windowStart, end: windowEnd } = getExtendedWindow(referenceDate, minEventTime, maxEventTime);
+		const {start: windowStart, end: windowEnd} = getExtendedWindow(referenceDate, minEventTime, maxEventTime);
 		const officeStart = new Date(referenceDate);
 		officeStart.setHours(OFFICE_START.hour, OFFICE_START.minute, 0, 0);
 		const officeEnd = new Date(referenceDate);
 		officeEnd.setHours(OFFICE_END.hour, OFFICE_END.minute, 0, 0);
 		const slotMs = SESSION_ACTIVITY_SLOT_MINUTES * 60 * 1000;
 		const slotCount = Math.floor((windowEnd.getTime() - windowStart.getTime()) / slotMs) + 1;
-		const buckets = Array.from({ length: slotCount }, () => 0);
+		const buckets = Array.from({length: slotCount}, () => 0);
 
 		events.forEach(event => {
 			const time = Date.parse(event.timestamp);
@@ -1497,7 +1474,7 @@ if (window.__EVENT_LOG_LOADED__) {
 
 		const maxBucketCount = buckets.length ? Math.max(...buckets) : 0;
 
-		return { seriesData, windowStart, windowEnd, referenceDate, officeStart, officeEnd, maxBucketCount };
+		return {seriesData, windowStart, windowEnd, referenceDate, officeStart, officeEnd, maxBucketCount};
 	}
 
 	function buildMultiSessionActivitySeries(events, useCurrentDay = false, customDate = null) {
@@ -1515,7 +1492,7 @@ if (window.__EVENT_LOG_LOADED__) {
 			.filter(time => !Number.isNaN(time));
 		const minEventTime = eventTimes.length ? Math.min(...eventTimes) : null;
 		const maxEventTime = eventTimes.length ? Math.max(...eventTimes) : null;
-		const { start: windowStart, end: windowEnd } = getExtendedWindow(referenceDate, minEventTime, maxEventTime);
+		const {start: windowStart, end: windowEnd} = getExtendedWindow(referenceDate, minEventTime, maxEventTime);
 		const officeStart = new Date(referenceDate);
 		officeStart.setHours(OFFICE_START.hour, OFFICE_START.minute, 0, 0);
 		const officeEnd = new Date(referenceDate);
@@ -1532,7 +1509,7 @@ if (window.__EVENT_LOG_LOADED__) {
 			}
 			const sessionId = event.session_id || 'Unknown session';
 			if (!sessionBuckets.has(sessionId)) {
-				sessionBuckets.set(sessionId, Array.from({ length: slotCount }, () => 0));
+				sessionBuckets.set(sessionId, Array.from({length: slotCount}, () => 0));
 			}
 			const bucketIndex = Math.floor((time - windowStart.getTime()) / slotMs);
 			if (bucketIndex >= 0 && bucketIndex < slotCount) {
@@ -1557,7 +1534,7 @@ if (window.__EVENT_LOG_LOADED__) {
 			});
 		});
 
-		return { seriesList, windowStart, windowEnd, referenceDate, officeStart, officeEnd, maxBucketCount };
+		return {seriesList, windowStart, windowEnd, referenceDate, officeStart, officeEnd, maxBucketCount};
 	}
 
 	function getExtendedWindow(referenceDate, minEventTime, maxEventTime) {
@@ -1621,7 +1598,7 @@ if (window.__EVENT_LOG_LOADED__) {
 			}
 		}
 
-		return { start, end };
+		return {start, end};
 	}
 
 	function formatChartTimeLabel(dateObj) {
@@ -1643,7 +1620,7 @@ if (window.__EVENT_LOG_LOADED__) {
 		previousDate.setDate(previousDate.getDate() - 1);
 
 		selectedActivityDate = previousDate;
-		renderSessionActivityChart(lastSessionActivityEvents, { sessionId: selectedSession });
+		renderSessionActivityChart(lastSessionActivityEvents, {sessionId: selectedSession});
 	}
 
 
@@ -1665,14 +1642,14 @@ if (window.__EVENT_LOG_LOADED__) {
 		}
 
 		selectedActivityDate = nextDate;
-		renderSessionActivityChart(lastSessionActivityEvents, { sessionId: selectedSession });
+		renderSessionActivityChart(lastSessionActivityEvents, {sessionId: selectedSession});
 	}
 
 	function updateDateNavigationButtons(referenceDate) {
 		const prevBtn = document.getElementById('prevDayBtn');
 		const nextBtn = document.getElementById('nextDayBtn');
 
-		if (!prevBtn || !nextBtn) return;
+		if (!prevBtn || !nextBtn) {return;}
 
 		// Disable next button if we're at today
 		const today = new Date();
@@ -1711,9 +1688,9 @@ if (window.__EVENT_LOG_LOADED__) {
 			return 'today';
 		} else if (dateToCheck.getTime() === yesterday.getTime()) {
 			return 'yesterday';
-		} else {
-			return formatHumanDate(dateObj);
 		}
+			return formatHumanDate(dateObj);
+
 	}
 
 	function padNumber(value) {
@@ -1725,9 +1702,7 @@ if (window.__EVENT_LOG_LOADED__) {
 		if (!banner || !message) {
 			return;
 		}
-		const formattedMessage = typeof message === 'string'
-			? message
-			: (message?.message || 'Unexpected error');
+		const formattedMessage = typeof message === 'string'? message: (message?.message || 'Unexpected error');
 		globalErrorMessages.unshift(formattedMessage);
 		if (globalErrorMessages.length > MAX_GLOBAL_ERROR_MESSAGES) {
 			globalErrorMessages.length = MAX_GLOBAL_ERROR_MESSAGES;
@@ -1778,12 +1753,12 @@ if (window.__EVENT_LOG_LOADED__) {
 			smoothMonotone: 'x', // prevent bezier overshoot while keeping curvature
 			showSymbol: false,
 			connectNulls: true, // Connect valid points even if there are null values between them
-			lineStyle: { width: 3, color: hexToRgba('#53cf98', 0.5) }, // More transparent line
+			lineStyle: {width: 3, color: hexToRgba('#53cf98', 0.5)}, // More transparent line
 			areaStyle: {
 				color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-					{ offset: 0, color: 'rgba(133,230,185,0.45)' },
-					{ offset: warmOffset, color: 'rgba(197,241,221,0.35)' },
-					{ offset: 1, color: 'rgba(216,247,232,0.16)' }
+					{offset: 0, color: 'rgba(133,230,185,0.45)'},
+					{offset: warmOffset, color: 'rgba(197,241,221,0.35)'},
+					{offset: 1, color: 'rgba(216,247,232,0.16)'}
 				])
 			},
 			data: seriesData
@@ -1800,11 +1775,11 @@ if (window.__EVENT_LOG_LOADED__) {
 			smoothMonotone: 'x',
 			showSymbol: false,
 			connectNulls: true, // Connect valid points even if there are null values between them
-			lineStyle: { width: 2.5, color: hexToRgba(color, 0.5) }, // More transparent line
+			lineStyle: {width: 2.5, color: hexToRgba(color, 0.5)}, // More transparent line
 			areaStyle: {
 				color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-					{ offset: 0, color: startColor },
-					{ offset: 1, color: endColor }
+					{offset: 0, color: startColor},
+					{offset: 1, color: endColor}
 				])
 			},
 			data: seriesData
@@ -1819,7 +1794,7 @@ if (window.__EVENT_LOG_LOADED__) {
 		if (sanitized.length === 3) {
 			sanitized = sanitized.split('').map(ch => ch + ch).join('');
 		}
-		const bigint = parseInt(sanitized, 16);
+		const bigint = Number.parseInt(sanitized, 16);
 		if (Number.isNaN(bigint)) {
 			return `rgba(83, 207, 152, ${alpha})`;
 		}
@@ -1849,12 +1824,12 @@ if (window.__EVENT_LOG_LOADED__) {
 		const fallbackHtml = `<span class="session-date">${escapeHtml(fallbackShort)}</span>`;
 
 		if (!session || !session.first_event) {
-			return { html: fallbackHtml, text: fallbackShort };
+			return {html: fallbackHtml, text: fallbackShort};
 		}
 
 		const parsedDate = new Date(session.first_event);
 		if (Number.isNaN(parsedDate.getTime())) {
-			return { html: fallbackHtml, text: fallbackShort };
+			return {html: fallbackHtml, text: fallbackShort};
 		}
 
 		const day = parsedDate.getDate();
@@ -1873,12 +1848,12 @@ if (window.__EVENT_LOG_LOADED__) {
 		}
 
 		if (!userText) {
-			return { html: dateHtml, text: dateStr };
+			return {html: dateHtml, text: dateStr};
 		}
 
 		const separatorHtml = '<span class="session-separator"><i class="fa-solid fa-circle"></i></span>';
 		const userHtml = `<span class="session-user">${escapeHtml(userText)}</span>`;
-		return { html: `${dateHtml}${separatorHtml}${userHtml}`, text: `${dateStr} • ${userText}` };
+		return {html: `${dateHtml}${separatorHtml}${userHtml}`, text: `${dateStr} • ${userText}`};
 	}
 
 	function renderSessionActivityLegend(seriesEntries, isAllSessionsView = false) {
@@ -1953,7 +1928,7 @@ if (window.__EVENT_LOG_LOADED__) {
 				credentials: 'include' // Ensure cookies are sent
 			});
 			const validResponse = await handleApiResponse(response);
-			if (!validResponse) return;
+			if (!validResponse) {return;}
 			const stats = await validResponse.json();
 
 			stats.forEach(stat => {
@@ -2001,7 +1976,7 @@ if (window.__EVENT_LOG_LOADED__) {
 				credentials: 'include' // Ensure cookies are sent
 			});
 			const validResponse = await handleApiResponse(response);
-			if (!validResponse) return;
+			if (!validResponse) {return;}
 			const sessions = await validResponse.json();
 			const sessionList = document.getElementById('sessionList');
 
@@ -2036,7 +2011,7 @@ if (window.__EVENT_LOG_LOADED__) {
 					}
 
 					// Format session display: date and user
-					const { html: sessionDisplayHtml, text: sessionLabelText } = formatSessionDisplay(session);
+					const {html: sessionDisplayHtml, text: sessionLabelText} = formatSessionDisplay(session);
 					sessionDisplayMap.set(session.session_id, sessionLabelText);
 
 					const isSelected = selectedSessionsForDeletion.has(session.session_id);
@@ -2128,9 +2103,7 @@ if (window.__EVENT_LOG_LOADED__) {
 						// Pin activity chart to this session's day (prefer last event, fall back to first)
 						const sessionDay = session.last_event || session.first_event || null;
 						const parsedSessionDate = sessionDay ? new Date(sessionDay) : null;
-						selectedActivityDate = parsedSessionDate && !Number.isNaN(parsedSessionDate.getTime())
-							? parsedSessionDate
-							: null;
+						selectedActivityDate = parsedSessionDate && !Number.isNaN(parsedSessionDate.getTime())? parsedSessionDate: null;
 						// Always default to DESC order (newest first)
 						sortOrder = 'DESC';
 						// Update sort icon
@@ -2233,12 +2206,12 @@ if (window.__EVENT_LOG_LOADED__) {
 		const fallbackHtml = `<span class="session-date">${escapeHtml(fallbackShort)}</span>`;
 
 		if (!user || !user.last_event) {
-			return { html: fallbackHtml, text: fallbackShort };
+			return {html: fallbackHtml, text: fallbackShort};
 		}
 
 		const parsedDate = new Date(user.last_event);
 		if (Number.isNaN(parsedDate.getTime())) {
-			return { html: fallbackHtml, text: fallbackShort };
+			return {html: fallbackHtml, text: fallbackShort};
 		}
 
 		const day = parsedDate.getDate();
@@ -2257,11 +2230,11 @@ if (window.__EVENT_LOG_LOADED__) {
 		}
 
 		if (!userText) {
-			return { html: dateHtml, text: dateStr };
+			return {html: dateHtml, text: dateStr};
 		}
 
 		const userHtml = `<span class="session-user">${escapeHtml(userText)}</span>`;
-		return { html: `${userHtml} <span class="session-date">${escapeHtml(dateStr)}</span>`, text: `${userText} • ${dateStr}` };
+		return {html: `${userHtml} <span class="session-date">${escapeHtml(dateStr)}</span>`, text: `${userText} • ${dateStr}`};
 	}
 
 	async function loadUsersList() {
@@ -2270,7 +2243,7 @@ if (window.__EVENT_LOG_LOADED__) {
 				credentials: 'include'
 			});
 			const validResponse = await handleApiResponse(response);
-			if (!validResponse) return;
+			if (!validResponse) {return;}
 			const data = await validResponse.json();
 
 			// Check if response is an error object
@@ -2297,21 +2270,15 @@ if (window.__EVENT_LOG_LOADED__) {
 						if (!trimmedId) {
 							return null;
 						}
-						const label = typeof entry.label === 'string' && entry.label.trim() !== ''
-							? entry.label.trim()
-							: trimmedId;
-						const count = Number.isFinite(entry.eventCount)
-							? Number(entry.eventCount)
-							: (Number.isFinite(entry.count) ? Number(entry.count) : 0);
+						const label = typeof entry.label === 'string' && entry.label.trim() !== ''? entry.label.trim(): trimmedId;
+						const count = Number.isFinite(entry.eventCount)? Number(entry.eventCount): (Number.isFinite(entry.count) ? Number(entry.count) : 0);
 						const lastEvent = entry.lastEvent || entry.last_event || null;
 						const userName = entry.user_name || label;
-						return { id: trimmedId, label, count, last_event: lastEvent, user_name: userName };
+						return {id: trimmedId, label, count, last_event: lastEvent, user_name: userName};
 					}
 					if (typeof entry === 'string') {
 						const trimmedValue = entry.trim();
-						return trimmedValue
-							? { id: trimmedValue, label: trimmedValue, count: 0, last_event: null, user_name: trimmedValue }
-							: null;
+						return trimmedValue? {id: trimmedValue, label: trimmedValue, count: 0, last_event: null, user_name: trimmedValue}: null;
 					}
 					return null;
 				})
@@ -2322,7 +2289,7 @@ if (window.__EVENT_LOG_LOADED__) {
 						acc.values.push(user);
 					}
 					return acc;
-				}, { seen: new Set(), values: [] }).values;
+				}, {seen: new Set(), values: []}).values;
 
 			if (normalizedUsers.length === 0) {
 				return;
@@ -2339,9 +2306,9 @@ if (window.__EVENT_LOG_LOADED__) {
 				};
 			}).sort((a, b) => {
 				// Sort by last_event DESC, users without events go to the end
-				if (!a.last_event && !b.last_event) return 0;
-				if (!a.last_event) return 1;
-				if (!b.last_event) return -1;
+				if (!a.last_event && !b.last_event) {return 0;}
+				if (!a.last_event) {return 1;}
+				if (!b.last_event) {return -1;}
 				const dateA = new Date(a.last_event);
 				const dateB = new Date(b.last_event);
 				return dateB - dateA;
@@ -2353,7 +2320,7 @@ if (window.__EVENT_LOG_LOADED__) {
 				li.className = 'session-item';
 				li.setAttribute('data-user', user.user_id);
 
-				const { html: userDisplayHtml } = formatUserDisplay({
+				const {html: userDisplayHtml} = formatUserDisplay({
 					user_id: user.user_id,
 					user_name: user.user_name || user.label,
 					last_event: user.last_event,
@@ -2407,8 +2374,8 @@ if (window.__EVENT_LOG_LOADED__) {
 
 			try {
 				const teamStatsUrl = '/api/team-stats';
-				logChartTrace('loadTeamsList: fetching aggregated team stats', { url: teamStatsUrl });
-				const statsResponse = await fetch(teamStatsUrl, { credentials: 'include' });
+				logChartTrace('loadTeamsList: fetching aggregated team stats', {url: teamStatsUrl});
+				const statsResponse = await fetch(teamStatsUrl, {credentials: 'include'});
 				const validStatsResponse = await handleApiResponse(statsResponse);
 				if (validStatsResponse) {
 					const statsData = await validStatsResponse.json();
@@ -2433,9 +2400,7 @@ if (window.__EVENT_LOG_LOADED__) {
 					const key = (team.key || team.teamName || '').trim().toLowerCase();
 					const activeCount = Number(team.activeCount) || 0;
 					const inactiveCount = Number(team.inactiveCount) || 0;
-					const totalMappings = Number.isFinite(team.totalMappings)
-						? Number(team.totalMappings)
-						: activeCount + inactiveCount;
+					const totalMappings = Number.isFinite(team.totalMappings)? Number(team.totalMappings): activeCount + inactiveCount;
 
 					if (key) {
 						const safeCount = Number(team.eventCount) || 0;
@@ -2494,13 +2459,9 @@ if (window.__EVENT_LOG_LOADED__) {
 				li.className = 'session-item';
 				li.dataset.teamKey = team.key;
 				const color = team.color || 'var(--bg-secondary)';
-				const clientsLabel = team.clients.length
-					? `Clients: ${escapeHtml(team.clients.slice(0, 2).join(', '))}${team.clients.length > 2 ? '…' : ''}`
-					: 'No clients defined';
+				const clientsLabel = team.clients.length? `Clients: ${escapeHtml(team.clients.slice(0, 2).join(', '))}${team.clients.length > 2 ? '…' : ''}`: 'No clients defined';
 				const mappingLabel = `${team.totalMappings} mapping${team.totalMappings === 1 ? '' : 's'}`;
-				const statusLabel = team.inactiveCount > 0
-					? `${team.activeCount} active · ${team.inactiveCount} inactive`
-					: `${team.activeCount} active`;
+				const statusLabel = team.inactiveCount > 0? `${team.activeCount} active · ${team.inactiveCount} inactive`: `${team.activeCount} active`;
 				const eventCount = team.eventCount || 0;
 
 				li.innerHTML = `
@@ -2561,7 +2522,7 @@ if (window.__EVENT_LOG_LOADED__) {
 		const counts = new Map();
 		events.forEach((event) => {
 			const teamKey = getTeamKeyForEvent(event);
-			if (!teamKey) return;
+			if (!teamKey) {return;}
 			const current = counts.get(teamKey) || 0;
 			counts.set(teamKey, current + 1);
 		});
@@ -2581,13 +2542,13 @@ if (window.__EVENT_LOG_LOADED__) {
 
 	function updateTabIndicator() {
 		const indicator = document.getElementById('tabIndicator');
-		if (!indicator) return;
+		if (!indicator) {return;}
 
 		const activeTabBtn = document.querySelector('.tab-btn.active');
-		if (!activeTabBtn) return;
+		if (!activeTabBtn) {return;}
 
 		const tabsContainer = activeTabBtn.closest('.tabs-container');
-		if (!tabsContainer) return;
+		if (!tabsContainer) {return;}
 
 		const containerRect = tabsContainer.getBoundingClientRect();
 		const activeTabRect = activeTabBtn.getBoundingClientRect();
@@ -2597,7 +2558,7 @@ if (window.__EVENT_LOG_LOADED__) {
 	}
 
 	function switchTab(tab) {
-		if (tab === activeTab) return;
+		if (tab === activeTab) {return;}
 
 		activeTab = tab;
 		const sessionsTab = document.getElementById('sessionsTab');
@@ -2733,7 +2694,7 @@ if (window.__EVENT_LOG_LOADED__) {
 
 			const response = await fetch(`/api/events?${params}`);
 			const validResponse = await handleApiResponse(response);
-			if (!validResponse) return;
+			if (!validResponse) {return;}
 			const data = await validResponse.json();
 
 			// Update last fetch time when fetch is successful
@@ -2765,7 +2726,7 @@ if (window.__EVENT_LOG_LOADED__) {
 				}
 				handleNotificationState(fetchedEvents, triggeredByNotification);
 				if (!append) {
-					updateSessionActivityChart({ sessionId: selectedSession });
+					updateSessionActivityChart({sessionId: selectedSession});
 				}
 			} else {
 				hasMoreEvents = false;
@@ -2787,7 +2748,7 @@ if (window.__EVENT_LOG_LOADED__) {
 		} catch (error) {
 			console.error('Error loading events:', error);
 			if (errorMessageEl) {
-				errorMessageEl.textContent = 'Error loading events: ' + error.message;
+				errorMessageEl.textContent = `Error loading events: ${  error.message}`;
 				errorMessageEl.style.display = 'block';
 			}
 		} finally {
@@ -2807,7 +2768,7 @@ if (window.__EVENT_LOG_LOADED__) {
 		}
 		try {
 			return JSON.parse(rawData);
-		} catch (_error) {
+		} catch {
 			return {};
 		}
 	}
@@ -2819,35 +2780,6 @@ if (window.__EVENT_LOG_LOADED__) {
 		return `<img src="${src}" alt="${statusLabel}" class="status-indicator ${statusClass}" loading="lazy">`;
 	}
 
-	function extractClientName(eventData) {
-		if (!eventData || typeof eventData !== 'object') {
-			return '';
-		}
-		try {
-			// New format: data.state.org.companyDetails.Name
-			const nestedCompanyName = eventData.state
-				&& eventData.state.org
-				&& eventData.state.org.companyDetails
-				&& typeof eventData.state.org.companyDetails.Name === 'string'
-				&& eventData.state.org.companyDetails.Name.trim() !== ''
-				? eventData.state.org.companyDetails.Name.trim()
-				: null;
-
-			if (nestedCompanyName) {
-				return nestedCompanyName;
-			}
-
-			// Legacy format: data.companyDetails.Name
-			if (eventData.companyDetails
-				&& typeof eventData.companyDetails.Name === 'string'
-				&& eventData.companyDetails.Name.trim() !== '') {
-				return eventData.companyDetails.Name.trim();
-			}
-		} catch (_error) {
-			// Ignore and fall through to default
-		}
-		return '';
-	}
 
 	function normalizeOrgIdentifier(value) {
 		return typeof value === 'string' ? value.trim().toLowerCase() : '';
@@ -2883,15 +2815,15 @@ if (window.__EVENT_LOG_LOADED__) {
 				(value) => typeof value === 'string' && value.trim() !== ''
 			);
 			return found ? found.trim() : '';
-		} catch (_error) {
+		} catch {
 			return '';
 		}
 	}
 
 	function getTeamKeyForEvent(event) {
-		if (!event) return '';
+		if (!event) {return '';}
 		const orgIdentifier = extractOrgIdentifierFromEvent(event);
-		if (!orgIdentifier) return '';
+		if (!orgIdentifier) {return '';}
 		const mappedKey = orgToTeamMap.get(normalizeOrgIdentifier(orgIdentifier));
 		return mappedKey || '';
 	}
@@ -2925,7 +2857,7 @@ if (window.__EVENT_LOG_LOADED__) {
 				if (fromData) {
 					return String(fromData);
 				}
-			} catch (_error) {
+			} catch {
 				// Ignore and fall through to other sources
 			}
 		}
@@ -2946,15 +2878,13 @@ if (window.__EVENT_LOG_LOADED__) {
 		// Gracefully handle pages that don't include the legacy logs table
 		if (!tbody) {
 			console.warn('[Telemetry Viewer] logs table body not found; skipping legacy table render');
-			allLoadedEvents = append
-				? [...allLoadedEvents, ...renderableEvents]
-				: [...renderableEvents];
+			allLoadedEvents = append? [...allLoadedEvents, ...renderableEvents]: [...renderableEvents];
 			return;
 		}
 
 		// Save selected event state before clearing (only if not appending)
 		let selectedEventId = null;
-		let expandedEventIds = new Set();
+		const expandedEventIds = new Set();
 		if (!append) {
 			// Find the currently selected event (keyboard-selected)
 			const selectedRow = tbody.querySelector('tr.keyboard-selected[data-event-id]');
@@ -2995,9 +2925,7 @@ if (window.__EVENT_LOG_LOADED__) {
 			const eventData = normalizeEventData(event.data);
 			const clientName = event.company_name || '';
 			const userLabel = extractUserLabelFromEvent(event, eventData);
-			const dataStatus = typeof eventData.status === 'string'
-				? eventData.status.toLowerCase()
-				: null;
+			const dataStatus = typeof eventData.status === 'string'? eventData.status.toLowerCase(): null;
 			const isToolFailure = event.event === 'tool_call' && (
 				dataStatus === 'error' ||
 				dataStatus === 'failed' ||
@@ -3009,15 +2937,11 @@ if (window.__EVENT_LOG_LOADED__) {
 
 			// Extract tool name for tool events (tool_call or tool_error)
 			const isToolEvent = event.event === 'tool_call' || event.event === 'tool_error';
-			const rawToolName = isToolEvent
-				? (event.tool_name || event.toolName || '')
-				: '';
+			const rawToolName = isToolEvent? (event.tool_name || event.toolName || ''): '';
 			const toolName = rawToolName ? escapeHtml(String(rawToolName)) : '';
 
 			// Extract error message for tool_error events
-			const errorMessage = event.event === 'tool_error'
-				? (event.error_message || '')
-				: '';
+			const errorMessage = event.event === 'tool_error'? (event.error_message || ''): '';
 			const escapedErrorMessage = errorMessage ? escapeHtml(String(errorMessage)) : '';
 
 			// Main row
@@ -3026,9 +2950,7 @@ if (window.__EVENT_LOG_LOADED__) {
 			row.setAttribute('data-event-id', event.id);
 			// Store event data in the row element to avoid API call when copying payload
 			row.setAttribute('data-event', JSON.stringify(event));
-			const userCellHtml = showUserColumn
-				? `<td class="hidden px-3 py-4 text-sm text-gray-500 sm:table-cell log-user whitespace-nowrap">${escapeHtml(userLabel)}</td>`
-				: '';
+			const userCellHtml = showUserColumn? `<td class="hidden px-3 py-4 text-sm text-gray-500 sm:table-cell log-user whitespace-nowrap">${escapeHtml(userLabel)}</td>`: '';
 
 			row.innerHTML = `
 				<td class="expand-column py-4 px-2 text-sm font-medium text-gray-900 whitespace-nowrap" style="text-align: center;">
@@ -3136,15 +3058,15 @@ if (window.__EVENT_LOG_LOADED__) {
 					const allEventRows = getAllEventRows();
 					selectedEventIndex = allEventRows.findIndex(row => row === restoredRow);
 					if (selectedEventIndex >= 0) {
-						restoredRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+						restoredRow.scrollIntoView({behavior: 'smooth', block: 'nearest'});
 					}
 				}
 			}
 
 			// Restore expanded state for events that were expanded
 			expandedEventIds.forEach(eventId => {
-				const eventIdNum = parseInt(eventId, 10);
-				if (!isNaN(eventIdNum)) {
+				const eventIdNum = Number.parseInt(eventId, 10);
+				if (!Number.isNaN(eventIdNum)) {
 					const mainRow = tbody.querySelector(`tr[data-event-id="${eventId}"]`);
 					const expandedRow = document.getElementById(`expanded-${eventId}`);
 					if (mainRow && expandedRow) {
@@ -3178,17 +3100,6 @@ if (window.__EVENT_LOG_LOADED__) {
 		return `level-badge ${levelClass}`;
 	}
 
-	function _getLevelIcon(eventType) {
-		const iconMap = {
-			'tool_call': '🐛',
-			'session_start': 'ℹ️',
-			'session_end': 'ℹ️',
-			'tool_error': '❌',
-			'error': '❌',
-			'custom': '⚠️'
-		};
-		return iconMap[eventType] || 'ℹ️';
-	}
 
 	function buildEventPayload(event) {
 		const payload = {
@@ -3243,7 +3154,7 @@ if (window.__EVENT_LOG_LOADED__) {
 	}
 
 	function formatDate(dateString) {
-		if (!dateString) return '';
+		if (!dateString) {return '';}
 		const date = new Date(dateString);
 		const day = date.getDate();
 		const month = date.getMonth() + 1;
@@ -3253,11 +3164,6 @@ if (window.__EVENT_LOG_LOADED__) {
 		return `${day}/${month}/${year} ${hours}:${minutes}`;
 	}
 
-	function _formatSize(bytes) {
-		if (bytes < 1024) return bytes + ' B';
-		if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
-		return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
-	}
 
 	// Infinite scroll handler
 	function shouldLoadMoreOnScroll() {
@@ -3285,7 +3191,7 @@ if (window.__EVENT_LOG_LOADED__) {
 		}
 
 		if (shouldLoadMoreOnScroll()) {
-			loadEvents({ append: true });
+			loadEvents({append: true});
 		}
 	}
 
@@ -3353,7 +3259,7 @@ if (window.__EVENT_LOG_LOADED__) {
 
 	async function enableNotificationMode() {
 		if (!('Notification' in window)) {
-			alert('Your browser does not support desktop notifications.');
+			showToast('Your browser does not support desktop notifications.', 'error');
 			return;
 		}
 
@@ -3368,7 +3274,7 @@ if (window.__EVENT_LOG_LOADED__) {
 		}
 
 		if (permission !== 'granted') {
-			alert('You must allow browser notifications to enable this mode.');
+			showToast('You must allow browser notifications to enable this mode.', 'error');
 			return;
 		}
 
@@ -3415,7 +3321,7 @@ if (window.__EVENT_LOG_LOADED__) {
 						bellIcon.classList.remove('animating');
 						// Apply tilted class after animation ends to maintain the tilted position
 						bellIcon.classList.add('tilted');
-					}, { once: true });
+					}, {once: true});
 				});
 			} else if (notificationModeEnabled && !shouldAnimate) {
 				// If already enabled but no animation needed (e.g., on page load), just add tilted class
@@ -3446,7 +3352,7 @@ if (window.__EVENT_LOG_LOADED__) {
 		setRefreshButtonAutoState(enabled, intervalMinutes);
 
 		if (enabled && intervalMinutes && intervalMinutes !== '') {
-			const intervalMs = parseInt(intervalMinutes) * 60 * 1000;
+			const intervalMs = Number.parseInt(intervalMinutes) * 60 * 1000;
 			autoRefreshIntervalId = setInterval(() => {
 				refreshLogs();
 			}, intervalMs);
@@ -3576,9 +3482,7 @@ if (window.__EVENT_LOG_LOADED__) {
 		}
 
 		const title = 'New telemetry sessions';
-		const body = newSessionsCount === 1
-			? '1 new session started.'
-			: `${newSessionsCount} new sessions started.`;
+		const body = newSessionsCount === 1? '1 new session started.': `${newSessionsCount} new sessions started.`;
 
 		try {
 			new Notification(title, {
@@ -3664,9 +3568,9 @@ if (window.__EVENT_LOG_LOADED__) {
 		if (window._eventLogScrollHandler) {
 			const scrollContainer = document.getElementById('logsTableScroll');
 			if (scrollContainer) {
-				scrollContainer.removeEventListener('scroll', window._eventLogScrollHandler, { passive: true });
+				scrollContainer.removeEventListener('scroll', window._eventLogScrollHandler, {passive: true});
 			}
-			window.removeEventListener('scroll', window._eventLogScrollHandler, { passive: true });
+			window.removeEventListener('scroll', window._eventLogScrollHandler, {passive: true});
 		}
 
 		// Create new scroll handler
@@ -3682,13 +3586,13 @@ if (window.__EVENT_LOG_LOADED__) {
 
 		const scrollContainer = document.getElementById('logsTableScroll');
 		if (scrollContainer) {
-			scrollContainer.addEventListener('scroll', window._eventLogScrollHandler, { passive: true });
+			scrollContainer.addEventListener('scroll', window._eventLogScrollHandler, {passive: true});
 		} else {
 			handleInitializationError('scroll container binding', new Error('Scroll container not found'));
 		}
 
 		// Also listen to page scroll to support layouts where the table container is not scrollable
-		window.addEventListener('scroll', window._eventLogScrollHandler, { passive: true });
+		window.addEventListener('scroll', window._eventLogScrollHandler, {passive: true});
 	}
 
 	// Setup infinite scroll
@@ -3809,7 +3713,7 @@ if (window.__EVENT_LOG_LOADED__) {
 	});
 
 	function registerDropdownScrollClose(target) {
-		if (!target) return;
+		if (!target) {return;}
 		const isWindow = target === window;
 		let lastTop = isWindow ? window.pageYOffset : target.scrollTop;
 		let lastLeft = isWindow ? window.pageXOffset : target.scrollLeft;
@@ -3828,7 +3732,7 @@ if (window.__EVENT_LOG_LOADED__) {
 			lastTop = currentTop;
 			lastLeft = currentLeft;
 			closeAllDropdowns();
-		}, { passive: true });
+		}, {passive: true});
 	}
 
 	registerDropdownScrollClose(window);
@@ -3867,7 +3771,7 @@ if (window.__EVENT_LOG_LOADED__) {
 	// Navigate sessions with keyboard
 	function navigateSessions(direction) {
 		const sessions = getAllSessionItems();
-		if (sessions.length === 0) return;
+		if (sessions.length === 0) {return;}
 
 		clearKeyboardSelection();
 		keyboardNavigationMode = 'sessions';
@@ -3887,14 +3791,14 @@ if (window.__EVENT_LOG_LOADED__) {
 		const selectedItem = sessions[selectedSessionIndex];
 		if (selectedItem) {
 			selectedItem.classList.add('keyboard-selected');
-			selectedItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+			selectedItem.scrollIntoView({behavior: 'smooth', block: 'nearest'});
 		}
 	}
 
 	// Navigate events with keyboard
 	function navigateEvents(direction) {
 		const events = getAllEventRows();
-		if (events.length === 0) return;
+		if (events.length === 0) {return;}
 
 		clearKeyboardSelection();
 		keyboardNavigationMode = 'events';
@@ -3912,7 +3816,7 @@ if (window.__EVENT_LOG_LOADED__) {
 		const selectedRow = events[selectedEventIndex];
 		if (selectedRow) {
 			selectedRow.classList.add('keyboard-selected');
-			selectedRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+			selectedRow.scrollIntoView({behavior: 'smooth', block: 'nearest'});
 		}
 	}
 
@@ -3932,7 +3836,7 @@ if (window.__EVENT_LOG_LOADED__) {
 			const selectedRow = events[selectedEventIndex];
 			const eventId = selectedRow.getAttribute('data-event-id');
 			if (eventId) {
-				toggleRowExpand(parseInt(eventId, 10));
+				toggleRowExpand(Number.parseInt(eventId, 10));
 			}
 		}
 	}
@@ -4063,7 +3967,7 @@ if (window.__EVENT_LOG_LOADED__) {
 	function toggleSessionActionsDropdown(e, sessionId) {
 		e.stopPropagation();
 		const dropdown = document.getElementById(`session-dropdown-${escapeHtml(sessionId)}`);
-		if (!dropdown) return;
+		if (!dropdown) {return;}
 		const isShowing = dropdown.classList.contains('show');
 		const button = e.currentTarget || e.target.closest('.actions-btn') || e.target.closest('button');
 		const sessionItem = dropdown.closest('.session-item');
@@ -4152,7 +4056,7 @@ if (window.__EVENT_LOG_LOADED__) {
 			}
 		} catch (error) {
 			console.error('Error copying payload:', error);
-			alert('Error copying payload: ' + error.message);
+			showToast(`Error copying payload: ${  error.message}`, 'error');
 		}
 	}
 
@@ -4179,9 +4083,7 @@ if (window.__EVENT_LOG_LOADED__) {
 				credentials: 'include' // Ensure cookies are sent
 			});
 			const validResponse = await handleApiResponse(response);
-			if (!validResponse) return;
-
-			const _data = await validResponse.json();
+			if (!validResponse) {return;}
 
 			// Close dropdown
 			closeAllDropdowns();
@@ -4192,7 +4094,7 @@ if (window.__EVENT_LOG_LOADED__) {
 			loadEvents();
 		} catch (error) {
 			console.error('Error deleting event:', error);
-			alert('Error deleting the event: ' + error.message);
+			showToast(`Error deleting the event: ${  error.message}`, 'error');
 		}
 	}
 
@@ -4235,7 +4137,8 @@ if (window.__EVENT_LOG_LOADED__) {
 						checkboxes.forEach((checkbox) => {
 							// Remove show class first to ensure transition works
 							checkbox.classList.remove('show');
-							void checkbox.offsetWidth; // Force reflow
+							// eslint-disable-next-line no-unused-expressions
+							checkbox.offsetWidth; // Force reflow
 							checkbox.classList.add('show');
 						});
 					}
@@ -4289,7 +4192,8 @@ if (window.__EVENT_LOG_LOADED__) {
 					checkbox.checked = true;
 					// Trigger animation
 					checkbox.classList.remove('just-unchecked');
-					void checkbox.offsetWidth; // Force reflow
+					// eslint-disable-next-line no-unused-expressions
+					checkbox.offsetWidth; // Force reflow
 					checkbox.classList.add('just-checked');
 
 					// Restore scroll position
@@ -4345,7 +4249,8 @@ if (window.__EVENT_LOG_LOADED__) {
 				checkbox.checked = false;
 				// Trigger animation by temporarily removing and re-adding checked state
 				checkbox.classList.remove('just-checked');
-				void checkbox.offsetWidth; // Force reflow
+				// eslint-disable-next-line no-unused-expressions
+				checkbox.offsetWidth; // Force reflow
 				checkbox.classList.add('just-unchecked');
 				// Restore scroll position using requestAnimationFrame for smooth restoration
 				if (sessionList) {
@@ -4374,7 +4279,8 @@ if (window.__EVENT_LOG_LOADED__) {
 				checkbox.checked = true;
 				// Trigger animation by temporarily removing and re-adding checked state
 				checkbox.classList.remove('just-unchecked');
-				void checkbox.offsetWidth; // Force reflow
+				// eslint-disable-next-line no-unused-expressions
+				checkbox.offsetWidth; // Force reflow
 				checkbox.classList.add('just-checked');
 				// Restore scroll position using requestAnimationFrame for smooth restoration
 				if (sessionList) {
@@ -4460,9 +4366,7 @@ if (window.__EVENT_LOG_LOADED__) {
 				credentials: 'include' // Ensure cookies are sent
 			});
 			const validResponse = await handleApiResponse(response);
-			if (!validResponse) return;
-
-			const _data = await validResponse.json();
+			if (!validResponse) {return;}
 
 			// Close dropdown
 			closeAllDropdowns();
@@ -4494,7 +4398,7 @@ if (window.__EVENT_LOG_LOADED__) {
 			loadEvents();
 		} catch (error) {
 			console.error('Error deleting session:', error);
-			alert('Error deleting the session: ' + error.message);
+			showToast(`Error deleting the session: ${  error.message}`, 'error');
 		}
 	}
 
@@ -4548,7 +4452,7 @@ if (window.__EVENT_LOG_LOADED__) {
 			loadEvents();
 		} catch (error) {
 			console.error('Error deleting selected sessions:', error);
-			alert('Error deleting sessions: ' + error.message);
+			showToast(`Error deleting sessions: ${  error.message}`, 'error');
 		}
 	}
 
@@ -4621,7 +4525,7 @@ if (window.__EVENT_LOG_LOADED__) {
 				credentials: 'include' // Ensure cookies are sent
 			});
 			const validResponse = await handleApiResponse(response);
-			if (!validResponse) return;
+			if (!validResponse) {return;}
 			const data = await validResponse.json();
 			if (data.status === 'ok') {
 				const displayText = data.displayText || data.sizeFormatted;
@@ -4663,7 +4567,7 @@ if (window.__EVENT_LOG_LOADED__) {
 				credentials: 'include'
 			});
 			const validResponse = await handleApiResponse(response);
-			if (!validResponse) return;
+			if (!validResponse) {return;}
 			const data = await validResponse.json();
 
 			// Check if response is an error object
@@ -4677,7 +4581,7 @@ if (window.__EVENT_LOG_LOADED__) {
 			}
 
 			const dropdownContent = document.getElementById('userFilterDropdownContent');
-			if (!dropdownContent) return;
+			if (!dropdownContent) {return;}
 
 			dropdownContent.innerHTML = '';
 
@@ -4689,14 +4593,12 @@ if (window.__EVENT_LOG_LOADED__) {
 						if (!trimmedId) {
 							return null;
 						}
-						const label = typeof entry.label === 'string' && entry.label.trim() !== ''
-							? entry.label.trim()
-							: trimmedId;
-						return { id: trimmedId, label };
+						const label = typeof entry.label === 'string' && entry.label.trim() !== ''? entry.label.trim(): trimmedId;
+						return {id: trimmedId, label};
 					}
 					if (typeof entry === 'string') {
 						const trimmedValue = entry.trim();
-						return trimmedValue ? { id: trimmedValue, label: trimmedValue } : null;
+						return trimmedValue ? {id: trimmedValue, label: trimmedValue} : null;
 					}
 					return null;
 				})
@@ -4707,7 +4609,7 @@ if (window.__EVENT_LOG_LOADED__) {
 						acc.values.push(user);
 					}
 					return acc;
-				}, { seen: new Set(), values: [] }).values;
+				}, {seen: new Set(), values: []}).values;
 
 			if (normalizedUsers.length === 0) {
 				allUserIds = new Set();
@@ -4825,7 +4727,7 @@ if (window.__EVENT_LOG_LOADED__) {
 	function showUserFilterDropdown() {
 		const dropdown = document.getElementById('userFilterDropdown');
 		const chevron = document.getElementById('userFilterChevron');
-		if (!dropdown || !chevron) return;
+		if (!dropdown || !chevron) {return;}
 
 		const isVisible = !dropdown.classList.contains('hidden');
 		if (!isVisible) {
@@ -4844,7 +4746,7 @@ if (window.__EVENT_LOG_LOADED__) {
 	function hideUserFilterDropdown() {
 		const dropdown = document.getElementById('userFilterDropdown');
 		const chevron = document.getElementById('userFilterChevron');
-		if (!dropdown || !chevron) return;
+		if (!dropdown || !chevron) {return;}
 
 		dropdown.classList.add('hidden');
 		chevron.classList.remove('fa-sort-up');
@@ -4855,7 +4757,7 @@ if (window.__EVENT_LOG_LOADED__) {
 		event.stopPropagation();
 		const dropdown = document.getElementById('userFilterDropdown');
 		const chevron = document.getElementById('userFilterChevron');
-		if (!dropdown || !chevron) return;
+		if (!dropdown || !chevron) {return;}
 
 		const isVisible = !dropdown.classList.contains('hidden');
 		if (isVisible) {
@@ -4866,9 +4768,8 @@ if (window.__EVENT_LOG_LOADED__) {
 	};
 
 	// Close user filter dropdown when clicking outside
-	document.addEventListener('click', function(event) {
+	document.addEventListener('click', (event) => {
 		const dropdown = document.getElementById('userFilterDropdown');
-		const _dropdownBtn = document.getElementById('userFilterDropdownBtn');
 		const dropdownContainer = event.target.closest('.user-filter-dropdown-container');
 
 		if (dropdown && !dropdown.classList.contains('hidden')) {
@@ -4936,7 +4837,7 @@ if (window.__EVENT_LOG_LOADED__) {
 		// Add hover listeners to dropdown itself
 		dropdown.addEventListener('mouseenter', handleMouseEnter);
 		dropdown.addEventListener('mouseleave', handleMouseLeave);
-	})();
+	}());
 
 	function setupTabs() {
 		const sessionsTab = document.getElementById('sessionsTab');
@@ -5055,7 +4956,7 @@ if (window.__EVENT_LOG_LOADED__) {
 						if (typeof echarts !== 'undefined') {
 							resolve();
 						} else {
-							window.addEventListener('echartsLoaded', resolve, { once: true });
+							window.addEventListener('echartsLoaded', resolve, {once: true});
 						}
 					});
 				}
@@ -5101,7 +5002,7 @@ if (window.__EVENT_LOG_LOADED__) {
 
 		// Listen for chart rendering completion
 		window.addEventListener('chartRenderComplete', (event) => {
-			const { isInitialLoad, sessionId, eventCount, timestamp } = event.detail;
+			const {isInitialLoad, sessionId, eventCount, timestamp} = event.detail;
 			if (isInitialLoad) {
 				console.log('Initial chart render completed:', {
 					sessionId,
@@ -5115,7 +5016,7 @@ if (window.__EVENT_LOG_LOADED__) {
 	}
 
 	// Expose a re-initializer so soft navigation can rebuild the page
-	window.initializeEventLogApp = function({ resetState = false } = {}) {
+	window.initializeEventLogApp = function({resetState = false} = {}) {
 		if (resetState) {
 			resetEventLogState();
 		}
@@ -5142,7 +5043,7 @@ if (window.__EVENT_LOG_LOADED__) {
 				await resumeEventLogPage();
 			} else {
 				// New page load - full initialization
-				window.initializeEventLogApp({ resetState: true });
+				window.initializeEventLogApp({resetState: true});
 			}
 		}
 	});
@@ -5151,7 +5052,7 @@ if (window.__EVENT_LOG_LOADED__) {
 	// Handle smooth hover animation for icon buttons group
 	(function() {
 		const iconButtonsGroup = document.querySelector('.icon-buttons-group');
-		if (!iconButtonsGroup) return;
+		if (!iconButtonsGroup) {return;}
 
 		let isInsideGroup = false;
 		let currentHoveredButton = null;
@@ -5191,7 +5092,8 @@ if (window.__EVENT_LOG_LOADED__) {
 					iconButtonsGroup.setAttribute('data-hover-index', index);
 
 					// Force a reflow to ensure the position is set before removing no-transition
-					void iconButtonsGroup.offsetHeight;
+					// eslint-disable-next-line no-unused-expressions
+					iconButtonsGroup.offsetHeight;
 
 					// Remove no-transition after a short delay to allow smooth transitions between buttons
 					setTimeout(() => {
@@ -5211,7 +5113,7 @@ if (window.__EVENT_LOG_LOADED__) {
 				}
 			});
 		});
-	})();
+	}());
 
 	// Mobile sidebar toggle functionality
 
@@ -5254,7 +5156,7 @@ if (window.__EVENT_LOG_LOADED__) {
 	function scrollToEvent(eventId) {
 		const eventRow = document.querySelector(`tr[data-event-id="${eventId}"]`);
 		if (eventRow) {
-			eventRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+			eventRow.scrollIntoView({behavior: 'smooth', block: 'center'});
 			// Highlight the row briefly
 			eventRow.classList.add('keyboard-selected');
 			setTimeout(() => {
@@ -5287,7 +5189,7 @@ if (window.__EVENT_LOG_LOADED__) {
 			showPayloadModal(payload, eventId);
 		} catch (error) {
 			console.error('Error loading event payload:', error);
-			alert('Error loading event payload: ' + error.message);
+			showToast(`Error loading event payload: ${  error.message}`, 'error');
 		}
 	}
 
@@ -5346,8 +5248,8 @@ if (window.__EVENT_LOG_LOADED__) {
 		const copyBtn = modal.querySelector('[data-action="copy-json"]');
 
 		const handleClose = () => closePayloadModal();
-		if (closeBtn) closeBtn.addEventListener('click', handleClose);
-		if (closeAction) closeAction.addEventListener('click', handleClose);
+		if (closeBtn) {closeBtn.addEventListener('click', handleClose);}
+		if (closeAction) {closeAction.addEventListener('click', handleClose);}
 		if (copyBtn) {
 			copyBtn.addEventListener('click', async () => {
 				try {
@@ -5361,13 +5263,13 @@ if (window.__EVENT_LOG_LOADED__) {
 					}, 1600);
 				} catch (error) {
 					console.error('Error copying payload:', error);
-					alert('Error copying payload: ' + error.message);
+					showToast(`Error copying payload: ${  error.message}`, 'error');
 				}
 			});
 		}
 
 		// Close modal when clicking backdrop
-		backdrop.addEventListener('click', function(e) {
+		backdrop.addEventListener('click', (e) => {
 			if (e.target === backdrop) {
 				closePayloadModal();
 			}

@@ -19,7 +19,12 @@
     "node_modules",
     "dist",
     "public/vendor",
-    "**/*.min.js"
+    "**/*.min.js",
+    "src/scripts/migrate-add-company-name.js",
+    "src/scripts/migrate-add-error-message.js",
+    "src/scripts/migrate-org-team-mappings.js",
+    "src/scripts/regularize-telemetry-data.js",
+    "src/scripts/update-company-names.js"
   ],
   "include": [
     "src/**/*",

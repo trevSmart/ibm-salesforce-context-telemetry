@@ -76,7 +76,7 @@ function getRequestHeaders(includeJson = true) {
 function getCsrfTokenFromCookie() {
 	try {
 		const cookies = document.cookie.split(';');
-		for (let cookie of cookies) {
+		for (const cookie of cookies) {
 			const [name, value] = cookie.trim().split('=');
 			if (name === 'csrf-token') {
 				return decodeURIComponent(value);

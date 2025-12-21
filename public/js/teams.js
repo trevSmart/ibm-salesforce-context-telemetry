@@ -1,21 +1,16 @@
 // @ts-nocheck
 // Teams management page
-import { showToast } from './notifications.js';
+import {showToast} from './notifications.js';
 
 const REFRESH_ICON_ANIMATION_DURATION_MS = 700;
 let currentView = 'list'; // 'list' or 'detail'
-let _currentTeamId = null;
 let teams = [];
-let _allOrgs = [];
-let _allUsers = [];
-let hasLoadedTeamsOnce = false;
+let _currentTeamId = null;
 
 // Utility functions
 async function buildCsrfHeaders(includeJson = true) {
 	// Start with shared helper headers if available
-	const baseHeaders = (typeof window !== 'undefined' && window.getRequestHeaders)
-		? window.getRequestHeaders(includeJson)
-		: (includeJson ? { 'Content-Type': 'application/json' } : {});
+	const baseHeaders = (typeof window !== 'undefined' && window.getRequestHeaders)? window.getRequestHeaders(includeJson): (includeJson ? {'Content-Type': 'application/json'} : {});
 
 	// If helper already provided token, return early
 	if (baseHeaders['X-CSRF-Token']) {
@@ -24,12 +19,8 @@ async function buildCsrfHeaders(includeJson = true) {
 
 	// Try to fetch/store token using shared helper functions
 	try {
-		const token = (typeof window !== 'undefined' && window.getCsrfToken)
-			? await window.getCsrfToken()
-			: null;
-		const fallbackToken = (!token && typeof window !== 'undefined' && window.getCsrfTokenFromCookie)
-			? window.getCsrfTokenFromCookie()
-			: null;
+		const token = (typeof window !== 'undefined' && window.getCsrfToken)? await window.getCsrfToken(): null;
+		const fallbackToken = (!token && typeof window !== 'undefined' && window.getCsrfTokenFromCookie)? window.getCsrfTokenFromCookie(): null;
 		const finalToken = token || fallbackToken;
 
 		if (finalToken) {
@@ -62,7 +53,7 @@ function sanitizeCssColor(color) {
 		return null;
 	}
 	// Only allow hex colors in format #RGB or #RRGGBB
-	const hexColorPattern = /^#([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})$/;
+	const hexColorPattern = /^#([\dA-Fa-f]{3}|[\dA-Fa-f]{6})$/;
 	if (hexColorPattern.test(color.trim())) {
 		return color.trim();
 	}
@@ -70,15 +61,15 @@ function sanitizeCssColor(color) {
 }
 
 function hexToRgba(hex, alpha = 0.12) {
-	if (!hex || typeof hex !== 'string') return null;
+	if (!hex || typeof hex !== 'string') {return null;}
 	const normalized = hex.replace('#', '');
-	if (normalized.length !== 3 && normalized.length !== 6) return null;
+	if (normalized.length !== 3 && normalized.length !== 6) {return null;}
 	const full = normalized.length === 3 ? normalized.split('').map(c => c + c).join('') : normalized;
-	const intVal = parseInt(full, 16);
-	if (Number.isNaN(intVal)) return null;
-	const r = (intVal >> 16) & 255;
-	const g = (intVal >> 8) & 255;
-	const b = intVal & 255;
+	const intVal = Number.parseInt(full, 16);
+	if (Number.isNaN(intVal)) {return null;}
+	const r = Math.floor(intVal / (256 * 256));
+	const g = Math.floor((intVal % (256 * 256)) / 256);
+	const b = intVal % 256;
 	return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
@@ -116,7 +107,7 @@ function toggleTheme() {
 function clearLocalData() {
 	if (confirm('Clear all local data stored in this browser for the telemetry UI (theme, filters, etc.)?')) {
 		localStorage.clear();
-		alert('Local data cleared. Page will reload.');
+		showToast('Local data cleared. Page will reload.', 'info');
 		window.location.reload();
 	}
 }
@@ -152,7 +143,7 @@ async function fetchTeams() {
 		return data.teams || [];
 	} catch (error) {
 		console.error('Error fetching teams:', error);
-		showToast('Failed to load teams: ' + error.message, 'error');
+		showToast(`Failed to load teams: ${  error.message}`, 'error');
 		return [];
 	}
 }
@@ -206,29 +197,6 @@ async function fetchEventUsers() {
 	}
 }
 
-async function createTeam(name, color) {
-	try {
-		const headers = await buildCsrfHeaders(true);
-		const response = await fetch('/api/teams', {
-			method: 'POST',
-			headers,
-			credentials: 'same-origin',
-			body: JSON.stringify({ name, color })
-		});
-
-		if (!response.ok) {
-			const data = await response.json();
-			throw new Error(data.message || `HTTP ${response.status}`);
-		}
-
-		const data = await response.json();
-		return data.team;
-	} catch (error) {
-		console.error('Error creating team:', error);
-		throw error;
-	}
-}
-
 async function createTeamWithLogo(name, color, logoFile) {
 	try {
 		const headers = await buildCsrfHeaders(false);
@@ -257,29 +225,6 @@ async function createTeamWithLogo(name, color, logoFile) {
 		return data.team;
 	} catch (error) {
 		console.error('Error creating team:', error);
-		throw error;
-	}
-}
-
-async function updateTeam(teamId, updates) {
-	try {
-		const headers = await buildCsrfHeaders(true);
-		const response = await fetch(`/api/teams/${teamId}`, {
-			method: 'PUT',
-			headers,
-			credentials: 'same-origin',
-			body: JSON.stringify(updates)
-		});
-
-		if (!response.ok) {
-			const data = await response.json();
-			throw new Error(data.message || `HTTP ${response.status}`);
-		}
-
-		const data = await response.json();
-		return data.team;
-	} catch (error) {
-		console.error('Error updating team:', error);
 		throw error;
 	}
 }
@@ -349,7 +294,7 @@ async function moveOrgToTeam(orgId, teamId) {
 			method: 'POST',
 			headers,
 			credentials: 'same-origin',
-			body: JSON.stringify({ team_id: teamId })
+			body: JSON.stringify({team_id: teamId})
 		});
 
 		if (!response.ok) {
@@ -371,7 +316,7 @@ async function addEventUserToTeam(userName, teamId) {
 			method: 'POST',
 			headers,
 			credentials: 'same-origin',
-			body: JSON.stringify({ user_name: userName })
+			body: JSON.stringify({user_name: userName})
 		});
 
 		if (!response.ok) {
@@ -393,7 +338,7 @@ async function upsertOrg(orgId, orgData) {
 			method: 'POST',
 			headers,
 			credentials: 'same-origin',
-			body: JSON.stringify({ id: orgId, ...orgData })
+			body: JSON.stringify({id: orgId, ...orgData})
 		});
 
 		if (!response.ok) {
@@ -412,7 +357,7 @@ async function upsertOrg(orgId, orgData) {
 // UI rendering functions
 function renderTeamsList() {
 	const container = document.getElementById('teamsContent');
-	if (!container) return;
+	if (!container) {return;}
 
 	container.innerHTML = `
     <div class="px-6 sm:px-8 teams-list-container">
@@ -456,12 +401,10 @@ function renderTeamsList() {
 		const initials = team.name.split(' ').map(word => word[0]).join('').substring(0, 2).toUpperCase();
 
 		// Logo or avatar
-		const logoOrAvatar = team.has_logo
-			? `<img src="/api/teams/${team.id}/logo" alt="${escapeHtml(team.name)} logo" class="size-12 object-contain" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+		const logoOrAvatar = team.has_logo? `<img src="/api/teams/${team.id}/logo" alt="${escapeHtml(team.name)} logo" class="size-12 object-contain" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
          <span class="inline-flex items-center justify-center rounded-lg text-sm font-semibold size-12" style="display: none; color: ${accentColor}; background-color: ${accentBg};">
            ${escapeHtml(initials)}
-         </span>`
-			: `<span class="inline-flex items-center justify-center rounded-lg text-sm font-semibold size-12" style="color: ${accentColor}; background-color: ${accentBg};">
+         </span>`: `<span class="inline-flex items-center justify-center rounded-lg text-sm font-semibold size-12" style="color: ${accentColor}; background-color: ${accentBg};">
            ${escapeHtml(initials)}
          </span>`;
 
@@ -502,7 +445,7 @@ function renderTeamsList() {
 
 async function renderTeamDetail(teamId) {
 	const container = document.getElementById('teamsContent');
-	if (!container) return;
+	if (!container) {return;}
 
 	container.innerHTML = `
     <div style="padding: 24px;">
@@ -721,7 +664,7 @@ function showTeamFormModal(team = null) {
 	document.addEventListener('keydown', handleKeydown);
 	document.getElementById('cancelTeamFormBtn')?.addEventListener('click', closeModal);
 	backdrop.addEventListener('click', (e) => {
-		if (e.target === backdrop) closeModal();
+		if (e.target === backdrop) {closeModal();}
 	});
 
 	// Handle logo file input preview
@@ -751,10 +694,10 @@ function showTeamFormModal(team = null) {
 
 				// Show preview
 				const reader = new FileReader();
-				reader.onload = (event) => {
+				reader.addEventListener('load', (event) => {
 					logoPreviewImg.src = event.target.result;
 					logoPreviewNew.style.display = 'block';
-				};
+				});
 				reader.readAsDataURL(file);
 				removeLogo = false;
 			} else {
@@ -794,7 +737,7 @@ function showTeamFormModal(team = null) {
 
 		try {
 			if (isEdit) {
-				await updateTeamWithLogo(team.id, { name, color }, logoInput?.files[0] || null, removeLogo);
+				await updateTeamWithLogo(team.id, {name, color}, logoInput?.files[0] || null, removeLogo);
 				showToast('Team updated successfully', 'success');
 			} else {
 				await createTeamWithLogo(name, color, logoInput?.files[0] || null);
@@ -924,7 +867,7 @@ async function showAddOrgModal(teamId) {
 	document.addEventListener('keydown', handleKeydown);
 	document.getElementById('cancelAddOrgBtn')?.addEventListener('click', closeModal);
 	backdrop.addEventListener('click', (e) => {
-		if (e.target === backdrop) closeModal();
+		if (e.target === backdrop) {closeModal();}
 	});
 
 	const existingSelect = document.getElementById('existingOrgSelect');
@@ -952,7 +895,7 @@ async function showAddOrgModal(teamId) {
 		}
 
 		try {
-			await upsertOrg(orgId, { alias, color, team_id: teamId });
+			await upsertOrg(orgId, {alias, color, team_id: teamId});
 			showToast('Org added successfully', 'success');
 			closeModal();
 			renderTeamDetail(teamId);
@@ -1036,7 +979,7 @@ async function showAddUserModal(teamId) {
 	document.addEventListener('keydown', handleKeydown);
 	document.getElementById('cancelAddUserBtn')?.addEventListener('click', closeModal);
 	backdrop.addEventListener('click', (e) => {
-		if (e.target === backdrop) closeModal();
+		if (e.target === backdrop) {closeModal();}
 	});
 
 	document.getElementById('saveAddUserBtn')?.addEventListener('click', async () => {

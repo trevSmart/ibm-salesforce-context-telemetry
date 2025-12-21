@@ -154,18 +154,34 @@ async function loadDashboardDatabaseSize() {
 void initializeDashboardPage();
 
 // Initialize dashboard; reused on first load and on soft navigation
-async function initializeDashboardPage({ resetState = false } = {}) {
+async function initializeDashboardPage({resetState = false} = {}) {
 	// Reset chart state when coming back from another page
 	if (resetState && chart) {
-		if (typeof chart.dispose === 'function') {
-			chart.dispose();
+		try {
+			if (typeof chart.dispose === 'function') {
+				chart.dispose();
+			}
+		} catch (error) {
+			console.warn('Error disposing chart:', error);
+		}
+		if (chartResizeHandler) {
+			window.removeEventListener('resize', chartResizeHandler);
+			chartResizeHandler = null;
+		}
+		if (chartResizeObserver) {
+			try {
+				chartResizeObserver.disconnect();
+			} catch (error) {
+				console.warn('Error disconnecting chart resize observer:', error);
+			}
+			chartResizeObserver = null;
 		}
 		chart = null;
 	}
 
 	// Always restore saved time range from localStorage, default to last month if not found
 	const savedTimeRange = localStorage.getItem('dashboardTimeRange');
-	currentDays = savedTimeRange ? parseInt(savedTimeRange, 10) : DEFAULT_DASHBOARD_TIME_RANGE_DAYS;
+	currentDays = savedTimeRange ? Number.parseInt(savedTimeRange, 10) : DEFAULT_DASHBOARD_TIME_RANGE_DAYS;
 
 	if (resetState) {
 		isInitialChartLoad = true;
@@ -200,16 +216,32 @@ async function initializeDashboardPage({ resetState = false } = {}) {
 		}
 
 		// Only load chart data if authenticated
-		await loadChartData();
-		await loadTopUsersToday();
-		await loadTopTeamsToday();
-		await loadDashboardDatabaseSize();
+		try {
+			await loadChartData();
+		} catch (error) {
+			console.warn('Failed to load initial chart data, will retry on refresh:', error);
+		}
+		try {
+			await loadTopUsersToday();
+		} catch (error) {
+			console.warn('Failed to load top users data:', error);
+		}
+		try {
+			await loadTopTeamsToday();
+		} catch (error) {
+			console.warn('Failed to load top teams data:', error);
+		}
+		try {
+			await loadDashboardDatabaseSize();
+		} catch (error) {
+			console.warn('Failed to load database size:', error);
+		}
 
 		// Set up time range selector (guard against duplicate listeners)
 		const timeRangeSelect = document.getElementById('timeRangeSelect');
 		if (timeRangeSelect && timeRangeSelect.dataset.dashboardInitialized !== 'true') {
 			const handleTimeRangeChange = (e) => {
-				const days = parseInt(e.target.value, 10);
+				const days = Number.parseInt(e.target.value, 10);
 				const resolvedDays = Number.isFinite(days) ? days : currentDays;
 				// Save selected time range to localStorage
 				localStorage.setItem('dashboardTimeRange', resolvedDays.toString());
@@ -302,7 +334,7 @@ function clearLocalData() {
 	});
 }
 
-function openConfirmModal({ title, message, confirmLabel = 'Confirm', cancelLabel = 'Cancel', destructive = false }) {
+function openConfirmModal({title, message, confirmLabel = 'Confirm', cancelLabel = 'Cancel', destructive = false}) {
 	return new Promise((resolve) => {
 		const existing = document.querySelector('.confirm-dialog-backdrop');
 		if (existing) {
@@ -345,11 +377,11 @@ function openConfirmModal({ title, message, confirmLabel = 'Confirm', cancelLabe
 				if (event.target !== backdrop) {
 					return;
 				}
-				backdrop.ontransitionend = null;
+				backdrop.removeEventListener('transitionend', handleTransitionEnd);
 				backdrop.remove();
 			};
 
-			backdrop.ontransitionend = handleTransitionEnd;
+			backdrop.addEventListener('transitionend', handleTransitionEnd);
 			backdrop.classList.remove('visible');
 			backdrop.classList.add('hiding');
 
@@ -410,7 +442,7 @@ if (document.readyState === 'loading') {
 // Handle smooth hover animation for icon buttons group
 function setupIconButtonsGroupHover() {
 	const iconButtonsGroup = document.querySelector('.icon-buttons-group');
-	if (!iconButtonsGroup) return;
+	if (!iconButtonsGroup) {return;}
 
 	let isInsideGroup = false;
 	let currentHoveredButton = null;
@@ -450,7 +482,7 @@ function setupIconButtonsGroupHover() {
 				iconButtonsGroup.setAttribute('data-hover-index', index);
 
 				// Force a reflow to ensure the position is set before removing no-transition
-				void iconButtonsGroup.offsetHeight;
+				iconButtonsGroup.offsetHeight;
 
 				// Remove no-transition after a short delay to allow smooth transitions between buttons
 				setTimeout(() => {
@@ -513,6 +545,7 @@ async function refreshDashboard(event) {
 
 // Chart configuration
 let chart = null;
+let chartResizeHandler = null; // Store resize handler to clean up properly
 let isInitialChartLoad = true; // Track if this is the initial chart load
 let savedChartOption = null; // Store chart option when pausing for cache restoration
 let chartResizeObserver = null;
@@ -534,7 +567,7 @@ function revealDashboardShell() {
 // Function to calculate polynomial regression (degree 2 for curved trend)
 function calculatePolynomialRegression(dataPoints, degree = 2) {
 	const n = dataPoints.length;
-	if (n < degree + 1) return { coefficients: [0] };
+	if (n < degree + 1) {return {coefficients: [0]};}
 
 	// Prepare matrices for polynomial regression
 	const X = [];
@@ -550,7 +583,7 @@ function calculatePolynomialRegression(dataPoints, degree = 2) {
 
 	// Solve normal equations using Gaussian elimination
 	const coefficients = solveNormalEquations(X, Y);
-	return { coefficients };
+	return {coefficients};
 }
 
 // Gaussian elimination for normal equations
@@ -559,7 +592,7 @@ function solveNormalEquations(X, Y) {
 	const m = X.length;
 
 	// Create augmented matrix [X^T * X | X^T * Y]
-	const A = Array.from({ length: n }, () => Array(n + 1).fill(0));
+	const A = Array.from({length: n}, () => Array(n + 1).fill(0));
 
 	// Calculate X^T * X and X^T * Y
 	for (let i = 0; i < n; i++) {
@@ -592,7 +625,7 @@ function solveNormalEquations(X, Y) {
 
 		// Make pivot 1
 		const pivot = A[i][i];
-		if (Math.abs(pivot) < 1e-10) continue; // Skip if pivot is too small
+		if (Math.abs(pivot) < 1e-10) {continue;} // Skip if pivot is too small
 
 		for (let j = i; j <= n; j++) {
 			A[i][j] /= pivot;
@@ -620,7 +653,7 @@ function solveNormalEquations(X, Y) {
 
 // Function to calculate exponential smoothing
 function calculateExponentialSmoothing(dataPoints, alpha = 0.3) {
-	if (dataPoints.length === 0) return [];
+	if (dataPoints.length === 0) {return [];}
 
 	const smoothed = [dataPoints[0]]; // First value remains the same
 
@@ -657,7 +690,7 @@ function generateTrendLine(dataPoints, futurePoints = 3, method = 'polynomial') 
 
 	if (method === 'polynomial') {
 		// Use polynomial regression (degree 2) for curved trends
-		const { coefficients } = calculatePolynomialRegression(dataPoints, 2);
+		const {coefficients} = calculatePolynomialRegression(dataPoints, 2);
 
 		// Generate trend line for existing data points
 		trendData = dataPoints.map((_, index) => {
@@ -681,7 +714,7 @@ function generateTrendLine(dataPoints, futurePoints = 3, method = 'polynomial') 
 		// Use exponential smoothing for trend following recent patterns
 		const smoothed = calculateExponentialSmoothing(dataPoints, 0.55); // menys smoothing
 		// Extend smoothing for future points (use last smoothed value)
-		const lastSmoothed = smoothed[smoothed.length - 1];
+		const lastSmoothed = smoothed.at(-1);
 		trendData = smoothed;
 		extrapolatedData = Array(futurePoints).fill(lastSmoothed);
 	}
@@ -701,7 +734,20 @@ function attachChartResizeObserver(chartEl) {
 		chartResizeObserver.disconnect();
 	}
 	chartResizeObserver = new ResizeObserver(() => {
-		chart?.resize();
+		try {
+			if (chart && typeof chart.resize === 'function') {
+				chart.resize();
+			}
+		} catch (error) {
+			console.warn('Error resizing chart via ResizeObserver:', error);
+			// If resize fails, disconnect the observer to prevent further errors
+			try {
+				chartResizeObserver?.disconnect();
+				chartResizeObserver = null;
+			} catch (disconnectError) {
+				console.warn('Error disconnecting ResizeObserver:', disconnectError);
+			}
+		}
 	});
 	chartResizeObserver.observe(chartEl);
 }
@@ -719,15 +765,51 @@ function initChart() {
 		window.addEventListener('echartsLoaded', function onEChartsLoaded() {
 			window.removeEventListener('echartsLoaded', onEChartsLoaded);
 			initChart();
-		}, { once: true });
+		}, {once: true});
 		return null;
 	}
-	chart = echarts.init(chartEl);
-	window.addEventListener('resize', () => {
-		chart?.resize();
-	});
-	attachChartResizeObserver(chartEl);
-	return chart;
+
+	// Clear any existing content and dispose any existing chart on this element
+	chartEl.innerHTML = '';
+	try {
+		// Try to dispose any existing chart on this element
+		if (typeof echarts.getInstanceByDom === 'function') {
+			const existingChart = echarts.getInstanceByDom(chartEl);
+			if (existingChart && existingChart !== chart) {
+				existingChart.dispose();
+			}
+		}
+	} catch (error) {
+		console.warn('Error disposing existing chart on element:', error);
+	}
+
+	try {
+		chart = echarts.init(chartEl);
+	chartResizeHandler = () => {
+		try {
+			if (chart && typeof chart.resize === 'function') {
+				chart.resize();
+			}
+		} catch (error) {
+			console.warn('Error resizing chart:', error);
+			// If resize fails, remove the handler to prevent further errors
+			try {
+				window.removeEventListener('resize', chartResizeHandler);
+				chartResizeHandler = null;
+			} catch (removeError) {
+				console.warn('Error removing chart resize handler:', removeError);
+			}
+		}
+	};
+		window.addEventListener('resize', chartResizeHandler);
+		attachChartResizeObserver(chartEl);
+		return chart;
+	} catch (error) {
+		console.error('Error initializing chart:', error);
+		// Clear the element on initialization failure
+		chartEl.innerHTML = '';
+		return null;
+	}
 }
 
 function updateChartLegendOverlay(legendItems) {
@@ -748,9 +830,7 @@ function updateChartLegendOverlay(legendItems) {
 		const name = escapeHtml(item?.name || '');
 		const color = escapeHtml(item?.itemStyle?.color || '#94a3b8');
 		const icon = item?.icon === 'line' ? 'line' : 'circle';
-		const markerClass = icon === 'line'
-			? 'chart-legend-overlay-marker chart-legend-overlay-marker--line'
-			: 'chart-legend-overlay-marker';
+		const markerClass = icon === 'line'? 'chart-legend-overlay-marker chart-legend-overlay-marker--line': 'chart-legend-overlay-marker';
 		const isSelected = legendSelected[item?.name] !== false; // default true when undefined
 		const disabledClass = isSelected ? '' : ' is-disabled';
 		return `<span class="chart-legend-overlay-item${disabledClass}" data-series-name="${name}"><span class="${markerClass}" style="background:${color};"></span>${name}</span>`;
@@ -765,9 +845,9 @@ function updateChartLegendOverlay(legendItems) {
 			event.preventDefault();
 			event.stopPropagation();
 			const seriesName = itemEl.getAttribute('data-series-name');
-			if (!seriesName || !chart) return;
+			if (!seriesName || !chart) {return;}
 
-			chart.dispatchAction({ type: 'legendToggleSelect', name: seriesName });
+			chart.dispatchAction({type: 'legendToggleSelect', name: seriesName});
 
 			const selectedMap = chart.getOption()?.legend?.[0]?.selected || {};
 			const isSelected = selectedMap[seriesName] !== false;
@@ -868,14 +948,10 @@ function renderTopTeams(teams) {
 		const eventCount = Number(team.eventCount) || 0;
 		// const countLabel = eventCount === 1 ? '1 event last 30 days' : `${eventCount} events last 30 days`;
 		const clientName = team.clientName ? team.clientName : '';
-		const orgNames = Array.isArray(team.orgs)
-			? team.orgs
+		const orgNames = Array.isArray(team.orgs)? team.orgs
 				.map(name => typeof name === 'string' ? name.trim() : '')
-				.filter(name => name.length > 0)
-			: [];
-		const orgText = orgNames.length > 0
-			? orgNames.map(name => escapeHtml(name)).join(' · ')
-			: (clientName ? escapeHtml(clientName) : escapeHtml('No org events recorded yet'));
+				.filter(name => name.length > 0): [];
+		const orgText = orgNames.length > 0? orgNames.map(name => escapeHtml(name)).join(' · '): (clientName ? escapeHtml(clientName) : escapeHtml('No org events recorded yet'));
 		const orgSubtitle = `
 			<span class="top-teams-orgs" style="display: inline-flex; align-items: center; gap: 6px;">
 				<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" class="size-4">
@@ -887,16 +963,14 @@ function renderTopTeams(teams) {
 		const badgeBackground = index === 0 ? '#dc2626' : SESSION_START_SERIES_COLOR;
 		const logoUrl = team.logoUrl || (team.teamId && team.hasLogo ? `/api/teams/${team.teamId}/logo` : '');
 
-		const avatar = logoUrl
-			? `
+		const avatar = logoUrl? `
         <span class="top-users-avatar top-users-avatar--team" style="padding: 0; background: transparent; border-radius: 0;">
           <img src="${escapeHtml(logoUrl)}" alt="${escapeHtml(teamName)} logo" style="object-fit: contain;" onerror="this.style.display='none'; const fallback=this.nextElementSibling; if (fallback) { fallback.style.display='flex'; }">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false" style="width: 32px; height: 32px; color: ${team.color || badgeBackground}; display:none;">
             <path d="m21 7.5-9-5.25L3 7.5m18 0-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" />
           </svg>
         </span>
-      `
-			: `
+      `: `
         <span class="top-users-avatar top-users-avatar--team">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false" style="width: 32px; height: 32px; color: ${team.color || badgeBackground};">
             <path d="m21 7.5-9-5.25L3 7.5m18 0-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" />
@@ -995,6 +1069,7 @@ async function loadTopTeamsToday() {
 
 async function loadChartData(days = currentDays) {
 	const fetchStartTime = performance.now();
+	let chartInstance;
 	try {
 		currentDays = days;
 		const response = await fetch(`/api/daily-stats?days=${days}&byEventType=true`, {
@@ -1021,9 +1096,9 @@ async function loadChartData(days = currentDays) {
 			revealDashboardShell();
 		}
 
-		const chartInstance = initChart();
+		chartInstance = initChart();
 		if (!chartInstance) {
-			window.addEventListener('echartsLoaded', () => loadChartData(days), { once: true });
+			window.addEventListener('echartsLoaded', () => loadChartData(days), {once: true});
 			return;
 		}
 
@@ -1055,7 +1130,7 @@ async function loadChartData(days = currentDays) {
 
 		const futureLabels = [];
 		for (let i = 1; i <= FUTURE_POINTS; i++) {
-			const futureDate = new Date(_dates[_dates.length - 1]);
+			const futureDate = new Date(_dates.at(-1));
 			futureDate.setDate(futureDate.getDate() + i);
 			const dayIndex = futureDate.getDay();
 			const dayNumber = futureDate.getDate();
@@ -1069,7 +1144,7 @@ async function loadChartData(days = currentDays) {
 		// -------------------------
 		function naturalCubicSplineYs(y) {
 			const n = y.length;
-			if (n < 3) return (x) => y[Math.round(Math.max(0, Math.min(n - 1, x)))];
+			if (n < 3) {return (x) => y[Math.round(Math.max(0, Math.min(n - 1, x)))];}
 
 			const a = y.slice();
 			const b = new Array(n - 1).fill(0);
@@ -1109,7 +1184,7 @@ async function loadChartData(days = currentDays) {
 		function densifyTrendY(yValues, samplesPerSegment = 25) {
 			const f = naturalCubicSplineYs(yValues);
 			const n = yValues.length;
-			if (n === 0) return [];
+			if (n === 0) {return [];}
 
 			const out = [];
 			for (let i = 0; i < n - 1; i++) {
@@ -1153,7 +1228,7 @@ async function loadChartData(days = currentDays) {
 			// ⭐️ Important: if we trimmed trailing zeros for fitting, the trend array can end earlier
 			// than the number of categories we still display (because we still show those zero days).
 			// Extend the trend to the full displayed length so the line reaches the last label.
-			const safeLast = yTrendRaw.length ? yTrendRaw[yTrendRaw.length - 1] : 0;
+			const safeLast = yTrendRaw.length ? yTrendRaw.at(-1) : 0;
 			const missing = Math.max(0, (fullLen || 0) - yTrendRaw.length);
 			const yTrendFull = missing > 0 ? [...yTrendRaw, ...Array(missing).fill(safeLast)] : yTrendRaw;
 
@@ -1169,9 +1244,9 @@ async function loadChartData(days = currentDays) {
 			return dense.map(([x, y]) => [x + CATEGORY_CENTER_SHIFT + TREND_FUTURE_OFFSET, y]);		}
 
 		function compressYAroundMean(points, factor = 0.88) {
-			if (!points?.length) return points;
+			if (!points?.length) {return points;}
 			let sum = 0;
-			for (const [, y] of points) sum += y;
+			for (const [, y] of points) {sum += y;}
 			const mean = sum / points.length;
 			return points.map(([x, y]) => [x, mean + (y - mean) * factor]);
 		}
@@ -1180,9 +1255,9 @@ async function loadChartData(days = currentDays) {
 			const o = Math.max(0, Math.min(1, opacityBase));
 			const fs = Math.max(0, Math.min(1, fadeStart));
 			return new echarts.graphic.LinearGradient(0, 1, 1, 0, [
-				{ offset: 0, color: `rgba(255, 183, 0, ${o})` },
-				{ offset: fs, color: `rgba(255, 105, 0, ${o})` },
-				{ offset: 1, color: 'rgba(255, 105, 0, 0)' }
+				{offset: 0, color: `rgba(255, 183, 0, ${o})`},
+				{offset: fs, color: `rgba(255, 105, 0, ${o})`},
+				{offset: 1, color: 'rgba(255, 105, 0, 0)'}
 			]);
 		}
 
@@ -1221,8 +1296,8 @@ async function loadChartData(days = currentDays) {
 					data: startSessionsData,
 					itemStyle: {
 						color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-							{ offset: 0, color: 'rgba(33, 149, 207, 0.16)' },
-							{ offset: 1, color: startSessionsColor }
+							{offset: 0, color: 'rgba(33, 149, 207, 0.16)'},
+							{offset: 1, color: startSessionsColor}
 						]),
 						borderRadius: [4, 4, 0, 0]
 					},
@@ -1231,8 +1306,8 @@ async function loadChartData(days = currentDays) {
 						position: 'top',
 						formatter: (params) => {
 							const value = Number(params.value);
-							if (!Number.isFinite(value)) return '';
-							if (value === 0) return '{zero| }';
+							if (!Number.isFinite(value)) {return '';}
+							if (value === 0) {return '{zero| }';}
 							return `{val|${value}}`;
 						},
 						rich: {
@@ -1258,11 +1333,11 @@ async function loadChartData(days = currentDays) {
 					},
 					emphasis: {
 						focus: 'series',
-						itemStyle: { opacity: 1 }
+						itemStyle: {opacity: 1}
 					},
 					blur: {
-						itemStyle: { opacity: BAR_BLUR_OPACITY },
-						label: { opacity: LABEL_BLUR_OPACITY }
+						itemStyle: {opacity: BAR_BLUR_OPACITY},
+						label: {opacity: LABEL_BLUR_OPACITY}
 					}
 				},
 				{
@@ -1273,8 +1348,8 @@ async function loadChartData(days = currentDays) {
 					data: toolEventsData,
 					itemStyle: {
 						color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-							{ offset: 0, color: 'rgba(142, 129, 234, 0.16)' },
-							{ offset: 1, color: toolEventsColor }
+							{offset: 0, color: 'rgba(142, 129, 234, 0.16)'},
+							{offset: 1, color: toolEventsColor}
 						]),
 						borderRadius: [4, 4, 0, 0]
 					},
@@ -1283,8 +1358,8 @@ async function loadChartData(days = currentDays) {
 						position: 'top',
 						formatter: (params) => {
 							const value = Number(params.value);
-							if (!Number.isFinite(value)) return '';
-							if (value === 0) return '{zero| }';
+							if (!Number.isFinite(value)) {return '';}
+							if (value === 0) {return '{zero| }';}
 							return `{val|${value}}`;
 						},
 						rich: {
@@ -1310,11 +1385,11 @@ async function loadChartData(days = currentDays) {
 					},
 					emphasis: {
 						focus: 'series',
-						itemStyle: { opacity: 1 }
+						itemStyle: {opacity: 1}
 					},
 					blur: {
-						itemStyle: { opacity: BAR_BLUR_OPACITY },
-						label: { opacity: LABEL_BLUR_OPACITY }
+						itemStyle: {opacity: BAR_BLUR_OPACITY},
+						label: {opacity: LABEL_BLUR_OPACITY}
 					}
 				},
 				{
@@ -1325,8 +1400,8 @@ async function loadChartData(days = currentDays) {
 					data: errorEventsData,
 					itemStyle: {
 						color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-							{ offset: 0, color: 'rgba(239, 68, 68, 0.16)' },
-							{ offset: 1, color: errorEventsColor }
+							{offset: 0, color: 'rgba(239, 68, 68, 0.16)'},
+							{offset: 1, color: errorEventsColor}
 						]),
 						borderRadius: [4, 4, 0, 0]
 					},
@@ -1335,8 +1410,8 @@ async function loadChartData(days = currentDays) {
 						position: 'top',
 						formatter: (params) => {
 							const value = Number(params.value);
-							if (!Number.isFinite(value)) return '';
-							if (value === 0) return '{zero| }';
+							if (!Number.isFinite(value)) {return '';}
+							if (value === 0) {return '{zero| }';}
 							return `{val|${value}}`;
 						},
 						rich: {
@@ -1362,11 +1437,11 @@ async function loadChartData(days = currentDays) {
 					},
 					emphasis: {
 						focus: 'series',
-						itemStyle: { opacity: 1 }
+						itemStyle: {opacity: 1}
 					},
 					blur: {
-						itemStyle: { opacity: BAR_BLUR_OPACITY },
-						label: { opacity: LABEL_BLUR_OPACITY }
+						itemStyle: {opacity: BAR_BLUR_OPACITY},
+						label: {opacity: LABEL_BLUR_OPACITY}
 					}
 				}
 			];
@@ -1389,9 +1464,9 @@ async function loadChartData(days = currentDays) {
 			const BASE_OPACITY = 0.18;
 			const FADE_START = 0.78;
 			const trendLineGradient = new echarts.graphic.LinearGradient(0, 1, 1, 0, [
-				{ offset: 0, color: `rgba(142, 129, 234, ${BASE_OPACITY})` }, // toolEventsColor with opacity
-				{ offset: FADE_START, color: `rgba(142, 129, 234, ${BASE_OPACITY})` },
-				{ offset: 1, color: 'rgba(142, 129, 234, 0)' }
+				{offset: 0, color: `rgba(142, 129, 234, ${BASE_OPACITY})`}, // toolEventsColor with opacity
+				{offset: FADE_START, color: `rgba(142, 129, 234, ${BASE_OPACITY})`},
+				{offset: 1, color: 'rgba(142, 129, 234, 0)'}
 			]);
 
 			series.push({
@@ -1413,10 +1488,10 @@ async function loadChartData(days = currentDays) {
 				},
 				emphasis: {
 					focus: 'series',
-					lineStyle: { width: 3, opacity: 0.9 }
+					lineStyle: {width: 3, opacity: 0.9}
 				},
 				blur: {
-					lineStyle: { opacity: TREND_BLUR_OPACITY }
+					lineStyle: {opacity: TREND_BLUR_OPACITY}
 				}
 			});
 
@@ -1438,9 +1513,9 @@ async function loadChartData(days = currentDays) {
 
 			const startSessionsBaseOpacity = 0.35;
 			const startSessionsTrendLineGradient = new echarts.graphic.LinearGradient(0, 1, 1, 0, [
-				{ offset: 0, color: `rgba(33, 149, 207, ${startSessionsBaseOpacity})` },
-				{ offset: FADE_START, color: `rgba(33, 149, 207, ${startSessionsBaseOpacity})` },
-				{ offset: 1, color: 'rgba(33, 149, 207, 0)' }
+				{offset: 0, color: `rgba(33, 149, 207, ${startSessionsBaseOpacity})`},
+				{offset: FADE_START, color: `rgba(33, 149, 207, ${startSessionsBaseOpacity})`},
+				{offset: 1, color: 'rgba(33, 149, 207, 0)'}
 			]);
 
 			series.push({
@@ -1463,10 +1538,10 @@ async function loadChartData(days = currentDays) {
 				},
 				emphasis: {
 					focus: 'series',
-					lineStyle: { width: 3, opacity: 0.9 }
+					lineStyle: {width: 3, opacity: 0.9}
 				},
 				blur: {
-					lineStyle: { opacity: TREND_BLUR_OPACITY }
+					lineStyle: {opacity: TREND_BLUR_OPACITY}
 				}
 			});
 
@@ -1492,9 +1567,9 @@ async function loadChartData(days = currentDays) {
 
 			const ERRORS_BASE_OPACITY = 0.36;
 			const errorsTrendLineGradient = new echarts.graphic.LinearGradient(0, 1, 1, 0, [
-				{ offset: 0, color: `rgba(239, 68, 68, ${ERRORS_BASE_OPACITY})` }, // errorEventsColor with opacity
-				{ offset: 0.78, color: `rgba(239, 68, 68, ${ERRORS_BASE_OPACITY})` },
-				{ offset: 1, color: 'rgba(239, 68, 68, 0)' }
+				{offset: 0, color: `rgba(239, 68, 68, ${ERRORS_BASE_OPACITY})`}, // errorEventsColor with opacity
+				{offset: 0.78, color: `rgba(239, 68, 68, ${ERRORS_BASE_OPACITY})`},
+				{offset: 1, color: 'rgba(239, 68, 68, 0)'}
 			]);
 
 			series.push({
@@ -1517,17 +1592,17 @@ async function loadChartData(days = currentDays) {
 				},
 				emphasis: {
 					focus: 'series',
-					lineStyle: { width: 3, opacity: 0.9 }
+					lineStyle: {width: 3, opacity: 0.9}
 				},
 				blur: {
-					lineStyle: { opacity: TREND_BLUR_OPACITY }
+					lineStyle: {opacity: TREND_BLUR_OPACITY}
 				}
 			});
 
 			legendData = [
-				{ name: 'New Sessions', icon: 'circle', itemStyle: { color: startSessionsColor } },
-				{ name: 'Tool Calls', icon: 'circle', itemStyle: { color: toolEventsColor } },
-				{ name: 'Errors', icon: 'circle', itemStyle: { color: errorEventsColor } }
+				{name: 'New Sessions', icon: 'circle', itemStyle: {color: startSessionsColor}},
+				{name: 'Tool Calls', icon: 'circle', itemStyle: {color: toolEventsColor}},
+				{name: 'Errors', icon: 'circle', itemStyle: {color: errorEventsColor}}
 			];
 		} else {
 			const totalEventsData = data.map(item => Number(item.count ?? item.total ?? 0));
@@ -1543,8 +1618,8 @@ async function loadChartData(days = currentDays) {
 					data: totalEventsDataWithZeroes,
 					itemStyle: {
 						color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-							{ offset: 0, color: 'rgba(142, 129, 234, 0.16)' },
-							{ offset: 1, color: totalEventsColor }
+							{offset: 0, color: 'rgba(142, 129, 234, 0.16)'},
+							{offset: 1, color: totalEventsColor}
 						]),
 						borderRadius: [4, 4, 0, 0]
 					},
@@ -1553,8 +1628,8 @@ async function loadChartData(days = currentDays) {
 						position: 'top',
 						formatter: (params) => {
 							const value = Number(params.value);
-							if (!Number.isFinite(value)) return '';
-							if (value === 0) return '{zero| }';
+							if (!Number.isFinite(value)) {return '';}
+							if (value === 0) {return '{zero| }';}
 							return `{val|${value}}`;
 						},
 						rich: {
@@ -1579,11 +1654,11 @@ async function loadChartData(days = currentDays) {
 					},
 					emphasis: {
 						focus: 'series',
-						itemStyle: { opacity: 1 }
+						itemStyle: {opacity: 1}
 					},
 					blur: {
-						itemStyle: { opacity: BAR_BLUR_OPACITY },
-						label: { opacity: LABEL_BLUR_OPACITY }
+						itemStyle: {opacity: BAR_BLUR_OPACITY},
+						label: {opacity: LABEL_BLUR_OPACITY}
 					}
 				}
 			];
@@ -1625,15 +1700,15 @@ async function loadChartData(days = currentDays) {
 				},
 				emphasis: {
 					focus: 'series',
-					lineStyle: { width: 1, opacity: 0.9 }
+					lineStyle: {width: 1, opacity: 0.9}
 				},
 				blur: {
-					lineStyle: { opacity: TREND_BLUR_OPACITY }
+					lineStyle: {opacity: TREND_BLUR_OPACITY}
 				}
 			});
 
 			legendData = [
-				{ name: 'Events', icon: 'circle', itemStyle: { color: totalEventsColor } }
+				{name: 'Events', icon: 'circle', itemStyle: {color: totalEventsColor}}
 			];
 		}
 
@@ -1667,8 +1742,8 @@ async function loadChartData(days = currentDays) {
 				width: 'auto',
 				height: 'auto'
 			},
-			tooltip: { show: false },
-			legend: { show: false, data: legendData },
+			tooltip: {show: false},
+			legend: {show: false, data: legendData},
 
 			xAxis: [
 				{
@@ -1681,9 +1756,9 @@ async function loadChartData(days = currentDays) {
 						interval: labelInterval,
 						margin: 18
 					},
-					axisLine: { show: false },
-					axisTick: { show: false },
-					splitLine: { show: false }
+					axisLine: {show: false},
+					axisTick: {show: false},
+					splitLine: {show: false}
 				},
 				{
 					type: 'value',
@@ -1695,9 +1770,9 @@ async function loadChartData(days = currentDays) {
 			yAxis: {
 				type: 'value',
 				min: 0,
-				axisLabel: { show: false },
-				axisLine: { show: false },
-				axisTick: { show: false },
+				axisLabel: {show: false},
+				axisLine: {show: false},
+				axisTick: {show: false},
 				axisPointer: {
 					label: {
 						show: true,
@@ -1710,7 +1785,7 @@ async function loadChartData(days = currentDays) {
 				},
 				splitLine: {
 					show: true,
-					lineStyle: { color: faintGridColor, width: 1 }
+					lineStyle: {color: faintGridColor, width: 1}
 				}
 			},
 
@@ -1718,7 +1793,13 @@ async function loadChartData(days = currentDays) {
 		};
 
 		chartInstance.setOption(option, true);
-		chartInstance.resize();
+		try {
+			if (typeof chartInstance.resize === 'function') {
+				chartInstance.resize();
+			}
+		} catch (error) {
+			console.warn('Error resizing chart after loading data:', error);
+		}
 
 		const onChartFinished = () => {
 			chartInstance.off('finished', onChartFinished);
@@ -1730,9 +1811,36 @@ async function loadChartData(days = currentDays) {
 		};
 
 		chartInstance.on('finished', onChartFinished);
-		chartInstance.resize();
+		try {
+			if (typeof chartInstance.resize === 'function') {
+				chartInstance.resize();
+			}
+		} catch (error) {
+			console.warn('Error resizing chart after setting finished handler:', error);
+		}
 	} catch (error) {
 		console.error('Error loading chart data:', error);
+
+		// Check if it's a network error (Failed to fetch)
+		const isNetworkError = error.message.includes('Failed to fetch') || error.name === 'TypeError';
+
+		if (isNetworkError) {
+			console.warn('Network error: Could not connect to API server. Chart will show empty state.');
+			// For network errors, show empty chart instead of crashing
+			if (chartInstance) {
+				chartInstance.setOption({
+					series: [{
+						data: [],
+						type: 'line',
+						smooth: true,
+						symbol: 'none',
+						lineStyle: {color: '#94a3b8'},
+						areaStyle: {color: 'rgba(148, 163, 184, 0.1)'}
+					}]
+				}, true);
+			}
+		}
+
 		if (isInitialChartLoad) {
 			isInitialChartLoad = false;
 			revealDashboardShell();
@@ -1772,8 +1880,24 @@ function pauseDashboardPage() {
 	}
 	// Dispose chart when leaving page to avoid stale references
 	if (chart) {
-		if (typeof chart.dispose === 'function') {
-			chart.dispose();
+		try {
+			if (typeof chart.dispose === 'function') {
+				chart.dispose();
+			}
+		} catch (error) {
+			console.warn('Error disposing chart:', error);
+		}
+		if (chartResizeHandler) {
+			window.removeEventListener('resize', chartResizeHandler);
+			chartResizeHandler = null;
+		}
+		if (chartResizeObserver) {
+			try {
+				chartResizeObserver.disconnect();
+			} catch (error) {
+				console.warn('Error disconnecting chart resize observer:', error);
+			}
+			chartResizeObserver = null;
 		}
 		chart = null;
 	}
@@ -1794,7 +1918,7 @@ async function resumeDashboardPage() {
 					if (typeof echarts !== 'undefined') {
 						resolve();
 					} else {
-						window.addEventListener('echartsLoaded', resolve, { once: true });
+						window.addEventListener('echartsLoaded', resolve, {once: true});
 					}
 				});
 			}
@@ -1820,6 +1944,7 @@ async function resumeDashboardPage() {
 window.pauseDashboardPage = pauseDashboardPage;
 window.resumeDashboardPage = resumeDashboardPage;
 window.applyTheme = applyTheme;
+window.refreshDashboard = refreshDashboard;
 
 // Listen for soft navigation events
 window.addEventListener('softNav:pagePausing', (event) => {
@@ -1837,7 +1962,7 @@ window.addEventListener('softNav:pageMounted', async (event) => {
 			await resumeDashboardPage();
 		} else {
 			// New page load - full initialization
-			initializeDashboardPage({ resetState: true });
+			initializeDashboardPage({resetState: true});
 		}
 	}
 });

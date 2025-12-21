@@ -45,7 +45,7 @@ function formatEvents(events) {
 	return events.map(event => formatAsJSONL(event)).join('\n');
 }
 
-module.exports = {
+export {
 	formatAsJSONL,
 	formatEvents
 };

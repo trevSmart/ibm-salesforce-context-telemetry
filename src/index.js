@@ -1,13 +1,22 @@
 // Load environment variables from .env file
-require('dotenv').config();
+import 'dotenv/config';
 
-const express = require('express');
-const session = require('express-session');
-const cors = require('cors');
-const cookieParser = require('cookie-parser');
-const Ajv = require('ajv');
-const addFormats = require('ajv-formats');
-const rateLimit = require('express-rate-limit');
+import express from 'express';
+import session from 'express-session';
+import cors from 'cors';
+import cookieParser from 'cookie-parser';
+import Ajv from 'ajv';
+import addFormats from 'ajv-formats';
+import rateLimit from 'express-rate-limit';
+import sharp from 'sharp';
+import compression from 'compression';
+import fs from 'node:fs';
+import {fileURLToPath} from 'node:url';
+import {dirname} from 'node:path';
+import path from 'node:path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const isDevelopment = process.env.NODE_ENV !== 'production';
 
@@ -137,15 +146,14 @@ const apiWriteLimiter = createLimiter({
 	}
 });
 
-// Import Sharp for image processing
-const sharp = require('sharp');
+// Sharp imported at top
 
 // Process team logo image - only resize if larger than target, always convert to WebP
 async function processTeamLogo(buffer, mimeType) {
 	try {
 		// Get image metadata to check dimensions
 		const metadata = await sharp(buffer).metadata();
-		const { width, height } = metadata;
+		const {width, height} = metadata;
 
 		// Target dimensions
 		const TARGET_SIZE = 48;
@@ -169,7 +177,7 @@ async function processTeamLogo(buffer, mimeType) {
 		if (needsResize) {
 			sharpInstance = sharpInstance.resize(TARGET_SIZE, TARGET_SIZE, {
 				fit: 'contain',
-				background: { r: 255, g: 255, b: 255, alpha: 0 }, // Transparent background
+				background: {r: 255, g: 255, b: 255, alpha: 0}, // Transparent background
 				withoutEnlargement: true // Never enlarge smaller images
 			});
 		}
@@ -194,25 +202,23 @@ async function processTeamLogo(buffer, mimeType) {
 		};
 	} catch (error) {
 		console.error('Error processing team logo:', error);
-		throw new Error('Failed to process image: ' + error.message);
+		throw new Error(`Failed to process image: ${  error.message}`);
 	}
 }
 
-const fs = require('fs');
-const path = require('path');
-const multer = require('multer');
-const db = require('./storage/database');
-const logFormatter = require('./storage/log-formatter');
-const auth = require('./auth/auth');
-const csrf = require('./auth/csrf');
-const { Cache } = require('./utils/performance');
+import multer from 'multer';
+import * as db from './storage/database.js';
+import * as logFormatter from './storage/log-formatter.js';
+import * as auth from './auth/auth.js';
+import * as csrf from './auth/csrf.js';
+import {Cache} from './utils/performance.js';
 const app = express();
 const port = process.env.PORT || 3100;
 
 // Performance constants
 const MAX_API_LIMIT = 1000; // Maximum events per API request
 const MAX_EXPORT_LIMIT = 50000; // Maximum events per export
-const HEALTH_CHECK_CACHE_TTL = parseInt(process.env.HEALTH_CHECK_CACHE_TTL_MS) || 5000; // 5 seconds default
+const HEALTH_CHECK_CACHE_TTL = Number.parseInt(process.env.HEALTH_CHECK_CACHE_TTL_MS, 10) || 5000; // 5 seconds default
 const STATS_CACHE_KEY_EMPTY = 'stats:::'; // Cache key for stats with no filters
 
 // Initialize caches for frequently accessed data
@@ -234,17 +240,17 @@ app.set('trust proxy', 1);
 
 // Load and compile JSON schema for validation
 const schemaPath = path.join(__dirname, 'api', 'telemetry-schema.json');
-const schema = JSON.parse(fs.readFileSync(schemaPath, 'utf8'));
+const schema = JSON.parse(fs.readFileSync(schemaPath));
 // Only enable allErrors in development/debug mode to prevent resource exhaustion in production
-const ajv = new Ajv({ allErrors: !!process.env.REST_DEBUG, strict: false }); // strict: false allows additional properties in 'data'
+const ajv = new Ajv({allErrors: Boolean(process.env.REST_DEBUG), strict: false}); // strict: false allows additional properties in 'data'
 addFormats(ajv); // Add support for date-time and other formats
 const validate = ajv.compile(schema);
 
 // Middleware
 app.use(cors()); // Allow requests from any origin
 app.use(cookieParser()); // Parse cookies
-app.use(express.json({ limit: '10mb' })); // Parse JSON request bodies with size limit
-app.use(express.urlencoded({ extended: true, limit: '10mb' })); // Parse URL-encoded bodies (for login form)
+app.use(express.json({limit: '10mb'})); // Parse JSON request bodies with size limit
+app.use(express.urlencoded({extended: true, limit: '10mb'})); // Parse URL-encoded bodies (for login form)
 
 // Configure multer for file uploads (team logos)
 const upload = multer({
@@ -263,17 +269,16 @@ const upload = multer({
 	}
 });
 
-// Add compression middleware for responses
-const compression = require('compression');
+// Add compression middleware for responses (imported at top)
 app.use(compression());
 
 // Live reload middleware (development only)
 if (isDevelopment) {
 	try {
-		const livereload = require('livereload');
-		const connectLivereload = require('connect-livereload');
+		const {default: livereload} = await import('livereload');
+		const {default: connectLivereload} = await import('connect-livereload');
 
-		const livereloadPort = parseInt(process.env.LIVERELOAD_PORT || '35729', 10);
+		const livereloadPort = Number.parseInt(process.env.LIVERELOAD_PORT || '35729', 10);
 
 		// Create livereload server
 		const liveReloadServer = livereload.createServer({
@@ -301,7 +306,7 @@ if (isDevelopment) {
 		liveReloadServer.server?.once('listening', () => {
 			console.log(`🔄 Live reload enabled on port ${livereloadPort}`);
 		});
-	} catch (_error) {
+	} catch {
 		// Live reload dependencies not installed, continue without it
 		console.log('⚠️  Live reload not available (install dev dependencies: npm install)');
 	}
@@ -353,7 +358,7 @@ app.use(async (req, res, next) => {
 						req.session.role = user.role || 'basic';
 
 						// Rotate token (create new, revoke old)
-						const rememberTokenDays = parseInt(process.env.REMEMBER_TOKEN_DAYS) || 30;
+						const rememberTokenDays = Number.parseInt(process.env.REMEMBER_TOKEN_DAYS, 10) || 30;
 						const expiresAt = new Date();
 						expiresAt.setDate(expiresAt.getDate() + rememberTokenDays);
 						const expiresAtISO = expiresAt.toISOString();
@@ -361,7 +366,7 @@ app.use(async (req, res, next) => {
 						const userAgent = req.headers['user-agent'] || null;
 						const ipAddress = req.ip || req.connection.remoteAddress || null;
 
-						const { token: newToken } = await db.rotateRememberToken(
+						const {token: newToken} = await db.rotateRememberToken(
 							tokenData.tokenId,
 							tokenData.userId,
 							expiresAtISO,
@@ -401,8 +406,8 @@ app.use(csrf.setCsrfToken);
 app.use(csrf.csrfProtection);
 
 // Serve static files from public directory with caching
-const LONG_CACHE_ASSETS = /\.(woff2?|ttf|svg|jpg|jpeg|png|gif|ico)$/;
-const SHORT_CACHE_ASSETS = /\.(css|js)$/;
+const LONG_CACHE_ASSETS = /\.(?<temp1>woff2?|ttf|svg|jpg|jpeg|png|gif|ico)$/;
+const SHORT_CACHE_ASSETS = /\.(?<temp1>css|js)$/;
 
 app.use(express.static(path.join(__dirname, '..', 'public'), {
 	// Prevent automatic index.html serving so auth guard can handle "/"
@@ -434,18 +439,18 @@ app.use(express.static(path.join(__dirname, '..', 'public'), {
 app.use((req, res, next) => {
 	if (req.path.endsWith('.css') && !res.headersSent) {
 		// Ensure publicRoot ends with a path separator for proper containment checking
-		let rawPublicRoot = path.resolve(__dirname, '..', 'public');
+		const rawPublicRoot = path.resolve(__dirname, '..', 'public');
 		const publicRoot = rawPublicRoot.endsWith(path.sep) ? rawPublicRoot : rawPublicRoot + path.sep;
 		let cssPath, resolvedPath = '';
 		try {
 			// Construct the absolute path to the requested CSS file
-			cssPath = path.resolve(publicRoot, '.' + req.path);
+			cssPath = path.resolve(publicRoot, `.${  req.path}`);
 			// Only proceed if the target is strictly within the public directory
 			// (use normalized version for test, prior to reading)
 			if (cssPath.startsWith(publicRoot) && fs.existsSync(cssPath)) {
 				resolvedPath = fs.realpathSync(cssPath);
 			}
-		} catch (_err) {
+		} catch {
 			// If any error occurs, treat as not found
 			resolvedPath = '';
 		}
@@ -562,7 +567,7 @@ app.get('/health', async (req, res) => {
 
 			// Check database status (lightweight check)
 			let dbStatus = 'unknown';
-			let dbType = process.env.DB_TYPE || 'sqlite';
+			const dbType = process.env.DB_TYPE || 'sqlite';
 			let totalEvents = 0;
 
 			try {
@@ -591,7 +596,7 @@ app.get('/health', async (req, res) => {
 				status: isHealthy ? 'healthy' : 'unhealthy',
 				timestamp: new Date().toISOString(),
 				uptime: uptime,
-				version: require('../package.json').version,
+				version: JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version,
 				nodeVersion: process.version,
 				environment: process.env.NODE_ENV || 'development',
 				memory: memory,
@@ -660,7 +665,7 @@ app.post('/login', auth.requireGuest, loginLimiter, async (req, res) => {
 		const authResult = await auth.authenticate(username, password);
 
 		if (authResult && authResult.success) {
-			const userInfo = authResult.user || { username, role: 'basic' };
+			const userInfo = authResult.user || {username, role: 'basic'};
 			req.session.authenticated = true;
 			req.session.username = userInfo.username;
 			req.session.role = userInfo.role;
@@ -679,7 +684,7 @@ app.post('/login', auth.requireGuest, loginLimiter, async (req, res) => {
 						}
 
 						// Calculate expiration (default 30 days, configurable)
-						const rememberTokenDays = parseInt(process.env.REMEMBER_TOKEN_DAYS) || 30;
+						const rememberTokenDays = Number.parseInt(process.env.REMEMBER_TOKEN_DAYS, 10) || 30;
 						const expiresAt = new Date();
 						expiresAt.setDate(expiresAt.getDate() + rememberTokenDays);
 						const expiresAtISO = expiresAt.toISOString();
@@ -689,7 +694,7 @@ app.post('/login', auth.requireGuest, loginLimiter, async (req, res) => {
 						const ipAddress = req.ip || req.connection.remoteAddress || null;
 
 						// Create remember token
-						const { token } = await db.createRememberToken(user.id, expiresAtISO, userAgent, ipAddress);
+						const {token} = await db.createRememberToken(user.id, expiresAtISO, userAgent, ipAddress);
 
 						// Set remember token cookie
 						const cookieName = process.env.REMEMBER_COOKIE_NAME || 'remember_token';
@@ -725,7 +730,7 @@ app.post('/login', auth.requireGuest, loginLimiter, async (req, res) => {
 				status: 'ok',
 				message: 'Login successful'
 			});
-		} else {
+		}
 			// If it's a form submission, redirect back with error
 			if (req.headers['content-type']?.includes('application/x-www-form-urlencoded')) {
 				return res.redirect('/login?error=invalid_credentials');
@@ -735,7 +740,7 @@ app.post('/login', auth.requireGuest, loginLimiter, async (req, res) => {
 				status: 'error',
 				message: 'Invalid username or password'
 			});
-		}
+
 	} catch (error) {
 		console.error('Login error:', error);
 
@@ -789,9 +794,7 @@ app.get('/api/auth/status', (req, res) => {
 	res.json({
 		authenticated: isAuthenticated,
 		username: req.session && req.session.username || null,
-		role: isAuthenticated && req.session?.role
-			? auth.normalizeRole(req.session.role)
-			: null,
+		role: isAuthenticated && req.session?.role? auth.normalizeRole(req.session.role): null,
 		csrfToken: csrf.getToken(req)
 	});
 });
@@ -815,7 +818,7 @@ app.get('/api/users', auth.requireAuth, auth.requireRole('administrator'), apiRe
 
 app.post('/api/users', auth.requireAuth, auth.requireRole('administrator'), userManagementLimiter, async (req, res) => {
 	try {
-		const { username, password, role } = req.body;
+		const {username, password, role} = req.body;
 
 		if (!username || !password) {
 			return res.status(400).json({
@@ -862,7 +865,7 @@ app.post('/api/users', auth.requireAuth, auth.requireRole('administrator'), user
 
 app.delete('/api/users/:username', auth.requireAuth, auth.requireRole('administrator'), userManagementLimiter, async (req, res) => {
 	try {
-		const { username } = req.params;
+		const {username} = req.params;
 
 		// Prevent deleting the current user
 		if (req.session && req.session.username === username) {
@@ -895,8 +898,8 @@ app.delete('/api/users/:username', auth.requireAuth, auth.requireRole('administr
 
 app.put('/api/users/:username/password', auth.requireAuth, auth.requireRole('administrator'), userManagementLimiter, async (req, res) => {
 	try {
-		const { username } = req.params;
-		const { password } = req.body;
+		const {username} = req.params;
+		const {password} = req.body;
 
 		if (!password) {
 			return res.status(400).json({
@@ -932,8 +935,8 @@ app.put('/api/users/:username/password', auth.requireAuth, auth.requireRole('adm
 
 app.put('/api/users/:username/role', auth.requireAuth, auth.requireRole('administrator'), userManagementLimiter, async (req, res) => {
 	try {
-		const { username } = req.params;
-		const { role } = req.body;
+		const {username} = req.params;
+		const {role} = req.body;
 
 		if (!role) {
 			return res.status(400).json({
@@ -1003,7 +1006,7 @@ app.get('/api/settings/org-team-mappings', auth.requireAuth, async (req, res) =>
 
 app.post('/api/settings/org-team-mappings', auth.requireAuth, auth.requireRole('administrator'), settingsLimiter, async (req, res) => {
 	try {
-		const { mappings } = req.body;
+		const {mappings} = req.body;
 
 		if (!Array.isArray(mappings)) {
 			return res.status(400).json({
@@ -1054,7 +1057,7 @@ app.get('/api/events', auth.requireAuth, auth.requireRole('advanced'), apiReadLi
 		} = req.query;
 
 		// Enforce maximum limit to prevent performance issues
-		const effectiveLimit = Math.min(parseInt(limit), MAX_API_LIMIT);
+		const effectiveLimit = Math.min(Number.parseInt(limit, 10), MAX_API_LIMIT);
 
 		// Handle multiple eventType values (Express converts them to an array)
 		const eventTypes = Array.isArray(eventType) ? eventType : (eventType ? [eventType] : []);
@@ -1066,14 +1069,14 @@ app.get('/api/events', auth.requireAuth, auth.requireRole('advanced'), apiReadLi
 			return res.json({
 				events: [],
 				total: 0,
-				limit: parseInt(limit),
-				offset: parseInt(offset)
+				limit: Number.parseInt(limit, 10),
+				offset: Number.parseInt(offset, 10)
 			});
 		}
 
 		const result = await db.getEvents({
 			limit: effectiveLimit,
-			offset: parseInt(offset, 10),
+			offset: Number.parseInt(offset, 10),
 			eventTypes: eventTypes.length > 0 ? eventTypes : undefined,
 			serverId,
 			sessionId,
@@ -1106,8 +1109,8 @@ app.get('/api/events/:id', auth.requireAuth, auth.requireRole('advanced'), apiRe
 		if (req.params.id === 'deleted') {
 			return next();
 		}
-		const eventId = parseInt(req.params.id, 10);
-		if (isNaN(eventId)) {
+		const eventId = Number.parseInt(req.params.id, 10);
+		if (Number.isNaN(eventId)) {
 			return res.status(400).json({
 				status: 'error',
 				message: 'Invalid event ID'
@@ -1137,7 +1140,7 @@ app.get('/api/events/:id', auth.requireAuth, auth.requireRole('advanced'), apiRe
 
 app.get('/api/stats', auth.requireAuth, async (req, res) => {
 	try {
-		const { startDate, endDate, eventType } = req.query;
+		const {startDate, endDate, eventType} = req.query;
 
 		// Use cache for basic stats queries without filters
 		const cacheKey = `stats:${startDate || ''}:${endDate || ''}:${eventType || ''}`;
@@ -1146,7 +1149,7 @@ app.get('/api/stats', auth.requireAuth, async (req, res) => {
 			return res.json(cached);
 		}
 
-		const stats = await db.getStats({ startDate, endDate, eventType });
+		const stats = await db.getStats({startDate, endDate, eventType});
 
 		// Cache the result
 		statsCache.set(cacheKey, stats);
@@ -1163,7 +1166,7 @@ app.get('/api/stats', auth.requireAuth, async (req, res) => {
 
 app.get('/api/event-types', auth.requireAuth, auth.requireRole('advanced'), apiReadLimiter, async (req, res) => {
 	try {
-		const { sessionId, userId } = req.query;
+		const {sessionId, userId} = req.query;
 		// Handle multiple userId values (Express converts them to an array)
 		const userIds = Array.isArray(userId) ? userId : (userId ? [userId] : []);
 
@@ -1188,7 +1191,7 @@ app.get('/api/event-types', auth.requireAuth, auth.requireRole('advanced'), apiR
 
 app.get('/api/sessions', auth.requireAuth, auth.requireRole('advanced'), apiReadLimiter, async (req, res) => {
 	try {
-		const { userId } = req.query;
+		const {userId} = req.query;
 		// Handle multiple userId values (Express converts them to an array)
 		const userIds = Array.isArray(userId) ? userId : (userId ? [userId] : []);
 
@@ -1223,13 +1226,11 @@ app.get('/api/sessions', auth.requireAuth, auth.requireRole('advanced'), apiRead
 
 app.get('/api/daily-stats', auth.requireAuth, async (req, res) => {
 	try {
-		const days = parseInt(req.query.days, 10) || 30;
+		const days = Number.parseInt(req.query.days, 10) || 30;
 		const byEventTypeRaw = String(req.query.byEventType || '').toLowerCase();
 		const useEventTypeBreakdown = ['true', '1', 'yes', 'on'].includes(byEventTypeRaw);
 
-		const stats = useEventTypeBreakdown
-			? await db.getDailyStatsByEventType(days)
-			: await db.getDailyStats(days);
+		const stats = useEventTypeBreakdown? await db.getDailyStatsByEventType(days): await db.getDailyStats(days);
 
 		res.json(stats);
 	} catch (error) {
@@ -1243,10 +1244,10 @@ app.get('/api/daily-stats', auth.requireAuth, async (req, res) => {
 
 app.get('/api/tool-usage-stats', auth.requireAuth, async (req, res) => {
 	try {
-		const daysRaw = parseInt(req.query.days, 10);
+		const daysRaw = Number.parseInt(req.query.days, 10);
 		const days = Math.min(Math.max(1, Number.isFinite(daysRaw) ? daysRaw : 30), 365);
 		const tools = await db.getToolUsageStats(days);
-		res.json({ tools, days });
+		res.json({tools, days});
 	} catch (error) {
 		console.error('Error fetching tool usage stats:', error);
 		res.status(500).json({
@@ -1258,12 +1259,12 @@ app.get('/api/tool-usage-stats', auth.requireAuth, async (req, res) => {
 
 app.get('/api/top-users-today', auth.requireAuth, async (req, res) => {
 	try {
-		const limitRaw = parseInt(req.query.limit, 10);
-		const daysRaw = parseInt(req.query.days, 10);
+		const limitRaw = Number.parseInt(req.query.limit, 10);
+		const daysRaw = Number.parseInt(req.query.days, 10);
 		const limit = Math.min(Math.max(1, Number.isFinite(limitRaw) ? limitRaw : 3), 500);
 		const days = Math.min(Math.max(1, Number.isFinite(daysRaw) ? daysRaw : 3), 365);
 		const users = await db.getTopUsersLastDays(limit, days);
-		res.json({ users, days });
+		res.json({users, days});
 	} catch (error) {
 		console.error('Error fetching top users for the selected window:', error);
 		res.status(500).json({
@@ -1275,8 +1276,8 @@ app.get('/api/top-users-today', auth.requireAuth, async (req, res) => {
 
 app.get('/api/top-teams-today', auth.requireAuth, async (req, res) => {
 	try {
-		const limitRaw = parseInt(req.query.limit, 10);
-		const daysRaw = parseInt(req.query.days, 10);
+		const limitRaw = Number.parseInt(req.query.limit, 10);
+		const daysRaw = Number.parseInt(req.query.days, 10);
 		const limit = Math.min(Math.max(1, Number.isFinite(limitRaw) ? limitRaw : 5), 500);
 		const days = Math.min(Math.max(1, Number.isFinite(daysRaw) ? daysRaw : 3), 365);
 
@@ -1291,7 +1292,7 @@ app.get('/api/top-teams-today', auth.requireAuth, async (req, res) => {
 		}
 
 		const teams = await db.getTopTeamsLastDays(orgTeamMappings, limit, days);
-		res.json({ teams, days });
+		res.json({teams, days});
 	} catch (error) {
 		console.error('Error fetching top teams for the selected window:', error);
 		res.status(500).json({
@@ -1316,7 +1317,7 @@ app.get('/api/team-stats', auth.requireAuth, auth.requireRole('advanced'), apiRe
 		}
 
 		const teams = await db.getTeamStats(mappings);
-		res.json({ teams });
+		res.json({teams});
 	} catch (error) {
 		console.error('Error fetching team stats:', error);
 		res.status(500).json({
@@ -1345,8 +1346,8 @@ app.get('/api/teams', auth.requireAuth, auth.requireRole('advanced'), apiReadLim
 
 app.get('/api/teams/:id', auth.requireAuth, auth.requireRole('advanced'), apiReadLimiter, async (req, res) => {
 	try {
-		const teamId = parseInt(req.params.id);
-		if (isNaN(teamId)) {
+		const teamId = Number.parseInt(req.params.id, 10);
+		if (Number.isNaN(teamId)) {
 			return res.status(400).json({
 				status: 'error',
 				message: 'Invalid team ID'
@@ -1412,7 +1413,7 @@ app.post('/api/teams', auth.requireAuth, auth.requireRole('administrator'), team
 				console.error('Logo processing error:', processError);
 				return res.status(400).json({
 					status: 'error',
-					message: 'Failed to process logo image: ' + processError.message
+					message: `Failed to process logo image: ${  processError.message}`
 				});
 			}
 		}
@@ -1421,7 +1422,7 @@ app.post('/api/teams', auth.requireAuth, auth.requireRole('administrator'), team
 	});
 }, async (req, res) => {
 	try {
-		const { name, color, logo_url } = req.body;
+		const {name, color, logo_url} = req.body;
 
 		if (!name || typeof name !== 'string' || name.trim() === '') {
 			return res.status(400).json({
@@ -1495,7 +1496,7 @@ app.put('/api/teams/:id', auth.requireAuth, auth.requireRole('administrator'), t
 				console.error('Logo processing error:', processError);
 				return res.status(400).json({
 					status: 'error',
-					message: 'Failed to process logo image: ' + processError.message
+					message: `Failed to process logo image: ${  processError.message}`
 				});
 			}
 		}
@@ -1504,19 +1505,19 @@ app.put('/api/teams/:id', auth.requireAuth, auth.requireRole('administrator'), t
 	});
 }, async (req, res) => {
 	try {
-		const teamId = parseInt(req.params.id);
-		if (isNaN(teamId)) {
+		const teamId = Number.parseInt(req.params.id, 10);
+		if (Number.isNaN(teamId)) {
 			return res.status(400).json({
 				status: 'error',
 				message: 'Invalid team ID'
 			});
 		}
 
-		const { name, color, logo_url, remove_logo } = req.body;
+		const {name, color, logo_url, remove_logo} = req.body;
 		const updates = {};
-		if (name !== undefined) updates.name = name;
-		if (color !== undefined) updates.color = color;
-		if (logo_url !== undefined) updates.logo_url = logo_url;
+		if (name !== undefined) {updates.name = name;}
+		if (color !== undefined) {updates.color = color;}
+		if (logo_url !== undefined) {updates.logo_url = logo_url;}
 
 		// Handle logo file upload
 		if (req.file) {
@@ -1565,8 +1566,8 @@ app.put('/api/teams/:id', auth.requireAuth, auth.requireRole('administrator'), t
 
 app.get('/api/teams/:id/logo', auth.requireAuth, apiReadLimiter, async (req, res) => {
 	try {
-		const teamId = parseInt(req.params.id);
-		if (isNaN(teamId)) {
+		const teamId = Number.parseInt(req.params.id, 10);
+		if (Number.isNaN(teamId)) {
 			return res.status(400).json({
 				status: 'error',
 				message: 'Invalid team ID'
@@ -1595,8 +1596,8 @@ app.get('/api/teams/:id/logo', auth.requireAuth, apiReadLimiter, async (req, res
 
 app.delete('/api/teams/:id', auth.requireAuth, auth.requireRole('administrator'), teamOrgLimiter, async (req, res) => {
 	try {
-		const teamId = parseInt(req.params.id);
-		if (isNaN(teamId)) {
+		const teamId = Number.parseInt(req.params.id, 10);
+		if (Number.isNaN(teamId)) {
 			return res.status(400).json({
 				status: 'error',
 				message: 'Invalid team ID'
@@ -1643,7 +1644,7 @@ app.get('/api/orgs', auth.requireAuth, auth.requireRole('advanced'), apiReadLimi
 
 app.post('/api/orgs', auth.requireAuth, auth.requireRole('administrator'), createOrgsLimiter, async (req, res) => {
 	try {
-		const { id, alias, color, team_id, company_name } = req.body;
+		const {id, alias, color, team_id, company_name} = req.body;
 
 		if (!id || typeof id !== 'string' || id.trim() === '') {
 			return res.status(400).json({
@@ -1675,7 +1676,7 @@ app.post('/api/orgs', auth.requireAuth, auth.requireRole('administrator'), creat
 app.put('/api/orgs/:id', auth.requireAuth, auth.requireRole('administrator'), teamOrgLimiter, async (req, res) => {
 	try {
 		const orgId = req.params.id;
-		const { alias, color, team_id, company_name } = req.body;
+		const {alias, color, team_id, company_name} = req.body;
 
 		const org = await db.upsertOrg(orgId, {
 			alias: alias !== undefined ? alias : undefined,
@@ -1700,16 +1701,16 @@ app.put('/api/orgs/:id', auth.requireAuth, auth.requireRole('administrator'), te
 app.post('/api/orgs/:id/move', auth.requireAuth, auth.requireRole('administrator'), teamOrgLimiter, async (req, res) => {
 	try {
 		const orgId = req.params.id;
-		const { team_id } = req.body;
+		const {team_id} = req.body;
 
-		if (team_id !== null && team_id !== undefined && (isNaN(team_id) || parseInt(team_id) < 1)) {
+		if (team_id !== null && team_id !== undefined && (Number.isNaN(team_id) || Number.parseInt(team_id, 10) < 1)) {
 			return res.status(400).json({
 				status: 'error',
 				message: 'Invalid team_id'
 			});
 		}
 
-		const moved = await db.moveOrgToTeam(orgId, team_id ? parseInt(team_id) : null);
+		const moved = await db.moveOrgToTeam(orgId, team_id ? Number.parseInt(team_id, 10) : null);
 		if (!moved) {
 			return res.status(404).json({
 				status: 'error',
@@ -1733,24 +1734,24 @@ app.post('/api/orgs/:id/move', auth.requireAuth, auth.requireRole('administrator
 // User-team assignment endpoint
 app.post('/api/users/:id/assign-team', auth.requireAuth, auth.requireRole('administrator'), teamOrgLimiter, async (req, res) => {
 	try {
-		const userId = parseInt(req.params.id);
-		const { team_id } = req.body;
+		const userId = Number.parseInt(req.params.id, 10);
+		const {team_id} = req.body;
 
-		if (isNaN(userId)) {
+		if (Number.isNaN(userId)) {
 			return res.status(400).json({
 				status: 'error',
 				message: 'Invalid user ID'
 			});
 		}
 
-		if (team_id !== null && team_id !== undefined && (isNaN(team_id) || parseInt(team_id) < 1)) {
+		if (team_id !== null && team_id !== undefined && (Number.isNaN(team_id) || Number.parseInt(team_id, 10) < 1)) {
 			return res.status(400).json({
 				status: 'error',
 				message: 'Invalid team_id'
 			});
 		}
 
-		const assigned = await db.assignUserToTeam(userId, team_id ? parseInt(team_id) : null);
+		const assigned = await db.assignUserToTeam(userId, team_id ? Number.parseInt(team_id, 10) : null);
 		if (!assigned) {
 			return res.status(404).json({
 				status: 'error',
@@ -1792,10 +1793,10 @@ app.get('/api/event-users', auth.requireAuth, auth.requireRole('advanced'), apiR
 // Add event user to team
 app.post('/api/teams/:teamId/event-users', auth.requireAuth, auth.requireRole('administrator'), teamOrgLimiter, async (req, res) => {
 	try {
-		const teamId = parseInt(req.params.teamId);
-		const { user_name } = req.body;
+		const teamId = Number.parseInt(req.params.teamId, 10);
+		const {user_name} = req.body;
 
-		if (isNaN(teamId)) {
+		if (Number.isNaN(teamId)) {
 			return res.status(400).json({
 				status: 'error',
 				message: 'Invalid team ID'
@@ -1823,10 +1824,10 @@ app.post('/api/teams/:teamId/event-users', auth.requireAuth, auth.requireRole('a
 // Remove event user from team
 app.delete('/api/teams/:teamId/event-users/:userName', auth.requireAuth, auth.requireRole('administrator'), deleteEventUserFromTeamLimiter, async (req, res) => {
 	try {
-		const teamId = parseInt(req.params.teamId);
+		const teamId = Number.parseInt(req.params.teamId, 10);
 		const userName = req.params.userName;
 
-		if (isNaN(teamId)) {
+		if (Number.isNaN(teamId)) {
 			return res.status(400).json({
 				status: 'error',
 				message: 'Invalid team ID'
@@ -1885,7 +1886,7 @@ app.get('/api/database-size', auth.requireAuth, auth.requireRole('advanced'), ap
 			});
 		}
 
-		const { size, maxSize } = sizeInfo;
+		const {size, maxSize} = sizeInfo;
 		const sizeFormatted = formatBytes(size);
 		const maxSizeFormatted = maxSize ? formatBytes(maxSize) : null;
 		const percentage = maxSize ? Math.round((size / maxSize) * 100) : null;
@@ -1897,9 +1898,7 @@ app.get('/api/database-size', auth.requireAuth, auth.requireRole('advanced'), ap
 			sizeFormatted: sizeFormatted,
 			maxSizeFormatted: maxSizeFormatted,
 			percentage: percentage,
-			displayText: maxSize
-				? `${percentage}% (${sizeFormatted} / ${maxSizeFormatted})`
-				: sizeFormatted
+			displayText: maxSize? `${percentage}% (${sizeFormatted} / ${maxSizeFormatted})`: sizeFormatted
 		});
 	} catch (error) {
 		console.error('Error fetching database size:', error);
@@ -1911,11 +1910,11 @@ app.get('/api/database-size', auth.requireAuth, auth.requireRole('advanced'), ap
 });
 
 function formatBytes(bytes) {
-	if (bytes === 0) return '0 Bytes';
+	if (bytes === 0) {return '0 Bytes';}
 	const k = 1024;
 	const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
 	const i = Math.floor(Math.log(bytes) / Math.log(k));
-	return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+	return `${Math.round((bytes / Math.pow(k, i)) * 100) / 100  } ${  sizes[i]}`;
 }
 
 // Serve landing page
@@ -1954,7 +1953,7 @@ app.get('/api-spec', auth.requireAuth, (_req, res) => {
 		res.type('text/yaml');
 		res.send(fs.readFileSync(specPath, 'utf8'));
 	} else {
-		res.status(404).json({ status: 'error', message: 'API spec not found' });
+		res.status(404).json({status: 'error', message: 'API spec not found'});
 	}
 });
 
@@ -1975,7 +1974,7 @@ app.get('/api/export/logs', auth.requireAuth, auth.requireRole('advanced'), apiR
 		} = req.query;
 
 		// Enforce maximum export limit for performance
-		const effectiveLimit = Math.min(parseInt(limit), MAX_EXPORT_LIMIT);
+		const effectiveLimit = Math.min(Number.parseInt(limit, 10), MAX_EXPORT_LIMIT);
 
 		// Get events from database
 		const result = await db.getEvents({
@@ -2013,8 +2012,8 @@ app.delete('/api/events/:id', auth.requireAuth, auth.requireRole('advanced'), de
 		if (req.params.id === 'deleted') {
 			return next();
 		}
-		const eventId = parseInt(req.params.id, 10);
-		if (isNaN(eventId)) {
+		const eventId = Number.parseInt(req.params.id, 10);
+		if (Number.isNaN(eventId)) {
 			return res.status(400).json({
 				status: 'error',
 				message: 'Invalid event ID'
@@ -2048,7 +2047,7 @@ app.delete('/api/events/:id', auth.requireAuth, auth.requireRole('advanced'), de
 // Delete all events from database
 app.delete('/api/events', auth.requireAuth, auth.requireRole('advanced'), deleteEventsLimiter, async (req, res) => {
 	try {
-		const { sessionId } = req.query;
+		const {sessionId} = req.query;
 
 		if (sessionId) {
 			const deletedCount = await db.deleteEventsBySession(sessionId);
@@ -2084,8 +2083,8 @@ app.delete('/api/events', auth.requireAuth, auth.requireRole('advanced'), delete
 // Recover a soft deleted event
 app.patch('/api/events/:id/recover', auth.requireAuth, auth.requireRole('advanced'), apiWriteLimiter, async (req, res) => {
 	try {
-		const eventId = parseInt(req.params.id, 10);
-		if (isNaN(eventId)) {
+		const eventId = Number.parseInt(req.params.id, 10);
+		if (Number.isNaN(eventId)) {
 			return res.status(400).json({
 				status: 'error',
 				message: 'Invalid event ID'
@@ -2120,8 +2119,8 @@ app.patch('/api/events/:id/recover', auth.requireAuth, auth.requireRole('advance
 // Permanently delete a soft deleted event
 app.delete('/api/events/:id/permanent', auth.requireAuth, auth.requireRole('administrator'), deleteEventsLimiter, async (req, res) => {
 	try {
-		const eventId = parseInt(req.params.id, 10);
-		if (isNaN(eventId)) {
+		const eventId = Number.parseInt(req.params.id, 10);
+		if (Number.isNaN(eventId)) {
 			return res.status(400).json({
 				status: 'error',
 				message: 'Invalid event ID'
@@ -2156,8 +2155,8 @@ app.delete('/api/events/:id/permanent', auth.requireAuth, auth.requireRole('admi
 // Get deleted events (trash bin)
 app.get('/api/events/deleted', auth.requireAuth, auth.requireRole('advanced'), apiReadLimiter, async (req, res) => {
 	try {
-		const limit = Math.min(parseInt(req.query.limit) || 50, 100);
-		const offset = parseInt(req.query.offset) || 0;
+		const limit = Math.min(Number.parseInt(req.query.limit, 10) || 50, 100);
+		const offset = Number.parseInt(req.query.offset, 10) || 0;
 		const orderBy = req.query.orderBy || 'deleted_at';
 		const order = req.query.order || 'DESC';
 
@@ -2205,7 +2204,7 @@ app.delete('/api/events/deleted', auth.requireAuth, auth.requireRole('advanced')
 // Cleanup old deleted events (permanent deletion of events deleted more than X days ago)
 app.delete('/api/events/deleted/cleanup', auth.requireAuth, auth.requireRole('administrator'), deleteEventsLimiter, async (req, res) => {
 	try {
-		const daysOld = parseInt(req.query.days) || 30;
+		const daysOld = Number.parseInt(req.query.days, 10) || 30;
 		if (daysOld < 1 || daysOld > 365) {
 			return res.status(400).json({
 				status: 'error',
@@ -2247,7 +2246,7 @@ app.get('/api/database/export', auth.requireAuth, auth.requireRole('administrato
 		console.error('Error exporting database:', error);
 		res.status(500).json({
 			status: 'error',
-			message: 'Failed to export database: ' + error.message
+			message: `Failed to export database: ${  error.message}`
 		});
 	}
 });
@@ -2282,7 +2281,7 @@ app.post('/api/database/import', auth.requireAuth, auth.requireRole('administrat
 		console.error('Error importing database:', error);
 		res.status(500).json({
 			status: 'error',
-			message: 'Failed to import database: ' + error.message
+			message: `Failed to import database: ${  error.message}`
 		});
 	}
 });
@@ -2302,7 +2301,7 @@ async function startServer() {
 		console.log('Session middleware initialized with database support');
 
 		app.listen(port, () => {
-			console.log('\n' + '='.repeat(60));
+			console.log(`\n${  '='.repeat(60)}`);
 			console.log('✅ Telemetry server is running!');
 			console.log('='.repeat(60));
 			console.log(`🌐 Server URL: http://localhost:${port}`);
@@ -2310,7 +2309,7 @@ async function startServer() {
 			console.log(`❤️  Health:     http://localhost:${port}/health`);
 			console.log(`📡 API:        http://localhost:${port}/api/events`);
 			console.log(`📋 Schema:     http://localhost:${port}/schema`);
-			console.log('='.repeat(60) + '\n');
+			console.log(`${'='.repeat(60)  }\n`);
 		});
 	} catch (error) {
 		console.error('Failed to initialize database:', error);

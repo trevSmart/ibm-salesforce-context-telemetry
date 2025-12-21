@@ -12,13 +12,11 @@
 			'transition-colors cursor-pointer focus-visible:outline-none'
 		].join(' ');
 		const iconClasses = 'size-5 shrink-0 text-gray-400 transition-colors group-hover/item:text-gray-500 group-focus-visible/item:text-gray-500 dark:text-gray-400 dark:group-hover/item:text-gray-200';
-		const themeIcon = isDark
-			? `
+		const themeIcon = isDark? `
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="${iconClasses}" aria-hidden="true">
           <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z" />
         </svg>
-      `
-			: `
+      `: `
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="${iconClasses}" aria-hidden="true">
           <path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z" />
         </svg>
@@ -69,7 +67,7 @@
 	renderUserMenu();
 	window.buildUserMenuTemplate = buildUserMenuTemplate;
 	window.renderUserMenu = renderUserMenu;
-})();
+}());
 
 // User menu behavior - consolidated from index.js, event-log.js, and teams.js
 (function initUserMenuBehavior() {
@@ -98,7 +96,7 @@
 				if (userMenu.matches(':popover-open') === shouldOpen) {
 					return;
 				}
-			} catch (_err) {
+			} catch {
 				// Ignore if :popover-open is unsupported in the current browser.
 			}
 		}
@@ -107,7 +105,7 @@
 			try {
 				userMenu.togglePopover(shouldOpen);
 				return;
-			} catch (_err) {
+			} catch {
 				// Ignore and fall back to show/hide specific methods.
 			}
 		}
@@ -116,7 +114,7 @@
 		if (typeof userMenu[method] === 'function') {
 			try {
 				userMenu[method]();
-			} catch (_err) {
+			} catch {
 				// Swallow InvalidStateError (already in requested state).
 			}
 		}
@@ -213,9 +211,8 @@
 	}
 
 	// Close user menu when clicking outside
-	document.addEventListener('click', function(event) {
+	document.addEventListener('click', (event) => {
 		const userMenu = document.getElementById('userMenu');
-		const _userBtn = document.getElementById('userBtn');
 		const userMenuContainer = event.target.closest('.user-menu-container');
 
 		if (userMenu && userMenu.classList.contains('show')) {
@@ -318,15 +315,9 @@
 
 		try {
 			// Obtain CSRF token (double submit cookie pattern)
-			const csrfToken = typeof window.getCsrfToken === 'function'
-				? await window.getCsrfToken()
-				: (typeof window.getCsrfTokenFromCookie === 'function'
-					? window.getCsrfTokenFromCookie()
-					: null);
+			const csrfToken = typeof window.getCsrfToken === 'function'? await window.getCsrfToken(): (typeof window.getCsrfTokenFromCookie === 'function'? window.getCsrfTokenFromCookie(): null);
 
-			const headers = (typeof window.getRequestHeaders === 'function')
-				? window.getRequestHeaders(true)
-				: { 'Content-Type': 'application/json' };
+			const headers = (typeof window.getRequestHeaders === 'function')? window.getRequestHeaders(true): {'Content-Type': 'application/json'};
 
 			if (csrfToken && !headers['X-CSRF-Token']) {
 				headers['X-CSRF-Token'] = csrfToken;
@@ -368,11 +359,11 @@
 			return;
 		}
 		const trigger = event.target.closest('.user-menu-container');
-		if (!trigger) return;
+		if (!trigger) {return;}
 		showUserMenu(event);
 	});
 
 	// Expose functions globally
 	window.showUserMenu = showUserMenu;
 	window.handleLogout = handleLogout;
-})();
+}());

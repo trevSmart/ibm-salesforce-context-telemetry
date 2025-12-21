@@ -13,7 +13,7 @@ class Cache {
 
 	get(key) {
 		const item = this.cache.get(key);
-		if (!item) return null;
+		if (!item) {return null;}
     
 		if (Date.now() > item.expiry) {
 			this.cache.delete(key);
@@ -76,13 +76,16 @@ function throttle(func, limit) {
 		if (!inThrottle) {
 			const result = func.apply(context, args);
 			inThrottle = true;
-			setTimeout(() => inThrottle = false, limit);
+			const resetThrottle = () => {
+				inThrottle = false;
+			};
+			setTimeout(resetThrottle, limit);
 			return result;
 		}
 	};
 }
 
-module.exports = {
+export {
 	Cache,
 	debounce,
 	throttle

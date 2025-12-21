@@ -1,7 +1,7 @@
-const { app, BrowserWindow } = require('electron');
-const path = require('path');
-const fs = require('fs');
-const dotenv = require('dotenv');
+import {app, BrowserWindow} from 'electron';
+import path from 'node:path';
+import fs from 'node:fs';
+import dotenv from 'dotenv';
 
 /**
  * Loads TELEMETRY_UI_URL from the most relevant .env file.
@@ -19,7 +19,7 @@ const loadEnv = () => {
 	let loadedFrom = null;
 	for (const envPath of candidates) {
 		if (fs.existsSync(envPath)) {
-			dotenv.config({ path: envPath });
+			dotenv.config({path: envPath});
 			loadedFrom = envPath;
 			break;
 		}

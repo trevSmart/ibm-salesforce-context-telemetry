@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 
 /**
  * Script per importar dades a la base de dades PostgreSQL
@@ -17,8 +16,8 @@
  */
 
 require('dotenv').config();
-const { Pool } = require('pg');
-const fs = require('fs');
+const {Pool} = require('pg');
+const fs = require('node:fs');
 
 async function importDatabase() {
 	const backupFile = process.argv[2];
@@ -42,7 +41,7 @@ async function importDatabase() {
 
 	const pool = new Pool({
 		connectionString: process.env.DATABASE_URL,
-		ssl: process.env.DATABASE_SSL === 'true' ? { rejectUnauthorized: false } : false
+		ssl: process.env.DATABASE_SSL === 'true' ? {rejectUnauthorized: false} : false
 	});
 
 	try {
@@ -52,7 +51,7 @@ async function importDatabase() {
 
 		// Llegir backup
 		console.log(`Llegint backup: ${backupFile}...`);
-		const backupContent = fs.readFileSync(backupFile, 'utf8');
+		const backupContent = fs.readFileSync(backupFile);
 		const backup = JSON.parse(backupContent);
 		console.log(`✓ Backup llegit (versió ${backup.version || 'desconeguda'})`);
 		console.log(`  - Events: ${backup.data?.events?.length || 0}`);

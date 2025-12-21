@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 
 /**
  * Cleanup script to permanently delete old soft-deleted events
@@ -16,7 +15,7 @@
 const dbModule = require('../storage/database');
 
 async function main() {
-	const daysOld = parseInt(process.argv[2]) || 30;
+	const daysOld = Number.parseInt(process.argv[2], 10) || 30;
 
 	if (daysOld < 1 || daysOld > 365) {
 		console.error('❌ Days must be between 1 and 365');

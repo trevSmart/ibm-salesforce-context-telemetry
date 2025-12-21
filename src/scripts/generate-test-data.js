@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 
 /**
  * Script to generate realistic test data for telemetry server
@@ -16,7 +15,7 @@
 
 require('dotenv').config();
 const db = require('../storage/database');
-const { v4: uuidv4 } = require('uuid');
+const {v4: uuidv4} = require('uuid');
 
 // Configuration
 const NUM_USERS = 20;
@@ -73,10 +72,26 @@ const PROJECTS = [
 
 // User names (real Spanish/Catalan names)
 const USER_IDS = [
-	'María García', 'Josep Martínez', 'Anna López', 'Carlos Rodríguez', 'Laura Sánchez',
-	'Pere Fernández', 'Elena González', 'Jordi Pérez', 'Carmen Torres', 'David Ruiz',
-	'Montserrat Díaz', 'Antonio Moreno', 'Núria Jiménez', 'Miguel Álvarez', 'Sílvia Romero',
-	'Javier Navarro', 'Marta Molina', 'Ramon Gutiérrez', 'Isabel Delgado', 'Francesc Ramos'
+	'María García',
+'Josep Martínez',
+'Anna López',
+'Carlos Rodríguez',
+'Laura Sánchez',
+	'Pere Fernández',
+'Elena González',
+'Jordi Pérez',
+'Carmen Torres',
+'David Ruiz',
+	'Montserrat Díaz',
+'Antonio Moreno',
+'Núria Jiménez',
+'Miguel Álvarez',
+'Sílvia Romero',
+	'Javier Navarro',
+'Marta Molina',
+'Ramon Gutiérrez',
+'Isabel Delgado',
+'Francesc Ramos'
 ];
 
 // Server versions
@@ -359,9 +374,12 @@ async function generateTestData(targetDay, shouldDeleteExisting) {
 	let totalSessions = 0;
 
 	// Generate sessions for each day
-	const currentDate = new Date(startDate);
+	const startTime = startDate.getTime();
+	const endTime = endDate.getTime();
+	const oneDayMs = 24 * 60 * 60 * 1000;
 
-	while (currentDate <= endDate) {
+	for (let dayMs = startTime; dayMs <= endTime; dayMs += oneDayMs) {
+		const currentDate = new Date(dayMs);
 		const isWeekend = !isWeekday(currentDate);
 
 		// Each user has different chance of opening IDE based on weekday/weekend
@@ -377,9 +395,6 @@ async function generateTestData(targetDay, shouldDeleteExisting) {
 				}
 			}
 		}
-
-		// Move to next day
-		currentDate.setDate(currentDate.getDate() + 1);
 	}
 
 	// Sort events by timestamp

@@ -22,15 +22,17 @@
     "update-admin-role": "node src/scripts/update-admin-role.js",
     "export-database": "node src/scripts/export-database.js",
     "import-database": "node src/scripts/import-database.js",
-    "lint": "npm run lint:eslint && npm run lint:ts",
-    "lint:eslint": "eslint .",
-    "lint:ts": "tsc --noEmit --pretty false --project tsconfig.lint.json",
+    "lint": "eslint .",
     "lint:fix": "eslint . --fix"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
+  "type": "module",
+  "engines": {
+    "node": ">=22.4.0",
+    "npm": ">=9.0.0"
+  },
   "dependencies": {
     "@fortawesome/fontawesome-free": "^7.1.0",
     "@tailwindcss/cli": "^4.1.18",

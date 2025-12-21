@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 
 /**
  * Script per esborrar tots els events d'un usuari específic de la base de dades PostgreSQL
@@ -15,7 +14,7 @@
  */
 
 require('dotenv').config();
-const { Pool } = require('pg');
+const {Pool} = require('pg');
 
 const userName = process.argv[2];
 
@@ -33,7 +32,7 @@ if (!process.env.DATABASE_URL) {
 
 const pool = new Pool({
 	connectionString: process.env.DATABASE_URL,
-	ssl: process.env.DATABASE_SSL === 'true' ? { rejectUnauthorized: false } : false
+	ssl: process.env.DATABASE_SSL === 'true' ? {rejectUnauthorized: false} : false
 });
 
 async function deleteUserEvents() {
@@ -53,7 +52,7 @@ async function deleteUserEvents() {
 			   OR data->'user'->>'name' = $1
 		`, [userName]);
 
-		const totalEvents = parseInt(countResult.rows[0].total);
+		const totalEvents = Number.parseInt(countResult.rows[0].total, 10);
 		console.log(`✓ Trobats ${totalEvents} events per l'usuari "${userName}"`);
 
 		if (totalEvents === 0) {

@@ -23,7 +23,7 @@ const NOTIFICATION_ICONS = {
 };
 
 function ensureNotificationStyles() {
-	if (document.getElementById('ct-toast-styles')) return;
+	if (document.getElementById('ct-toast-styles')) {return;}
 	const style = document.createElement('style');
 	style.id = 'ct-toast-styles';
 	style.textContent = `
@@ -176,7 +176,7 @@ function ensureNotificationRegion() {
 		document.body.appendChild(region);
 	}
 
-	return { region, stack };
+	return {region, stack};
 }
 
 function buildIcon(type) {
@@ -184,7 +184,7 @@ function buildIcon(type) {
 }
 
 function renderToast(title, type, description) {
-	const { stack } = ensureNotificationRegion();
+	const {stack} = ensureNotificationRegion();
 
 	const panel = document.createElement('div');
 	panel.className = 'ct-toast-panel pointer-events-auto w-full max-w-sm translate-y-0 transform rounded-lg bg-white opacity-100 shadow-lg outline-1 outline-black/5 transition duration-300 ease-out sm:translate-x-0';
@@ -219,7 +219,7 @@ function renderToast(title, type, description) {
 		panel.classList.remove('ct-visible');
 		panel.classList.add('ct-leaving');
 		const cleanup = () => panel.remove();
-		panel.addEventListener('transitionend', cleanup, { once: true });
+		panel.addEventListener('transitionend', cleanup, {once: true});
 		setTimeout(cleanup, 350);
 	};
 
@@ -228,24 +228,22 @@ function renderToast(title, type, description) {
 		closeButton.addEventListener('click', removePanel);
 	}
 
-	return { panel, remove: removePanel };
+	return {panel, remove: removePanel};
 }
 
 export function showToast(title, type = 'info', description) {
 	ensureNotificationStyles();
 	const resolvedTitle = title || 'Notification';
-	const resolvedDescription = typeof description === 'string' && description.trim() !== ''
-		? description
-		: resolvedTitle;
+	const resolvedDescription = typeof description === 'string' && description.trim() !== ''? description: resolvedTitle;
 	const duration = NOTIFICATION_DEFAULT_DURATION_MS;
 
-	const { remove } = renderToast(resolvedTitle, type, resolvedDescription);
+	const {remove} = renderToast(resolvedTitle, type, resolvedDescription);
 
 	if (duration > 0) {
 		setTimeout(remove, duration);
 	}
 
-	return { dismiss: remove };
+	return {dismiss: remove};
 }
 
 // Expose globally for non-module scripts

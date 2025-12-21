@@ -4,6 +4,7 @@
 const TOOL_USAGE_MAX_TOOLS = 6;
 const TOOL_USAGE_DEFAULT_DAYS = 30;
 let toolUsageChartInstance = null;
+let toolUsageResizeHandler = null; // Store resize handler to clean up properly
 let toolUsageChartInitialized = false;
 
 function cleanupToolUsageChart() {
@@ -14,6 +15,14 @@ function cleanupToolUsageChart() {
 			console.warn('Error disposing tool usage chart:', error);
 		}
 		toolUsageChartInstance = null;
+	}
+	if (toolUsageResizeHandler) {
+		try {
+			window.removeEventListener('resize', toolUsageResizeHandler);
+		} catch (error) {
+			console.warn('Error removing tool usage resize handler:', error);
+		}
+		toolUsageResizeHandler = null;
 	}
 	toolUsageChartInitialized = false;
 }
@@ -36,18 +45,55 @@ function initToolUsageChart() {
 		return toolUsageChartInstance;
 	}
 	const el = document.getElementById('toolUsageChart');
-	if (!el) return null;
+	if (!el) {return null;}
 
 	if (typeof echarts === 'undefined') {
 		window.addEventListener('echartsLoaded', () => {
 			initToolUsageChart();
-		}, { once: true });
+		}, {once: true});
 		return null;
 	}
 
-	toolUsageChartInstance = echarts.init(el);
-	window.addEventListener('resize', () => toolUsageChartInstance?.resize());
-	return toolUsageChartInstance;
+	// Clear any existing content and dispose any existing chart on this element
+	el.innerHTML = '';
+	try {
+		// Try to dispose any existing chart on this element
+		if (typeof echarts.getInstanceByDom === 'function') {
+			const existingChart = echarts.getInstanceByDom(el);
+			if (existingChart && existingChart !== toolUsageChartInstance) {
+				existingChart.dispose();
+			}
+		}
+	} catch (error) {
+		console.warn('Error disposing existing chart on tool usage element:', error);
+	}
+
+	try {
+		toolUsageChartInstance = echarts.init(el);
+	toolUsageResizeHandler = () => {
+		try {
+			if (toolUsageChartInstance && typeof toolUsageChartInstance.resize === 'function') {
+				toolUsageChartInstance.resize();
+			}
+		} catch (error) {
+			console.warn('Error resizing tool usage chart:', error);
+			// If resize fails, remove the handler to prevent further errors
+			try {
+				window.removeEventListener('resize', toolUsageResizeHandler);
+				toolUsageResizeHandler = null;
+			} catch (removeError) {
+				console.warn('Error removing tool usage resize handler:', removeError);
+			}
+		}
+	};
+		window.addEventListener('resize', toolUsageResizeHandler);
+		return toolUsageChartInstance;
+	} catch (error) {
+		console.error('Error initializing tool usage chart:', error);
+		// Clear the element on initialization failure
+		el.innerHTML = '';
+		return null;
+	}
 }
 
 function renderToolUsageEmpty(message = 'No tool usage recorded yet.') {
@@ -59,7 +105,7 @@ function renderToolUsageEmpty(message = 'No tool usage recorded yet.') {
 
 function setToolUsageLoading(isLoading) {
 	const card = document.getElementById('toolUsageChart');
-	if (!card) return;
+	if (!card) {return;}
 	card.setAttribute('data-loading', isLoading ? 'true' : 'false');
 }
 
@@ -67,13 +113,16 @@ async function loadToolUsageChart(days = TOOL_USAGE_DEFAULT_DAYS) {
 	// Clean up any existing chart first
 	cleanupToolUsageChart();
 
+	// Small delay to ensure cleanup is complete
+	await new Promise(resolve => setTimeout(resolve, 10));
+
 	const chart = initToolUsageChart();
-	if (!chart) return;
+	if (!chart) {return;}
 
 	setToolUsageLoading(true);
 
 	try {
-		const response = await fetch(`/api/tool-usage-stats?days=${days}`, { credentials: 'include' });
+		const response = await fetch(`/api/tool-usage-stats?days=${days}`, {credentials: 'include'});
 		if (response.status === 401) {
 			window.location.href = '/login';
 			return;
@@ -103,7 +152,7 @@ async function loadToolUsageChart(days = TOOL_USAGE_DEFAULT_DAYS) {
 			},
 			tooltip: {
 				trigger: 'axis',
-				axisPointer: { type: 'shadow' }
+				axisPointer: {type: 'shadow'}
 			},
 			// legend: {
 			// 	data: ['Successful', 'Errors'],
@@ -120,22 +169,22 @@ async function loadToolUsageChart(days = TOOL_USAGE_DEFAULT_DAYS) {
 				type: 'value',
 				minInterval: 1,
 				show: false,
-				splitLine: { show: false }
+				splitLine: {show: false}
 			},
 			yAxis: {
 				type: 'category',
 				data: names,
-				axisTick: { alignWithLabel: false },
-				axisLine: { show: false },
-				axisLabel: { color: theme.text, fontSize: 10, fontWeight: 500, lineHeight: 14 }
+				axisTick: {alignWithLabel: false},
+				axisLine: {show: false},
+				axisLabel: {color: theme.text, fontSize: 10, fontWeight: 500, lineHeight: 14}
 			},
 			series: [
 				{
 					name: 'Successful',
 					type: 'bar',
 					stack: 'total',
-					label: { show: false },
-					itemStyle: { color: theme.success, borderRadius: [0, 0, 0, 0] },
+					label: {show: false},
+					itemStyle: {color: theme.success, borderRadius: [0, 0, 0, 0]},
 					data: successData
 				},
 				{
@@ -151,18 +200,24 @@ async function loadToolUsageChart(days = TOOL_USAGE_DEFAULT_DAYS) {
 							return `{success|${successData[idx]}}/{error|${errorData[idx]}}`;
 						},
 						rich: {
-							success: { color: theme.success, fontWeight: 600 },
-							error: { color: theme.error, fontWeight: 600 }
+							success: {color: theme.success, fontWeight: 600},
+							error: {color: theme.error, fontWeight: 600}
 						}
 					},
-					itemStyle: { color: theme.error, borderRadius: [0, 10, 10, 0] },
+					itemStyle: {color: theme.error, borderRadius: [0, 10, 10, 0]},
 					data: errorData
 				}
 			]
 		};
 
 		chart.setOption(option, true);
-		chart.resize();
+		try {
+			if (typeof chart.resize === 'function') {
+				chart.resize();
+			}
+		} catch (error) {
+			console.warn('Error resizing tool usage chart:', error);
+		}
 		toolUsageChartInitialized = true;
 	} catch (error) {
 		console.error('Error fetching tool usage stats:', error);
@@ -176,7 +231,7 @@ async function loadToolUsageChart(days = TOOL_USAGE_DEFAULT_DAYS) {
 window.addEventListener('DOMContentLoaded', () => {
 	// Wait for echarts to be ready
 	if (typeof echarts === 'undefined') {
-		window.addEventListener('echartsLoaded', () => loadToolUsageChart(), { once: true });
+		window.addEventListener('echartsLoaded', () => loadToolUsageChart(), {once: true});
 	} else {
 		loadToolUsageChart();
 	}
@@ -189,7 +244,7 @@ window.addEventListener('softNav:pageMounted', (event) => {
 		cleanupToolUsageChart();
 		// Wait for echarts to be ready
 		if (typeof echarts === 'undefined') {
-			window.addEventListener('echartsLoaded', () => loadToolUsageChart(), { once: true });
+			window.addEventListener('echartsLoaded', () => loadToolUsageChart(), {once: true});
 		} else {
 			loadToolUsageChart();
 		}
@@ -198,7 +253,7 @@ window.addEventListener('softNav:pageMounted', (event) => {
 
 // Handle theme toggles (class on html)
 const observer = new MutationObserver((mutations) => {
-	if (!toolUsageChartInitialized || !toolUsageChartInstance) return;
+	if (!toolUsageChartInitialized || !toolUsageChartInstance) {return;}
 	for (const mutation of mutations) {
 		if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
 			cleanupToolUsageChart();
@@ -207,4 +262,4 @@ const observer = new MutationObserver((mutations) => {
 		}
 	}
 });
-observer.observe(document.documentElement, { attributes: true });
+observer.observe(document.documentElement, {attributes: true});

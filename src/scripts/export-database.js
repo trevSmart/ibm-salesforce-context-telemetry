@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 
 /**
  * Script per exportar dades de la base de dades PostgreSQL
@@ -15,9 +14,9 @@
  */
 
 require('dotenv').config();
-const { Pool } = require('pg');
-const fs = require('fs');
-const path = require('path');
+const {Pool} = require('pg');
+const fs = require('node:fs');
+const path = require('node:path');
 
 const outputFile = process.argv[2] || `backup_telemetry_${new Date().toISOString().split('T')[0]}.json`;
 
@@ -30,7 +29,7 @@ async function exportDatabase() {
 
 	const pool = new Pool({
 		connectionString: process.env.DATABASE_URL,
-		ssl: process.env.DATABASE_SSL === 'true' ? { rejectUnauthorized: false } : false
+		ssl: process.env.DATABASE_SSL === 'true' ? {rejectUnauthorized: false} : false
 	});
 
 	try {

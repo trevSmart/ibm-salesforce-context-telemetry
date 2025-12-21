@@ -5,7 +5,7 @@
  * Usage: node src/scripts/add-parent-session-id-column.js
  */
 
-const { Pool } = require('pg');
+const {Pool} = require('pg');
 require('dotenv').config();
 
 async function addParentSessionIdColumn() {
@@ -25,7 +25,7 @@ async function addParentSessionIdColumn() {
 
 	const pool = new Pool({
 		connectionString: connectionString,
-		ssl: process.env.DATABASE_SSL === 'true' ? { rejectUnauthorized: false } : false
+		ssl: process.env.DATABASE_SSL === 'true' ? {rejectUnauthorized: false} : false
 	});
 
 	try {

@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 
 /**
  * Migration script to add deleted_at column to telemetry_events table
