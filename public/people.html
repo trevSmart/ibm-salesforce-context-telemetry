@@ -47,23 +47,52 @@
 					<div style="display: flex; align-items: center; gap: 12px;">
 						<a href="/" class="back-link subtitle" data-soft-nav="true">← Back to Dashboard</a>
 					</div>
-					<div class="log-viewer-title font-semibold">Users</div>
+					<div class="log-viewer-title font-semibold">People</div>
 				</div>
 				<div style="display: flex; justify-content: flex-end;">
-					<button type="button" onclick="showCreateUserModal()" class="btn">
+					<button type="button" onclick="showCreatePersonModal()" class="btn">
 						<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5">
 							<path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5z" />
 						</svg>
-						New user
+						New person
 					</button>
 				</div>
 			</div>
-			<div id="usersContent">
-				<!-- Content will be loaded by users.js -->
-				<div class="users-loading">
-					<p>Loading users...</p>
-				</div>
+			<div id="peopleContent" class="mt-6">
+				<ul role="list" class="divide-y divide-gray-100" id="peopleList">
+					<li class="py-4 text-center text-gray-500">
+						<p>Loading people...</p>
+					</li>
+				</ul>
 			</div>
+		</div>
+	</div>
+
+	<!-- Create Person Modal -->
+	<div id="createPersonModal" class="modal-backdrop" style="display: none;">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h3 class="modal-title">Add New Person</h3>
+				<button type="button" onclick="closeCreatePersonModal()" class="modal-close-btn">
+					<svg viewBox="0 0 20 20" fill="currentColor" class="size-5">
+						<path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
+					</svg>
+				</button>
+			</div>
+			<form onsubmit="handleCreatePerson(event)" class="modal-body">
+				<div class="form-group">
+					<label for="personName" class="form-label">Name *</label>
+					<input type="text" id="personName" name="name" class="form-input" required autocomplete="off">
+				</div>
+				<div class="form-group">
+					<label for="personEmail" class="form-label">Email (optional)</label>
+					<input type="email" id="personEmail" name="email" class="form-input" autocomplete="off">
+				</div>
+				<div class="modal-footer">
+					<button type="button" onclick="closeCreatePersonModal()" class="btn-secondary">Cancel</button>
+					<button type="submit" class="btn">Create Person</button>
+				</div>
+			</form>
 		</div>
 	</div>
 

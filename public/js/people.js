@@ -163,10 +163,10 @@ async function handleCreatePerson(event) {
 
 		await response.json();
 
-		// Clear form
-		event.target.reset();
+		// Close the modal
+		closeCreatePersonModal();
 
-		// Refresh the people list (this will show the people list section)
+		// Refresh the people list
 		await initPeoplePage();
 
 		// Show success message
@@ -185,7 +185,35 @@ function showPersonDetails(personId) {
 	showToast('Person details - feature coming soon!', 'info');
 }
 
+// Function to show create person modal
+function showCreatePersonModal() {
+	const modal = document.getElementById('createPersonModal');
+	if (modal) {
+		modal.style.display = 'flex';
+		// Focus on the name input
+		const nameInput = document.getElementById('personName');
+		if (nameInput) {
+			setTimeout(() => nameInput.focus(), 100);
+		}
+	}
+}
+
+// Function to close create person modal
+function closeCreatePersonModal() {
+	const modal = document.getElementById('createPersonModal');
+	if (modal) {
+		modal.style.display = 'none';
+		// Clear the form
+		const form = modal.querySelector('form');
+		if (form) {
+			form.reset();
+		}
+	}
+}
+
 // Export functions to window for global access
 window.refreshPeople = refreshPeople;
 window.handleCreatePerson = handleCreatePerson;
 window.showPersonDetails = showPersonDetails;
+window.showCreatePersonModal = showCreatePersonModal;
+window.closeCreatePersonModal = closeCreatePersonModal;
