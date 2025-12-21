@@ -636,7 +636,7 @@ app.get('/health', healthCheckLimiter, async (req, res) => {
 				status: isHealthy ? 'healthy' : 'unhealthy',
 				timestamp: new Date().toISOString(),
 				uptime: uptime,
-				version: JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version,
+				version: JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url))).version,
 				nodeVersion: process.version,
 				environment: process.env.NODE_ENV || 'development',
 				memory: memory,
