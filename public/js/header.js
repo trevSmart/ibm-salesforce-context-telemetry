@@ -2,6 +2,41 @@
 // Global header component - single source of truth for the navigation header
 (function initGlobalHeader() {
 	/**
+	 * Dynamic refresh dispatcher - calls the appropriate refresh function based on current page
+	 * This ensures the correct refresh function is called even after soft navigation
+	 */
+	function handleRefreshClick(event) {
+		if (event?.preventDefault) {
+			event.preventDefault();
+		}
+
+		// Determine which refresh function to call based on current path at click time
+		const currentPath = window.location.pathname;
+		
+		if (currentPath === '/' || currentPath.startsWith('/?')) {
+			// Dashboard page
+			if (typeof window.refreshDashboard === 'function') {
+				window.refreshDashboard(event);
+			}
+		} else if (currentPath.startsWith('/logs')) {
+			// Event log page
+			if (typeof window.refreshLogs === 'function') {
+				window.refreshLogs(event);
+			}
+		} else if (currentPath.startsWith('/teams')) {
+			// Teams page
+			if (typeof window.refreshTeams === 'function') {
+				window.refreshTeams(event);
+			}
+		} else if (currentPath.startsWith('/people')) {
+			// People page
+			if (typeof window.refreshPeople === 'function') {
+				window.refreshPeople(event);
+			}
+		}
+	}
+
+	/**
 	 * Unified refresh handler - fetches latest event data
 	 * This is the same handler used across all pages
 	 */
@@ -53,23 +88,15 @@
 		const currentPath = window.location.pathname;
 		const activePage = currentPath === '/' ? '/' :currentPath.startsWith('/logs') ? '/logs' :currentPath.startsWith('/teams') ? '/teams' :currentPath.startsWith('/people') ? '/people' :currentPath.startsWith('/users') ? '/users' : '/';
 
-		// Refresh button properties - same handler for all pages
+		// Refresh button properties - use dynamic handler for all pages
 		const showBadge = currentPath.startsWith('/logs');
 		const refreshId = currentPath.startsWith('/logs') ? 'refreshButton' : '';
 		const refreshAriaLabel = 'Refresh';
 		const refreshTitle = 'Refresh';
 
-		// Determine which refresh function to call based on current page
-		let refreshOnClick = '';
-		if (currentPath === '/' || currentPath.startsWith('/?')) {
-			refreshOnClick = 'refreshDashboard(event)';
-		} else if (currentPath.startsWith('/logs')) {
-			refreshOnClick = 'refreshLogs(event)';
-		} else if (currentPath.startsWith('/teams')) {
-			refreshOnClick = 'refreshTeams(event)';
-		} else if (currentPath.startsWith('/people')) {
-			refreshOnClick = 'refreshPeople(event)';
-		}
+		// Use dynamic refresh handler that determines which function to call at click time
+		// This ensures correct behavior even after soft navigation between pages
+		const refreshOnClick = 'handleRefreshClick(event)';
 
 		const refreshButtonId = refreshId ? `id="${refreshId}"` : '';
 		const refreshBadge = showBadge? '<span class="refresh-badge" id="autoRefreshBadge" aria-hidden="true"></span>': '';
@@ -148,4 +175,5 @@
 	window.initGlobalHeader = initHeader;
 	window.buildGlobalHeaderHTML = buildHeaderHTML;
 	window.refreshEvents = refreshEvents;
+	window.handleRefreshClick = handleRefreshClick;
 }());
