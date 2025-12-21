@@ -946,3 +946,6 @@ async function openSettingsModal() {
 		window.loadTrashInfo();
 	}
 }
+
+// Export settings modal opener to global scope for HTML and other scripts
+window.openSettingsModal = openSettingsModal;
