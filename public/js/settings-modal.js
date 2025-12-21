@@ -569,26 +569,7 @@ async function openSettingsModal() {
 		closeBtn.addEventListener('click', closeSettingsModal);
 	}
 
-	// Close modal on ESC key press (unless focus is on input with text or open dropdown)
-	function handleEscKey(e) {
-		if (e.key === 'Escape' && document.body.contains(backdrop)) {
-			// Check if focus is on an input field with text
-			const activeElement = document.activeElement;
-			const isInputWithText = (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA') && activeElement.value.trim() !== '';
-
-			// Check if there's an open dropdown/combobox
-			const hasOpenDropdown = document.querySelector('[role="listbox"]:not([hidden]), .combobox-dropdown:not([hidden]), [data-open="true"]');
-
-			// Don't close if focus is on input with text or dropdown is open
-			if (!isInputWithText && !hasOpenDropdown) {
-				e.preventDefault();
-				closeSettingsModal();
-			}
-		}
-	}
-
-	document.addEventListener('keydown', handleEscKey);
-
+	// ESC key handling is configured via `escHandler` earlier; no additional listener needed here.
 	const darkThemeToggle = modal.querySelector('#darkThemeToggle');
 	if (darkThemeToggle) {
 		darkThemeToggle.addEventListener('change', (e) => {
