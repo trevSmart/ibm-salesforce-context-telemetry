@@ -517,9 +517,30 @@ async function openSettingsModal() {
 		backdrop.classList.add('visible');
 	});
 
+	// Define the ESC handler function first so it can be properly referenced by closeSettingsModal
+	const escHandler = function(e) {
+		if (e.key === 'Escape' && document.body.contains(backdrop)) {
+			// Check if focus is on an input field with text
+			const activeElement = document.activeElement;
+			const isInputWithText = activeElement && 
+				(activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA') && 
+				activeElement.value.trim() !== '';
+
+			// Check if there's an open dropdown/combobox
+			const hasOpenDropdown = document.querySelector('[role="listbox"]:not([hidden]), .combobox-dropdown:not([hidden]), [data-open="true"]');
+
+			// Don't close if focus is on input with text or dropdown is open
+			if (!isInputWithText && !hasOpenDropdown) {
+				e.preventDefault();
+				closeSettingsModal();
+			}
+		}
+	};
+
+	// Define closeSettingsModal after escHandler so it can remove the listener correctly
 	function closeSettingsModal() {
 		// Remove ESC key listener
-		document.removeEventListener('keydown', handleEscKey);
+		document.removeEventListener('keydown', escHandler);
 
 		backdrop.classList.remove('visible');
 		backdrop.classList.add('hiding');
@@ -536,33 +557,8 @@ async function openSettingsModal() {
 		}, 220);
 	}
 
-	// Store the ESC handler function so we can remove it later
-	const escHandler = function handleEscKey(e) {
-		if (e.key === 'Escape' && document.body.contains(backdrop)) {
-			// Check if focus is on an input field with text
-			const activeElement = document.activeElement;
-			const isInputWithText = (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA') && activeElement.value.trim() !== '';
-
-			// Check if there's an open dropdown/combobox
-			const hasOpenDropdown = document.querySelector('[role="listbox"]:not([hidden]), .combobox-dropdown:not([hidden]), [data-open="true"]');
-
-			// Don't close if focus is on input with text or dropdown is open
-			if (!isInputWithText && !hasOpenDropdown) {
-				e.preventDefault();
-				closeSettingsModal();
-			}
-		}
-	};
-
 	// Add ESC key listener
 	document.addEventListener('keydown', escHandler);
-
-	// Override closeSettingsModal to also remove the ESC listener
-	const originalCloseSettingsModal = closeSettingsModal;
-	closeSettingsModal = function() {
-		document.removeEventListener('keydown', escHandler);
-		originalCloseSettingsModal();
-	};
 
 	const closeBtn = modal.querySelector('#settingsCloseBtn');
 	if (closeBtn) {
