@@ -9,6 +9,7 @@ This directory contains all documentation for the IBM Salesforce Context Telemet
 - **[API_SPECIFICATION.md](./API_SPECIFICATION.md)** - Detailed API specification and endpoint documentation
 - **[DATABASE.md](./DATABASE.md)** - Database configuration and setup (SQLite/PostgreSQL)
 - **[AGENTS.md](./AGENTS.md)** - Instructions for AI agents working with the telemetry server
+- **[PERFORMANCE.md](./PERFORMANCE.md)** - Performance optimizations and benchmarks
 
 ## Quick Links
 
