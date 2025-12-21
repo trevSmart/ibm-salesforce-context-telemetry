@@ -15,7 +15,7 @@ module.exports = [
 	{
 		languageOptions: {
 			ecmaVersion: 'latest',
-			sourceType: 'commonjs',
+			sourceType: 'module',
 			globals: {
 				console: 'readonly',
 				process: 'readonly',
@@ -56,7 +56,8 @@ module.exports = [
 				define: 'readonly',
 				AbortController: 'readonly',
 				AbortSignal: 'readonly',
-				Element: 'readonly'
+				Element: 'readonly',
+				HTMLElement: 'readonly'
 			}
 		},
 		rules: {

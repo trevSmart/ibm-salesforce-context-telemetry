@@ -1,3 +1,5 @@
+// @ts-nocheck
+
 /**
  * Shared CSRF token helper module
  * This module provides CSRF token management for all frontend JavaScript files

@@ -310,15 +310,15 @@ async function openSettingsModal() {
     </a>
     ` : ''}
     ${isAdministrator ? `
-    <a href="#settings-import-export" class="settings-sidebar-link flex items-center gap-2 rounded-md px-2 py-1.5 text-[color:var(--text-primary)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-secondary)]">
-      <span class="w-5 h-5 flex items-center justify-center rounded-full border border-[color:var(--border-color)] bg-[color:var(--bg-secondary)]">
+    <a href="#settings-import-export" class="settings-sidebar-link flex items-center gap-2 rounded-md px-2 py-1.5 text-[color:var(--text-primary)] hover:text-[color:var(--text-primary)] hover:bg-(--bg-secondary)">
+      <span class="w-5 h-5 flex items-center justify-center rounded-full border border-(--border-color) bg-[color:var(--bg-secondary)]">
         <i class="fa-solid fa-database text-[12px]"></i>
       </span>
       <span class="font-medium">Import/Export</span>
     </a>
     ` : ''}
-    <a href="#settings-danger" class="settings-sidebar-link flex items-center gap-2 rounded-md px-2 py-1.5 text-[color:var(--text-primary)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-secondary)]">
-      <span class="w-5 h-5 flex items-center justify-center rounded-full border border-[color:var(--border-color)] bg-[color:var(--bg-secondary)]">
+    <a href="#settings-danger" class="settings-sidebar-link flex items-center gap-2 rounded-md px-2 py-1.5 text-(--text-primary) hover:text-(--text-primary) hover:bg-(--bg-secondary)">
+      <span class="w-5 h-5 flex items-center justify-center rounded-full border border-(--border-color) bg-(--bg-secondary)">
         <i class="fa-solid fa-triangle-exclamation text-[12px]"></i>
       </span>
       <span class="font-medium">Danger zone</span>
@@ -331,7 +331,7 @@ async function openSettingsModal() {
 		</div>
 		<div class="settings-modal-content">
 			<div class="settings-layout flex flex-col md:flex-row md:gap-8 mt-2">
-				<aside class="settings-sidebar-nav md:w-56 border-b md:border-b-0 md:border-r border-[color:var(--border-color)] pb-3 md:pb-0 md:pr-3">
+				<aside class="settings-sidebar-nav md:w-56 border-b md:border-b-0 md:border-r border-(--border-color) pb-3 md:pb-0 md:pr-3">
 					<nav class="flex md:flex-col gap-2 text-sm" aria-label="Settings sections">
 						${sidebarNav}
 					</nav>
