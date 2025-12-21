@@ -517,12 +517,12 @@ async function openSettingsModal() {
 		backdrop.classList.add('visible');
 	});
 
-	// Define the ESC handler function first so it can be properly referenced
+	// Define the ESC handler function first so it can be properly referenced by closeSettingsModal
 	const escHandler = function(e) {
 		if (e.key === 'Escape' && document.body.contains(backdrop)) {
 			// Check if focus is on an input field with text
 			const activeElement = document.activeElement;
-			const isInputWithText = (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA') && activeElement.value.trim() !== '';
+			const isInputWithText = activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA') && activeElement.value.trim() !== '';
 
 			// Check if there's an open dropdown/combobox
 			const hasOpenDropdown = document.querySelector('[role="listbox"]:not([hidden]), .combobox-dropdown:not([hidden]), [data-open="true"]');
@@ -535,7 +535,7 @@ async function openSettingsModal() {
 		}
 	};
 
-	// Define closeSettingsModal after escHandler so it can reference it correctly
+	// Define closeSettingsModal after escHandler so it can remove the listener correctly
 	function closeSettingsModal() {
 		// Remove ESC key listener
 		document.removeEventListener('keydown', escHandler);
