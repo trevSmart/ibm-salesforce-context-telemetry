@@ -2,7 +2,7 @@
 /* global DOMParser */
 // Lightweight client-side navigation to avoid repainting shared chrome
 (() => {
-	const SUPPORTED_PATHS = ['/', '/logs', '/teams'];
+	const SUPPORTED_PATHS = ['/', '/logs', '/teams', '/people'];
 	const SOFT_NAV_SELECTOR = [
 		'a.top-nav-link',
 		'a.top-nav-logo',
@@ -13,7 +13,8 @@
 	const PAGE_SCRIPTS = {
 		'/': [{src: '/js/index.js', type: 'module'}],
 		'/logs': [{src: '/js/event-log.js'}],
-		'/teams': [{src: '/js/teams.js', type: 'module'}]
+		'/teams': [{src: '/js/teams.js', type: 'module'}],
+		'/people': [{src: '/js/people.js', type: 'module'}]
 	};
 
 	// Crossfade transition duration in milliseconds

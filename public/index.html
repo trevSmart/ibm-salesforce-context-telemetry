@@ -226,19 +226,8 @@
 		</div>
 	</div>
 
-	<script>
-		// Load ECharts asynchronously to avoid blocking initial render
-		(function () {
-			const script = document.createElement('script');
-			script.src = '/vendor/echarts/echarts.min.js';
-			script.async = true;
-			script.onload = function () {
-				// Dispatch event when ECharts is loaded
-				window.dispatchEvent(new CustomEvent('echartsLoaded'));
-			};
-			document.head.appendChild(script);
-		})();
-	</script>
+	<!-- Load ECharts with defer to ensure it loads before chart initialization scripts -->
+	<script src="/vendor/echarts/echarts.min.js" defer></script>
 	<script src="/js/navigation.js" defer></script>
 	<script src="/js/user-menu.js" defer></script>
 	<script src="/js/csrf-helper.js" defer></script>
