@@ -146,6 +146,46 @@ const apiWriteLimiter = createLimiter({
 	}
 });
 
+// Rate limit for health check endpoint: max 100 requests per minute per IP
+const healthCheckLimiter = createLimiter({
+	windowMs: 60 * 1000, // 1 minute
+	max: 100, // Allow frequent health checks but prevent abuse
+	message: {
+		status: 'error',
+		message: 'Too many health check requests. Please try again later.'
+	}
+});
+
+// Rate limit for auth status checks: max 200 requests per minute per IP
+const authStatusLimiter = createLimiter({
+	windowMs: 60 * 1000, // 1 minute
+	max: 200, // Higher limit for UI polling
+	message: {
+		status: 'error',
+		message: 'Too many auth status requests. Please try again later.'
+	}
+});
+
+// Rate limit for logout endpoint: max 20 requests per 15 minutes per IP
+const logoutLimiter = createLimiter({
+	windowMs: 15 * 60 * 1000, // 15 minutes
+	max: 20, // Reasonable limit for logout operations
+	message: {
+		status: 'error',
+		message: 'Too many logout requests. Please try again later.'
+	}
+});
+
+// Rate limit for dashboard stats endpoints: max 500 requests per 10 minutes per IP
+const dashboardStatsLimiter = createLimiter({
+	windowMs: 10 * 60 * 1000, // 10 minutes
+	max: 500, // Moderate limit for dashboard data
+	message: {
+		status: 'error',
+		message: 'Too many dashboard stats requests. Please try again later.'
+	}
+});
+
 // Sharp imported at top
 
 // Process team logo image - only resize if larger than target, always convert to WebP
@@ -537,7 +577,7 @@ app.post('/telemetry', telemetryLimiter, (req, res) => {
 // Track server start time for uptime calculation
 const serverStartTime = Date.now();
 
-app.get('/health', async (req, res) => {
+app.get('/health', healthCheckLimiter, async (req, res) => {
 	const format = req.query.format || (req.headers.accept?.includes('application/json') ? 'json' : 'html');
 
 	if (format === 'json') {
@@ -596,7 +636,7 @@ app.get('/health', async (req, res) => {
 				status: isHealthy ? 'healthy' : 'unhealthy',
 				timestamp: new Date().toISOString(),
 				uptime: uptime,
-				version: JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version,
+				version: JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version,
 				nodeVersion: process.version,
 				environment: process.env.NODE_ENV || 'development',
 				memory: memory,
@@ -756,7 +796,7 @@ app.post('/login', auth.requireGuest, loginLimiter, async (req, res) => {
 	}
 });
 
-app.post('/logout', async (req, res) => {
+app.post('/logout', logoutLimiter, async (req, res) => {
 	// Revoke remember token if present
 	const cookieName = process.env.REMEMBER_COOKIE_NAME || 'remember_token';
 	const rememberToken = req.cookies[cookieName];
@@ -789,7 +829,7 @@ app.post('/logout', async (req, res) => {
 	});
 });
 
-app.get('/api/auth/status', (req, res) => {
+app.get('/api/auth/status', authStatusLimiter, (req, res) => {
 	const isAuthenticated = Boolean(req.session && req.session.authenticated);
 	res.json({
 		authenticated: isAuthenticated,
@@ -1018,7 +1058,7 @@ app.post('/api/people', auth.requireAuth, auth.requireRole('administrator'), use
 });
 
 // Settings API endpoints
-app.get('/api/settings/org-team-mappings', auth.requireAuth, async (req, res) => {
+app.get('/api/settings/org-team-mappings', apiReadLimiter, auth.requireAuth, async (req, res) => {
 	try {
 		const mappingsJson = await db.getSetting('org_team_mappings');
 		let mappings = [];
@@ -1182,7 +1222,7 @@ app.get('/api/events/:id', auth.requireAuth, auth.requireRole('advanced'), apiRe
 	}
 });
 
-app.get('/api/stats', auth.requireAuth, async (req, res) => {
+app.get('/api/stats', dashboardStatsLimiter, auth.requireAuth, async (req, res) => {
 	try {
 		const {startDate, endDate, eventType} = req.query;
 
@@ -1268,7 +1308,7 @@ app.get('/api/sessions', auth.requireAuth, auth.requireRole('advanced'), apiRead
 	}
 });
 
-app.get('/api/daily-stats', auth.requireAuth, async (req, res) => {
+app.get('/api/daily-stats', dashboardStatsLimiter, auth.requireAuth, async (req, res) => {
 	try {
 		const days = Number.parseInt(req.query.days, 10) || 30;
 		const byEventTypeRaw = String(req.query.byEventType || '').toLowerCase();
@@ -1286,7 +1326,7 @@ app.get('/api/daily-stats', auth.requireAuth, async (req, res) => {
 	}
 });
 
-app.get('/api/tool-usage-stats', auth.requireAuth, async (req, res) => {
+app.get('/api/tool-usage-stats', dashboardStatsLimiter, auth.requireAuth, async (req, res) => {
 	try {
 		const daysRaw = Number.parseInt(req.query.days, 10);
 		const days = Math.min(Math.max(1, Number.isFinite(daysRaw) ? daysRaw : 30), 365);
@@ -1301,7 +1341,7 @@ app.get('/api/tool-usage-stats', auth.requireAuth, async (req, res) => {
 	}
 });
 
-app.get('/api/top-users-today', auth.requireAuth, async (req, res) => {
+app.get('/api/top-users-today', dashboardStatsLimiter, auth.requireAuth, async (req, res) => {
 	try {
 		const limitRaw = Number.parseInt(req.query.limit, 10);
 		const daysRaw = Number.parseInt(req.query.days, 10);
@@ -1318,7 +1358,7 @@ app.get('/api/top-users-today', auth.requireAuth, async (req, res) => {
 	}
 });
 
-app.get('/api/top-teams-today', auth.requireAuth, async (req, res) => {
+app.get('/api/top-teams-today', dashboardStatsLimiter, auth.requireAuth, async (req, res) => {
 	try {
 		const limitRaw = Number.parseInt(req.query.limit, 10);
 		const daysRaw = Number.parseInt(req.query.days, 10);
