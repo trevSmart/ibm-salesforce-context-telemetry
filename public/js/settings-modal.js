@@ -14,6 +14,232 @@ function escapeHtml(unsafe) {
 		.replace(/'/g, '&#039;');
 }
 
+// Confirm modal for dangerous operations
+function openConfirmModal({ title, message, confirmLabel = 'Confirm', cancelLabel = 'Cancel', destructive = false }) {
+	return new Promise((resolve) => {
+		const existing = document.querySelector('.confirm-dialog-backdrop');
+		if (existing) {
+			existing.remove();
+		}
+
+		const backdrop = document.createElement('div');
+		backdrop.className = 'confirm-modal-backdrop confirm-dialog-backdrop';
+
+		const modal = document.createElement('div');
+		modal.className = 'confirm-modal confirm-dialog';
+		modal.innerHTML = `
+			<div class="confirm-dialog-header">
+				<div class="confirm-dialog-icon ${destructive ? 'destructive' : ''}">
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" focusable="false">
+						<path d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" stroke-linecap="round" stroke-linejoin="round" />
+					</svg>
+				</div>
+				<div class="confirm-dialog-text">
+					<div class="confirm-modal-title">${escapeHtml(title || 'Confirm action')}</div>
+					<div class="confirm-modal-message">${escapeHtml(message || '')}</div>
+				</div>
+			</div>
+			<div class="confirm-dialog-actions">
+				<button type="button" class="confirm-modal-btn confirm-modal-btn-cancel">${escapeHtml(cancelLabel)}</button>
+				<button type="button" class="confirm-modal-btn ${destructive ? 'confirm-modal-btn-destructive' : 'confirm-modal-btn-confirm'}">${escapeHtml(confirmLabel)}</button>
+			</div>
+		`;
+
+		backdrop.appendChild(modal);
+		document.body.appendChild(backdrop);
+
+		// Trigger enter transition on next frame
+		requestAnimationFrame(() => {
+			backdrop.classList.add('visible');
+		});
+
+		function animateAndResolve(result) {
+			const handleTransitionEnd = (event) => {
+				if (event.target !== backdrop) {
+					return;
+				}
+				backdrop.ontransitionend = null;
+				backdrop.remove();
+			};
+
+			backdrop.ontransitionend = handleTransitionEnd;
+			backdrop.classList.remove('visible');
+			backdrop.classList.add('hiding');
+
+			resolve(result);
+		}
+
+		const [cancelBtn, confirmBtn] = modal.querySelectorAll('.confirm-modal-btn');
+		cancelBtn.addEventListener('click', () => animateAndResolve(false));
+		confirmBtn.addEventListener('click', () => animateAndResolve(true));
+
+		document.addEventListener(
+			'keydown',
+			function handleKeydown(e) {
+				if (e.key === 'Escape') {
+					e.stopImmediatePropagation();
+					e.preventDefault();
+					document.removeEventListener('keydown', handleKeydown);
+					if (document.body.contains(backdrop)) {
+						animateAndResolve(false);
+					}
+				}
+			}
+		);
+	});
+}
+
+// Danger zone functionality - Delete all events
+let deleteAllConfirmed = false;
+
+function confirmDeleteAll() {
+	if (!deleteAllConfirmed) {
+		deleteAllConfirmed = true;
+		openConfirmModal({
+			title: 'Delete all events',
+			message: 'Are you sure you want to delete ALL events? This action cannot be undone.',
+			confirmLabel: 'Delete all events',
+			destructive: true
+		}).then((firstConfirmed) => {
+			if (!firstConfirmed) {
+				deleteAllConfirmed = false;
+				return;
+			}
+
+			openConfirmModal({
+				title: 'Final warning',
+				message: 'This will permanently delete ALL events from the database.\nAre you absolutely sure?',
+				confirmLabel: 'Yes, delete everything',
+				destructive: true
+			}).then((secondConfirmed) => {
+				if (!secondConfirmed) {
+					deleteAllConfirmed = false;
+					return;
+				}
+				// Perform deletion
+				deleteAllEvents();
+			});
+		});
+	} else {
+		deleteAllEvents();
+	}
+}
+
+async function deleteAllEvents() {
+	try {
+		const response = await fetch('/api/events', {
+			method: 'DELETE',
+			headers: window.getRequestHeaders ? window.getRequestHeaders(false) : {},
+			credentials: 'include'
+		});
+
+		if (response.status === 401) {
+			window.location.href = '/login';
+			return;
+		}
+		if (!response.ok) {
+			throw new Error(`HTTP error! status: ${response.status}`);
+		}
+
+		const data = await response.json();
+		alert(`Successfully deleted ${data.deletedCount || 0} events.`);
+
+		// Reset confirmation flag
+		deleteAllConfirmed = false;
+
+		// Call page-specific refresh callback if available
+		if (typeof window.onEventsDeleted === 'function') {
+			window.onEventsDeleted();
+		}
+	} catch (error) {
+		console.error('Error deleting events:', error);
+		alert('Error deleting events: ' + error.message);
+		deleteAllConfirmed = false;
+	}
+}
+
+// Empty trash functionality
+function confirmEmptyTrash() {
+	openConfirmModal({
+		title: 'Empty trash',
+		message: 'Are you sure you want to permanently delete ALL events in the trash? This action cannot be undone.',
+		confirmLabel: 'Empty trash',
+		destructive: true
+	}).then((confirmed) => {
+		if (confirmed) {
+			emptyTrash();
+		}
+	});
+}
+
+async function emptyTrash() {
+	try {
+		const response = await fetch('/api/events/deleted', {
+			method: 'DELETE',
+			headers: window.getRequestHeaders ? window.getRequestHeaders(false) : {},
+			credentials: 'include'
+		});
+
+		if (response.status === 401) {
+			window.location.href = '/login';
+			return;
+		}
+		if (!response.ok) {
+			throw new Error(`HTTP error! status: ${response.status}`);
+		}
+
+		const data = await response.json();
+		alert(`Successfully deleted ${data.deletedCount || 0} events from trash.`);
+
+		// Refresh trash info
+		loadTrashInfo();
+
+		// Call page-specific refresh callback if available
+		if (typeof window.onTrashEmptied === 'function') {
+			window.onTrashEmptied();
+		}
+	} catch (error) {
+		console.error('Error emptying trash:', error);
+		alert('Error emptying trash: ' + error.message);
+	}
+}
+
+// Load trash info
+async function loadTrashInfo() {
+	try {
+		const response = await fetch('/api/events/deleted?limit=0', {
+			method: 'GET',
+			headers: window.getRequestHeaders ? window.getRequestHeaders(false) : {},
+			credentials: 'include'
+		});
+
+		if (response.status === 401) {
+			// User doesn't have permission, hide the trash info
+			return;
+		}
+		if (response.status === 403) {
+			return;
+		}
+		if (!response.ok) {
+			console.warn('Could not load trash info:', response.status);
+			return;
+		}
+
+		const data = await response.json();
+		const trashInfo = document.getElementById('trashInfo');
+		if (trashInfo && data.total !== undefined) {
+			if (data.total > 0) {
+				trashInfo.textContent = `Permanently delete all ${data.total} events currently in the trash. This action cannot be undone.`;
+			} else {
+				trashInfo.textContent = 'Permanently delete all events currently in the trash. This action cannot be undone.';
+			}
+		}
+	} catch (error) {
+		console.warn('Error loading trash info:', error);
+		// Don't show error to user, just leave default text
+	}
+}
+
 async function openSettingsModal() {
 	const existing = document.querySelector('.confirm-modal-backdrop.settings-backdrop');
 	if (existing) {
@@ -926,26 +1152,25 @@ async function openSettingsModal() {
 	const deleteAllEventsBtn = modal.querySelector('#deleteAllEventsBtn');
 	if (deleteAllEventsBtn) {
 		deleteAllEventsBtn.addEventListener('click', () => {
-			if (typeof window.confirmDeleteAll === 'function') {
-				window.confirmDeleteAll();
-			}
+			confirmDeleteAll();
 		});
 	}
 
 	const emptyTrashBtn = modal.querySelector('#emptyTrashBtn');
 	if (emptyTrashBtn) {
 		emptyTrashBtn.addEventListener('click', () => {
-			if (typeof window.confirmEmptyTrash === 'function') {
-				window.confirmEmptyTrash();
-			}
+			confirmEmptyTrash();
 		});
 	}
 
 	// Load trash info when settings modal opens (only for users with delete permissions)
-	if (canDeleteAllEvents && typeof window.loadTrashInfo === 'function') {
-		window.loadTrashInfo();
+	if (canDeleteAllEvents) {
+		loadTrashInfo();
 	}
 }
 
 // Export settings modal opener to global scope for HTML and other scripts
 window.openSettingsModal = openSettingsModal;
+
+// Export trash management functions to global scope for inline handlers in event-log.html
+window.confirmEmptyTrash = confirmEmptyTrash;
