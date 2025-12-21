@@ -22,8 +22,6 @@
     "update-admin-role": "node src/scripts/update-admin-role.js",
     "export-database": "node src/scripts/export-database.js",
     "import-database": "node src/scripts/import-database.js",
-    "migrate:add-error-message": "node src/scripts/migrate-add-error-message.js",
-    "migrate:production": "node migrate-production.js",
     "lint": "npm run lint:eslint && npm run lint:ts",
     "lint:eslint": "eslint .",
     "lint:ts": "tsc --noEmit --pretty false --project tsconfig.lint.json",

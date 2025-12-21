@@ -40,8 +40,9 @@ The IBM Salesforce Context Telemetry Server is a Node.js/Express backend service
 │   └── js/                   # Frontend JavaScript
 ├── docs/                     # Documentation (additional copies)
 ├── AGENTS.md                 # Agent instructions (canonical - at root)
-├── API_SPECIFICATION.md      # API docs (canonical - at root)
-├── INTEGRATION.md            # Integration guide (canonical - at root)
+├── docs/                      # Documentation directory
+│   ├── API_SPECIFICATION.md  # API docs
+│   ├── INTEGRATION.md        # Integration guide
 ├── README.md                 # Main readme (root only)
 └── .github/
     ├── copilot-instructions.md  # This file
@@ -233,7 +234,7 @@ try {
 1. Add route handler in `src/index.js` or relevant module
 2. Add authentication middleware if needed (e.g., `auth.requireAuth`)
 3. Validate inputs (use Ajv or manual validation)
-4. Update API specification in `API_SPECIFICATION.md` (canonical version at root)
+4. Update API specification in `docs/API_SPECIFICATION.md`
 5. Add examples to README.md if public-facing
 
 ### Adding a Database Column
@@ -326,11 +327,11 @@ cp .env.example .env
 
 ### Root-Level Documentation (Canonical)
 - **README.md**: User-facing documentation (root only)
-- **AGENTS.md**: Comprehensive agent instructions (canonical version at root)
-- **API_SPECIFICATION.md**: Complete API documentation (canonical version at root)
-- **INTEGRATION.md**: Integration guide for MCP servers (canonical version at root)
-- **SETUP.md**: Quick setup reference (canonical version at root)
-- **PERFORMANCE.md**: Performance considerations (root only)
+- **AGENTS.md**: Comprehensive agent instructions
+- **docs/API_SPECIFICATION.md**: Complete API documentation
+- **docs/INTEGRATION.md**: Integration guide for MCP servers
+- **docs/SETUP.md**: Quick setup reference
+- **docs/PERFORMANCE.md**: Performance considerations
 
 ### docs/ Directory (Additional Documentation)
 - **docs/SETUP.md**: Detailed deployment guide

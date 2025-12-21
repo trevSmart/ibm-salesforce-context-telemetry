@@ -38,13 +38,8 @@ This telemetry server receives telemetry events from IBM Salesforce Context MCP 
 ├── api/                    # API specifications
 │   ├── api-spec.yaml       # OpenAPI 3.0 specification
 │   └── telemetry-schema.json # JSON Schema for validation
-├── docs/                   # Documentation
-│   ├── SETUP.md           # Setup and deployment guide
-│   ├── INTEGRATION.md     # Integration guide for MCP servers
-│   ├── API_SPECIFICATION.md # Complete API documentation
-│   ├── DATABASE.md        # Database configuration guide
-│   ├── LOG_FORMATS.md     # Standard log formats documentation
-│   └── AGENTS.md          # Instructions for AI agents
+├── docs/                   # Complete documentation
+├── AGENTS.md              # Instructions for AI agents
 ├── examples/               # Code examples
 │   └── telemetry-client.js # Reference telemetry client
 ├── public/                 # Web dashboard
@@ -424,9 +419,7 @@ The database automatically creates two tables:
 * `telemetry_events` - Stores all telemetry event data
 * `users` - Stores user authentication credentials (for multi-user support)
 
-See [docs/DATABASE.md](./docs/DATABASE.md) for complete database configuration and setup instructions.
-
-**⚠️ Important for Render deployments**: SQLite does not persist between deployments on Render. See [docs/RENDER_DEPLOYMENT.md](./docs/RENDER_DEPLOYMENT.md) for instructions on using PostgreSQL with Render.
+See the database documentation in [`docs/`](./docs/) for complete configuration and setup instructions.
 
 ## Authentication
 
@@ -526,32 +519,28 @@ Contributions are welcome! Please ensure that:
 * Tests are added for new features
 * Documentation is updated as needed
 
+## Documentation
+
+Complete documentation is available in the [`docs/`](./docs/) directory, including:
+
+- Setup and deployment guides
+- API specification and examples
+- Integration instructions
+- Database configuration
+- Performance optimizations
+
 ## API Specification
 
 The complete API specification is available in multiple formats:
 
-- **[API_SPECIFICATION.md](./docs/API_SPECIFICATION.md)** - Human-readable API documentation
-- **[api-spec.yaml](./api/api-spec.yaml)** - OpenAPI 3.0 specification (Swagger)
-- **[telemetry-schema.json](./api/telemetry-schema.json)** - JSON Schema for validation
+- **OpenAPI/Swagger**: [`api/api-spec.yaml`](./api/api-spec.yaml)
+- **JSON Schema**: [`api/telemetry-schema.json`](./api/telemetry-schema.json)
 
-You can view the OpenAPI spec in [Swagger Editor](https://editor.swagger.io/) by importing `api/api-spec.yaml`.
+You can view the OpenAPI spec in [Swagger Editor](https://editor.swagger.io/).
 
 ## Integration
 
-To integrate this telemetry server with your MCP server, see the [INTEGRATION.md](./docs/INTEGRATION.md) guide for detailed instructions and code examples.
-
-**Quick integration example:**
-
-```javascript
-const { sendTelemetry } = require('./telemetry-client');
-
-// Send telemetry after a tool call
-await sendTelemetry('tool_call', {
-  toolName: 'my_tool',
-  success: true,
-  duration: 150
-});
-```
+To integrate this telemetry server with your MCP server, see the integration guide in [`docs/`](./docs/).
 
 A reference implementation is available in [`examples/telemetry-client.js`](./examples/telemetry-client.js).
 
