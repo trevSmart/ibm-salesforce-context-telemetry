@@ -123,22 +123,42 @@
 							<button type="button" class="icon-btn" id="sortBtn" aria-label="Toggle sort order" title="Toggle sort order">
 								<img id="sortIcon" src="/resources/sort-desc" alt="Sort descending" width="18" height="18">
 							</button>
+
+							<!--
 							<div class="user-filter-dropdown-container relative">
-								<button type="button" class="relative w-full cursor-default rounded-md bg-white dark:bg-(--bg-secondary) py-1.5 pl-3 pr-10 text-left text-gray-900 dark:text-(--text-primary) shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-(--border-color) focus:outline-none focus:ring-2 focus:ring-blue-600 sm:text-sm sm:leading-6" id="userFilterDropdownBtn" onclick="toggleUserFilterDropdown(event)">
+								<button type="button" class="relative w-full cursor-default rounded-md bg-white dark:bg-white/5 py-1.5 pl-3 pr-12 text-left text-gray-900 dark:text-white outline-1 -outline-offset-1 outline-gray-300 dark:outline-white/10 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 dark:focus:outline-indigo-500 sm:text-sm sm:leading-6" id="userFilterDropdownBtn" onclick="toggleUserFilterDropdown(event)">
 									<span class="flex items-center">
 										<i class="fa-solid fa-users mr-2"></i>
 										<span class="block truncate text-sm">Users</span>
 									</span>
-									<span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
-										<i class="fa-solid fa-sort-down text-gray-400" id="userFilterChevron" aria-hidden="true"></i>
+									<span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+										<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5 text-gray-400 transition-transform duration-200" id="userFilterChevron">
+											<path d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" fill-rule="evenodd" />
+										</svg>
 									</span>
 								</button>
-								<div class="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white dark:bg-(--bg-primary) py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm hidden" id="userFilterDropdown" role="listbox">
+								<div class="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white dark:bg-gray-800 py-1 text-base outline outline-black/5 dark:outline-white/10 dark:-outline-offset-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm hidden" id="userFilterDropdown" role="listbox">
 									<div id="userFilterDropdownContent" role="listbox">
-										<!-- User list will be populated by JavaScript -->
 									</div>
 								</div>
 							</div>
+							-->
+
+
+							<el-autocomplete class="relative block">
+								<input id="autocomplete" type="text" class="block w-full rounded-md bg-white py-1.5 pr-12 pl-3 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm" />
+								<button type="button" class="absolute inset-y-0 right-0 flex items-center rounded-r-md px-2">
+									<svg viewBox="0 0 20 20" fill="currentColor" data-slot="icon" aria-hidden="true" class="size-5 text-gray-400">
+										<path d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" fill-rule="evenodd" />
+									</svg>
+								</button>
+
+								<el-options id="userFilterOptions" anchor="bottom end" popover class="w-(--input-width) overflow-auto rounded-md bg-white py-1 text-base shadow-lg outline outline-black/5 transition-discrete [--anchor-gap:--spacing(1)] data-leave:transition data-leave:duration-100 data-leave:ease-in data-closed:data-leave:opacity-0 sm:text-sm" style="max-height: 60vh">
+
+
+								</el-options>
+							</el-autocomplete>
+
 							<div class="level-filters">
 								<button class="level-filter-btn level-info active" data-level="session_start">
 									<span class="text-sm font-medium">Session</span>

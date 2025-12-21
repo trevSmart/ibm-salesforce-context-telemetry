@@ -214,10 +214,7 @@
   }
 
   .top-nav-logo-icon {
-    width: 22px;
-    aspect-ratio: 1 / 1;
-    border-radius: 50%;
-    background: #ef4444;
+    width: 54px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -253,7 +250,7 @@
     border: none;
     border-radius: 22px;
     font-size: 0.875rem;
-    background: #f3f5f7;
+    background: var(--button-bg);
     color: #3d4152;
     width: 200px;
     transition: width 0.2s ease, box-shadow 0.2s ease;

@@ -115,7 +115,7 @@
       <nav class="top-nav">
         <a href="/" class="top-nav-logo">
           <div class="top-nav-logo-icon">
-            <img src="/resources/custom30.png" alt="IBM SF CTXT TELEMETRY" class="top-nav-logo-img">
+            <img src="/resources/ibm.webp" alt="IBM SF CTXT TELEMETRY" class="top-nav-logo-img">
           </div>
           <span>TELEMETRY</span>
         </a>
@@ -130,8 +130,8 @@
         </div>
         <div class="top-nav-actions">
           <button type="button" class="icon-btn" ${refreshButtonId} aria-label="${refreshAriaLabel}" title="${refreshTitle}" onclick="${refreshOnClick}">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="18" height="18" aria-hidden="true">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="refresh-icon" width="18" height="18" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 12c0-1.232-.046-2.453-.138-3.662a4.006 4.006 0 0 0-3.7-3.7 48.678 48.678 0 0 0-7.324 0 4.006 4.006 0 0 0-3.7 3.7c-.017.22-.032.441-.046.662M19.5 12l3-3m-3 3-3-3m-12 3c0 1.232.046 2.453.138 3.662a4.006 4.006 0 0 0 3.7 3.7 48.656 48.656 0 0 0 7.324 0 4.006 4.006 0 0 0 3.7-3.7c.017-.22.032-.441.046-.662M4.5 12l3 3m-3-3-3 3" />
             </svg>
             ${refreshBadge}
           </button>
@@ -145,7 +145,7 @@
                 <path d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" fill-rule="evenodd" />
               </svg>
             </button>
-            <el-menu id="userMenu" anchor="bottom end" popover class="w-56 origin-top-right divide-y divide-gray-100 rounded-md bg-white text-gray-900 shadow-lg ring-1 ring-black/5 transition transition-discrete dark:divide-white/10 dark:bg-zinc-900 dark:text-gray-50 [--anchor-gap:--spacing(2)] data-closed:scale-95 data-closed:transform data-closed:opacity-0 data-enter:duration-100 data-enter:ease-out data-leave:duration-75 data-leave:ease-in"></el-menu>
+            <el-menu id="userMenu" anchor="bottom end" popover class="w-56 origin-top-right divide-y divide-gray-100 rounded-md bg-white text-gray-900 shadow-lg ring-1 ring-black/5 transition transition-discrete dark:divide-white/10 dark:bg-zinc-900 dark:text-gray-50 [--anchor-gap:--spacing(2)] data-closed:-translate-y-2 data-closed:scale-95 data-closed:transform data-closed:opacity-0 data-enter:duration-250 data-enter:ease-out data-leave:duration-200 data-leave:ease-in"></el-menu>
           </el-dropdown>
         </div>
       </nav>

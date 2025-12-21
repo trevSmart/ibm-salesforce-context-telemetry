@@ -46,6 +46,7 @@ public/css/output.css.map
 tmp/
 temp/
 create-user-render.sh
+dev/
 
 # Test files
 test-*.js

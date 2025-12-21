@@ -1307,7 +1307,7 @@ function safeShowToast(message, type = 'info') {
 					formatter: value => formatChartTimeLabel(new Date(value))
 				},
 				axisLine: {lineStyle: {color: axisColor}},
-				splitLine: {show: true, lineStyle: {color: splitLineColor}},
+				splitLine: {show: false},
 				axisTick: {show: false}
 			},
 			yAxis: {
@@ -3011,7 +3011,7 @@ function safeShowToast(message, type = 'info') {
 			const descriptionCell = row.querySelector('.log-description');
 			if (descriptionCell) {
 				if (description === '__VIEW_PAYLOAD_BUTTON__') {
-					descriptionCell.innerHTML = `<button onclick="loadEventPayload(${event.id})" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 p-1 rounded" title="View payload">
+					descriptionCell.innerHTML = `<button onclick="loadEventPayload(${event.id})" class="text-gray-900 hover:text-[#2195cf] dark:text-white dark:hover:text-[#2195cf] p-1 rounded" title="View payload">
 						<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
 							<path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
 							<path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
@@ -4595,17 +4595,18 @@ function safeShowToast(message, type = 'info') {
 			// Check if response is an error object
 			if (data && data.status === 'error') {
 				console.error('Error loading users:', data.message);
-				const dropdownContent = document.getElementById('userFilterDropdownContent');
-				if (dropdownContent) {
-					dropdownContent.innerHTML = '<div class="user-filter-empty">Error loading users</div>';
+				const optionsContainer = document.getElementById('userFilterOptions');
+				if (optionsContainer) {
+					optionsContainer.innerHTML = '<div class="user-filter-empty">Error loading users</div>';
 				}
 				return;
 			}
 
-			const dropdownContent = document.getElementById('userFilterDropdownContent');
-			if (!dropdownContent) {return;}
+			const optionsContainer = document.getElementById('userFilterOptions');
+			if (!optionsContainer) {return;}
 
-			dropdownContent.innerHTML = '';
+			// Clear existing options
+			optionsContainer.innerHTML = '';
 
 			// Normalize API response to consistent objects { id, label }
 			const normalizedUsers = (Array.isArray(data) ? data : [])
@@ -4636,7 +4637,7 @@ function safeShowToast(message, type = 'info') {
 			if (normalizedUsers.length === 0) {
 				allUserIds = new Set();
 				selectedUserIds.clear();
-				dropdownContent.innerHTML = '<div class="user-filter-empty">No users found</div>';
+				optionsContainer.innerHTML = '<div class="user-filter-empty">No users found</div>';
 				return;
 			}
 
@@ -4656,89 +4657,45 @@ function safeShowToast(message, type = 'info') {
 				);
 			}
 
-			const syncCheckboxStates = () => {
-				dropdownContent.querySelectorAll('.user-filter-checkbox').forEach(checkbox => {
-					const checkboxUserId = checkbox.getAttribute('data-user-id');
-					if (!checkboxUserId) {
-						return;
-					}
-					checkbox.checked = selectedUserIds.has(checkboxUserId);
-				});
-			};
+			// For autocomplete, we don't need Select All/Deselect All buttons
+			// Users can select individual users or use the input to filter
 
-			// Add "Select all" button at the top
-			const selectAllButton = document.createElement('button');
-			selectAllButton.className = 'user-filter-action-btn';
-			selectAllButton.textContent = 'Select all';
-			selectAllButton.addEventListener('click', (e) => {
-				e.stopPropagation();
-				// Select all users
-				selectedUserIds = new Set(allIdsArray);
-				syncCheckboxStates();
-				currentOffset = 0;
-				loadEvents();
-				loadEventTypeStats(selectedSession);
-				loadSessions();
-			});
+			// Color palette for user indicators (matching chart colors)
+			const userColors = [
+				'#3B82F6', // blue-500
+				'#EF4444', // red-500
+				'#10B981', // emerald-500
+				'#F59E0B', // amber-500
+				'#8B5CF6', // violet-500
+				'#06B6D4', // cyan-500
+				'#F97316', // orange-500
+				'#84CC16', // lime-500
+				'#EC4899', // pink-500
+				'#6B7280'  // gray-500 (fallback)
+			];
 
-			dropdownContent.appendChild(selectAllButton);
-
-			// Add "Deselect all" button
-			const deselectAllButton = document.createElement('button');
-			deselectAllButton.className = 'user-filter-action-btn';
-			deselectAllButton.textContent = 'Deselect all';
-			deselectAllButton.addEventListener('click', (e) => {
-				e.stopPropagation();
-				// Deselect all users
-				selectedUserIds.clear();
-				syncCheckboxStates();
-				currentOffset = 0;
-				loadEvents();
-				loadEventTypeStats(selectedSession);
-				loadSessions();
-			});
-
-			dropdownContent.appendChild(deselectAllButton);
-
-			// Add separator
-			const separator = document.createElement('div');
-			separator.className = 'user-filter-separator';
-			dropdownContent.appendChild(separator);
-
-			let userCheckboxCounter = 0;
-			normalizedUsers.forEach(user => {
+			// Create el-option elements for each user
+			normalizedUsers.forEach((user, index) => {
 				const userId = user.id;
 				const userLabel = user.label || userId;
-				const checkboxId = `user-filter-${userCheckboxCounter++}`;
-				const userItem = document.createElement('div');
-				userItem.className = 'user-filter-item';
-				userItem.innerHTML = `
-					<input type="checkbox" id="${checkboxId}" class="user-filter-checkbox" data-user-id="${escapeHtml(userId)}">
-					<label for="${checkboxId}" class="user-filter-label">${escapeHtml(userLabel)}</label>
+
+				// Assign color to user (cycle through color palette)
+				const userColor = userColors[index % userColors.length];
+
+				// Create the el-option element
+				const optionElement = document.createElement('el-option');
+				optionElement.setAttribute('value', userId);
+				optionElement.className = 'block px-3 py-2 text-gray-900 select-none aria-selected:bg-indigo-600 aria-selected:text-white';
+				optionElement.innerHTML = `
+					<div class="flex items-center">
+						<span aria-hidden="true" class="inline-block size-2 shrink-0 rounded-full forced-colors:bg-[Highlight]" style="background-color: ${userColor}"></span>
+						<span class="ml-3 truncate">
+							${escapeHtml(userLabel)}
+						</span>
+					</div>
 				`;
 
-				const checkbox = userItem.querySelector('input[type="checkbox"]');
-				// Check if user is selected (default to true on first load)
-				checkbox.checked = selectedUserIds.has(userId);
-
-				checkbox.addEventListener('change', (e) => {
-					const targetUserId = e.target.getAttribute('data-user-id');
-					if (!targetUserId) {
-						return;
-					}
-					if (e.target.checked) {
-						selectedUserIds.add(targetUserId);
-					} else {
-						selectedUserIds.delete(targetUserId);
-					}
-					// No need to update button states - they're always available
-					currentOffset = 0;
-					loadEvents();
-					loadEventTypeStats(selectedSession);
-					loadSessions();
-				});
-
-				dropdownContent.appendChild(userItem);
+				optionsContainer.appendChild(optionElement);
 			});
 		} catch (error) {
 			console.error('Error loading users:', error);
@@ -4754,11 +4711,10 @@ function safeShowToast(message, type = 'info') {
 		const isVisible = !dropdown.classList.contains('hidden');
 		if (!isVisible) {
 			dropdown.classList.remove('hidden');
-			chevron.classList.remove('fa-sort-down');
-			chevron.classList.add('fa-sort-up');
+			chevron.style.transform = 'rotate(180deg)';
 			// Load users if not already loaded
-			const dropdownContent = document.getElementById('userFilterDropdownContent');
-			if (dropdownContent && dropdownContent.children.length === 0) {
+			const optionsContainer = document.getElementById('userFilterOptions');
+			if (optionsContainer && optionsContainer.children.length === 0) {
 				loadUsers();
 			}
 		}
@@ -4771,8 +4727,7 @@ function safeShowToast(message, type = 'info') {
 		if (!dropdown || !chevron) {return;}
 
 		dropdown.classList.add('hidden');
-		chevron.classList.remove('fa-sort-up');
-		chevron.classList.add('fa-sort-down');
+		chevron.style.transform = 'rotate(0deg)';
 	}
 
 	window.toggleUserFilterDropdown = function(event) {
@@ -5019,6 +4974,7 @@ function safeShowToast(message, type = 'info') {
 			setTimeout(() => loadUsersList(), 300);
 		});
 		runSafeAsyncInitStep('teams list', () => loadTeamsList());
+		runSafeAsyncInitStep('users for filter', () => loadUsers());
 		runSafeAsyncInitStep('auto refresh', () => updateAutoRefreshInterval());
 		runSafeInitStep('infinite scroll', () => setupInfiniteScroll());
 

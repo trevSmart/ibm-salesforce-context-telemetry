@@ -956,20 +956,18 @@ async function showAddOrgModal(teamId) {
     ${unassignedOrgs.length > 0 ? `
       <div style="margin-bottom: 16px;">
         <div style="margin-bottom: 8px; font-weight: 500;">Or select existing org:</div>
-        <el-autocomplete class="relative existing-org-combo">
-          <input id="existingOrgSelect" name="existingOrgSelect" type="text" value=""
-            class="block w-full rounded-md bg-white dark:bg-white/5 py-1.5 pr-12 pl-3 text-base text-gray-900 dark:text-white outline-1 -outline-offset-1 outline-gray-300 dark:outline-white/10 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 dark:focus:outline-indigo-500 sm:text-sm/6"
-            placeholder="-- Select an org --">
-          <button type="button" class="absolute inset-y-0 right-0 flex items-center rounded-r-md px-2">
+        <div class="relative existing-org-combo">
+          <select id="existingOrgSelect" name="existingOrgSelect"
+            class="block w-full appearance-none rounded-md bg-white dark:bg-white/5 py-1.5 pr-12 pl-3 text-base text-gray-900 dark:text-white outline-1 -outline-offset-1 outline-gray-300 dark:outline-white/10 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 dark:focus:outline-indigo-500 sm:text-sm/6">
+            <option value="" selected>-- Select an org --</option>
+            ${unassignedOrgs.map(org => `<option value="${escapeHtml(org.id)}">${escapeHtml(org.alias || org.id)}</option>`).join('')}
+          </select>
+          <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
             <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5 text-gray-400">
               <path d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" fill-rule="evenodd" />
             </svg>
-          </button>
-          <el-options anchor="bottom end" popover class="max-h-60 w-(--input-width) overflow-auto rounded-md bg-white dark:bg-gray-800 py-1 text-base shadow-lg outline outline-black/5 dark:outline dark:-outline-offset-1 dark:outline-white/10 transition-discrete [--anchor-gap:--spacing(1)] data-leave:transition data-leave:duration-100 data-leave:ease-in data-closed:data-leave:opacity-0 sm:text-sm">
-            <el-option value="" class="block truncate px-3 py-2 text-gray-900 dark:text-gray-300 select-none aria-selected:bg-indigo-600 dark:aria-selected:bg-indigo-500 aria-selected:text-white">-- Select an org --</el-option>
-            ${unassignedOrgs.map(org => `<el-option value="${escapeHtml(org.id)}" class="block truncate px-3 py-2 text-gray-900 dark:text-gray-300 select-none aria-selected:bg-indigo-600 dark:aria-selected:bg-indigo-500 aria-selected:text-white">${escapeHtml(org.alias || org.id)}</el-option>`).join('')}
-          </el-options>
-        </el-autocomplete>
+          </div>
+        </div>
       </div>
     ` : ''}
     <div style="display: flex; gap: 8px; justify-content: flex-end;">
@@ -1077,11 +1075,18 @@ async function showAddUserModal(teamId) {
     <div style="margin-bottom: 16px;">
       <label>
         <div style="margin-bottom: 4px; font-weight: 500;">Select User</div>
-        <select id="userSelect" name="userSelect"
-          class="block w-full rounded-md bg-white dark:bg-white/5 py-2 pr-3 pl-3 text-base text-gray-900 dark:text-white outline-1 -outline-offset-1 outline-gray-300 dark:outline-white/10 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 dark:focus:outline-indigo-500 sm:text-sm/6">
-          <option value="">-- Select a user --</option>
-          ${availableUsers.map(userName => `<option value="${escapeHtml(userName)}">${escapeHtml(userName)}</option>`).join('')}
-        </select>
+        <div class="relative">
+          <select id="userSelect" name="userSelect"
+            class="block w-full appearance-none rounded-md bg-white dark:bg-white/5 py-2 pr-12 pl-3 text-base text-gray-900 dark:text-white outline-1 -outline-offset-1 outline-gray-300 dark:outline-white/10 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 dark:focus:outline-indigo-500 sm:text-sm/6">
+            <option value="">-- Select a user --</option>
+            ${availableUsers.map(userName => `<option value="${escapeHtml(userName)}">${escapeHtml(userName)}</option>`).join('')}
+          </select>
+          <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+            <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5 text-gray-400">
+              <path d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" fill-rule="evenodd" />
+            </svg>
+          </div>
+        </div>
       </label>
     </div>
     <div style="display: flex; gap: 8px; justify-content: flex-end;">

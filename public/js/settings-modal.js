@@ -362,14 +362,21 @@ async function openSettingsModal() {
 									</div>
 								</div>
 								<div style="display: flex; align-items: center; gap: 8px;">
-									<select id="autoRefreshInterval" name="autoRefreshInterval"
-										class="auto-refresh-interval block w-full rounded-md bg-white dark:bg-white/5 py-1.5 pr-3 pl-3 text-base text-gray-900 dark:text-white outline-1 -outline-offset-1 outline-gray-300 dark:outline-white/10 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 dark:focus:outline-indigo-500 sm:text-sm/6">
-										<option value="" ${autoRefreshInterval === '' ? 'selected' : ''}>Off</option>
-										<option value="3" ${autoRefreshInterval === '3' ? 'selected' : ''}>3 minutes</option>
-										<option value="5" ${autoRefreshInterval === '5' ? 'selected' : ''}>5 minutes</option>
-										<option value="10" ${autoRefreshInterval === '10' ? 'selected' : ''}>10 minutes</option>
-										<option value="15" ${autoRefreshInterval === '15' ? 'selected' : ''}>15 minutes</option>
-									</select>
+									<div class="relative">
+										<select id="autoRefreshInterval" name="autoRefreshInterval"
+											class="block w-full appearance-none rounded-md bg-white dark:bg-white/5 py-1.5 pr-12 pl-3 text-base text-gray-900 dark:text-white outline-1 -outline-offset-1 outline-gray-300 dark:outline-white/10 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 dark:focus:outline-indigo-500 sm:text-sm/6">
+											<option value="" ${autoRefreshInterval === '' ? 'selected' : ''}>Off</option>
+											<option value="3" ${autoRefreshInterval === '3' ? 'selected' : ''}>3 minutes</option>
+											<option value="5" ${autoRefreshInterval === '5' ? 'selected' : ''}>5 minutes</option>
+											<option value="10" ${autoRefreshInterval === '10' ? 'selected' : ''}>10 minutes</option>
+											<option value="15" ${autoRefreshInterval === '15' ? 'selected' : ''}>15 minutes</option>
+										</select>
+										<div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+											<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5 text-gray-400">
+												<path d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" fill-rule="evenodd" />
+											</svg>
+										</div>
+									</div>
 								</div>
 							</div>
 						</section>
@@ -588,13 +595,10 @@ async function openSettingsModal() {
 		});
 	}
 
-	const autoRefreshIntervalInput = modal.querySelector('#autoRefreshInterval');
-	if (autoRefreshIntervalInput) {
+	const autoRefreshIntervalSelect = modal.querySelector('#autoRefreshInterval');
+	if (autoRefreshIntervalSelect) {
 		const handleAutoRefreshChange = (e) => {
-			let interval = (e.target.value || '').trim();
-			if (!interval) {
-				interval = '';
-			}
+			const interval = (e.target.value || '').trim();
 
 			// Store in localStorage for persistence
 			localStorage.setItem('autoRefreshIntervalMinutes', interval);
@@ -613,8 +617,8 @@ async function openSettingsModal() {
 				window.onAutoRefreshChanged(interval !== '', interval);
 			}
 		};
-		autoRefreshIntervalInput.addEventListener('change', handleAutoRefreshChange);
-		autoRefreshIntervalInput.addEventListener('input', handleAutoRefreshChange);
+
+		autoRefreshIntervalSelect.addEventListener('change', handleAutoRefreshChange);
 	}
 
 	// Navigation between settings sections
@@ -812,20 +816,19 @@ async function openSettingsModal() {
               <div>
                 <label class="settings-modal-placeholder-text" style="display: block; margin-bottom: 6px;">
                   Role
-                  <el-autocomplete class="relative" style="margin-top: 4px;">
-                    <input id="createUserRole" name="role" type="text" value="basic"
-                      class="block w-full rounded-md bg-white dark:bg-white/5 py-1.5 pr-12 pl-3 text-base text-gray-900 dark:text-white outline-1 -outline-offset-1 outline-gray-300 dark:outline-white/10 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 dark:focus:outline-indigo-500 sm:text-sm/6">
-                    <button type="button" class="absolute inset-y-0 right-0 flex items-center rounded-r-md px-2">
+                  <div class="relative" style="margin-top: 4px;">
+                    <select id="createUserRole" name="role"
+                      class="block w-full appearance-none rounded-md bg-white dark:bg-white/5 py-1.5 pr-12 pl-3 text-base text-gray-900 dark:text-white outline-1 -outline-offset-1 outline-gray-300 dark:outline-white/10 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 dark:focus:outline-indigo-500 sm:text-sm/6">
+                      <option value="basic" selected>Basic</option>
+                      <option value="advanced">Advanced</option>
+                      <option value="administrator">Administrator</option>
+                    </select>
+                    <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                       <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5 text-gray-400">
                         <path d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" fill-rule="evenodd" />
                       </svg>
-                    </button>
-                    <el-options anchor="bottom end" popover class="max-h-60 w-(--input-width) overflow-auto rounded-md bg-white dark:bg-gray-800 py-1 text-base shadow-lg outline outline-black/5 dark:outline dark:-outline-offset-1 dark:outline-white/10 transition-discrete [--anchor-gap:--spacing(1)] data-leave:transition data-leave:duration-100 data-leave:ease-in data-closed:data-leave:opacity-0 sm:text-sm">
-                      <el-option value="basic" class="block truncate px-3 py-2 text-gray-900 dark:text-gray-300 select-none aria-selected:bg-indigo-600 dark:aria-selected:bg-indigo-500 aria-selected:text-white">Basic</el-option>
-                      <el-option value="advanced" class="block truncate px-3 py-2 text-gray-900 dark:text-gray-300 select-none aria-selected:bg-indigo-600 dark:aria-selected:bg-indigo-500 aria-selected:text-white">Advanced</el-option>
-                      <el-option value="administrator" class="block truncate px-3 py-2 text-gray-900 dark:text-gray-300 select-none aria-selected:bg-indigo-600 dark:aria-selected:bg-indigo-500 aria-selected:text-white">Administrator</el-option>
-                    </el-options>
-                  </el-autocomplete>
+                    </div>
+                  </div>
                 </label>
               </div>
             `,
@@ -906,20 +909,19 @@ async function openSettingsModal() {
               <div>
                 <label class="settings-modal-placeholder-text" style="display: block; margin-bottom: 6px;">
                   Role
-                  <el-autocomplete class="relative" style="margin-top: 4px;">
-                    <input id="editUserRole" name="role" type="text" value="${currentRole}"
-                      class="block w-full rounded-md bg-white dark:bg-white/5 py-1.5 pr-12 pl-3 text-base text-gray-900 dark:text-white outline-1 -outline-offset-1 outline-gray-300 dark:outline-white/10 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 dark:focus:outline-indigo-500 sm:text-sm/6">
-                    <button type="button" class="absolute inset-y-0 right-0 flex items-center rounded-r-md px-2">
+                  <div class="relative" style="margin-top: 4px;">
+                    <select id="editUserRole" name="role"
+                      class="block w-full appearance-none rounded-md bg-white dark:bg-white/5 py-1.5 pr-12 pl-3 text-base text-gray-900 dark:text-white outline-1 -outline-offset-1 outline-gray-300 dark:outline-white/10 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 dark:focus:outline-indigo-500 sm:text-sm/6">
+                      <option value="basic" ${currentRole === 'basic' ? 'selected' : ''}>Basic</option>
+                      <option value="advanced" ${currentRole === 'advanced' ? 'selected' : ''}>Advanced</option>
+                      <option value="administrator" ${currentRole === 'administrator' ? 'selected' : ''}>Administrator</option>
+                    </select>
+                    <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                       <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5 text-gray-400">
                         <path d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" fill-rule="evenodd" />
                       </svg>
-                    </button>
-                    <el-options anchor="bottom end" popover class="max-h-60 w-(--input-width) overflow-auto rounded-md bg-white dark:bg-gray-800 py-1 text-base shadow-lg outline outline-black/5 dark:outline dark:-outline-offset-1 dark:outline-white/10 transition-discrete [--anchor-gap:--spacing(1)] data-leave:transition data-leave:duration-100 data-leave:ease-in data-closed:data-leave:opacity-0 sm:text-sm">
-                      <el-option value="basic" class="block truncate px-3 py-2 text-gray-900 dark:text-gray-300 select-none aria-selected:bg-indigo-600 dark:aria-selected:bg-indigo-500 aria-selected:text-white">Basic</el-option>
-                      <el-option value="advanced" class="block truncate px-3 py-2 text-gray-900 dark:text-gray-300 select-none aria-selected:bg-indigo-600 dark:aria-selected:bg-indigo-500 aria-selected:text-white">Advanced</el-option>
-                      <el-option value="administrator" class="block truncate px-3 py-2 text-gray-900 dark:text-gray-300 select-none aria-selected:bg-indigo-600 dark:aria-selected:bg-indigo-500 aria-selected:text-white">Administrator</el-option>
-                    </el-options>
-                  </el-autocomplete>
+                    </div>
+                  </div>
                 </label>
               </div>
             `,
