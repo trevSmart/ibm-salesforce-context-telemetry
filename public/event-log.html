@@ -145,7 +145,7 @@
 							-->
 
 
-							<el-autocomplete class="relative block">
+							<el-autocomplete class="relative block user-filter-autocomplete">
 								<input id="autocomplete" type="text" value="Users" class="block w-full rounded-md bg-transparent dark:bg-transparent py-1.5 pr-12 pl-3 text-base text-gray-900 dark:text-gray-100 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm" />
 								<button type="button" class="absolute inset-y-0 right-0 flex items-center rounded-r-md px-2">
 									<svg viewBox="0 0 20 20" fill="currentColor" data-slot="icon" aria-hidden="true" class="size-5 text-gray-400">
@@ -180,42 +180,52 @@
 						</div>
 					</div>
 					<div class="main-content-body">
-						<div id="sessionActivityCard" class="session-activity-card overflow-hidden rounded-lg bg-white dark:bg-gray-800/50 dark:outline dark:-outline-offset-1 dark:outline-white/10 shadow-sm hidden" style="flex-direction: column;">
-							<div class="session-activity-header-floating px-4 py-3 sm:px-6">
-								<div class="session-activity-header">
-									<div style="display: flex; align-items: center; gap: 4px;">
-										<button class="date-nav-btn" id="prevDayBtn" onclick="navigateToPreviousDay()">
-											<i class="fa-solid fa-caret-left"></i>
-										</button>
-										<div>
-											<p id="sessionActivityTitle" class="label">Timeline</p>
-											<p id="sessionActivitySubtitle" class="subtitle">–</p>
+						<div id="sessionActivityCard" class="session-activity-card overflow-hidden rounded-lg bg-white dark:bg-gray-800/50 dark:outline dark:-outline-offset-1 dark:outline-white/10 shadow-sm flex flex-col" style="min-height: 300px;">
+							<!-- Loading state -->
+							<div id="sessionActivityLoading" class="session-activity-loading flex-1 flex items-center justify-center px-4 py-8 sm:px-6">
+								<div class="flex items-center gap-3">
+									<div class="animate-spin rounded-full h-5 w-5 border-2 border-gray-300 dark:border-gray-600 border-t-blue-500"></div>
+									<span class="text-sm text-gray-600 dark:text-gray-400">Loading activity chart...</span>
+								</div>
+							</div>
+							<!-- Chart content (initially hidden) -->
+							<div id="sessionActivityContent" class="hidden flex-1">
+								<div class="session-activity-header-floating px-4 py-3 sm:px-6">
+									<div class="session-activity-header">
+										<div style="display: flex; align-items: center; gap: 4px;">
+											<button class="date-nav-btn" id="prevDayBtn" onclick="navigateToPreviousDay()">
+												<i class="fa-solid fa-caret-left"></i>
+											</button>
+											<div>
+												<p id="sessionActivityTitle" class="label">Timeline</p>
+												<p id="sessionActivitySubtitle" class="subtitle">–</p>
+											</div>
+											<button class="date-nav-btn" id="nextDayBtn" onclick="navigateToNextDay()">
+												<i class="fa-solid fa-caret-right"></i>
+											</button>
 										</div>
-										<button class="date-nav-btn" id="nextDayBtn" onclick="navigateToNextDay()">
-											<i class="fa-solid fa-caret-right"></i>
-										</button>
-									</div>
-									<div class="session-activity-legend-wrapper">
-										<button
-												type="button"
-												class="session-activity-legend-toggle">
-											<img src="resources/colors.webp" alt="" class="session-activity-legend-toggle-image">
-										</button>
-										<div id="sessionActivityLegend" class="session-activity-legend">
-											<span class="legend-item">
-												<span class="legend-dot" style="background: #0ea5e9;"></span>
-												<span>Events per slot</span>
-											</span>
-											<span class="legend-item">
-												<span class="legend-dot" style="background: rgba(16,185,129,0.7);"></span>
-												<span>Office window</span>
-											</span>
+										<div class="session-activity-legend-wrapper">
+											<button
+													type="button"
+													class="session-activity-legend-toggle">
+												<img src="resources/colors.webp" alt="" class="session-activity-legend-toggle-image">
+											</button>
+											<div id="sessionActivityLegend" class="session-activity-legend">
+												<span class="legend-item">
+													<span class="legend-dot" style="background: #0ea5e9;"></span>
+													<span>Events per slot</span>
+												</span>
+												<span class="legend-item">
+													<span class="legend-dot" style="background: rgba(16,185,129,0.7);"></span>
+													<span>Office window</span>
+												</span>
+											</div>
 										</div>
 									</div>
 								</div>
-							</div>
-							<div class="session-activity-chart-body px-4 pt-0 pb-5 sm:px-6 sm:pt-0 sm:pb-6">
-								<div id="sessionActivityChart" style="width: 100%; min-height: 0; height: 100%;"></div>
+								<div class="session-activity-chart-body px-4 pt-0 pb-5 sm:px-6 sm:pt-0 sm:pb-6 h-full">
+									<div id="sessionActivityChart" style="width: 100%; min-height: 0; height: 100%;"></div>
+								</div>
 							</div>
 						</div>
 						<div class="horizontal-resizer" id="horizontalResizer" aria-hidden="true"></div>

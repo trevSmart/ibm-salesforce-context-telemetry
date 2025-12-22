@@ -1294,7 +1294,7 @@ app.get('/api/event-types', auth.requireAuth, auth.requireRole('advanced'), apiR
 
 app.get('/api/sessions', auth.requireAuth, auth.requireRole('advanced'), apiReadLimiter, async (req, res) => {
 	try {
-		const {userId} = req.query;
+		const {userId, limit, offset} = req.query;
 		// Handle multiple userId values (Express converts them to an array)
 		const userIds = Array.isArray(userId) ? userId : (userId ? [userId] : []);
 
@@ -1303,19 +1303,31 @@ app.get('/api/sessions', auth.requireAuth, auth.requireRole('advanced'), apiRead
 			return res.json([]);
 		}
 
+		// Parse limit and offset with defaults
+		const limitNum = limit ? Math.min(Number.parseInt(limit, 10), 1000) : undefined; // Max 1000 to prevent abuse
+		const offsetNum = offset ? Number.parseInt(offset, 10) : 0;
+
 		// Use cache for session queries (sanitize key to avoid cache pollution)
-		const cacheKey = `sessions:${JSON.stringify(userIds.sort())}`;
-		const cached = sessionsCache.get(cacheKey);
-		if (cached) {
-			return res.json(cached);
+		// Only cache when no pagination is applied for performance
+		const shouldCache = !limitNum && offsetNum === 0;
+		const cacheKey = shouldCache ? `sessions:${JSON.stringify(userIds.sort())}` : null;
+		if (cacheKey) {
+			const cached = sessionsCache.get(cacheKey);
+			if (cached) {
+				return res.json(cached);
+			}
 		}
 
 		const sessions = await db.getSessions({
-			userIds: userIds.length > 0 ? userIds : undefined
+			userIds: userIds.length > 0 ? userIds : undefined,
+			limit: limitNum,
+			offset: offsetNum
 		});
 
-		// Cache the result
-		sessionsCache.set(cacheKey, sessions);
+		// Cache the result only for non-paginated requests
+		if (cacheKey) {
+			sessionsCache.set(cacheKey, sessions);
+		}
 
 		res.json(sessions);
 	} catch (error) {
@@ -1957,17 +1969,31 @@ app.delete('/api/teams/:teamId/event-users/:userName', auth.requireAuth, auth.re
 
 app.get('/api/telemetry-users', auth.requireAuth, auth.requireRole('advanced'), telemetryUsersLimiter, async (req, res) => {
 	try {
-		// Use cache because counts are maintained eagerly during writes
-		const cacheKey = 'userStats:all';
-		const cached = userIdsCache.get(cacheKey);
-		if (cached) {
-			return res.json(cached);
+		const {limit, offset} = req.query;
+
+		// Parse limit and offset with defaults
+		const limitNum = limit ? Math.min(Number.parseInt(limit, 10), 1000) : undefined; // Max 1000 to prevent abuse
+		const offsetNum = offset ? Number.parseInt(offset, 10) : 0;
+
+		// Use cache only for full list (no pagination)
+		const shouldCache = !limitNum && offsetNum === 0;
+		const cacheKey = shouldCache ? 'userStats:all' : null;
+		if (cacheKey) {
+			const cached = userIdsCache.get(cacheKey);
+			if (cached) {
+				return res.json(cached);
+			}
 		}
 
-		const userStats = await db.getUserEventStats();
+		const userStats = await db.getUserEventStats({
+			limit: limitNum,
+			offset: offsetNum
+		});
 
-		// Cache the result
-		userIdsCache.set(cacheKey, userStats);
+		// Cache the result only for full list
+		if (cacheKey) {
+			userIdsCache.set(cacheKey, userStats);
+		}
 
 		res.json(userStats);
 	} catch (error) {

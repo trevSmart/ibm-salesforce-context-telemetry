@@ -798,9 +798,14 @@ function safeShowToast(message, type = 'info') {
 	}
 
 	function hideSessionActivityCard() {
-		const card = document.getElementById('sessionActivityCard');
-		if (card) {
-			card.classList.add('hidden');
+		// Show loading state and hide content
+		const loading = document.getElementById('sessionActivityLoading');
+		const content = document.getElementById('sessionActivityContent');
+		if (loading) {
+			loading.classList.remove('hidden');
+		}
+		if (content) {
+			content.classList.add('hidden');
 		}
 		const title = document.getElementById('sessionActivityTitle');
 		if (title) {
@@ -817,9 +822,18 @@ function safeShowToast(message, type = 'info') {
 	}
 
 	function showSessionActivityCard() {
-		const card = document.getElementById('sessionActivityCard');
-		if (card) {
-			card.classList.remove('hidden');
+		// Hide loading state and show content
+		const loading = document.getElementById('sessionActivityLoading');
+		const content = document.getElementById('sessionActivityContent');
+		if (loading) {
+			loading.classList.add('hidden');
+		}
+		if (content) {
+			content.classList.remove('hidden');
+		}
+		// Resize chart to fit the new available space
+		if (sessionActivityChart) {
+			sessionActivityChart.resize();
 		}
 	}
 
@@ -1985,6 +1999,10 @@ function safeShowToast(message, type = 'info') {
 				});
 			}
 			// If all users are selected (selectedUserIds.size === allUserIds.size), don't add any userId param
+
+			// Add limit for performance - load only recent sessions initially
+			params.append('limit', '50');
+
 			const queryString = params.toString();
 			const url = queryString ? `/api/sessions?${queryString}` : '/api/sessions';
 			const response = await fetch(url, {
@@ -3174,11 +3192,10 @@ function safeShowToast(message, type = 'info') {
 		if (!dateString) {return '';}
 		const date = new Date(dateString);
 		const day = date.getDate();
-		const month = date.getMonth() + 1;
-		const year = date.getFullYear().toString().slice(-2);
-		const hours = String(date.getHours()).padStart(2, '0');
+		const month = date.toLocaleString('default', { month: 'short' }).toLowerCase();
+		const hours = String(date.getHours());
 		const minutes = String(date.getMinutes()).padStart(2, '0');
-		return `${day}/${month}/${year} ${hours}:${minutes}`;
+		return `${day} ${month} ${hours}:${minutes}`;
 	}
 
 
@@ -4585,7 +4602,7 @@ function safeShowToast(message, type = 'info') {
 	// User filter dropdown management
 	async function loadUsers() {
 		try {
-			const response = await fetch('/api/telemetry-users', {
+			const response = await fetch('/api/telemetry-users?limit=50', {
 				credentials: 'include'
 			});
 			const validResponse = await handleApiResponse(response);

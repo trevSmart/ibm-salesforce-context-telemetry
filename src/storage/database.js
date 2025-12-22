@@ -1092,7 +1092,7 @@ async function getEventTypeStats(options = {}) {
  * @returns {Array} Sessions with count and latest timestamp
  */
 async function getSessions(options = {}) {
-	const {userIds} = options || {};
+	const {userIds, limit, offset} = options || {};
 	if (!db) {
 		throw new Error('Database not initialized. Call init() first.');
 	}
@@ -1139,7 +1139,9 @@ async function getSessions(options = {}) {
 			FROM session_aggregates sa
 			WHERE sa.count > 0
 			ORDER BY sa.last_event DESC
-		`).all(...params);
+			${limit ? `LIMIT ?` : ''}
+			${offset ? `OFFSET ?` : ''}
+		`).all(...params, ...(limit ? [limit] : []), ...(offset ? [offset] : []));
 		return result.map(row => {
 			let user_name = null;
 			if (row.session_start_data) {
@@ -1215,7 +1217,9 @@ async function getSessions(options = {}) {
 			FROM session_aggregates sa
 			WHERE sa.count > 0
 			ORDER BY sa.last_event DESC
-		`, params);
+		${limit ? `LIMIT $${paramIndex++}` : ''}
+		${offset ? `OFFSET $${paramIndex++}` : ''}
+		`, [...params, ...(limit ? [limit] : []), ...(offset ? [offset] : [])]);
 		return result.rows.map(row => {
 			let user_name = null;
 			if (row.session_start_data) {
@@ -3202,20 +3206,31 @@ async function recomputeOrgEventStats(orgIds = []) {
 }
 
 
-async function getUserEventStats() {
+async function getUserEventStats(options = {}) {
+	const {limit, offset} = options;
 	if (!db) {
 		throw new Error('Database not initialized. Call init() first.');
 	}
 
 	if (dbType === 'sqlite') {
-		const rows = db.prepare(`
+		let query = `
       SELECT user_id, display_name, event_count, last_event
       FROM user_event_stats
       ORDER BY
         CASE WHEN last_event IS NULL THEN 1 ELSE 0 END,
         last_event DESC,
         user_id ASC
-    `).all();
+    `;
+		const params = [];
+		if (limit) {
+			query += ' LIMIT ?';
+			params.push(limit);
+		}
+		if (offset) {
+			query += ' OFFSET ?';
+			params.push(offset);
+		}
+		const rows = db.prepare(query).all(...params);
 		return rows.map(row => ({
 			id: row.user_id,
 			label: (row.display_name || row.user_id || '').trim() || row.user_id || '',
@@ -3224,14 +3239,24 @@ async function getUserEventStats() {
 		})).filter(entry => entry.id);
 	}
 
-	const {rows} = await db.query(`
+	let query = `
     SELECT user_id, display_name, event_count, last_event
     FROM user_event_stats
     ORDER BY
       CASE WHEN last_event IS NULL THEN 1 ELSE 0 END,
       last_event DESC,
       user_id ASC
-  `);
+  `;
+	const params = [];
+	if (limit) {
+		query += ' LIMIT $1';
+		params.push(limit);
+	}
+	if (offset) {
+		query += ` OFFSET $${params.length + 1}`;
+		params.push(offset);
+	}
+	const {rows} = await db.query(query, params);
 	return rows.map(row => ({
 		id: row.user_id,
 		label: (row.display_name || row.user_id || '').trim() || row.user_id || '',
@@ -3953,7 +3978,7 @@ async function createPerson(name, email = null) {
 		if (dbType === 'sqlite') {
 			const stmt = db.prepare('INSERT INTO people (name, email) VALUES (?, ?)');
 			const result = stmt.run(name.trim(), email);
-			
+
 			// Get the created person
 			const person = db.prepare('SELECT id, name, email, created_at FROM people WHERE id = ?').get(result.lastInsertRowid);
 			return person;
