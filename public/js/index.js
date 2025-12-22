@@ -1722,7 +1722,7 @@ async function loadChartData(days = currentDays) {
 		const option = {
 			textStyle: {
 				fontFamily:
-				'Inter, \'Manrope\', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, \'Helvetica Neue\', Arial, sans-serif'
+				'Inter, \'Inter\', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, \'Helvetica Neue\', Arial, sans-serif'
 			},
 			animation: true,
 			animationDuration: 350,

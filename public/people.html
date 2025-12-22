@@ -6,18 +6,17 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>Users - IBM Salesforce Context Telemetry</title>
 	<link rel="icon" type="image/svg+xml" sizes="any" href="/resources/favicon.svg">
-	<link rel="icon" type="image/png" sizes="32x32" href="/resources/favicon.png">
+	<link rel="icon" type="image/webp" sizes="32x32" href="/resources/favicon.webp">
 
-	<!-- Preload local Inter variable font and main stylesheet without blocking render -->
+	<!-- Preload local fonts and main stylesheet -->
+	<link rel="preload" href="/fonts/inter-variable.woff2" as="font" type="font/woff2" crossorigin>
 	<link rel="preload" href="/fonts/inter-variable.woff2" as="font" type="font/woff2" crossorigin>
 	<link rel="preload" href="/css/output.css" as="style">
 	<link rel="stylesheet" href="/css/output.css">
 
-	<!-- Load FontAwesome asynchronously to prevent render blocking -->
-	<link rel="preload" href="/vendor/fontawesome/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
-	<noscript><link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css"></noscript>
-	<link rel="preload" href="/vendor/fontawesome/css/v4-shims.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
-	<noscript><link rel="stylesheet" href="/vendor/fontawesome/css/v4-shims.min.css"></noscript>
+	<!-- Load FontAwesome -->
+	<link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
+	<link rel="stylesheet" href="/vendor/fontawesome/css/v4-shims.min.css">
 	<script src="/js/polyfills.js" defer></script>
 	<script src="https://cdn.jsdelivr.net/npm/@tailwindplus/elements@1" type="module" defer></script>
 	<script>

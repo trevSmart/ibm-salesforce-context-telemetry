@@ -6,7 +6,8 @@
       "Bash(npm start)",
       "Bash(curl:*)",
       "Bash(node -c:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(npm run build:css:*)"
     ]
   }
 }

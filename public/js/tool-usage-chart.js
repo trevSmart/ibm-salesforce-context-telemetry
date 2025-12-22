@@ -148,7 +148,7 @@ async function loadToolUsageChart(days = TOOL_USAGE_DEFAULT_DAYS) {
 			backgroundColor: theme.bg,
 			textStyle: {
 				fontFamily:
-					'Inter, \'Manrope\', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, \'Helvetica Neue\', Arial, sans-serif'
+					'Inter, \'Inter\', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, \'Helvetica Neue\', Arial, sans-serif'
 			},
 			tooltip: {
 				trigger: 'axis',

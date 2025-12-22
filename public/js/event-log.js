@@ -1309,7 +1309,7 @@ function safeShowToast(message, type = 'info') {
 		chartInstance.setOption({
 			...animationConfig,
 			textStyle: {
-				fontFamily: 'Inter, \'Manrope\', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, \'Helvetica Neue\', Arial, sans-serif'
+				fontFamily: 'Inter, \'Inter\', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, \'Helvetica Neue\', Arial, sans-serif'
 			},
 			grid: {left: 45, right: 10, top: 15, bottom: 30},
 			xAxis: {
