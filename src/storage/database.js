@@ -1356,6 +1356,7 @@ async function getDailyStats(days = 30) {
 				COUNT(*) as count
 			FROM telemetry_events
 			WHERE timestamp >= ?
+				AND deleted_at IS NULL
 			GROUP BY date(timestamp, 'utc')
 			ORDER BY date ASC
 		`);
@@ -1392,6 +1393,7 @@ async function getDailyStats(days = 30) {
 				COUNT(*) as count
 			FROM telemetry_events
 			WHERE timestamp >= $1
+				AND deleted_at IS NULL
 			GROUP BY DATE(timestamp AT TIME ZONE 'UTC')
 			ORDER BY date ASC
 		`, [startDateISO]);
@@ -1446,6 +1448,7 @@ async function getDailyStatsByEventType(days = 30) {
 				id
 			FROM telemetry_events
 			WHERE timestamp >= ? AND event = 'session_start'
+				AND deleted_at IS NULL
 		`).all(startDateISO);
 
 		// Count all session_starts by date (regardless of whether they have an end)
@@ -1463,6 +1466,7 @@ async function getDailyStatsByEventType(days = 30) {
 				COUNT(*) as count
 			FROM telemetry_events
 			WHERE timestamp >= ? AND event IN ('tool_call', 'tool_error')
+				AND deleted_at IS NULL
 			GROUP BY date(timestamp, 'utc')
 		`).all(startDateISO);
 
@@ -1480,6 +1484,7 @@ async function getDailyStatsByEventType(days = 30) {
 				COUNT(*) as count
 			FROM telemetry_events
 			WHERE timestamp >= ? AND event = 'tool_error'
+				AND deleted_at IS NULL
 			GROUP BY date(timestamp, 'utc')
 		`).all(startDateISO);
 
@@ -1515,6 +1520,7 @@ async function getDailyStatsByEventType(days = 30) {
 				id
 			FROM telemetry_events
 			WHERE timestamp >= $1 AND event = 'session_start'
+				AND deleted_at IS NULL
 		`, [startDateISO]);
 
 		// Count all session_starts by date (regardless of whether they have an end)
@@ -1531,6 +1537,7 @@ async function getDailyStatsByEventType(days = 30) {
 				COUNT(*) as count
 			FROM telemetry_events
 			WHERE timestamp >= $1 AND event IN ('tool_call', 'tool_error')
+				AND deleted_at IS NULL
 			GROUP BY DATE(timestamp AT TIME ZONE 'UTC')
 		`, [startDateISO]);
 
@@ -1547,6 +1554,7 @@ async function getDailyStatsByEventType(days = 30) {
 				COUNT(*) as count
 			FROM telemetry_events
 			WHERE timestamp >= $1 AND event = 'tool_error'
+				AND deleted_at IS NULL
 			GROUP BY DATE(timestamp AT TIME ZONE 'UTC')
 		`, [startDateISO]);
 
@@ -1688,6 +1696,7 @@ async function getToolUsageStats(days = 30) {
 					AND event IN ('tool_call', 'tool_error')
 					AND tool_name IS NOT NULL
 					AND tool_name != ''
+					AND deleted_at IS NULL
 				GROUP BY tool_name
 				ORDER BY (successful + errors) DESC
 				LIMIT 6
@@ -1710,6 +1719,7 @@ async function getToolUsageStats(days = 30) {
 					AND event IN ('tool_call', 'tool_error')
 					AND tool_name IS NOT NULL
 					AND tool_name != ''
+					AND deleted_at IS NULL
 				GROUP BY tool_name
 				ORDER BY (successful + errors) DESC
 				LIMIT 6
@@ -2190,6 +2200,7 @@ async function getTopUsersLastDays(limit = 50, days = 3) {
 			WHERE created_at >= datetime('now', 'localtime', ?)
 				AND user_id IS NOT NULL
 				AND TRIM(user_id) != ''
+				AND deleted_at IS NULL
 			GROUP BY user_id
 			ORDER BY event_count DESC, user_id ASC
 			LIMIT ?
@@ -2201,6 +2212,7 @@ async function getTopUsersLastDays(limit = 50, days = 3) {
 				FROM telemetry_events
 				WHERE user_id = ?
 					AND created_at >= datetime('now', 'localtime', ?)
+					AND deleted_at IS NULL
 				ORDER BY created_at DESC
 				LIMIT 1
 			`).get(row.user_id, lookbackModifier);
@@ -2220,6 +2232,7 @@ async function getTopUsersLastDays(limit = 50, days = 3) {
 					WHERE created_at >= (NOW() - ($2 || ' days')::interval)
 						AND user_id IS NOT NULL
 						AND TRIM(user_id) != ''
+						AND deleted_at IS NULL
 					GROUP BY user_id
 					ORDER BY event_count DESC, user_id ASC
 					LIMIT $1
@@ -2231,6 +2244,7 @@ async function getTopUsersLastDays(limit = 50, days = 3) {
 				         FROM telemetry_events e
 				         WHERE e.user_id = a.user_id
 				           AND e.created_at >= (NOW() - ($2 || ' days')::interval)
+				           AND e.deleted_at IS NULL
 				         ORDER BY e.created_at DESC
 				         LIMIT 1
 				       ) AS data
@@ -2355,6 +2369,7 @@ async function getTopTeamsLastDays(orgTeamMappings = [], limit = 50, days = 3) {
 			WHERE created_at >= datetime('now', 'localtime', ?)
 				AND org_id IS NOT NULL
 				AND org_id != ''
+				AND deleted_at IS NULL
 			GROUP BY org_id
 			ORDER BY event_count DESC, org_id ASC
 		`).all(lookbackModifier);
@@ -2374,6 +2389,7 @@ async function getTopTeamsLastDays(orgTeamMappings = [], limit = 50, days = 3) {
 				WHERE created_at >= (NOW() - ($1 || ' days')::interval)
 					AND org_id IS NOT NULL
 					AND org_id != ''
+					AND deleted_at IS NULL
 				GROUP BY org_id
 				ORDER BY event_count DESC, org_id ASC
 			`,
@@ -2893,6 +2909,7 @@ async function backfillEventStatsIfEmpty() {
           FROM telemetry_events
           WHERE org_id IS NOT NULL
             AND TRIM(org_id) != ''
+            AND deleted_at IS NULL
           GROUP BY org_id
         `).all();
 
@@ -2946,6 +2963,7 @@ async function backfillEventStatsIfEmpty() {
           FROM telemetry_events
           WHERE org_id IS NOT NULL
             AND TRIM(org_id) != ''
+            AND deleted_at IS NULL
           GROUP BY org_id
           ON CONFLICT (org_id) DO UPDATE SET
             event_count = EXCLUDED.event_count,
