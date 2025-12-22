@@ -1294,7 +1294,7 @@ app.get('/api/event-types', auth.requireAuth, auth.requireRole('advanced'), apiR
 
 app.get('/api/sessions', auth.requireAuth, auth.requireRole('advanced'), apiReadLimiter, async (req, res) => {
 	try {
-		const {userId, limit, offset} = req.query;
+		const {userId, limit, offset, includeUsersWithoutSessions} = req.query;
 		// Handle multiple userId values (Express converts them to an array)
 		const userIds = Array.isArray(userId) ? userId : (userId ? [userId] : []);
 
@@ -1303,13 +1303,14 @@ app.get('/api/sessions', auth.requireAuth, auth.requireRole('advanced'), apiRead
 			return res.json([]);
 		}
 
-		// Parse limit and offset with defaults
+		// Parse parameters
 		const limitNum = limit ? Math.min(Number.parseInt(limit, 10), 1000) : undefined; // Max 1000 to prevent abuse
 		const offsetNum = offset ? Number.parseInt(offset, 10) : 0;
+		const includeUsersWithoutSessionsBool = includeUsersWithoutSessions === 'true' || includeUsersWithoutSessions === '1';
 
 		// Use cache for session queries (sanitize key to avoid cache pollution)
-		// Only cache when no pagination is applied for performance
-		const shouldCache = !limitNum && offsetNum === 0;
+		// Only cache when no pagination is applied and not including users without sessions
+		const shouldCache = !limitNum && offsetNum === 0 && !includeUsersWithoutSessionsBool;
 		const cacheKey = shouldCache ? `sessions:${JSON.stringify(userIds.sort())}` : null;
 		if (cacheKey) {
 			const cached = sessionsCache.get(cacheKey);
@@ -1321,7 +1322,8 @@ app.get('/api/sessions', auth.requireAuth, auth.requireRole('advanced'), apiRead
 		const sessions = await db.getSessions({
 			userIds: userIds.length > 0 ? userIds : undefined,
 			limit: limitNum,
-			offset: offsetNum
+			offset: offsetNum,
+			includeUsersWithoutSessions: includeUsersWithoutSessionsBool
 		});
 
 		// Cache the result only for non-paginated requests

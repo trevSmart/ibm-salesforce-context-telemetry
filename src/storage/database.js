@@ -1092,7 +1092,7 @@ async function getEventTypeStats(options = {}) {
  * @returns {Array} Sessions with count and latest timestamp
  */
 async function getSessions(options = {}) {
-	const {userIds, limit, offset} = options || {};
+	const {userIds, limit, offset, includeUsersWithoutSessions = false} = options || {};
 	if (!db) {
 		throw new Error('Database not initialized. Call init() first.');
 	}
@@ -1100,48 +1100,109 @@ async function getSessions(options = {}) {
 	if (dbType === 'sqlite') {
 		// Group by logical session: parent_session_id when available, otherwise session_id
 		// Use optimized query with CTEs and aggregations instead of correlated subqueries
-		let whereClause = 'WHERE (session_id IS NOT NULL OR parent_session_id IS NOT NULL) AND deleted_at IS NULL';
+		let whereClause = `WHERE deleted_at IS NULL AND (
+			(session_id IS NOT NULL OR parent_session_id IS NOT NULL)${includeUsersWithoutSessions ? ' OR user_id IS NOT NULL' : ''}
+		)`;
 		const params = [];
 		if (userIds && Array.isArray(userIds) && userIds.length > 0) {
 			const placeholders = userIds.map(() => '?').join(', ');
 			whereClause += ` AND user_id IN (${placeholders})`;
 			params.push(...userIds);
 		}
-		const result = db.prepare(`
-			WITH session_aggregates AS (
+		let query;
+		let queryParams = params.slice(); // Copy params array
+
+		if (includeUsersWithoutSessions) {
+			// When including users without sessions, use UNION of sessions and user-only events
+			query = `
+				WITH session_aggregates AS (
+					SELECT
+						COALESCE(parent_session_id, session_id) AS logical_session_id,
+						COUNT(*) as count,
+						MIN(timestamp) as first_event,
+						MAX(timestamp) as last_event,
+						SUM(CASE WHEN event = 'session_start' THEN 1 ELSE 0 END) as has_start,
+						SUM(CASE WHEN event = 'session_end' THEN 1 ELSE 0 END) as has_end,
+						(SELECT user_id FROM telemetry_events
+						 WHERE COALESCE(parent_session_id, session_id) = sa.logical_session_id
+						   AND deleted_at IS NULL
+						 ORDER BY timestamp ASC LIMIT 1) as user_id,
+						(SELECT data FROM telemetry_events
+						 WHERE COALESCE(parent_session_id, session_id) = sa.logical_session_id
+						   AND event = 'session_start'
+						   AND deleted_at IS NULL
+						 ORDER BY timestamp ASC LIMIT 1) as session_start_data
+					FROM telemetry_events sa
+					WHERE (session_id IS NOT NULL OR parent_session_id IS NOT NULL) AND deleted_at IS NULL
+					${userIds && userIds.length > 0 ? `AND user_id IN (${userIds.map(() => '?').join(', ')})` : ''}
+					GROUP BY COALESCE(parent_session_id, session_id)
+				),
+				user_aggregates AS (
+					SELECT
+						'user_' || user_id || '_' || DATE(timestamp) AS logical_session_id,
+						COUNT(*) as count,
+						MIN(timestamp) as first_event,
+						MAX(timestamp) as last_event,
+						0 as has_start,
+						0 as has_end,
+						user_id,
+						NULL as session_start_data
+					FROM telemetry_events
+					WHERE session_id IS NULL AND parent_session_id IS NULL AND user_id IS NOT NULL AND deleted_at IS NULL
+					${userIds && userIds.length > 0 ? `AND user_id IN (${userIds.map(() => '?').join(', ')})` : ''}
+					GROUP BY user_id, DATE(timestamp)
+				)
+				SELECT * FROM session_aggregates
+				UNION ALL
+				SELECT * FROM user_aggregates
+				ORDER BY last_event DESC
+				${limit ? `LIMIT ?` : ''}
+				${offset ? `OFFSET ?` : ''}
+			`;
+			// Add userIds again for the user_aggregates part
+			if (userIds && userIds.length > 0) {
+				queryParams.push(...userIds);
+			}
+		} else {
+			// Original query for sessions only
+			query = `
+				WITH session_aggregates AS (
+					SELECT
+						COALESCE(parent_session_id, session_id) AS logical_session_id,
+						COUNT(*) as count,
+						MIN(timestamp) as first_event,
+						MAX(timestamp) as last_event,
+						SUM(CASE WHEN event = 'session_start' THEN 1 ELSE 0 END) as has_start,
+						SUM(CASE WHEN event = 'session_end' THEN 1 ELSE 0 END) as has_end
+					FROM telemetry_events
+					${whereClause}
+					GROUP BY COALESCE(parent_session_id, session_id)
+				)
 				SELECT
-					COALESCE(parent_session_id, session_id) AS logical_session_id,
-					COUNT(*) as count,
-					MIN(timestamp) as first_event,
-					MAX(timestamp) as last_event,
-					SUM(CASE WHEN event = 'session_start' THEN 1 ELSE 0 END) as has_start,
-					SUM(CASE WHEN event = 'session_end' THEN 1 ELSE 0 END) as has_end
-				FROM telemetry_events
-				${whereClause}
-				GROUP BY COALESCE(parent_session_id, session_id)
-			)
-			SELECT
-				sa.logical_session_id,
-				sa.count,
-				sa.first_event,
-				sa.last_event,
-				(SELECT user_id FROM telemetry_events
-				 WHERE COALESCE(parent_session_id, session_id) = sa.logical_session_id
-				   AND deleted_at IS NULL
-				 ORDER BY timestamp ASC LIMIT 1) as user_id,
-				(SELECT data FROM telemetry_events
-				 WHERE COALESCE(parent_session_id, session_id) = sa.logical_session_id
-				   AND event = 'session_start'
-				   AND deleted_at IS NULL
-				 ORDER BY timestamp ASC LIMIT 1) as session_start_data,
-				sa.has_start,
-				sa.has_end
-			FROM session_aggregates sa
-			WHERE sa.count > 0
-			ORDER BY sa.last_event DESC
-			${limit ? `LIMIT ?` : ''}
-			${offset ? `OFFSET ?` : ''}
-		`).all(...params, ...(limit ? [limit] : []), ...(offset ? [offset] : []));
+					sa.logical_session_id,
+					sa.count,
+					sa.first_event,
+					sa.last_event,
+					(SELECT user_id FROM telemetry_events
+					 WHERE COALESCE(parent_session_id, session_id) = sa.logical_session_id
+					   AND deleted_at IS NULL
+					 ORDER BY timestamp ASC LIMIT 1) as user_id,
+					(SELECT data FROM telemetry_events
+					 WHERE COALESCE(parent_session_id, session_id) = sa.logical_session_id
+					   AND event = 'session_start'
+					   AND deleted_at IS NULL
+					 ORDER BY timestamp ASC LIMIT 1) as session_start_data,
+					sa.has_start,
+					sa.has_end
+				FROM session_aggregates sa
+				WHERE sa.count > 0
+				ORDER BY sa.last_event DESC
+				${limit ? `LIMIT ?` : ''}
+				${offset ? `OFFSET ?` : ''}
+			`;
+		}
+
+		const result = db.prepare(query).all(...queryParams, ...(limit ? [limit] : []), ...(offset ? [offset] : []));
 		return result.map(row => {
 			let user_name = null;
 			if (row.session_start_data) {
@@ -1175,7 +1236,9 @@ async function getSessions(options = {}) {
 			};
 		});
 	}
-		let whereClause = 'WHERE (session_id IS NOT NULL OR parent_session_id IS NOT NULL) AND deleted_at IS NULL';
+		let whereClause = `WHERE deleted_at IS NULL AND (
+			(session_id IS NOT NULL OR parent_session_id IS NOT NULL)${includeUsersWithoutSessions ? ' OR user_id IS NOT NULL' : ''}
+		)`;
 		const params = [];
 		let paramIndex = 1;
 		if (userIds && Array.isArray(userIds) && userIds.length > 0) {
@@ -1184,42 +1247,104 @@ async function getSessions(options = {}) {
 			params.push(...userIds);
 		}
 
-		// Use optimized query with CTEs and aggregations instead of correlated subqueries
-		const result = await db.query(`
-			WITH session_aggregates AS (
+		let query;
+		let queryParams = params.slice(); // Copy params array
+
+		if (includeUsersWithoutSessions) {
+			// When including users without sessions, use UNION of sessions and user-only events
+			query = `
+				WITH session_aggregates AS (
+					SELECT
+						COALESCE(parent_session_id, session_id) AS logical_session_id,
+						COUNT(*) as count,
+						MIN(timestamp) as first_event,
+						MAX(timestamp) as last_event,
+						SUM(CASE WHEN event = 'session_start' THEN 1 ELSE 0 END) as has_start,
+						SUM(CASE WHEN event = 'session_end' THEN 1 ELSE 0 END) as has_end,
+						(SELECT user_id FROM telemetry_events
+						 WHERE COALESCE(parent_session_id, session_id) = sa.logical_session_id
+						   AND deleted_at IS NULL
+						 ORDER BY timestamp ASC LIMIT 1) as user_id,
+						(SELECT data FROM telemetry_events
+						 WHERE COALESCE(parent_session_id, session_id) = sa.logical_session_id
+						   AND event = 'session_start'
+						   AND deleted_at IS NULL
+						 ORDER BY timestamp ASC LIMIT 1) as session_start_data
+					FROM telemetry_events sa
+					WHERE (session_id IS NOT NULL OR parent_session_id IS NOT NULL) AND deleted_at IS NULL
+					${userIds && userIds.length > 0 ? `AND user_id IN (${userIds.map((_, i) => `$${paramIndex + i}`).join(', ')})` : ''}
+					GROUP BY COALESCE(parent_session_id, session_id)
+				),
+				user_aggregates AS (
+					SELECT
+						'user_' || user_id || '_' || DATE(timestamp) AS logical_session_id,
+						COUNT(*) as count,
+						MIN(timestamp) as first_event,
+						MAX(timestamp) as last_event,
+						0 as has_start,
+						0 as has_end,
+						user_id,
+						NULL as session_start_data
+					FROM telemetry_events
+					WHERE session_id IS NULL AND parent_session_id IS NULL AND user_id IS NOT NULL AND deleted_at IS NULL
+					${userIds && userIds.length > 0 ? `AND user_id IN (${userIds.map((_, i) => `$${paramIndex + userIds.length + i}`).join(', ')})` : ''}
+					GROUP BY user_id, DATE(timestamp)
+				)
+				SELECT * FROM session_aggregates
+				UNION ALL
+				SELECT * FROM user_aggregates
+				ORDER BY last_event DESC
+				${limit ? `LIMIT $${paramIndex + (userIds ? userIds.length * 2 : 0)}` : ''}
+				${offset ? `OFFSET $${paramIndex + (userIds ? userIds.length * 2 : 0) + (limit ? 1 : 0)}` : ''}
+			`;
+			// Add userIds for both parts of the union
+			if (userIds && userIds.length > 0) {
+				queryParams.push(...userIds, ...userIds);
+			}
+			if (limit) queryParams.push(limit);
+			if (offset) queryParams.push(offset);
+		} else {
+			// Original query for sessions only
+			query = `
+				WITH session_aggregates AS (
+					SELECT
+						COALESCE(parent_session_id, session_id) AS logical_session_id,
+						COUNT(*) as count,
+						MIN(timestamp) as first_event,
+						MAX(timestamp) as last_event,
+						SUM(CASE WHEN event = 'session_start' THEN 1 ELSE 0 END) as has_start,
+						SUM(CASE WHEN event = 'session_end' THEN 1 ELSE 0 END) as has_end
+					FROM telemetry_events
+					${whereClause}
+					GROUP BY COALESCE(parent_session_id, session_id)
+				)
 				SELECT
-					COALESCE(parent_session_id, session_id) AS logical_session_id,
-					COUNT(*) as count,
-					MIN(timestamp) as first_event,
-					MAX(timestamp) as last_event,
-					SUM(CASE WHEN event = 'session_start' THEN 1 ELSE 0 END) as has_start,
-					SUM(CASE WHEN event = 'session_end' THEN 1 ELSE 0 END) as has_end
-				FROM telemetry_events
-				${whereClause}
-				GROUP BY COALESCE(parent_session_id, session_id)
-			)
-			SELECT
-				sa.logical_session_id,
-				sa.count,
-				sa.first_event,
-				sa.last_event,
-				(SELECT user_id FROM telemetry_events
-				 WHERE COALESCE(parent_session_id, session_id) = sa.logical_session_id
-				   AND deleted_at IS NULL
-				 ORDER BY timestamp ASC LIMIT 1) as user_id,
-				(SELECT data FROM telemetry_events
-				 WHERE COALESCE(parent_session_id, session_id) = sa.logical_session_id
-				   AND event = 'session_start'
-				   AND deleted_at IS NULL
-				 ORDER BY timestamp ASC LIMIT 1) as session_start_data,
-				sa.has_start,
-				sa.has_end
-			FROM session_aggregates sa
-			WHERE sa.count > 0
-			ORDER BY sa.last_event DESC
-		${limit ? `LIMIT $${paramIndex++}` : ''}
-		${offset ? `OFFSET $${paramIndex++}` : ''}
-		`, [...params, ...(limit ? [limit] : []), ...(offset ? [offset] : [])]);
+					sa.logical_session_id,
+					sa.count,
+					sa.first_event,
+					sa.last_event,
+					(SELECT user_id FROM telemetry_events
+					 WHERE COALESCE(parent_session_id, session_id) = sa.logical_session_id
+					   AND deleted_at IS NULL
+					 ORDER BY timestamp ASC LIMIT 1) as user_id,
+					(SELECT data FROM telemetry_events
+					 WHERE COALESCE(parent_session_id, session_id) = sa.logical_session_id
+					   AND event = 'session_start'
+					   AND deleted_at IS NULL
+					 ORDER BY timestamp ASC LIMIT 1) as session_start_data,
+					sa.has_start,
+					sa.has_end
+				FROM session_aggregates sa
+				WHERE sa.count > 0
+				ORDER BY sa.last_event DESC
+				${limit ? `LIMIT $${paramIndex++}` : ''}
+				${offset ? `OFFSET $${paramIndex++}` : ''}
+			`;
+			if (limit) queryParams.push(limit);
+			if (offset) queryParams.push(offset);
+		}
+
+		const result = await db.query(query, queryParams);
 		return result.rows.map(row => {
 			let user_name = null;
 			if (row.session_start_data) {
