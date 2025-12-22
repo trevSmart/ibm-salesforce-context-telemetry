@@ -3009,7 +3009,7 @@ function safeShowToast(message, type = 'info') {
 				<td class="hidden text-gray-500 xl:table-cell log-error-message whitespace-nowrap overflow-hidden text-ellipsis max-w-48" title="${escapedErrorMessage}">${escapedErrorMessage}</td>
 				<td class="text-gray-500 text-center log-description">${description}</td>
 				<td class="pr-4 pl-3 text-right font-medium actions-cell whitespace-nowrap sm:pr-8 lg:pr-8">
-					<button class="actions-btn text-indigo-600 hover:text-indigo-900" onclick="toggleActionsDropdown(event, ${event.id})" style="background: none; border: none; cursor: pointer; padding: 4px;">
+					<button class="actions-btn hover:text-indigo-900" onclick="toggleActionsDropdown(event, ${event.id})" style="background: none; border: none; cursor: pointer; padding: 4px;">
 						<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
 							<circle cx="8" cy="3" r="1.5"/>
 							<circle cx="8" cy="8" r="1.5"/>
@@ -3192,7 +3192,7 @@ function safeShowToast(message, type = 'info') {
 		if (!dateString) {return '';}
 		const date = new Date(dateString);
 		const day = date.getDate();
-		const month = date.toLocaleString('default', { month: 'short' }).toLowerCase();
+		const month = date.toLocaleString('default', {month: 'short'}).toLowerCase();
 		const hours = String(date.getHours());
 		const minutes = String(date.getMinutes()).padStart(2, '0');
 		return `${day} ${month} ${hours}:${minutes}`;
