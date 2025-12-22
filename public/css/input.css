@@ -638,7 +638,7 @@
     background: #e8ebec;
     backdrop-filter: blur(10px);
     border-radius: 23px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+    box-shadow: 5px 5px 60px 5px rgb(0 0 0 / 10%);
     transition: opacity 0.1s ease-in-out;
     overflow: hidden;
     display: flex;
