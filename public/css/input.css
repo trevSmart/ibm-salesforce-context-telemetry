@@ -1590,7 +1590,7 @@
   }
 
   .top-users-avatar {
-    width: 40px;
+    width: 38px;
     aspect-ratio: 1 / 1;
     display: inline-flex;
     align-items: center;
@@ -1614,7 +1614,7 @@
   .top-users-info {
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: 1px;
     color: var(--text-primary);
     flex: 1;
     min-width: 0;
