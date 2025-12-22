@@ -10,6 +10,11 @@
 	<!-- Preload local Inter variable font used across the UI -->
 	<link rel="preload" href="/fonts/inter-variable.woff2" as="font" type="font/woff2" crossorigin>
 
+	<!-- Load Manrope font from Google Fonts -->
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&display=swap" rel="stylesheet">
+
 	<!-- Load FontAwesome asynchronously to prevent render blocking -->
 	<link rel="preload" href="/vendor/fontawesome/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
 	<noscript><link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css"></noscript>
@@ -59,6 +64,7 @@
 			justify-content: center;
 			padding: 20px;
 			visibility: hidden;
+			gap: 0px;
 		}
 
 		html.dark body {
@@ -102,7 +108,7 @@
 			align-items: center;
 			justify-content: center;
 			padding: 40px;
-		opacity: 0.77;
+			/* filter: saturate(1.2); */
 		}
 
 		.login-visual-panel::before {
@@ -153,7 +159,7 @@
 		}
 
 		.login-header {
-			margin-bottom: 40px;
+			margin-bottom: 32px;
 		}
 
 		.login-header h1 {
@@ -190,7 +196,7 @@
 			padding: 12px 16px;
 			border-radius: 8px;
 			font-size: 14px;
-			margin-bottom: 24px;
+			margin-bottom: 0px;
 			display: none;
 		}
 
@@ -205,7 +211,7 @@
 		}
 
 		.form-group {
-			margin-bottom: 24px;
+			margin-bottom: 18px;
 			position: relative;
 		}
 
@@ -287,7 +293,7 @@
 		.login-button-container {
 			display: flex;
 			justify-content: flex-end;
-			margin-top: 8px;
+			margin-top: 0px;
 		}
 
 		.login-button {
@@ -368,8 +374,17 @@
 			color: #a1a1aa;
 		}
 
+		.form-actions-container {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			margin-top: 8px;
+			padding-left: 12px;
+			padding-right: 27px;
+		}
+
 		.remember-me-group {
-			margin-bottom: 20px;
+			margin-bottom: 0;
 		}
 
 		.remember-me-control {
@@ -428,7 +443,7 @@
 		}
 
 		.remember-me-text {
-			font-size: 14px;
+			font-size: 13px;
 			color: #52525b;
 			line-height: 1.5;
 			cursor: pointer;
@@ -501,23 +516,25 @@
 					</div>
 				</div>
 
-				<div class="form-group remember-me-group">
-					<div class="remember-me-control">
-						<div class="remember-me-box">
-							<input type="checkbox" id="rememberMe" name="rememberMe" class="remember-me-checkbox" aria-label="Remember me">
-							<svg viewBox="0 0 14 14" fill="none" class="remember-me-icon" aria-hidden="true">
-								<path d="M3 8L6 11L11 3.5" />
-							</svg>
+				<div class="form-actions-container">
+					<div class="form-group remember-me-group">
+						<div class="remember-me-control">
+							<div class="remember-me-box">
+								<input type="checkbox" id="rememberMe" name="rememberMe" class="remember-me-checkbox" aria-label="Remember me">
+								<svg viewBox="0 0 14 14" fill="none" class="remember-me-icon" aria-hidden="true">
+									<path d="M3 8L6 11L11 3.5" />
+								</svg>
+							</div>
+							<label for="rememberMe" class="remember-me-text">Remember me</label>
 						</div>
-						<label for="rememberMe" class="remember-me-text">Remember me</label>
 					</div>
-				</div>
 
-				<div class="login-button-container">
-					<button type="submit" class="login-button" id="loginButton">
-						<i class="fas fa-arrow-right" aria-hidden="true"></i>
-						<span class="visually-hidden">Log in</span>
-					</button>
+					<div class="login-button-container">
+						<button type="submit" class="login-button" id="loginButton">
+							<i class="fas fa-arrow-right" aria-hidden="true"></i>
+							<span class="visually-hidden">Log in</span>
+						</button>
+					</div>
 				</div>
 			</form>
 
