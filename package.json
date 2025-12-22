@@ -37,7 +37,7 @@
     "@fortawesome/fontawesome-free": "^7.1.0",
     "@tailwindcss/cli": "^4.1.18",
     "@tailwindcss/postcss": "^4.1.18",
-    "@tailwindplus/elements": "^1.0.20",
+    "@tailwindplus/elements": "^1.0.21",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
     "bcrypt": "^6.0.0",
