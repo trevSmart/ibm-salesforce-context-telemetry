@@ -1347,6 +1347,38 @@ app.get('/api/sessions', auth.requireAuth, auth.requireRole('advanced'), apiRead
 	}
 });
 
+// Temporary user creation endpoint (admin only)
+app.post('/api/create-user', auth.requireAuth, auth.requireRole('administrator'), async (req, res) => {
+	try {
+		const { username, password, role } = req.body;
+
+		if (!username || !password || !role) {
+			return res.status(400).json({ error: 'Username, password, and role are required' });
+		}
+
+		// Check if user already exists
+		const existing = await db.getUserByUsername(username);
+		if (existing) {
+			return res.status(409).json({ error: 'User already exists' });
+		}
+
+		// Hash password
+		const bcrypt = await import('bcrypt');
+		const hashedPassword = await bcrypt.default.hash(password, 10);
+
+		// Create user
+		const userId = await db.createUser(username, hashedPassword, role);
+
+		res.json({
+			message: 'User created successfully',
+			user: { id: userId, username, role }
+		});
+	} catch (error) {
+		console.error('Error creating user:', error);
+		res.status(500).json({ error: 'Failed to create user' });
+	}
+});
+
 // Temporary diagnostic endpoint
 app.get('/api/diagnostic', async (req, res) => {
 	try {
