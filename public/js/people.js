@@ -72,31 +72,68 @@ function renderPeopleList(people) {
 		return;
 	}
 
-	const peopleHTML = people.map(person => `
-		<li class="flex items-center justify-between space-x-3 py-4">
-			<div class="flex min-w-0 flex-1 items-center space-x-3">
-				<div class="shrink-0">
-					<div class="size-10 rounded-full bg-gray-300 flex items-center justify-center text-gray-600 font-semibold">
-						${person.name.charAt(0).toUpperCase()}
-					</div>
+	const peopleHTML = people.map(person => {
+		const initial = person.name.charAt(0).toUpperCase();
+		const createdDate = new Date(person.created_at);
+		const timeAgo = getTimeAgo(createdDate);
+
+		return `
+		<li class="flex justify-between gap-x-6 py-5">
+			<div class="flex min-w-0 gap-x-4">
+				<div class="size-12 flex-none rounded-full bg-gray-50 flex items-center justify-center text-gray-600 font-semibold text-lg">
+					${initial}
 				</div>
-				<div class="min-w-0 flex-1">
-					<p class="truncate text-sm font-medium text-gray-900">${person.name}</p>
-					<p class="truncate text-sm font-medium text-gray-500">Person</p>
+				<div class="min-w-0 flex-auto">
+					<p class="text-sm/6 font-semibold text-gray-900">
+						<a href="#" onclick="showPersonDetails(${person.id})" class="hover:underline">${person.name}</a>
+					</p>
+					<p class="mt-1 flex text-xs/5 text-gray-500">
+						${person.email ? `<a href="mailto:${person.email}" class="truncate hover:underline">${person.email}</a>` : '<span class="text-gray-400">No email</span>'}
+					</p>
 				</div>
 			</div>
-			<div class="shrink-0">
-				<button type="button" onclick="showPersonDetails(${person.id})" class="inline-flex items-center gap-x-1.5 text-sm/6 font-semibold text-gray-900">
-					<svg viewBox="0 0 20 20" fill="currentColor" data-slot="icon" aria-hidden="true" class="size-5 text-gray-400">
-						<path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
-					</svg>
-					Add username <span class="sr-only">${person.name}</span>
-				</button>
+			<div class="flex shrink-0 items-center gap-x-6">
+				<div class="hidden sm:flex sm:flex-col sm:items-end">
+					<p class="text-sm/6 text-gray-900">Person</p>
+					<p class="mt-1 text-xs/5 text-gray-500">Created ${timeAgo}</p>
+				</div>
+				<el-dropdown class="relative flex-none">
+					<button class="relative block text-gray-500 hover:text-gray-900">
+						<span class="absolute -inset-2.5"></span>
+						<span class="sr-only">Open options</span>
+						<svg viewBox="0 0 20 20" fill="currentColor" data-slot="icon" aria-hidden="true" class="size-5">
+							<path d="M10 3a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM10 8.5a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM11.5 15.5a1.5 1.5 0 1 0-3 0 1.5 1.5 0 0 0 3 0Z" />
+						</svg>
+					</button>
+					<el-menu anchor="bottom end" popover class="w-32 origin-top-right rounded-md bg-white py-2 shadow-lg outline outline-gray-900/5 transition transition-discrete [--anchor-gap:--spacing(2)] data-closed:scale-95 data-closed:transform data-closed:opacity-0 data-enter:duration-100 data-enter:ease-out data-leave:duration-75 data-leave:ease-in">
+						<a href="#" onclick="showPersonDetails(${person.id})" class="block px-3 py-1 text-sm/6 text-gray-900 focus:bg-gray-50 focus:outline-hidden">View profile<span class="sr-only">, ${person.name}</span></a>
+						<a href="#" onclick="showAddUsernameModal(${person.id})" class="block px-3 py-1 text-sm/6 text-gray-900 focus:bg-gray-50 focus:outline-hidden">Add username<span class="sr-only">, ${person.name}</span></a>
+					</el-menu>
+				</el-dropdown>
 			</div>
 		</li>
-	`).join('');
+		`;
+	}).join('');
 
 	peopleListElement.innerHTML = peopleHTML;
+}
+
+// Helper function to get time ago string
+function getTimeAgo(date) {
+	const now = new Date();
+	const diffInMs = now - date;
+	const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
+	const diffInDays = Math.floor(diffInHours / 24);
+
+	if (diffInHours < 1) {
+		return 'just now';
+	} else if (diffInHours < 24) {
+		return `${diffInHours}h ago`;
+	} else if (diffInDays < 30) {
+		return `${diffInDays}d ago`;
+	} else {
+		return date.toLocaleDateString();
+	}
 }
 
 // Refresh function for the header button
@@ -173,10 +210,16 @@ async function handleCreatePerson(event) {
 	}
 }
 
-// Function to show person details (placeholder)
+// Function to show person details
 function showPersonDetails(personId) {
 	// TODO: Implement person details modal with usernames
 	showToast('Person details - feature coming soon!', 'info');
+}
+
+// Function to show add username modal (placeholder)
+function showAddUsernameModal(personId) {
+	// TODO: Implement add username functionality
+	showToast('Add username - feature coming soon!', 'info');
 }
 
 // Function to show create person modal
@@ -209,5 +252,6 @@ function closeCreatePersonModal() {
 window.refreshPeople = refreshPeople;
 window.handleCreatePerson = handleCreatePerson;
 window.showPersonDetails = showPersonDetails;
+window.showAddUsernameModal = showAddUsernameModal;
 window.showCreatePersonModal = showCreatePersonModal;
 window.closeCreatePersonModal = closeCreatePersonModal;
