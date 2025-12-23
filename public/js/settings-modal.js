@@ -267,6 +267,7 @@ async function openSettingsModal() {
 	}
 
 	const isAdministrator = userRole === 'administrator' || userRole === 'god';
+	const isGod = userRole === 'god';
 	const canDeleteAllEvents = userRole === 'advanced' || userRole === 'administrator' || userRole === 'god';
 	const usersLoadingRow = `
       <tr>
@@ -318,6 +319,16 @@ async function openSettingsModal() {
         </svg>
       </span>
       <span>Database</span>
+    </a>
+    ` : ''}
+    ${isGod ? `
+    <a href="#settings-login-history" class="settings-sidebar-link flex items-center gap-2 rounded-md px-2 py-1.5 text-[color:var(--text-primary)] hover:text-(--text-primary) hover:bg-[color:var(--bg-secondary)]">
+      <span class="w-5 h-5 flex items-center justify-center">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+        </svg>
+      </span>
+      <span>Login history</span>
     </a>
     ` : ''}
     <a href="#settings-danger" class="settings-sidebar-link flex items-center gap-2 rounded-md px-2 py-1.5 text-[color:var(--text-primary)] hover:text-(--text-primary) hover:bg-(--bg-secondary)">
@@ -447,6 +458,49 @@ async function openSettingsModal() {
 									</div>
 									<div style="width: 100%; height: 4px; background: var(--border-color); border-radius: 2px; overflow: hidden;">
 										<div id="importProgressBar" style="width: 0%; height: 100%; background: var(--color-primary); transition: width 0.3s ease;"></div>
+									</div>
+								</div>
+							</div>
+						</section>
+						` : ''}
+						${isGod ? `
+						<section id="settings-login-history" class="settings-section" style="display: none;">
+							<div class="settings-modal-placeholder-title">Login history</div>
+							<div class="settings-modal-placeholder-text">
+								<div class="settings-users-section">
+									<div class="settings-users-header">
+										<div class="settings-users-title">Recent login attempts</div>
+										<div class="settings-users-subtitle">View all login attempts across the system</div>
+									</div>
+									<div class="settings-users-table-container">
+										<table class="settings-users-table" id="loginHistoryTable">
+											<thead>
+												<tr>
+													<th class="settings-users-th">Username</th>
+													<th class="settings-users-th">IP Address</th>
+													<th class="settings-users-th">User Agent</th>
+													<th class="settings-users-th">Status</th>
+													<th class="settings-users-th">Time</th>
+													<th class="settings-users-th">Error</th>
+												</tr>
+											</thead>
+											<tbody id="loginHistoryTableBody">
+												<tr>
+													<td colspan="6" class="settings-users-empty">
+														<div class="settings-users-loading" role="status" aria-live="polite">
+															<span class="settings-users-spinner" aria-hidden="true"></span>
+															<span class="settings-users-loading-text">Loading login history...</span>
+														</div>
+													</td>
+												</tr>
+											</tbody>
+										</table>
+									</div>
+									<div class="settings-users-actions">
+										<button type="button" class="confirm-modal-btn" id="refreshLoginHistoryBtn">
+											<i class="fa-solid fa-refresh"></i>
+											Refresh
+										</button>
 									</div>
 								</div>
 							</div>
@@ -1049,6 +1103,101 @@ async function openSettingsModal() {
 
 			loadUsers();
 		}
+	}
+
+	// Login history functionality (God only)
+	if (isGod) {
+		async function loadLoginHistory() {
+			const tableBody = modal.querySelector('#loginHistoryTableBody');
+			const refreshBtn = modal.querySelector('#refreshLoginHistoryBtn');
+
+			if (!tableBody) return;
+
+			try {
+				if (refreshBtn) {
+					refreshBtn.disabled = true;
+					refreshBtn.innerHTML = '<span class="settings-users-spinner" style="width: 14px; height: 14px; margin-right: 6px;"></span>Loading...';
+				}
+
+				const response = await fetch('/api/user-login-logs?limit=50', {
+					method: 'GET',
+					headers: {
+						'Content-Type': 'application/json',
+						'X-CSRF-Token': await window.getCsrfToken()
+					},
+					credentials: 'include'
+				});
+
+				if (!response.ok) {
+					const error = await response.json();
+					throw new Error(error.message || 'Failed to load login history');
+				}
+
+				const data = await response.json();
+
+				if (data.logs && data.logs.length > 0) {
+					const rows = data.logs.map(log => {
+						const timestamp = new Date(log.created_at).toLocaleString();
+						const statusClass = log.successful ? 'text-green-600' : 'text-red-600';
+						const statusText = log.successful ? 'Success' : 'Failed';
+						const errorText = log.error_message ? `<div class="text-xs text-gray-500 mt-1">${log.error_message}</div>` : '';
+
+						return `
+							<tr>
+								<td class="settings-users-td">${log.username}</td>
+								<td class="settings-users-td font-mono text-xs">${log.ip_address || 'N/A'}</td>
+								<td class="settings-users-td text-xs max-w-xs truncate" title="${log.user_agent || ''}">${log.user_agent || 'N/A'}</td>
+								<td class="settings-users-td ${statusClass} font-medium">${statusText}</td>
+								<td class="settings-users-td text-xs text-gray-500">${timestamp}</td>
+								<td class="settings-users-td">${errorText}</td>
+							</tr>
+						`;
+					}).join('');
+
+					tableBody.innerHTML = rows;
+				} else {
+					tableBody.innerHTML = `
+						<tr>
+							<td colspan="6" class="settings-users-empty">
+								<div class="settings-users-empty-content">
+									<i class="fa-solid fa-clock-rotate-left settings-users-empty-icon"></i>
+									<div class="settings-users-empty-title">No login history</div>
+									<div class="settings-users-empty-subtitle">Login attempts will appear here</div>
+								</div>
+							</td>
+						</tr>
+					`;
+				}
+
+			} catch (error) {
+				console.error('Error loading login history:', error);
+				tableBody.innerHTML = `
+					<tr>
+						<td colspan="6" class="settings-users-empty">
+							<div class="settings-users-error">
+								<i class="fa-solid fa-exclamation-triangle settings-users-error-icon"></i>
+								<div class="settings-users-error-title">Failed to load login history</div>
+								<div class="settings-users-error-subtitle">${error.message}</div>
+							</div>
+						</td>
+					</tr>
+				`;
+			} finally {
+				if (refreshBtn) {
+					refreshBtn.disabled = false;
+					refreshBtn.innerHTML = '<i class="fa-solid fa-refresh"></i> Refresh';
+				}
+			}
+		}
+
+		const refreshLoginHistoryBtn = modal.querySelector('#refreshLoginHistoryBtn');
+		if (refreshLoginHistoryBtn) {
+			refreshLoginHistoryBtn.addEventListener('click', () => {
+				loadLoginHistory();
+			});
+		}
+
+		loadLoginHistory();
 	}
 
 	// Import/Export functionality
