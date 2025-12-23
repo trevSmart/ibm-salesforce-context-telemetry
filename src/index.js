@@ -1445,6 +1445,38 @@ app.get('/api/user-login-logs', auth.requireAuth, auth.requireRole('god'), apiRe
 	}
 });
 
+// Temporary user management endpoint (admin only) - REMOVE AFTER USE
+app.post('/api/manage-user', auth.requireAuth, auth.requireRole('administrator'), async (req, res) => {
+	try {
+		const { action, username, role } = req.body;
+
+		if (!action || !username) {
+			return res.status(400).json({ error: 'Action and username are required' });
+		}
+
+		// Special action to change user role to god
+		if (action === 'make_god' && username && role === 'god') {
+			const user = await db.getUserByUsername(username);
+			if (!user) {
+				return res.status(404).json({ error: 'User not found' });
+			}
+
+			// Update user role to god
+			await db.updateUserRole(user.id, 'god');
+
+			return res.json({
+				message: `User ${username} role changed to god successfully`,
+				user: { id: user.id, username, role: 'god' }
+			});
+		}
+
+		return res.status(400).json({ error: 'Invalid action' });
+	} catch (error) {
+		console.error('Error managing user:', error);
+		res.status(500).json({ error: 'Failed to manage user' });
+	}
+});
+
 // Temporary user creation endpoint (admin only) - REMOVE AFTER USE
 app.post('/api/create-user', auth.requireAuth, auth.requireRole('administrator'), async (req, res) => {
 	try {
