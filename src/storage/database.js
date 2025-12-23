@@ -137,7 +137,7 @@ async function init() {
 			CREATE INDEX IF NOT EXISTS idx_user_id ON telemetry_events(user_id);
 			CREATE INDEX IF NOT EXISTS idx_parent_session_id ON telemetry_events(parent_session_id);
 			CREATE INDEX IF NOT EXISTS idx_username ON users(username);
-			CREATE INDEX IF NOT EXISTS idx_event_id_created_at ON telemetry_events(event_id, created_at);
+			-- CREATE INDEX IF NOT EXISTS idx_event_id_created_at ON telemetry_events(event_id, created_at); -- Created by migration
 			CREATE INDEX IF NOT EXISTS idx_user_created_at ON telemetry_events(user_id, created_at);
 			CREATE INDEX IF NOT EXISTS idx_user_logins_username ON user_logins(username);
 			CREATE INDEX IF NOT EXISTS idx_user_logins_created_at ON user_logins(created_at);
@@ -246,7 +246,7 @@ async function init() {
 			CREATE INDEX IF NOT EXISTS idx_user_id ON telemetry_events(user_id);
 			CREATE INDEX IF NOT EXISTS idx_parent_session_id ON telemetry_events(parent_session_id);
 			CREATE INDEX IF NOT EXISTS idx_username ON users(username);
-			CREATE INDEX IF NOT EXISTS idx_event_id_created_at ON telemetry_events(event_id, created_at);
+			-- CREATE INDEX IF NOT EXISTS idx_event_id_created_at ON telemetry_events(event_id, created_at); -- Created by migration
 			CREATE INDEX IF NOT EXISTS idx_user_created_at ON telemetry_events(user_id, created_at);
 			CREATE INDEX IF NOT EXISTS idx_user_logins_username ON user_logins(username);
 			CREATE INDEX IF NOT EXISTS idx_user_logins_created_at ON user_logins(created_at);
