@@ -2529,6 +2529,17 @@ function getPostgresPool() {
 	return null;
 }
 
+/**
+ * Get SQLite database instance if using SQLite, null otherwise
+ * Used for direct database operations in scripts
+ */
+function getSqliteDb() {
+	if (dbType === 'sqlite' && db) {
+		return db;
+	}
+	return null;
+}
+
 async function ensureUserRoleColumn() {
 	if (!db) {
 		return;
@@ -6285,6 +6296,7 @@ export {
 	getUniqueUserIds,
 	// Session store
 	getPostgresPool,
+	getSqliteDb,
 	// Settings
 	getSetting,
 	saveSetting,
