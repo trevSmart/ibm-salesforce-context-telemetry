@@ -61,7 +61,6 @@
 				throw new Error('Failed to fetch events');
 			}
 			const data = await response.json();
-			console.log('Events refreshed:', data.events?.length || 0, 'events');
 
 			// Dispatch a custom event that pages can listen to if they want to update their UI
 			window.dispatchEvent(new CustomEvent('eventsRefreshed', {detail: data}));

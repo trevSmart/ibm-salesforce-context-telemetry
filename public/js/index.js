@@ -146,7 +146,7 @@ async function loadDashboardDatabaseSize() {
 			}
 		}
 	} catch (error) {
-		console.debug('Database size not available:', error);
+		// Silently fail if database size is not available
 	}
 }
 
@@ -1944,6 +1944,7 @@ window.pauseDashboardPage = pauseDashboardPage;
 window.resumeDashboardPage = resumeDashboardPage;
 window.applyTheme = applyTheme;
 window.refreshDashboard = refreshDashboard;
+window.toggleTheme = toggleTheme;
 
 // Listen for soft navigation events
 window.addEventListener('softNav:pagePausing', (event) => {

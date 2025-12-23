@@ -13,7 +13,6 @@ async function getRequestHeaders(includeJson = true) {
 			const csrfToken = await window.getCsrfToken();
 			if (csrfToken) {
 				headers['X-CSRF-Token'] = csrfToken;
-				console.log('CSRF token added to headers');
 			} else {
 				console.warn('No CSRF token available');
 			}
@@ -44,8 +43,6 @@ async function initPeoplePage() {
 
 		// Always render the people list (may be empty)
 		renderPeopleList(people);
-
-		console.log('People page initialized with', people.length, 'people');
 
 	} catch (error) {
 		console.error('Error loading people:', error);
@@ -119,8 +116,6 @@ function refreshPeople(event) {
 
 	// Reinitialize the page
 	initPeoplePage();
-
-	console.log('People page refreshed');
 }
 
 // Initialize when DOM is ready
@@ -180,7 +175,6 @@ async function handleCreatePerson(event) {
 
 // Function to show person details (placeholder)
 function showPersonDetails(personId) {
-	console.log('Show details for person:', personId);
 	// TODO: Implement person details modal with usernames
 	showToast('Person details - feature coming soon!', 'info');
 }

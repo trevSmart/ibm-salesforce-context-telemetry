@@ -63,33 +63,6 @@
       icon: 'cog-6-tooth',
       action: () => openSettingsModal(),
       shortcut: 'S'
-    },
-    {
-      id: 'action-notifications-toggle',
-      type: 'action',
-      title: 'Toggle Notifications',
-      description: 'Enable/disable notifications',
-      icon: 'bell',
-      action: () => toggleNotifications(),
-      shortcut: 'N'
-    },
-    {
-      id: 'action-theme-toggle',
-      type: 'action',
-      title: 'Toggle Theme',
-      description: 'Switch between light/dark theme',
-      icon: 'moon',
-      action: () => toggleTheme(),
-      shortcut: 'M'
-    },
-    {
-      id: 'action-logout',
-      type: 'action',
-      title: 'Logout',
-      description: 'Sign out of the application',
-      icon: 'arrow-right-on-rectangle',
-      action: () => logout(),
-      shortcut: 'Q'
     }
   ];
 
@@ -168,6 +141,108 @@
       'arrow-right-on-rectangle': 'M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z'
     };
     return icons[iconName] || icons['cog-6-tooth'];
+  }
+
+  /**
+   * Check if user is currently editing in an input/textarea or if modals are open
+   */
+  function isUserEditing() {
+    const activeElement = document.activeElement;
+    if (!activeElement) {
+      return false;
+    }
+
+    // Check for input elements (excluding buttons, checkboxes, etc.)
+    if (activeElement.tagName === 'INPUT') {
+      const inputType = activeElement.type;
+      return inputType === 'text' || inputType === 'password' || inputType === 'email' ||
+             inputType === 'search' || inputType === 'url' || inputType === 'tel' ||
+             !inputType; // default is text
+    }
+
+    // Check for textarea elements
+    if (activeElement.tagName === 'TEXTAREA') {
+      return true;
+    }
+
+    // Check for contenteditable elements
+    if (activeElement.hasAttribute('contenteditable') &&
+        activeElement.getAttribute('contenteditable') !== 'false') {
+      return true;
+    }
+
+    // Check if inside a contenteditable container
+    const contentEditableParent = activeElement.closest('[contenteditable="true"]');
+    if (contentEditableParent) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Check if any modals or dialogs are currently open
+   */
+  function isModalOrDialogOpen() {
+    // Check for elements with aria-modal="true"
+    const ariaModalElements = document.querySelectorAll('[aria-modal="true"]');
+    if (ariaModalElements.length > 0) {
+      return true;
+    }
+
+    // Check for elements with role="dialog"
+    const dialogElements = document.querySelectorAll('[role="dialog"]');
+    if (dialogElements.length > 0) {
+      return true;
+    }
+
+    // Check for common modal classes/backdrop patterns
+    const modalSelectors = [
+      '.modal[style*="display: block"]',
+      '.modal.show',
+      '.modal.open',
+      '.modal.visible',
+      '.dialog[style*="display: block"]',
+      '.dialog.show',
+      '.dialog.open',
+      '.dialog.visible',
+      '[data-modal-open="true"]',
+      '[data-dialog-open="true"]',
+      // Check for backdrop elements that might indicate modals
+      '.backdrop',
+      '.modal-backdrop',
+      '.dialog-backdrop',
+      '.overlay[style*="display: block"]',
+      '.overlay.show',
+      '.overlay.visible',
+      // Common framework modal classes
+      '.MuiModal-root[aria-hidden="false"]',
+      '.chakra-modal__content',
+      '.ant-modal-mask',
+      '.el-overlay',
+      // Fixed positioned elements that might be modals
+      '.fixed.z-50',
+      '.absolute.z-50'
+    ];
+
+    for (const selector of modalSelectors) {
+      const elements = document.querySelectorAll(selector);
+      if (elements.length > 0) {
+        return true;
+      }
+    }
+
+    // Additional check: look for elements with very high z-index that might be modals
+    const allElements = document.querySelectorAll('*');
+    for (const element of allElements) {
+      const zIndex = window.getComputedStyle(element).zIndex;
+      if (zIndex && parseInt(zIndex) > 1000) {
+        // Elements with very high z-index are likely modals/overlays
+        return true;
+      }
+    }
+
+    return false;
   }
 
   /**
@@ -369,14 +444,6 @@
         hideCommandPalette();
       }
     });
-
-    // Global keyboard shortcut (Cmd+K)
-    document.addEventListener('keydown', (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault();
-        showCommandPalette();
-      }
-    });
   }
 
   /**
@@ -471,34 +538,32 @@
   /**
    * Action helpers
    */
-  function toggleNotifications() {
-    // Toggle notifications functionality
-    if (typeof window.toggleNotifications === 'function') {
-      window.toggleNotifications();
-    }
-  }
 
-  function toggleTheme() {
-    // Toggle theme functionality
-    if (typeof window.toggleTheme === 'function') {
-      window.toggleTheme();
-    } else {
-      // Fallback theme toggle
-      const html = document.documentElement;
-      if (html.classList.contains('dark')) {
-        html.classList.remove('dark');
-        localStorage.setItem('theme', 'light');
-      } else {
-        html.classList.add('dark');
-        localStorage.setItem('theme', 'dark');
+  // Global keyboard shortcut (K) - registered immediately on initialization
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'k') {
+      // If palette is already open, close it (unless user is editing in palette input)
+      if (isOpen) {
+        const activeElement = document.activeElement;
+        const isEditingInPalette = activeElement && activeElement.id === 'commandPaletteInput';
+        if (!isEditingInPalette) {
+          e.preventDefault();
+          hideCommandPalette();
+        }
+        return;
       }
+      // Don't open command palette if user is editing in an input/textarea
+      if (isUserEditing()) {
+        return;
+      }
+      // Don't open command palette if any modals or dialogs are open
+      if (isModalOrDialogOpen()) {
+        return;
+      }
+      e.preventDefault();
+      showCommandPalette();
     }
-  }
-
-  function logout() {
-    // Logout functionality
-    window.location.href = '/logout';
-  }
+  });
 
   // Expose functions globally
   window.showCommandPalette = showCommandPalette;

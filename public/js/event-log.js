@@ -48,7 +48,6 @@ function safeShowToast(message, type = 'info') {
 	window.__IS_ELECTRON__ = isElectronRuntime;
 	document.documentElement.dataset.runtime = isElectronRuntime ? 'electron' : 'browser';
 	document.body?.classList?.toggle('electron-runtime', isElectronRuntime);
-	console.info(`[Telemetry Viewer] Runtime detected: ${isElectronRuntime ? 'Electron' : 'Browser'}`);
 
 
 	// Check authentication status on page load
@@ -260,7 +259,7 @@ function safeShowToast(message, type = 'info') {
 	const logChartTrace = (message, details = {}) => {
 		try {
 			// Lightweight tracing to understand intermittent chart load issues
-			console.info('[LogsChart]', message, details);
+			// Tracing disabled in production
 		} catch {
 			// No-op: tracing should never break the UI
 		}
@@ -4600,7 +4599,6 @@ function safeShowToast(message, type = 'info') {
 				if (displayText) {
 					const dbSizeElement = document.getElementById('dbSize');
 					if (!dbSizeElement) {
-						console.debug('Database size element not present; skipping update');
 						return;
 					}
 					dbSizeElement.textContent = displayText;
@@ -4624,7 +4622,6 @@ function safeShowToast(message, type = 'info') {
 			}
 		} catch (error) {
 			// Silently fail if database size is not available
-			console.debug('Database size not available:', error);
 		}
 	}
 
@@ -5057,11 +5054,6 @@ function safeShowToast(message, type = 'info') {
 		window.addEventListener('chartRenderComplete', (event) => {
 			const {isInitialLoad, sessionId, eventCount, timestamp} = event.detail;
 			if (isInitialLoad) {
-				console.log('Initial chart render completed:', {
-					sessionId,
-					eventCount,
-					renderTime: timestamp
-				});
 				// Show the page once initial chart render is complete
 				revealEventLogShell();
 			}
@@ -5224,6 +5216,7 @@ function safeShowToast(message, type = 'info') {
 	window.refreshLogs = refreshLogs;
 	window.toggleNotificationMode = toggleNotificationMode;
 	window.toggleSelectionMode = toggleSelectionMode;
+	window.toggleTheme = toggleTheme;
 	// Load and display event payload in a modal
 	async function loadEventPayload(eventId) {
 		try {
