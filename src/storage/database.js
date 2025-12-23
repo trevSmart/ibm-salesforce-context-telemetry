@@ -9,8 +9,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import {fileURLToPath} from 'node:url';
-import {dirname} from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { dirname } from 'node:path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -34,13 +34,13 @@ function normalizeRole(role) {
  */
 async function init() {
 	if (dbType === 'sqlite') {
-		const {default: Database} = await import('better-sqlite3');
+		const { default: Database } = await import('better-sqlite3');
 		const dbPath = process.env.DB_PATH || path.join(__dirname, '..', 'data', 'telemetry.db');
 
 		// Ensure data directory exists
 		const dataDir = path.dirname(dbPath);
 		if (!fs.existsSync(dataDir)) {
-			fs.mkdirSync(dataDir, {recursive: true});
+			fs.mkdirSync(dataDir, { recursive: true });
 		}
 
 		db = new Database(dbPath);
@@ -113,11 +113,11 @@ async function init() {
 		console.log(`SQLite database initialized at: ${dbPath}`);
 
 	} else if (dbType === 'postgresql') {
-		const {Pool} = await import('pg');
+		const { Pool } = await import('pg');
 
 		const pool = new Pool({
 			connectionString: process.env.DATABASE_URL,
-			ssl: process.env.DATABASE_SSL === 'true' ? {rejectUnauthorized: false} : false,
+			ssl: process.env.DATABASE_SSL === 'true' ? { rejectUnauthorized: false } : false,
 			// Connection pool optimization
 			max: 20, // Maximum pool size
 			min: 2, // Minimum pool size
@@ -253,9 +253,9 @@ function getNormalizedSessionId(eventData = {}) {
 		eventData.data?.sessionId ||
 		eventData.data?.session_id ||
 		(typeof eventData.data?.session === 'string' ? eventData.data.session : null) ||
-		(eventData.data?.session && typeof eventData.data.session === 'object'? eventData.data.session.id ||
-				eventData.data.session.sessionId ||
-				eventData.data.session.session_id: null);
+		(eventData.data?.session && typeof eventData.data.session === 'object' ? eventData.data.session.id ||
+			eventData.data.session.sessionId ||
+			eventData.data.session.session_id : null);
 
 	return dataSession || null;
 }
@@ -340,7 +340,7 @@ function buildUserLabel(userId, rawData) {
 		return displayName;
 	}
 
-	const normalizedFromData = getNormalizedUserId({data: parsedData});
+	const normalizedFromData = getNormalizedUserId({ data: parsedData });
 	if (normalizedFromData) {
 		return normalizedFromData;
 	}
@@ -714,7 +714,7 @@ async function storeEvent(eventData, receivedAt) {
 
 		// Extract denormalized fields for faster queries (single pass optimization)
 		const normalizedFields = extractNormalizedFields(eventData);
-		const {orgId, userName, toolName, companyName, errorMessage} = normalizedFields;
+		const { orgId, userName, toolName, companyName, errorMessage } = normalizedFields;
 
 		// Resolve team_id for pre-calculated team association
 		let teamId = null;
@@ -813,13 +813,13 @@ async function getStats(options = {}) {
 		throw new Error('Database not initialized. Call init() first.');
 	}
 
-	const {startDate, endDate, eventType} = options;
+	const { startDate, endDate, eventType } = options;
 
 	if (dbType === 'sqlite') {
 		// Use prepared statement for common case (no filters)
 		if (!startDate && !endDate && !eventType) {
 			const stmt = getPreparedStatement('getStatsTotal', 'SELECT COUNT(*) as total FROM telemetry_events WHERE deleted_at IS NULL');
-			return {total: stmt.get().total};
+			return { total: stmt.get().total };
 		}
 
 		let query = 'SELECT COUNT(*) as total FROM telemetry_events WHERE deleted_at IS NULL';
@@ -839,7 +839,7 @@ async function getStats(options = {}) {
 		}
 
 		const result = db.prepare(query).get(...params);
-		return {total: result.total};
+		return { total: result.total };
 	} else if (dbType === 'postgresql') {
 		let query = 'SELECT COUNT(*) as total FROM telemetry_events WHERE deleted_at IS NULL';
 		const params = [];
@@ -859,7 +859,7 @@ async function getStats(options = {}) {
 		}
 
 		const result = await db.query(query, params);
-		return {total: Number.parseInt(result.rows[0].total, 10)};
+		return { total: Number.parseInt(result.rows[0].total, 10) };
 	}
 }
 
@@ -1019,11 +1019,11 @@ async function getEventById(id) {
 			data: JSON.parse(event.data)
 		};
 	}
-		const result = await db.query('SELECT id, event, timestamp, server_id, version, session_id, user_id, data, received_at, created_at, org_id, user_name, tool_name, company_name, error_message FROM telemetry_events WHERE id = $1 AND deleted_at IS NULL', [id]);
-		if (result.rows.length === 0) {
-			return null;
-		}
-		return result.rows[0];
+	const result = await db.query('SELECT id, event, timestamp, server_id, version, session_id, user_id, data, received_at, created_at, org_id, user_name, tool_name, company_name, error_message FROM telemetry_events WHERE id = $1 AND deleted_at IS NULL', [id]);
+	if (result.rows.length === 0) {
+		return null;
+	}
+	return result.rows[0];
 
 }
 
@@ -1032,7 +1032,7 @@ async function getEventById(id) {
  * @returns {Array} Statistics by event type
  */
 async function getEventTypeStats(options = {}) {
-	const {sessionId, userIds} = options || {};
+	const { sessionId, userIds } = options || {};
 	if (!db) {
 		throw new Error('Database not initialized. Call init() first.');
 	}
@@ -1059,7 +1059,7 @@ async function getEventTypeStats(options = {}) {
 			params.push(...userIds);
 		}
 		if (conditions.length > 0) {
-			query += ` WHERE ${  conditions.join(' AND ')}`;
+			query += ` WHERE ${conditions.join(' AND ')}`;
 		}
 		query += `
 			GROUP BY event
@@ -1069,39 +1069,39 @@ async function getEventTypeStats(options = {}) {
 		const result = params.length ? stmt.all(...params) : stmt.all();
 		return result;
 	}
-		let query = `
+	let query = `
 			SELECT event, COUNT(*) as count
 			FROM telemetry_events
 		`;
-		const params = [];
-		const conditions = [];
-		let paramIndex = 1;
+	const params = [];
+	const conditions = [];
+	let paramIndex = 1;
 
-		// Always exclude soft deleted events
-		conditions.push('deleted_at IS NULL');
+	// Always exclude soft deleted events
+	conditions.push('deleted_at IS NULL');
 
-		if (sessionId) {
-			conditions.push(`(parent_session_id = $${paramIndex} OR (parent_session_id IS NULL AND session_id = $${paramIndex + 1}))`);
-			params.push(sessionId, sessionId);
-			paramIndex += 2;
-		}
-		if (userIds && Array.isArray(userIds) && userIds.length > 0) {
-			const placeholders = userIds.map(() => `$${paramIndex++}`).join(', ');
-			conditions.push(`user_id IN (${placeholders})`);
-			params.push(...userIds);
-		}
-		if (conditions.length > 0) {
-			query += ` WHERE ${  conditions.join(' AND ')}`;
-		}
-		query += `
+	if (sessionId) {
+		conditions.push(`(parent_session_id = $${paramIndex} OR (parent_session_id IS NULL AND session_id = $${paramIndex + 1}))`);
+		params.push(sessionId, sessionId);
+		paramIndex += 2;
+	}
+	if (userIds && Array.isArray(userIds) && userIds.length > 0) {
+		const placeholders = userIds.map(() => `$${paramIndex++}`).join(', ');
+		conditions.push(`user_id IN (${placeholders})`);
+		params.push(...userIds);
+	}
+	if (conditions.length > 0) {
+		query += ` WHERE ${conditions.join(' AND ')}`;
+	}
+	query += `
 			GROUP BY event
 			ORDER BY count DESC
 		`;
-		const result = await db.query(query, params);
-		return result.rows.map(row => ({
-			event: row.event,
-			count: Number.parseInt(row.count, 10)
-		}));
+	const result = await db.query(query, params);
+	return result.rows.map(row => ({
+		event: row.event,
+		count: Number.parseInt(row.count, 10)
+	}));
 
 }
 
@@ -1111,7 +1111,7 @@ async function getEventTypeStats(options = {}) {
  * @returns {Array} Sessions with count and latest timestamp
  */
 async function getSessions(options = {}) {
-	const {userIds, limit, offset, includeUsersWithoutSessions = true} = options || {};
+	const { userIds, limit, offset, includeUsersWithoutSessions = true } = options || {};
 	if (!db) {
 		throw new Error('Database not initialized. Call init() first.');
 	}
@@ -1419,20 +1419,20 @@ async function getSessions(options = {}) {
 	let whereClause = `WHERE deleted_at IS NULL AND (
 			(session_id IS NOT NULL OR parent_session_id IS NOT NULL)${includeUsersWithoutSessions ? ' OR user_id IS NOT NULL' : ''}
 		)`;
-		const params = [];
-		let paramIndex = 1;
-		if (userIds && Array.isArray(userIds) && userIds.length > 0) {
-			const placeholders = userIds.map(() => `$${paramIndex++}`).join(', ');
-			whereClause += ` AND user_id IN (${placeholders})`;
-			params.push(...userIds);
-		}
+	const params = [];
+	let paramIndex = 1;
+	if (userIds && Array.isArray(userIds) && userIds.length > 0) {
+		const placeholders = userIds.map(() => `$${paramIndex++}`).join(', ');
+		whereClause += ` AND user_id IN (${placeholders})`;
+		params.push(...userIds);
+	}
 
-		let query;
-		const queryParams = params.slice(); // Copy params array
+	let query;
+	const queryParams = params.slice(); // Copy params array
 
-		if (includeUsersWithoutSessions) {
-			// When including users without sessions, use UNION of sessions and user-only events
-			query = `
+	if (includeUsersWithoutSessions) {
+		// When including users without sessions, use UNION of sessions and user-only events
+		query = `
 				WITH session_aggregates AS (
 					SELECT
 						COALESCE(parent_session_id, session_id) AS logical_session_id,
@@ -1477,15 +1477,15 @@ async function getSessions(options = {}) {
 				${limit ? `LIMIT $${paramIndex + (userIds ? userIds.length * 2 : 0)}` : ''}
 				${offset ? `OFFSET $${paramIndex + (userIds ? userIds.length * 2 : 0) + (limit ? 1 : 0)}` : ''}
 			`;
-			// Add userIds for both parts of the union
-			if (userIds && userIds.length > 0) {
-				queryParams.push(...userIds, ...userIds);
-			}
-			if (limit) {queryParams.push(limit);}
-			if (offset) {queryParams.push(offset);}
-		} else {
-			// Original query for sessions only
-			query = `
+		// Add userIds for both parts of the union
+		if (userIds && userIds.length > 0) {
+			queryParams.push(...userIds, ...userIds);
+		}
+		if (limit) { queryParams.push(limit); }
+		if (offset) { queryParams.push(offset); }
+	} else {
+		// Original query for sessions only
+		query = `
 				WITH session_aggregates AS (
 					SELECT
 						COALESCE(parent_session_id, session_id) AS logical_session_id,
@@ -1520,43 +1520,43 @@ async function getSessions(options = {}) {
 				${limit ? `LIMIT $${paramIndex++}` : ''}
 				${offset ? `OFFSET $${paramIndex++}` : ''}
 			`;
-			if (limit) {queryParams.push(limit);}
-			if (offset) {queryParams.push(offset);}
+		if (limit) { queryParams.push(limit); }
+		if (offset) { queryParams.push(offset); }
+	}
+
+	const result = await db.query(query, queryParams);
+	return result.rows.map(row => {
+		let user_name = null;
+		if (row.session_start_data) {
+			try {
+				const data = typeof row.session_start_data === 'string' ? JSON.parse(row.session_start_data) : row.session_start_data;
+				// Try multiple paths: userName (camelCase), user_name (snake_case), or data.user.name (nested)
+				if (data) {
+					user_name = data.userName || data.user_name || (data.user && data.user.name) || null;
+				}
+			} catch {
+				// If parsing fails, ignore and use user_id
+			}
 		}
 
-		const result = await db.query(query, queryParams);
-		return result.rows.map(row => {
-			let user_name = null;
-			if (row.session_start_data) {
-				try {
-					const data = typeof row.session_start_data === 'string'? JSON.parse(row.session_start_data): row.session_start_data;
-					// Try multiple paths: userName (camelCase), user_name (snake_case), or data.user.name (nested)
-					if (data) {
-						user_name = data.userName || data.user_name || (data.user && data.user.name) || null;
-					}
-				} catch {
-					// If parsing fails, ignore and use user_id
-				}
-			}
+		// Determine if session is active
+		const hasStart = Number.parseInt(row.has_start, 10) > 0;
+		const hasEnd = Number.parseInt(row.has_end, 10) > 0;
+		const lastEvent = new Date(row.last_event);
+		const now = new Date();
+		const hoursSinceLastEvent = (now - lastEvent) / (1000 * 60 * 60);
+		const isActive = hasStart && !hasEnd && hoursSinceLastEvent < 2;
 
-			// Determine if session is active
-			const hasStart = Number.parseInt(row.has_start, 10) > 0;
-			const hasEnd = Number.parseInt(row.has_end, 10) > 0;
-			const lastEvent = new Date(row.last_event);
-			const now = new Date();
-			const hoursSinceLastEvent = (now - lastEvent) / (1000 * 60 * 60);
-			const isActive = hasStart && !hasEnd && hoursSinceLastEvent < 2;
-
-			return {
-				session_id: row.logical_session_id,
-				count: Number.parseInt(row.count, 10),
-				first_event: row.first_event,
-				last_event: row.last_event,
-				user_id: row.user_id,
-				user_name: user_name,
-				is_active: isActive
-			};
-		});
+		return {
+			session_id: row.logical_session_id,
+			count: Number.parseInt(row.count, 10),
+			first_event: row.first_event,
+			last_event: row.last_event,
+			user_id: row.user_id,
+			user_name: user_name,
+			is_active: isActive
+		};
+	});
 
 }
 
@@ -1707,8 +1707,8 @@ async function getDailyStats(days = 30) {
 
 		return filledResults;
 	}
-		// PostgreSQL: use DATE with UTC timezone to group by date using the event timestamp
-		const result = await db.query(`
+	// PostgreSQL: use DATE with UTC timezone to group by date using the event timestamp
+	const result = await db.query(`
 			SELECT
 				DATE(timestamp AT TIME ZONE 'UTC') as date,
 				COUNT(*) as count
@@ -1719,26 +1719,26 @@ async function getDailyStats(days = 30) {
 			ORDER BY date ASC
 		`, [startDateISO]);
 
-		// Fill in missing days with 0 counts
-		const dateMap = new Map();
-		result.rows.forEach(row => {
-			// Handle both Date objects and string dates from PostgreSQL
-			const dateValue = row.date instanceof Date? row.date.toISOString().split('T')[0]: row.date.split('T')[0];
-			dateMap.set(dateValue, Number.parseInt(row.count, 10));
+	// Fill in missing days with 0 counts
+	const dateMap = new Map();
+	result.rows.forEach(row => {
+		// Handle both Date objects and string dates from PostgreSQL
+		const dateValue = row.date instanceof Date ? row.date.toISOString().split('T')[0] : row.date.split('T')[0];
+		dateMap.set(dateValue, Number.parseInt(row.count, 10));
+	});
+
+	const filledResults = [];
+	for (let i = 0; i < rangeDays; i++) {
+		const date = new Date(startDate);
+		date.setUTCDate(date.getUTCDate() + i);
+		const dateStr = date.toISOString().split('T')[0];
+		filledResults.push({
+			date: dateStr,
+			count: dateMap.get(dateStr) || 0
 		});
+	}
 
-		const filledResults = [];
-		for (let i = 0; i < rangeDays; i++) {
-			const date = new Date(startDate);
-			date.setUTCDate(date.getUTCDate() + i);
-			const dateStr = date.toISOString().split('T')[0];
-			filledResults.push({
-				date: dateStr,
-				count: dateMap.get(dateStr) || 0
-			});
-		}
-
-		return filledResults;
+	return filledResults;
 
 }
 
@@ -1832,9 +1832,9 @@ async function getDailyStatsByEventType(days = 30) {
 
 		return filledResults;
 	}
-		// PostgreSQL
-		// Get all session_start events
-		const sessionStartsResult = await db.query(`
+	// PostgreSQL
+	// Get all session_start events
+	const sessionStartsResult = await db.query(`
 			SELECT
 				DATE(timestamp AT TIME ZONE 'UTC') as date,
 				session_id,
@@ -1844,15 +1844,15 @@ async function getDailyStatsByEventType(days = 30) {
 				AND deleted_at IS NULL
 		`, [startDateISO]);
 
-		// Count all session_starts by date (regardless of whether they have an end)
-		const startSessionsMap = new Map();
-		sessionStartsResult.rows.forEach(row => {
-			const dateValue = row.date instanceof Date? row.date.toISOString().split('T')[0]: row.date.split('T')[0];
-			startSessionsMap.set(dateValue, (startSessionsMap.get(dateValue) || 0) + 1);
-		});
+	// Count all session_starts by date (regardless of whether they have an end)
+	const startSessionsMap = new Map();
+	sessionStartsResult.rows.forEach(row => {
+		const dateValue = row.date instanceof Date ? row.date.toISOString().split('T')[0] : row.date.split('T')[0];
+		startSessionsMap.set(dateValue, (startSessionsMap.get(dateValue) || 0) + 1);
+	});
 
-		// Get tool events (tool_call and tool_error)
-		const toolEventsResult = await db.query(`
+	// Get tool events (tool_call and tool_error)
+	const toolEventsResult = await db.query(`
 			SELECT
 				DATE(timestamp AT TIME ZONE 'UTC') as date,
 				COUNT(*) as count
@@ -1862,14 +1862,14 @@ async function getDailyStatsByEventType(days = 30) {
 			GROUP BY DATE(timestamp AT TIME ZONE 'UTC')
 		`, [startDateISO]);
 
-		const toolEventsMap = new Map();
-		toolEventsResult.rows.forEach(row => {
-			const dateValue = row.date instanceof Date? row.date.toISOString().split('T')[0]: row.date.split('T')[0];
-			toolEventsMap.set(dateValue, Number.parseInt(row.count, 10));
-		});
+	const toolEventsMap = new Map();
+	toolEventsResult.rows.forEach(row => {
+		const dateValue = row.date instanceof Date ? row.date.toISOString().split('T')[0] : row.date.split('T')[0];
+		toolEventsMap.set(dateValue, Number.parseInt(row.count, 10));
+	});
 
-		// Get error events (tool_error only)
-		const errorEventsResult = await db.query(`
+	// Get error events (tool_error only)
+	const errorEventsResult = await db.query(`
 			SELECT
 				DATE(timestamp AT TIME ZONE 'UTC') as date,
 				COUNT(*) as count
@@ -1879,27 +1879,27 @@ async function getDailyStatsByEventType(days = 30) {
 			GROUP BY DATE(timestamp AT TIME ZONE 'UTC')
 		`, [startDateISO]);
 
-		const errorEventsMap = new Map();
-		errorEventsResult.rows.forEach(row => {
-			const dateValue = row.date instanceof Date? row.date.toISOString().split('T')[0]: row.date.split('T')[0];
-			errorEventsMap.set(dateValue, Number.parseInt(row.count, 10));
+	const errorEventsMap = new Map();
+	errorEventsResult.rows.forEach(row => {
+		const dateValue = row.date instanceof Date ? row.date.toISOString().split('T')[0] : row.date.split('T')[0];
+		errorEventsMap.set(dateValue, Number.parseInt(row.count, 10));
+	});
+
+	// Fill in missing days with 0 counts
+	const filledResults = [];
+	for (let i = 0; i < rangeDays; i++) {
+		const date = new Date(startDate);
+		date.setUTCDate(date.getUTCDate() + i);
+		const dateStr = date.toISOString().split('T')[0];
+		filledResults.push({
+			date: dateStr,
+			startSessionsWithoutEnd: startSessionsMap.get(dateStr) || 0,
+			toolEvents: toolEventsMap.get(dateStr) || 0,
+			errorEvents: errorEventsMap.get(dateStr) || 0
 		});
+	}
 
-		// Fill in missing days with 0 counts
-		const filledResults = [];
-		for (let i = 0; i < rangeDays; i++) {
-			const date = new Date(startDate);
-			date.setUTCDate(date.getUTCDate() + i);
-			const dateStr = date.toISOString().split('T')[0];
-			filledResults.push({
-				date: dateStr,
-				startSessionsWithoutEnd: startSessionsMap.get(dateStr) || 0,
-				toolEvents: toolEventsMap.get(dateStr) || 0,
-				errorEvents: errorEventsMap.get(dateStr) || 0
-			});
-		}
-
-		return filledResults;
+	return filledResults;
 
 }
 
@@ -1934,7 +1934,7 @@ async function getDatabaseSize() {
 		}
 
 		// Get max size from environment variable (in bytes) if set, otherwise use default
-		const maxSize = process.env.DB_MAX_SIZE? Number.parseInt(process.env.DB_MAX_SIZE, 10): DEFAULT_MAX_DB_SIZE;
+		const maxSize = process.env.DB_MAX_SIZE ? Number.parseInt(process.env.DB_MAX_SIZE, 10) : DEFAULT_MAX_DB_SIZE;
 
 		return {
 			size: size,
@@ -2115,7 +2115,7 @@ async function getToolUsageStats(days = 30) {
 			const toolStats = new Map();
 			result.rows.forEach(row => {
 				const toolName = String(row.tool_name).trim();
-				if (!toolName) {return;}
+				if (!toolName) { return; }
 
 				if (!toolStats.has(toolName)) {
 					toolStats.set(toolName, {
@@ -2453,7 +2453,7 @@ async function getUniqueUserIds() {
 		}
 
 		const displayName = extractUserDisplayName(parsedData);
-		const label = displayName && displayName.toLowerCase() !== normalizedId.toLowerCase()? `${displayName} (${normalizedId})`: normalizedId;
+		const label = displayName && displayName.toLowerCase() !== normalizedId.toLowerCase() ? `${displayName} (${normalizedId})` : normalizedId;
 
 		const existing = userMap.get(normalizedId);
 		if (!existing || (existing.label === normalizedId && label !== normalizedId)) {
@@ -2600,7 +2600,7 @@ async function getTopTeamsLastDays(orgTeamMappings = [], limit = 50, days = 3) {
 	}
 
 	const mappingsFromRequest = Array.isArray(orgTeamMappings) ? orgTeamMappings : [];
-	const effectiveMappings = mappingsFromRequest.length > 0? mappingsFromRequest: await getOrgTeamMappingsFromTeamsTable();
+	const effectiveMappings = mappingsFromRequest.length > 0 ? mappingsFromRequest : await getOrgTeamMappingsFromTeamsTable();
 
 	if (!effectiveMappings || effectiveMappings.length === 0) {
 		return [];
@@ -2727,7 +2727,7 @@ async function getTopTeamsLastDays(orgTeamMappings = [], limit = 50, days = 3) {
 
 	// Convert to array and sort by count
 	const sortedOrgs = Array.from(orgIdCounts.entries())
-		.map(([orgId, count]) => ({orgId, count}))
+		.map(([orgId, count]) => ({ orgId, count }))
 		.sort((a, b) => {
 			if (b.count !== a.count) {
 				return b.count - a.count;
@@ -2736,7 +2736,7 @@ async function getTopTeamsLastDays(orgTeamMappings = [], limit = 50, days = 3) {
 		});
 
 	// Map to team info and add to results
-	sortedOrgs.forEach(({orgId, count}) => {
+	sortedOrgs.forEach(({ orgId, count }) => {
 		const normalizedOrgId = normalizeOrgId(orgId);
 		const teamKey = orgToTeamKey.get(normalizedOrgId);
 		if (!teamKey) {
@@ -2822,7 +2822,7 @@ async function getOrgTeamMappingsFromTeamsTable() {
 					active: true
 				}));
 		} else if (dbType === 'postgresql') {
-			const {rows} = await db.query(`
+			const { rows } = await db.query(`
         SELECT
           o.server_id AS org_id,
           COALESCE(o.company_name, o.alias, '') AS client_name,
@@ -3048,11 +3048,11 @@ async function populateDenormalizedColumns() {
 					try {
 						// Parseja les dades JSON si cal
 						const data = typeof row.data === 'string' ? JSON.parse(row.data) : row.data;
-						const eventData = {data};
+						const eventData = { data };
 
 						// Extreu els valors denormalitzats usant la funció consolidada (optimització)
 						const normalizedFields = extractNormalizedFields(eventData);
-						const {orgId, userName, toolName, companyName, errorMessage} = normalizedFields;
+						const { orgId, userName, toolName, companyName, errorMessage } = normalizedFields;
 
 						// Resol team_id si tenim org_id
 						let teamId = null;
@@ -3206,8 +3206,8 @@ async function backfillEventStatsIfEmpty() {
 	}
 
 	try {
-		const hasUserStats = dbType === 'sqlite'? (db.prepare('SELECT COUNT(*) as count FROM user_event_stats').get()?.count || 0) > 0: (await db.query('SELECT COUNT(*) as count FROM user_event_stats')).rows.some(row => Number.parseInt(row.count, 10) > 0);
-		const hasOrgStats = dbType === 'sqlite'? (db.prepare('SELECT COUNT(*) as count FROM org_event_stats').get()?.count || 0) > 0: (await db.query('SELECT COUNT(*) as count FROM org_event_stats')).rows.some(row => Number.parseInt(row.count, 10) > 0);
+		const hasUserStats = dbType === 'sqlite' ? (db.prepare('SELECT COUNT(*) as count FROM user_event_stats').get()?.count || 0) > 0 : (await db.query('SELECT COUNT(*) as count FROM user_event_stats')).rows.some(row => Number.parseInt(row.count, 10) > 0);
+		const hasOrgStats = dbType === 'sqlite' ? (db.prepare('SELECT COUNT(*) as count FROM org_event_stats').get()?.count || 0) > 0 : (await db.query('SELECT COUNT(*) as count FROM org_event_stats')).rows.some(row => Number.parseInt(row.count, 10) > 0);
 
 		if (hasUserStats && hasOrgStats) {
 			return;
@@ -3465,7 +3465,7 @@ async function recomputeUserEventStats(userIds = []) {
 		});
 	} else if (dbType === 'postgresql') {
 		for (const userId of uniqueIds) {
-			const {rows} = await db.query(
+			const { rows } = await db.query(
 				`
           SELECT
             COUNT(*) AS event_count,
@@ -3542,7 +3542,7 @@ async function recomputeOrgEventStats(orgIds = []) {
 		});
 	} else if (dbType === 'postgresql') {
 		for (const orgId of uniqueIds) {
-			const {rows} = await db.query(
+			const { rows } = await db.query(
 				`
           SELECT
             COUNT(*) AS event_count,
@@ -3574,7 +3574,7 @@ async function recomputeOrgEventStats(orgIds = []) {
 
 
 async function getUserEventStats(options = {}) {
-	const {limit, offset} = options;
+	const { limit, offset } = options;
 	if (!db) {
 		throw new Error('Database not initialized. Call init() first.');
 	}
@@ -3623,7 +3623,7 @@ async function getUserEventStats(options = {}) {
 		query += ` OFFSET $${params.length + 1}`;
 		params.push(offset);
 	}
-	const {rows} = await db.query(query, params);
+	const { rows } = await db.query(query, params);
 	return rows.map(row => ({
 		id: row.user_id,
 		label: (row.display_name || row.user_id || '').trim() || row.user_id || '',
@@ -3650,7 +3650,7 @@ async function getOrgStatsMap() {
 			}
 		});
 	} else {
-		const {rows} = await db.query('SELECT org_id, event_count, last_event FROM org_event_stats');
+		const { rows } = await db.query('SELECT org_id, event_count, last_event FROM org_event_stats');
 		rows.forEach(row => {
 			if (row.org_id) {
 				statsMap.set(String(row.org_id).trim().toLowerCase(), {
@@ -3673,7 +3673,7 @@ async function getTeamStats(orgTeamMappings = []) {
 	const normalizeOrgId = (value) => String(value || '').trim().toLowerCase();
 
 	const mappingsFromRequest = Array.isArray(orgTeamMappings) ? orgTeamMappings : [];
-	const effectiveMappings = mappingsFromRequest.length > 0? mappingsFromRequest: await getOrgTeamMappingsFromTeamsTable();
+	const effectiveMappings = mappingsFromRequest.length > 0 ? mappingsFromRequest : await getOrgTeamMappingsFromTeamsTable();
 
 	if (!effectiveMappings || effectiveMappings.length === 0) {
 		return [];
@@ -4204,7 +4204,7 @@ async function addEventUserToTeam(teamId, userName) {
         ON CONFLICT(team_id, user_name) DO NOTHING
       `).run(teamId, userName);
 
-			return {status: 'ok', message: 'Event user added to team successfully'};
+			return { status: 'ok', message: 'Event user added to team successfully' };
 		} else if (dbType === 'postgresql') {
 			await db.query(`
         INSERT INTO team_event_users (team_id, user_name)
@@ -4212,7 +4212,7 @@ async function addEventUserToTeam(teamId, userName) {
         ON CONFLICT (team_id, user_name) DO NOTHING
       `, [teamId, userName]);
 
-			return {status: 'ok', message: 'Event user added to team successfully'};
+			return { status: 'ok', message: 'Event user added to team successfully' };
 		}
 	} catch (error) {
 		console.error('Error adding event user to team:', error);
@@ -4238,14 +4238,14 @@ async function removeEventUserFromTeam(teamId, userName) {
         WHERE team_id = ? AND user_name = ?
       `).run(teamId, userName);
 
-			return {status: 'ok', message: 'Event user removed from team successfully'};
+			return { status: 'ok', message: 'Event user removed from team successfully' };
 		} else if (dbType === 'postgresql') {
 			await db.query(`
         DELETE FROM team_event_users
         WHERE team_id = $1 AND user_name = $2
       `, [teamId, userName]);
 
-			return {status: 'ok', message: 'Event user removed from team successfully'};
+			return { status: 'ok', message: 'Event user removed from team successfully' };
 		}
 	} catch (error) {
 		console.error('Error removing event user from team:', error);
@@ -4425,7 +4425,7 @@ async function updateTeam(teamId, updates) {
 		throw new Error('Database not initialized. Call init() first.');
 	}
 
-	const {name, color, logo_url, logo_data, logo_mime} = updates || {};
+	const { name, color, logo_url, logo_data, logo_mime } = updates || {};
 	const now = new Date().toISOString();
 	const updatesList = [];
 	const params = [];
@@ -4434,27 +4434,27 @@ async function updateTeam(teamId, updates) {
 		if (typeof name !== 'string' || name.trim() === '') {
 			throw new Error('Team name cannot be empty');
 		}
-		updatesList.push(dbType === 'sqlite' ? 'name = ?' : `name = $${  params.length + 1}`);
+		updatesList.push(dbType === 'sqlite' ? 'name = ?' : `name = $${params.length + 1}`);
 		params.push(name.trim());
 	}
 
 	if (color !== undefined) {
-		updatesList.push(dbType === 'sqlite' ? 'color = ?' : `color = $${  params.length + 1}`);
+		updatesList.push(dbType === 'sqlite' ? 'color = ?' : `color = $${params.length + 1}`);
 		params.push(color || null);
 	}
 
 	if (logo_url !== undefined) {
-		updatesList.push(dbType === 'sqlite' ? 'logo_url = ?' : `logo_url = $${  params.length + 1}`);
+		updatesList.push(dbType === 'sqlite' ? 'logo_url = ?' : `logo_url = $${params.length + 1}`);
 		params.push(logo_url || null);
 	}
 
 	if (logo_data !== undefined) {
-		updatesList.push(dbType === 'sqlite' ? 'logo_data = ?' : `logo_data = $${  params.length + 1}`);
+		updatesList.push(dbType === 'sqlite' ? 'logo_data = ?' : `logo_data = $${params.length + 1}`);
 		params.push(logo_data || null);
 	}
 
 	if (logo_mime !== undefined) {
-		updatesList.push(dbType === 'sqlite' ? 'logo_mime = ?' : `logo_mime = $${  params.length + 1}`);
+		updatesList.push(dbType === 'sqlite' ? 'logo_mime = ?' : `logo_mime = $${params.length + 1}`);
 		params.push(logo_mime || null);
 	}
 
@@ -4462,7 +4462,7 @@ async function updateTeam(teamId, updates) {
 		return false;
 	}
 
-	updatesList.push(dbType === 'sqlite' ? 'updated_at = ?' : `updated_at = $${  params.length + 1}`);
+	updatesList.push(dbType === 'sqlite' ? 'updated_at = ?' : `updated_at = $${params.length + 1}`);
 	params.push(now);
 
 	params.push(teamId);
@@ -4666,7 +4666,7 @@ async function upsertOrg(orgId, orgData = {}) {
 		throw new Error('Org ID is required');
 	}
 
-	const {alias, color, team_id, company_name} = orgData;
+	const { alias, color, team_id, company_name } = orgData;
 	const now = new Date().toISOString();
 
 	try {
@@ -4881,7 +4881,7 @@ async function createRememberToken(userId, expiresAt, userAgent = null, ipAddres
         VALUES (?, ?, ?, ?, ?)
       `);
 			const result = stmt.run(userId, tokenHash, expiresAt, userAgent, ipAddress);
-			return {token, id: result.lastInsertRowid};
+			return { token, id: result.lastInsertRowid };
 		} else if (dbType === 'postgresql') {
 			const result = await db.query(
 				`INSERT INTO remember_tokens (user_id, token_hash, expires_at, user_agent, ip_address)
@@ -4889,7 +4889,7 @@ async function createRememberToken(userId, expiresAt, userAgent = null, ipAddres
          RETURNING id`,
 				[userId, tokenHash, expiresAt, userAgent, ipAddress]
 			);
-			return {token, id: result.rows[0].id};
+			return { token, id: result.rows[0].id };
 		}
 	} catch (error) {
 		console.error('Error creating remember token:', error);
@@ -4920,7 +4920,7 @@ async function validateRememberToken(token) {
           AND revoked_at IS NULL
       `);
 			const row = stmt.get(tokenHash, now);
-			return row ? {userId: row.user_id, tokenId: row.id} : null;
+			return row ? { userId: row.user_id, tokenId: row.id } : null;
 		} else if (dbType === 'postgresql') {
 			const result = await db.query(
 				`SELECT id, user_id
@@ -4930,7 +4930,7 @@ async function validateRememberToken(token) {
            AND revoked_at IS NULL`,
 				[tokenHash]
 			);
-			return result.rows.length > 0? {userId: result.rows[0].user_id, tokenId: result.rows[0].id}: null;
+			return result.rows.length > 0 ? { userId: result.rows[0].user_id, tokenId: result.rows[0].id } : null;
 		}
 	} catch (error) {
 		console.error('Error validating remember token:', error);
@@ -5137,7 +5137,7 @@ async function exportDatabase() {
 		return exportData;
 	} catch (error) {
 		console.error('Error exporting database:', error);
-		throw new Error(`Failed to export database: ${  error.message}`);
+		throw new Error(`Failed to export database: ${error.message}`);
 	}
 }
 
@@ -5184,7 +5184,7 @@ async function importDatabase(importData) {
 							);
 							results.imported++;
 						} catch (err) {
-							results.errors.push({table: 'users', id: user.id, error: err.message});
+							results.errors.push({ table: 'users', id: user.id, error: err.message });
 						}
 					});
 				}
@@ -5209,7 +5209,7 @@ async function importDatabase(importData) {
 							);
 							results.imported++;
 						} catch (err) {
-							results.errors.push({table: 'teams', id: team.id, error: err.message});
+							results.errors.push({ table: 'teams', id: team.id, error: err.message });
 						}
 					});
 				}
@@ -5233,7 +5233,7 @@ async function importDatabase(importData) {
 							);
 							results.imported++;
 						} catch (err) {
-							results.errors.push({table: 'orgs', id: org.server_id, error: err.message});
+							results.errors.push({ table: 'orgs', id: org.server_id, error: err.message });
 						}
 					});
 				}
@@ -5261,7 +5261,7 @@ async function importDatabase(importData) {
 							);
 							results.imported++;
 						} catch (err) {
-							results.errors.push({table: 'telemetry_events', id: event.id, error: err.message});
+							results.errors.push({ table: 'telemetry_events', id: event.id, error: err.message });
 						}
 					});
 				}
@@ -5282,7 +5282,7 @@ async function importDatabase(importData) {
 							);
 							results.imported++;
 						} catch (err) {
-							results.errors.push({table: 'settings', key: setting.key, error: err.message});
+							results.errors.push({ table: 'settings', key: setting.key, error: err.message });
 						}
 					});
 				}
@@ -5307,7 +5307,7 @@ async function importDatabase(importData) {
 							);
 							results.imported++;
 						} catch (err) {
-							results.errors.push({table: 'remember_tokens', id: token.id, error: err.message});
+							results.errors.push({ table: 'remember_tokens', id: token.id, error: err.message });
 						}
 					});
 				}
@@ -5328,7 +5328,7 @@ async function importDatabase(importData) {
 							);
 							results.imported++;
 						} catch (err) {
-							results.errors.push({table: 'event_user_teams', id: eut.id, error: err.message});
+							results.errors.push({ table: 'event_user_teams', id: eut.id, error: err.message });
 						}
 					});
 				}
@@ -5367,7 +5367,7 @@ async function importDatabase(importData) {
 							]);
 							results.imported++;
 						} catch (err) {
-							results.errors.push({table: 'users', id: user.id, error: err.message});
+							results.errors.push({ table: 'users', id: user.id, error: err.message });
 						}
 					}
 				}
@@ -5399,7 +5399,7 @@ async function importDatabase(importData) {
 							]);
 							results.imported++;
 						} catch (err) {
-							results.errors.push({table: 'teams', id: team.id, error: err.message});
+							results.errors.push({ table: 'teams', id: team.id, error: err.message });
 						}
 					}
 				}
@@ -5429,7 +5429,7 @@ async function importDatabase(importData) {
 							]);
 							results.imported++;
 						} catch (err) {
-							results.errors.push({table: 'orgs', id: org.server_id, error: err.message});
+							results.errors.push({ table: 'orgs', id: org.server_id, error: err.message });
 						}
 					}
 				}
@@ -5469,7 +5469,7 @@ async function importDatabase(importData) {
 							]);
 							results.imported++;
 						} catch (err) {
-							results.errors.push({table: 'telemetry_events', id: event.id, error: err.message});
+							results.errors.push({ table: 'telemetry_events', id: event.id, error: err.message });
 						}
 					}
 				}
@@ -5492,7 +5492,7 @@ async function importDatabase(importData) {
 							]);
 							results.imported++;
 						} catch (err) {
-							results.errors.push({table: 'settings', key: setting.key, error: err.message});
+							results.errors.push({ table: 'settings', key: setting.key, error: err.message });
 						}
 					}
 				}
@@ -5524,7 +5524,7 @@ async function importDatabase(importData) {
 							]);
 							results.imported++;
 						} catch (err) {
-							results.errors.push({table: 'remember_tokens', id: token.id, error: err.message});
+							results.errors.push({ table: 'remember_tokens', id: token.id, error: err.message });
 						}
 					}
 				}
@@ -5548,7 +5548,7 @@ async function importDatabase(importData) {
 							]);
 							results.imported++;
 						} catch (err) {
-							results.errors.push({table: 'event_user_teams', id: eut.id, error: err.message});
+							results.errors.push({ table: 'event_user_teams', id: eut.id, error: err.message });
 						}
 					}
 				}
@@ -5565,7 +5565,7 @@ async function importDatabase(importData) {
 		return results;
 	} catch (error) {
 		console.error('Error importing database:', error);
-		throw new Error(`Failed to import database: ${  error.message}`);
+		throw new Error(`Failed to import database: ${error.message}`);
 	}
 }
 
