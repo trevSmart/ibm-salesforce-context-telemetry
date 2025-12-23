@@ -129,7 +129,7 @@ async function init() {
 				created_at TEXT DEFAULT CURRENT_TIMESTAMP
 			);
 
-			CREATE INDEX IF NOT EXISTS idx_event_id ON telemetry_events(event_id);
+			-- CREATE INDEX IF NOT EXISTS idx_event_id ON telemetry_events(event_id); -- Created by migration
 			CREATE INDEX IF NOT EXISTS idx_timestamp ON telemetry_events(timestamp);
 			CREATE INDEX IF NOT EXISTS idx_server_id ON telemetry_events(server_id);
 			CREATE INDEX IF NOT EXISTS idx_created_at ON telemetry_events(created_at);
@@ -238,7 +238,7 @@ async function init() {
 				created_at TIMESTAMPTZ DEFAULT NOW()
 			);
 
-			CREATE INDEX IF NOT EXISTS idx_event_id ON telemetry_events(event_id);
+			-- CREATE INDEX IF NOT EXISTS idx_event_id ON telemetry_events(event_id); -- Created by migration
 			CREATE INDEX IF NOT EXISTS idx_timestamp ON telemetry_events(timestamp);
 			CREATE INDEX IF NOT EXISTS idx_server_id ON telemetry_events(server_id);
 			CREATE INDEX IF NOT EXISTS idx_created_at ON telemetry_events(created_at);
@@ -265,7 +265,7 @@ async function init() {
 		await ensureErrorMessageColumn();
 		await ensurePeopleInitialsColumn();
 		await ensureEventTypesInitialized();
-		await ensureEventMigration();
+		await ensureEventMigration(); // Execute migration before creating indexes that reference event_id
 		await ensureEventStatsTables();
 		await ensureTeamsAndOrgsTables();
 		await ensureRememberTokensTable();
