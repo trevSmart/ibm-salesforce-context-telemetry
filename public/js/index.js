@@ -1974,7 +1974,7 @@ document.addEventListener('keydown', (e) => {
 		const confirmModal = document.querySelector('.confirm-dialog-backdrop');
 		if (confirmModal) {
 			confirmModal.remove();
-			
+
 		}
 	}
 });
