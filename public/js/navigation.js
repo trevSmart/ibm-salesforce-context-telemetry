@@ -95,13 +95,20 @@
 			if (loadedScripts.has(src)) {
 				continue;
 			}
+
+			// Load global-cache.js synchronously to ensure it's available before other scripts
+			const isGlobalCache = src === '/js/global-cache.js';
+
 			await new Promise((resolve, reject) => {
 				const script = document.createElement('script');
 				script.src = src;
 				if (type) {
 					script.type = type;
 				}
-				script.async = true;
+				// Only make global-cache.js synchronous, others can be async
+				if (!isGlobalCache) {
+					script.async = true;
+				}
 				script.addEventListener('load', () => {
 					loadedScripts.add(src);
 					resolve();

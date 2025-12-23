@@ -174,7 +174,6 @@ async function init() {
 
 			CREATE TABLE IF NOT EXISTS telemetry_events (
 				id SERIAL PRIMARY KEY,
-				event_id INTEGER NOT NULL REFERENCES event_types(id),
 				timestamp TIMESTAMPTZ NOT NULL,
 				server_id TEXT,
 				version TEXT,
@@ -260,15 +259,16 @@ async function init() {
 		throw new Error(`Unsupported database type: ${dbType}`);
 	}
 
-	await ensureUserRoleColumn();
-	await ensureTelemetryParentSessionColumn();
-	await ensureDenormalizedColumns();
-	await ensureErrorMessageColumn();
-	await ensurePeopleInitialsColumn();
-	await ensureEventTypesInitialized();
-	await ensureEventStatsTables();
-	await ensureTeamsAndOrgsTables();
-	await ensureRememberTokensTable();
+		await ensureUserRoleColumn();
+		await ensureTelemetryParentSessionColumn();
+		await ensureDenormalizedColumns();
+		await ensureErrorMessageColumn();
+		await ensurePeopleInitialsColumn();
+		await ensureEventTypesInitialized();
+		await ensureEventMigration();
+		await ensureEventStatsTables();
+		await ensureTeamsAndOrgsTables();
+		await ensureRememberTokensTable();
 }
 
 async function ensureErrorMessageColumn() {
@@ -409,6 +409,130 @@ async function ensureEventTypesInitialized() {
 		}
 	} catch (error) {
 		console.error('Error initializing event types:', error);
+	}
+}
+
+async function ensureEventMigration() {
+	if (!db) {
+		return;
+	}
+
+	try {
+		console.log('Checking for event migration...');
+
+		if (dbType === 'sqlite') {
+			// Check if migration is needed (old 'event' column exists)
+			const columns = db.prepare('PRAGMA table_info(telemetry_events)').all();
+			const columnNames = columns.map(col => col.name);
+
+			const hasEventColumn = columnNames.includes('event');
+			const hasEventIdColumn = columnNames.includes('event_id');
+
+			if (hasEventColumn && !hasEventIdColumn) {
+				console.log('Starting event types migration...');
+
+				// Add event_id column if it doesn't exist
+				db.exec('ALTER TABLE telemetry_events ADD COLUMN event_id INTEGER REFERENCES event_types(id)');
+
+				// Migrate data from event to event_id
+				const updateStmt = db.prepare(`
+					UPDATE telemetry_events
+					SET event_id = (SELECT id FROM event_types WHERE name = telemetry_events.event)
+					WHERE event_id IS NULL
+				`);
+				const result = updateStmt.run();
+				console.log(`Migrated ${result.changes} rows from event to event_id`);
+
+				// Drop old indexes that reference the event column
+				const indexesToDrop = ['idx_event', 'idx_event_created_at', 'idx_timestamp_event'];
+				for (const indexName of indexesToDrop) {
+					try {
+						db.exec(`DROP INDEX IF EXISTS ${indexName}`);
+						console.log(`Dropped index: ${indexName}`);
+					} catch (e) {
+						console.warn(`Could not drop index ${indexName}:`, e.message);
+					}
+				}
+
+				// Drop old event column
+				db.exec('ALTER TABLE telemetry_events DROP COLUMN event');
+
+				// Recreate indexes
+				db.exec('CREATE INDEX IF NOT EXISTS idx_event_id ON telemetry_events(event_id)');
+				db.exec('CREATE INDEX IF NOT EXISTS idx_event_id_created_at ON telemetry_events(event_id, created_at)');
+
+				console.log('Event migration completed successfully!');
+			} else if (hasEventIdColumn) {
+				console.log('Event migration already completed');
+			} else {
+				console.log('No event migration needed');
+			}
+
+		} else if (dbType === 'postgresql') {
+			// Check if migration is needed
+			const columnsResult = await db.query(`
+				SELECT column_name
+				FROM information_schema.columns
+				WHERE table_name = 'telemetry_events' AND table_schema = 'public'
+			`);
+			const columnNames = columnsResult.rows.map(row => row.column_name);
+
+			const hasEventColumn = columnNames.includes('event');
+			const hasEventIdColumn = columnNames.includes('event_id');
+
+			if (hasEventColumn && !hasEventIdColumn) {
+				console.log('Starting event types migration...');
+
+				// Start transaction for PostgreSQL
+				await db.query('BEGIN');
+
+				try {
+					// Add event_id column
+					await db.query('ALTER TABLE telemetry_events ADD COLUMN event_id INTEGER REFERENCES event_types(id)');
+
+					// Migrate data from event to event_id
+					const updateResult = await db.query(`
+						UPDATE telemetry_events
+						SET event_id = event_types.id
+						FROM event_types
+						WHERE event_types.name = telemetry_events.event
+						AND telemetry_events.event_id IS NULL
+					`);
+					console.log(`Migrated ${updateResult.rowCount} rows from event to event_id`);
+
+					// Drop old indexes that reference the event column
+					const indexesToDrop = ['idx_event', 'idx_event_created_at', 'idx_timestamp_event'];
+					for (const indexName of indexesToDrop) {
+						try {
+							await db.query(`DROP INDEX IF EXISTS ${indexName}`);
+							console.log(`Dropped index: ${indexName}`);
+						} catch (e) {
+							console.warn(`Could not drop index ${indexName}:`, e.message);
+						}
+					}
+
+					// Drop old event column
+					await db.query('ALTER TABLE telemetry_events DROP COLUMN event');
+
+					// Recreate indexes
+					await db.query('CREATE INDEX IF NOT EXISTS idx_event_id ON telemetry_events(event_id)');
+					await db.query('CREATE INDEX IF NOT EXISTS idx_event_id_created_at ON telemetry_events(event_id, created_at)');
+
+					await db.query('COMMIT');
+					console.log('Event migration completed successfully!');
+				} catch (error) {
+					await db.query('ROLLBACK');
+					throw error;
+				}
+			} else if (hasEventIdColumn) {
+				console.log('Event migration already completed');
+			} else {
+				console.log('No event migration needed');
+			}
+		}
+	} catch (error) {
+		console.error('Error during event migration:', error);
+		throw error; // Re-throw to fail initialization if migration fails
 	}
 }
 
