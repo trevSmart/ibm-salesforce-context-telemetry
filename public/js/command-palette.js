@@ -247,7 +247,7 @@
                        window.getComputedStyle(element).visibility !== 'hidden' &&
                        element.offsetWidth > 0 && element.offsetHeight > 0;
 
-      if (zIndex && parseInt(zIndex) > 1000 && isVisible) {
+      if (zIndex && Number.parseInt(zIndex) > 1000 && isVisible) {
         // Elements with very high z-index that are actually visible are likely modals/overlays
         return true;
       }
@@ -644,7 +644,7 @@
           const isVisible = window.getComputedStyle(element).display !== 'none' &&
                            window.getComputedStyle(element).visibility !== 'hidden' &&
                            element.offsetWidth > 0 && element.offsetHeight > 0;
-          if (zIndex && parseInt(zIndex) > 1000 && isVisible) {
+          if (zIndex && Number.parseInt(zIndex) > 1000 && isVisible) {
             console.log('Found visible high z-index element:', element, 'z-index:', zIndex);
           }
         }

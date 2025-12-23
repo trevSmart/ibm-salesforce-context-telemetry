@@ -399,8 +399,9 @@ async function ensureEventTypesInitialized() {
 		} else if (dbType === 'postgresql') {
 			// Check if event_types table has data
 			const result = await db.query('SELECT COUNT(*) as count FROM event_types');
-			if (result.rows[0].count === 0) {
-				const query = 'INSERT INTO event_types (name, description) VALUES ($1, $2)';
+			// PostgreSQL returns COUNT as a string (bigint), convert to number for comparison
+			if (Number.parseInt(result.rows[0].count, 10) === 0) {
+				const query = 'INSERT INTO event_types (name, description) VALUES ($1, $2) ON CONFLICT (name) DO NOTHING';
 				for (const eventType of eventTypes) {
 					await db.query(query, [eventType.name, eventType.description]);
 				}
@@ -509,7 +510,8 @@ async function ensureEventMigration() {
 
 				// Ensure event_types table has data before migration
 				const eventTypesCount = await db.query('SELECT COUNT(*) as count FROM event_types');
-				if (eventTypesCount.rows[0].count === 0) {
+				// PostgreSQL returns COUNT as a string (bigint), convert to number for comparison
+				if (Number.parseInt(eventTypesCount.rows[0].count, 10) === 0) {
 					console.log('Event types table is empty, populating it first...');
 					const eventTypes = [
 						{name: 'tool_call', description: 'Tool call event'},
@@ -520,7 +522,7 @@ async function ensureEventMigration() {
 						{name: 'custom', description: 'Custom event'}
 					];
 					for (const eventType of eventTypes) {
-						await db.query('INSERT INTO event_types (name, description) VALUES ($1, $2)', [eventType.name, eventType.description]);
+						await db.query('INSERT INTO event_types (name, description) VALUES ($1, $2) ON CONFLICT (name) DO NOTHING', [eventType.name, eventType.description]);
 					}
 					console.log('Populated event_types table with', eventTypes.length, 'types');
 				}

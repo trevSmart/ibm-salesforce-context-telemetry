@@ -7,8 +7,8 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-import { init, getUserByUsername, createUser, close } from '../storage/database.js';
-import { hashPassword } from '../auth/auth.js';
+import {init, getUserByUsername, createUser, close} from '../storage/database.js';
+import {hashPassword} from '../auth/auth.js';
 
 async function createUserScript() {
 	const username = process.argv[2];

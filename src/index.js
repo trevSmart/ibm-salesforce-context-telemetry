@@ -1544,7 +1544,7 @@ app.get('/api/check-user-logins-table', async (req, res) => {
 
 		if (db.dbType === 'sqlite') {
 			const result = db.db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='user_logins'").get();
-			tableExists = !!result;
+			tableExists = Boolean(result);
 
 			if (tableExists) {
 				const countResult = db.db.prepare("SELECT COUNT(*) as count FROM user_logins").get();
@@ -1582,7 +1582,7 @@ app.get('/api/check-user-logins-table', async (req, res) => {
 // User login logs endpoint (god only)
 app.get('/api/user-login-logs', auth.requireAuth, auth.requireRole('god'), apiReadLimiter, async (req, res) => {
 	try {
-		const { limit = 100, offset = 0, username, successful } = req.query;
+		const {limit = 100, offset = 0, username, successful} = req.query;
 
 		const options = {
 			limit: Number.parseInt(limit, 10),
@@ -1617,15 +1617,15 @@ app.get('/api/user-login-logs', auth.requireAuth, auth.requireRole('god'), apiRe
 // Temporary user info endpoint (admin only) - REMOVE AFTER USE
 app.get('/api/user-info/:username', auth.requireAuth, auth.requireRole('administrator'), async (req, res) => {
 	try {
-		const { username } = req.params;
+		const {username} = req.params;
 
 		if (!username) {
-			return res.status(400).json({ error: 'Username is required' });
+			return res.status(400).json({error: 'Username is required'});
 		}
 
 		const user = await db.getUserByUsername(username);
 		if (!user) {
-			return res.status(404).json({ error: 'User not found' });
+			return res.status(404).json({error: 'User not found'});
 		}
 
 		// Return user info without sensitive data
@@ -1638,24 +1638,24 @@ app.get('/api/user-info/:username', auth.requireAuth, auth.requireRole('administ
 		});
 	} catch (error) {
 		console.error('Error getting user info:', error);
-		res.status(500).json({ error: 'Failed to get user info' });
+		res.status(500).json({error: 'Failed to get user info'});
 	}
 });
 
 // Temporary user management endpoint (admin only) - REMOVE AFTER USE
 app.post('/api/manage-user', auth.requireAuth, auth.requireRole('administrator'), async (req, res) => {
 	try {
-		const { action, username, role } = req.body;
+		const {action, username, role} = req.body;
 
 		if (!action || !username) {
-			return res.status(400).json({ error: 'Action and username are required' });
+			return res.status(400).json({error: 'Action and username are required'});
 		}
 
 		// Special action to change user role to god
 		if (action === 'make_god' && username && role === 'god') {
 			const user = await db.getUserByUsername(username);
 			if (!user) {
-				return res.status(404).json({ error: 'User not found' });
+				return res.status(404).json({error: 'User not found'});
 			}
 
 			// Update user role to god
@@ -1663,24 +1663,24 @@ app.post('/api/manage-user', auth.requireAuth, auth.requireRole('administrator')
 
 			return res.json({
 				message: `User ${username} role changed to god successfully`,
-				user: { id: user.id, username, role: 'god' }
+				user: {id: user.id, username, role: 'god'}
 			});
 		}
 
-		return res.status(400).json({ error: 'Invalid action' });
+		return res.status(400).json({error: 'Invalid action'});
 	} catch (error) {
 		console.error('Error managing user:', error);
-		res.status(500).json({ error: 'Failed to manage user' });
+		res.status(500).json({error: 'Failed to manage user'});
 	}
 });
 
 // Temporary user creation endpoint (admin only) - REMOVE AFTER USE
 app.post('/api/create-user', auth.requireAuth, auth.requireRole('administrator'), async (req, res) => {
 	try {
-		const { username, password, role } = req.body;
+		const {username, password, role} = req.body;
 
 		if (!username || !password || !role) {
-			return res.status(400).json({ error: 'Username, password, and role are required' });
+			return res.status(400).json({error: 'Username, password, and role are required'});
 		}
 
 		// Special handling for god user creation
@@ -1688,7 +1688,7 @@ app.post('/api/create-user', auth.requireAuth, auth.requireRole('administrator')
 			// Check if god user already exists
 			const existing = await db.getUserByUsername('god');
 			if (existing) {
-				return res.status(409).json({ error: 'God user already exists' });
+				return res.status(409).json({error: 'God user already exists'});
 			}
 
 			// Hash password "metria"
@@ -1700,14 +1700,14 @@ app.post('/api/create-user', auth.requireAuth, auth.requireRole('administrator')
 
 			return res.json({
 				message: 'God user created successfully',
-				user: { id: userId, username: 'god', role: 'god' }
+				user: {id: userId, username: 'god', role: 'god'}
 			});
 		}
 
 		// Regular user creation
 		const existing = await db.getUserByUsername(username);
 		if (existing) {
-			return res.status(409).json({ error: 'User already exists' });
+			return res.status(409).json({error: 'User already exists'});
 		}
 
 		const bcrypt = await import('bcrypt');
@@ -1716,11 +1716,11 @@ app.post('/api/create-user', auth.requireAuth, auth.requireRole('administrator')
 
 		res.json({
 			message: 'User created successfully',
-			user: { id: userId, username, role }
+			user: {id: userId, username, role}
 		});
 	} catch (error) {
 		console.error('Error creating user:', error);
-		res.status(500).json({ error: 'Failed to create user' });
+		res.status(500).json({error: 'Failed to create user'});
 	}
 });
 
