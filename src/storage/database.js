@@ -716,11 +716,28 @@ async function storeEvent(eventData, receivedAt) {
 		const normalizedFields = extractNormalizedFields(eventData);
 		const {orgId, userName, toolName, companyName, errorMessage} = normalizedFields;
 
+		// Resolve team_id for pre-calculated team association
+		let teamId = null;
+		if (orgId) {
+			try {
+				if (dbType === 'sqlite') {
+					const result = db.prepare('SELECT team_id FROM orgs WHERE server_id = ?').get(orgId);
+					teamId = result?.team_id || null;
+				} else if (dbType === 'postgresql') {
+					const result = await db.query('SELECT team_id FROM orgs WHERE server_id = $1', [orgId]);
+					teamId = result.rows.length > 0 ? result.rows[0].team_id : null;
+				}
+			} catch (error) {
+				// Log error but don't fail event insertion
+				console.warn(`Could not resolve team_id for org_id ${orgId}:`, error.message);
+			}
+		}
+
 		if (dbType === 'sqlite') {
 			const stmt = getPreparedStatement('insertEvent', `
 				INSERT INTO telemetry_events
-				(event, timestamp, server_id, version, session_id, parent_session_id, user_id, data, received_at, org_id, user_name, tool_name, company_name, error_message)
-				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+				(event, timestamp, server_id, version, session_id, parent_session_id, user_id, data, received_at, org_id, user_name, tool_name, company_name, error_message, team_id)
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 			`);
 
 			stmt.run(
@@ -737,13 +754,14 @@ async function storeEvent(eventData, receivedAt) {
 				userName,
 				toolName,
 				companyName,
-				errorMessage
+				errorMessage,
+				teamId
 			);
 		} else if (dbType === 'postgresql') {
 			await db.query(
 				`INSERT INTO telemetry_events
-				(event, timestamp, server_id, version, session_id, parent_session_id, user_id, data, received_at, org_id, user_name, tool_name, company_name, error_message)
-				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+				(event, timestamp, server_id, version, session_id, parent_session_id, user_id, data, received_at, org_id, user_name, tool_name, company_name, error_message, team_id)
+				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
 				[
 					eventData.event,
 					eventData.timestamp,
@@ -758,7 +776,8 @@ async function storeEvent(eventData, receivedAt) {
 					userName,
 					toolName,
 					companyName,
-					errorMessage
+					errorMessage,
+					teamId
 				]
 			);
 		}
@@ -1110,7 +1129,7 @@ async function getSessions(options = {}) {
 			params.push(...userIds);
 		}
 		let query;
-		let queryParams = params.slice(); // Copy params array
+		const queryParams = params.slice(); // Copy params array
 
 		if (includeUsersWithoutSessions) {
 			// When including users without sessions, use UNION of sessions and user-only events
@@ -1124,11 +1143,11 @@ async function getSessions(options = {}) {
 						SUM(CASE WHEN event = 'session_start' THEN 1 ELSE 0 END) as has_start,
 						SUM(CASE WHEN event = 'session_end' THEN 1 ELSE 0 END) as has_end,
 						(SELECT user_id FROM telemetry_events
-						 WHERE COALESCE(parent_session_id, session_id) = sa.logical_session_id
+						 WHERE COALESCE(parent_session_id, session_id) = COALESCE(sa.parent_session_id, sa.session_id)
 						   AND deleted_at IS NULL
 						 ORDER BY timestamp ASC LIMIT 1) as user_id,
 						(SELECT data FROM telemetry_events
-						 WHERE COALESCE(parent_session_id, session_id) = sa.logical_session_id
+						 WHERE COALESCE(parent_session_id, session_id) = COALESCE(sa.parent_session_id, sa.session_id)
 						   AND event = 'session_start'
 						   AND deleted_at IS NULL
 						 ORDER BY timestamp ASC LIMIT 1) as session_start_data
@@ -1184,11 +1203,11 @@ async function getSessions(options = {}) {
 					sa.first_event,
 					sa.last_event,
 					(SELECT user_id FROM telemetry_events
-					 WHERE COALESCE(parent_session_id, session_id) = sa.logical_session_id
+					 WHERE COALESCE(parent_session_id, session_id) = COALESCE(sa.parent_session_id, sa.session_id)
 					   AND deleted_at IS NULL
 					 ORDER BY timestamp ASC LIMIT 1) as user_id,
 					(SELECT data FROM telemetry_events
-					 WHERE COALESCE(parent_session_id, session_id) = sa.logical_session_id
+					 WHERE COALESCE(parent_session_id, session_id) = COALESCE(sa.parent_session_id, sa.session_id)
 					   AND event = 'session_start'
 					   AND deleted_at IS NULL
 					 ORDER BY timestamp ASC LIMIT 1) as session_start_data,
@@ -1248,7 +1267,7 @@ async function getSessions(options = {}) {
 		}
 
 		let query;
-		let queryParams = params.slice(); // Copy params array
+		const queryParams = params.slice(); // Copy params array
 
 		if (includeUsersWithoutSessions) {
 			// When including users without sessions, use UNION of sessions and user-only events
@@ -1262,11 +1281,11 @@ async function getSessions(options = {}) {
 						SUM(CASE WHEN event = 'session_start' THEN 1 ELSE 0 END) as has_start,
 						SUM(CASE WHEN event = 'session_end' THEN 1 ELSE 0 END) as has_end,
 						(SELECT user_id FROM telemetry_events
-						 WHERE COALESCE(parent_session_id, session_id) = sa.logical_session_id
+						 WHERE COALESCE(parent_session_id, session_id) = COALESCE(sa.parent_session_id, sa.session_id)
 						   AND deleted_at IS NULL
 						 ORDER BY timestamp ASC LIMIT 1) as user_id,
 						(SELECT data FROM telemetry_events
-						 WHERE COALESCE(parent_session_id, session_id) = sa.logical_session_id
+						 WHERE COALESCE(parent_session_id, session_id) = COALESCE(sa.parent_session_id, sa.session_id)
 						   AND event = 'session_start'
 						   AND deleted_at IS NULL
 						 ORDER BY timestamp ASC LIMIT 1) as session_start_data
@@ -1301,8 +1320,8 @@ async function getSessions(options = {}) {
 			if (userIds && userIds.length > 0) {
 				queryParams.push(...userIds, ...userIds);
 			}
-			if (limit) queryParams.push(limit);
-			if (offset) queryParams.push(offset);
+			if (limit) {queryParams.push(limit);}
+			if (offset) {queryParams.push(offset);}
 		} else {
 			// Original query for sessions only
 			query = `
@@ -1324,11 +1343,11 @@ async function getSessions(options = {}) {
 					sa.first_event,
 					sa.last_event,
 					(SELECT user_id FROM telemetry_events
-					 WHERE COALESCE(parent_session_id, session_id) = sa.logical_session_id
+					 WHERE COALESCE(parent_session_id, session_id) = COALESCE(sa.parent_session_id, sa.session_id)
 					   AND deleted_at IS NULL
 					 ORDER BY timestamp ASC LIMIT 1) as user_id,
 					(SELECT data FROM telemetry_events
-					 WHERE COALESCE(parent_session_id, session_id) = sa.logical_session_id
+					 WHERE COALESCE(parent_session_id, session_id) = COALESCE(sa.parent_session_id, sa.session_id)
 					   AND event = 'session_start'
 					   AND deleted_at IS NULL
 					 ORDER BY timestamp ASC LIMIT 1) as session_start_data,
@@ -1340,8 +1359,8 @@ async function getSessions(options = {}) {
 				${limit ? `LIMIT $${paramIndex++}` : ''}
 				${offset ? `OFFSET $${paramIndex++}` : ''}
 			`;
-			if (limit) queryParams.push(limit);
-			if (offset) queryParams.push(offset);
+			if (limit) {queryParams.push(limit);}
+			if (offset) {queryParams.push(offset);}
 		}
 
 		const result = await db.query(query, queryParams);
@@ -2727,6 +2746,14 @@ async function ensureDenormalizedColumns() {
 				console.log('Added deleted_at column to telemetry_events');
 			}
 
+			// Add team_id column if it doesn't exist (for pre-calculated team association)
+			if (!columnNames.includes('team_id')) {
+				db.exec('ALTER TABLE telemetry_events ADD COLUMN team_id INTEGER REFERENCES teams(id)');
+				db.exec('CREATE INDEX IF NOT EXISTS idx_team_id ON telemetry_events(team_id)');
+				db.exec('CREATE INDEX IF NOT EXISTS idx_team_id_created_at ON telemetry_events(team_id, created_at)');
+				console.log('Added team_id column to telemetry_events');
+			}
+
 			// Create indexes for denormalized columns (if they don't exist)
 			db.exec('CREATE INDEX IF NOT EXISTS idx_user_name_created_at ON telemetry_events(user_name, created_at)');
 			db.exec('CREATE INDEX IF NOT EXISTS idx_org_id_created_at ON telemetry_events(org_id, created_at)');
@@ -2741,8 +2768,11 @@ async function ensureDenormalizedColumns() {
 			await db.query('ALTER TABLE IF EXISTS telemetry_events ADD COLUMN IF NOT EXISTS tool_name TEXT');
 			await db.query('ALTER TABLE IF EXISTS telemetry_events ADD COLUMN IF NOT EXISTS company_name TEXT');
 			await db.query('ALTER TABLE IF EXISTS telemetry_events ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ');
+			await db.query('ALTER TABLE IF EXISTS telemetry_events ADD COLUMN IF NOT EXISTS team_id INTEGER REFERENCES teams(id)');
 			await db.query('CREATE INDEX IF NOT EXISTS idx_deleted_at ON telemetry_events(deleted_at)');
-			console.log('Ensured denormalized columns (org_id, user_name, tool_name, company_name, deleted_at) in telemetry_events');
+			await db.query('CREATE INDEX IF NOT EXISTS idx_team_id ON telemetry_events(team_id)');
+			await db.query('CREATE INDEX IF NOT EXISTS idx_team_id_created_at ON telemetry_events(team_id, created_at)');
+			console.log('Ensured denormalized columns (org_id, user_name, tool_name, company_name, deleted_at, team_id) in telemetry_events');
 
 			// Create indexes for denormalized columns (if they don't exist)
 			await db.query('CREATE INDEX IF NOT EXISTS idx_user_name_created_at ON telemetry_events(user_name, created_at)');
@@ -2784,7 +2814,7 @@ async function populateDenormalizedColumns() {
 			const result = db.prepare(`
         SELECT COUNT(*) as count
         FROM telemetry_events
-        WHERE (org_id IS NULL OR user_name IS NULL OR tool_name IS NULL OR error_message IS NULL)
+        WHERE (org_id IS NULL OR user_name IS NULL OR tool_name IS NULL OR error_message IS NULL OR team_id IS NULL)
           AND data IS NOT NULL
           AND data != ''
         LIMIT 1
@@ -2794,7 +2824,7 @@ async function populateDenormalizedColumns() {
 			const result = await db.query(`
         SELECT COUNT(*) as count
         FROM telemetry_events
-        WHERE (org_id IS NULL OR user_name IS NULL OR tool_name IS NULL)
+        WHERE (org_id IS NULL OR user_name IS NULL OR tool_name IS NULL OR team_id IS NULL)
           AND data IS NOT NULL
         LIMIT 1
       `);
@@ -2816,9 +2846,9 @@ async function populateDenormalizedColumns() {
 			while (hasMore) {
 				// Obté el següent lot de registres que necessiten actualització
 				const rows = db.prepare(`
-          SELECT id, data
+          SELECT id, data, org_id
           FROM telemetry_events
-          WHERE (org_id IS NULL OR user_name IS NULL OR tool_name IS NULL)
+          WHERE (org_id IS NULL OR user_name IS NULL OR tool_name IS NULL OR (team_id IS NULL AND org_id IS NOT NULL))
             AND data IS NOT NULL
             AND data != ''
           LIMIT ? OFFSET ?
@@ -2832,7 +2862,7 @@ async function populateDenormalizedColumns() {
 				// Prepara la consulta d'actualització
 				const updateStmt = db.prepare(`
           UPDATE telemetry_events
-          SET org_id = ?, user_name = ?, tool_name = ?, company_name = ?, error_message = ?
+          SET org_id = ?, user_name = ?, tool_name = ?, company_name = ?, error_message = ?, team_id = ?
           WHERE id = ?
         `);
 
@@ -2847,8 +2877,15 @@ async function populateDenormalizedColumns() {
 						const normalizedFields = extractNormalizedFields(eventData);
 						const {orgId, userName, toolName, companyName, errorMessage} = normalizedFields;
 
+						// Resol team_id si tenim org_id
+						let teamId = null;
+						if (orgId) {
+							const teamResult = db.prepare('SELECT team_id FROM orgs WHERE server_id = ?').get(orgId);
+							teamId = teamResult?.team_id || null;
+						}
+
 						// Actualitza el registre amb els valors extrets
-						updateStmt.run(orgId, userName, toolName, companyName, errorMessage, row.id);
+						updateStmt.run(orgId, userName, toolName, companyName, errorMessage, teamId, row.id);
 					} catch (error) {
 						// Salta registres amb JSON invàlid (els deixa sense emplenar)
 						// Això evita aturar tot el procés per un sol registre corrupte
@@ -2895,6 +2932,16 @@ async function populateDenormalizedColumns() {
           )
         WHERE (org_id IS NULL OR user_name IS NULL OR tool_name IS NULL OR error_message IS NULL)
           AND data IS NOT NULL
+      `);
+
+			// Actualitza team_id basant-se en org_id per registres que el necessiten
+			await db.query(`
+        UPDATE telemetry_events
+        SET team_id = orgs.team_id
+        FROM orgs
+        WHERE telemetry_events.org_id = orgs.server_id
+          AND telemetry_events.team_id IS NULL
+          AND telemetry_events.org_id IS NOT NULL
       `);
 		}
 
@@ -4534,12 +4581,20 @@ async function moveOrgToTeam(orgId, teamId) {
 			const stmt = db.prepare('UPDATE orgs SET team_id = ?, updated_at = ? WHERE server_id = ?');
 			const now = new Date().toISOString();
 			const result = stmt.run(teamId || null, now, orgId);
+			if (result.changes > 0) {
+				// Recalculate team_id for all existing events of this org
+				await recalculateTeamIdsForOrg(orgId);
+			}
 			return result.changes > 0;
 		} else if (dbType === 'postgresql') {
 			const result = await db.query(
 				'UPDATE orgs SET team_id = $1, updated_at = NOW() WHERE server_id = $2',
 				[teamId || null, orgId]
 			);
+			if (result.rowCount > 0) {
+				// Recalculate team_id for all existing events of this org
+				await recalculateTeamIdsForOrg(orgId);
+			}
 			return result.rowCount > 0;
 		}
 	} catch (error) {
@@ -5583,6 +5638,50 @@ async function getDeletedEvents(options = {}) {
 	};
 }
 
+/**
+ * Recalculate team_id for all events of an organization when org->team assignment changes
+ * @param {string} orgId - Organization ID (server_id)
+ * @returns {Promise<number>} Number of events updated
+ */
+async function recalculateTeamIdsForOrg(orgId) {
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
+
+	if (!orgId) {
+		throw new Error('orgId is required');
+	}
+
+	try {
+		let teamId = null;
+
+		// Get the current team_id for this org
+		if (dbType === 'sqlite') {
+			const result = db.prepare('SELECT team_id FROM orgs WHERE server_id = ?').get(orgId);
+			teamId = result?.team_id || null;
+		} else if (dbType === 'postgresql') {
+			const result = await db.query('SELECT team_id FROM orgs WHERE server_id = $1', [orgId]);
+			teamId = result.rows.length > 0 ? result.rows[0].team_id : null;
+		}
+
+		// Update all events for this org with the new team_id
+		if (dbType === 'sqlite') {
+			const result = db.prepare('UPDATE telemetry_events SET team_id = ? WHERE org_id = ?').run(teamId, orgId);
+			console.log(`Updated team_id for ${result.changes} events of org ${orgId} to team ${teamId}`);
+			return result.changes;
+		} else if (dbType === 'postgresql') {
+			const result = await db.query('UPDATE telemetry_events SET team_id = $1 WHERE org_id = $2', [teamId, orgId]);
+			console.log(`Updated team_id for ${result.rowCount} events of org ${orgId} to team ${teamId}`);
+			return result.rowCount;
+		}
+
+		return 0;
+	} catch (error) {
+		console.error(`Error recalculating team_ids for org ${orgId}:`, error);
+		throw new Error(`Failed to recalculate team_ids: ${error.message}`);
+	}
+}
+
 export {
 	init,
 	storeEvent,
@@ -5633,6 +5732,7 @@ export {
 	createTeam,
 	updateTeam,
 	deleteTeam,
+	recalculateTeamIdsForOrg,
 	assignUserToTeam,
 	addEventUserToTeam,
 	removeEventUserFromTeam,

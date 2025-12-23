@@ -4,9 +4,9 @@
   "description": "",
   "main": "src/index.js",
   "scripts": {
-    "prestart": "lsof -ti :3100 | xargs kill -9 2>/dev/null || true",
+    "prestart": "lsof -ti :3100,35729,35730 | xargs kill -9 2>/dev/null || true",
     "start": "npm run build:css && node src/index.js",
-    "dev": "concurrently \"npm run dev:css\" \"nodemon src/index.js\"",
+    "dev": "LIVERELOAD_PORT=35730 concurrently \"npm run dev:css\" \"nodemon src/index.js\"",
     "dev:css": "tailwindcss -i ./public/css/input.css -o ./public/css/output.css --watch",
     "build": "npm run build:css:prod",
     "build:css": "tailwindcss -i ./public/css/input.css -o ./public/css/output.css",
