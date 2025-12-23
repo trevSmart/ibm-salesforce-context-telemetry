@@ -1320,7 +1320,7 @@ async function getSessions(options = {}) {
 						0 as has_start,
 						0 as has_end,
 						user_id,
-						NULL as session_start_data
+						NULL::jsonb as session_start_data
 					FROM telemetry_events
 					WHERE session_id IS NULL AND parent_session_id IS NULL AND user_id IS NOT NULL AND deleted_at IS NULL
 					${userIds && userIds.length > 0 ? `AND user_id IN (${userIds.map(() => `$${paramIndex++}`).join(', ')})` : ''}
