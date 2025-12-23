@@ -5329,10 +5329,12 @@ html.dark .level-filters .level-filter-btn.level-error {
 /* Command palette states */
 .command-palette-backdrop-hidden {
 	opacity: 0;
+	transition: opacity 150ms ease-out;
 }
 
 .command-palette-backdrop-visible {
 	opacity: 1;
+	transition: opacity 150ms ease-out;
 }
 
 .command-palette-panel-hidden {

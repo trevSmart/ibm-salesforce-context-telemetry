@@ -5,7 +5,6 @@
   let searchInput = null;
   let commandList = null;
   let isOpen = false;
-  const ignoreBackdropClicks = false; // Start as false to allow immediate closing
 
   // Define available commands
   const commands = [
@@ -101,7 +100,7 @@
     return `
       <div id="commandPaletteBackdrop" class="fixed inset-0 bg-gray-900/50 z-50 command-palette-backdrop-hidden">
         <div class="fixed inset-0 w-screen overflow-y-auto p-4 focus:outline-none sm:p-6 md:p-20 pt-12 sm:pt-16 md:pt-24">
-          <div class="mx-auto block max-w-2xl overflow-hidden rounded-xl bg-white/70 dark:bg-gray-800/70 shadow-2xl outline-1 outline-black/5 dark:outline-white/10 backdrop-blur-sm backdrop-filter" style="transform: scale(0.95); opacity: 0; transition: transform 150ms ease-out, opacity 150ms ease-out;">
+          <div class="mx-auto block max-w-2xl overflow-hidden rounded-xl bg-white/70 dark:bg-gray-800/70 shadow-2xl outline-1 outline-black/5 dark:outline-white/10 backdrop-blur-sm backdrop-filter command-palette-panel-hidden">
             <div class="grid grid-cols-1 border-b border-gray-500/10 dark:border-gray-700/50">
               <input type="text" placeholder="Search commands..." class="col-start-1 row-start-1 h-12 w-full bg-transparent pr-4 pl-11 text-base text-gray-900 dark:text-white outline-hidden placeholder:text-gray-500 dark:placeholder:text-gray-400 sm:text-sm" id="commandPaletteInput" />
               <svg viewBox="0 0 20 20" fill="currentColor" data-slot="icon" aria-hidden="true" class="pointer-events-none col-start-1 row-start-1 ml-4 size-5 self-center text-gray-900/40 dark:text-white/40">
@@ -193,13 +192,8 @@
 
         const panel = commandPaletteElement.querySelector('.mx-auto');
         if (panel) {
-          // Apply transition properties directly with JavaScript
-          console.log('🎨 Obrint: aplicant transform scale(1)');
-          panel.style.setProperty('--tw-scale-x', 'initial', 'important');
-          panel.style.setProperty('--tw-scale-y', 'initial', 'important');
-          panel.style.setProperty('--tw-transform', 'initial', 'important');
-          panel.style.setProperty('transform', 'scale(1)', 'important');
-          panel.style.setProperty('opacity', '1', 'important');
+          panel.classList.remove('command-palette-panel-hidden');
+          panel.classList.add('command-palette-panel-visible');
         }
       });
 
@@ -227,34 +221,17 @@
    * Hide command palette
    */
   function hideCommandPalette() {
-    console.log('🚀 Començant hideCommandPalette()');
     if (commandPaletteElement) {
       // Use requestAnimationFrame to ensure class changes trigger transitions
       requestAnimationFrame(() => {
-        console.log('⚡ Canviant classes CSS per iniciar transició de desaparèixer');
         // Add closed classes to trigger transition
         commandPaletteElement.classList.remove('command-palette-backdrop-visible');
         commandPaletteElement.classList.add('command-palette-backdrop-hidden');
 
         const panel = commandPaletteElement.querySelector('.mx-auto');
         if (panel) {
-          console.log('🔍 Computed style abans - transform:', getComputedStyle(panel).transform, 'opacity:', getComputedStyle(panel).opacity);
-          console.log('🎨 Classes del panel:', panel.className);
-          console.log('🔍 CSS Custom Properties - --tw-scale-x:', getComputedStyle(panel).getPropertyValue('--tw-scale-x'), '--tw-transform:', getComputedStyle(panel).getPropertyValue('--tw-transform'));
-          console.log('🔍 Altres propietats - transition:', getComputedStyle(panel).transition, 'display:', getComputedStyle(panel).display, 'visibility:', getComputedStyle(panel).visibility);
-
-          // Force override all Tailwind transform-related properties
-          console.log('🎨 Forçant override de Tailwind');
-          panel.style.setProperty('--tw-scale-x', 'initial', 'important');
-          panel.style.setProperty('--tw-scale-y', 'initial', 'important');
-          panel.style.setProperty('--tw-transform', 'initial', 'important');
-          panel.style.setProperty('transform', 'scale(0.95)', 'important');
-          panel.style.setProperty('opacity', '0', 'important');
-
-          // Check after a short delay to see if properties actually change
-          setTimeout(() => {
-            console.log('🔍 Computed style després (delayed) - transform:', getComputedStyle(panel).transform, 'opacity:', getComputedStyle(panel).opacity);
-          }, 10);
+          panel.classList.remove('command-palette-panel-visible');
+          panel.classList.add('command-palette-panel-hidden');
         }
       });
 
@@ -265,25 +242,20 @@
       let handleTransitionEnd = null;
 
       if (panel) {
-        console.log('🎬 Afegint listener transitionend al panel:', panel.className);
         handleTransitionEnd = (event) => {
-          console.log('🎬 TRANSITIONEND rebut:', event.propertyName, 'de', event.target);
           // Only respond to transitionend on the panel (which has the actual transition)
           if (event.target === panel) {
-            console.log('✅ Transició completada correctament');
             commandPaletteElement.style.display = 'none';
             document.body.style.overflow = ''; // Restore scrolling
             panel.removeEventListener('transitionend', handleTransitionEnd);
           }
         };
         panel.addEventListener('transitionend', handleTransitionEnd);
-        console.log('👂 Listener afegit correctament');
       }
 
       // Fallback: if transition doesn't complete within reasonable time, hide anyway
       setTimeout(() => {
         if (commandPaletteElement && commandPaletteElement.style.display !== 'none') {
-          console.log('⏰ Fallback activat - transició no va acabar, amagant element');
           commandPaletteElement.style.display = 'none';
           document.body.style.overflow = '';
           if (handleTransitionEnd && panel) {
@@ -295,7 +267,11 @@
       // Return focus to header search input
       const headerSearchInput = document.getElementById('searchInput');
       if (headerSearchInput) {
+        window.__commandPaletteIgnoreNextFocus = true;
         headerSearchInput.focus();
+        setTimeout(() => {
+          window.__commandPaletteIgnoreNextFocus = false;
+        }, 0);
       }
     }
   }
@@ -381,8 +357,7 @@
       backdropElement.addEventListener('click', (e) => {
         // Only close if clicking directly on the backdrop, not on the inner panel
         // and not during the ignore period after opening
-        if (e.target === backdropElement && !ignoreBackdropClicks) {
-          console.log('🎯 Clic fora detectat - cridant hideCommandPalette()');
+        if (e.target === backdropElement) {
           hideCommandPalette();
         }
       });
@@ -500,8 +475,6 @@
     // Toggle notifications functionality
     if (typeof window.toggleNotifications === 'function') {
       window.toggleNotifications();
-    } else {
-      console.log('Toggle notifications');
     }
   }
 
