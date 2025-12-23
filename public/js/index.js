@@ -1016,7 +1016,7 @@ async function loadTopUsersToday() {
 	renderTopUsersPlaceholder('Loading top users…');
 
 	try {
-		const response = await fetch(`/api/top-users-today?days=${TOP_USERS_LOOKBACK_DAYS}&limit=${TOP_USERS_LIMIT}`, {
+		const response = await window.ApiCache.cachedFetch(`/api/top-users-today?days=${TOP_USERS_LOOKBACK_DAYS}&limit=${TOP_USERS_LIMIT}`, {
 			credentials: 'include'
 		});
 
@@ -1052,7 +1052,7 @@ async function loadTopTeamsToday() {
 			limit: TOP_TEAMS_LIMIT.toString()
 		});
 
-		const response = await fetch(`/api/top-teams-today?${params}`, {
+		const response = await window.ApiCache.cachedFetch(`/api/top-teams-today?${params}`, {
 			credentials: 'include'
 		});
 

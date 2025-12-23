@@ -55,9 +55,16 @@ async function init() {
 
 		// Create tables if they don't exist
 		db.exec(`
+			CREATE TABLE IF NOT EXISTS event_types (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				name TEXT NOT NULL UNIQUE,
+				description TEXT,
+				created_at TEXT DEFAULT CURRENT_TIMESTAMP
+			);
+
 			CREATE TABLE IF NOT EXISTS telemetry_events (
 				id INTEGER PRIMARY KEY AUTOINCREMENT,
-				event TEXT NOT NULL,
+				event_id INTEGER NOT NULL REFERENCES event_types(id),
 				timestamp TEXT NOT NULL,
 				server_id TEXT,
 				version TEXT,
@@ -96,6 +103,7 @@ async function init() {
 				id INTEGER PRIMARY KEY AUTOINCREMENT,
 				name TEXT NOT NULL,
 				email TEXT,
+				initials TEXT,
 				created_at TEXT DEFAULT CURRENT_TIMESTAMP
 			);
 
@@ -121,7 +129,7 @@ async function init() {
 				created_at TEXT DEFAULT CURRENT_TIMESTAMP
 			);
 
-			CREATE INDEX IF NOT EXISTS idx_event ON telemetry_events(event);
+			CREATE INDEX IF NOT EXISTS idx_event_id ON telemetry_events(event_id);
 			CREATE INDEX IF NOT EXISTS idx_timestamp ON telemetry_events(timestamp);
 			CREATE INDEX IF NOT EXISTS idx_server_id ON telemetry_events(server_id);
 			CREATE INDEX IF NOT EXISTS idx_created_at ON telemetry_events(created_at);
@@ -129,7 +137,7 @@ async function init() {
 			CREATE INDEX IF NOT EXISTS idx_user_id ON telemetry_events(user_id);
 			CREATE INDEX IF NOT EXISTS idx_parent_session_id ON telemetry_events(parent_session_id);
 			CREATE INDEX IF NOT EXISTS idx_username ON users(username);
-			CREATE INDEX IF NOT EXISTS idx_event_created_at ON telemetry_events(event, created_at);
+			CREATE INDEX IF NOT EXISTS idx_event_id_created_at ON telemetry_events(event_id, created_at);
 			CREATE INDEX IF NOT EXISTS idx_user_created_at ON telemetry_events(user_id, created_at);
 			CREATE INDEX IF NOT EXISTS idx_user_logins_username ON user_logins(username);
 			CREATE INDEX IF NOT EXISTS idx_user_logins_created_at ON user_logins(created_at);
@@ -157,9 +165,16 @@ async function init() {
 
 		// Create tables if they don't exist
 		await pool.query(`
+			CREATE TABLE IF NOT EXISTS event_types (
+				id SERIAL PRIMARY KEY,
+				name TEXT NOT NULL UNIQUE,
+				description TEXT,
+				created_at TIMESTAMPTZ DEFAULT NOW()
+			);
+
 			CREATE TABLE IF NOT EXISTS telemetry_events (
 				id SERIAL PRIMARY KEY,
-				event TEXT NOT NULL,
+				event_id INTEGER NOT NULL REFERENCES event_types(id),
 				timestamp TIMESTAMPTZ NOT NULL,
 				server_id TEXT,
 				version TEXT,
@@ -198,6 +213,7 @@ async function init() {
 				id SERIAL PRIMARY KEY,
 				name TEXT NOT NULL,
 				email TEXT,
+				initials TEXT,
 				created_at TIMESTAMPTZ DEFAULT NOW()
 			);
 
@@ -223,7 +239,7 @@ async function init() {
 				created_at TIMESTAMPTZ DEFAULT NOW()
 			);
 
-			CREATE INDEX IF NOT EXISTS idx_event ON telemetry_events(event);
+			CREATE INDEX IF NOT EXISTS idx_event_id ON telemetry_events(event_id);
 			CREATE INDEX IF NOT EXISTS idx_timestamp ON telemetry_events(timestamp);
 			CREATE INDEX IF NOT EXISTS idx_server_id ON telemetry_events(server_id);
 			CREATE INDEX IF NOT EXISTS idx_created_at ON telemetry_events(created_at);
@@ -231,7 +247,7 @@ async function init() {
 			CREATE INDEX IF NOT EXISTS idx_user_id ON telemetry_events(user_id);
 			CREATE INDEX IF NOT EXISTS idx_parent_session_id ON telemetry_events(parent_session_id);
 			CREATE INDEX IF NOT EXISTS idx_username ON users(username);
-			CREATE INDEX IF NOT EXISTS idx_event_created_at ON telemetry_events(event, created_at);
+			CREATE INDEX IF NOT EXISTS idx_event_id_created_at ON telemetry_events(event_id, created_at);
 			CREATE INDEX IF NOT EXISTS idx_user_created_at ON telemetry_events(user_id, created_at);
 			CREATE INDEX IF NOT EXISTS idx_user_logins_username ON user_logins(username);
 			CREATE INDEX IF NOT EXISTS idx_user_logins_created_at ON user_logins(created_at);
@@ -248,6 +264,8 @@ async function init() {
 	await ensureTelemetryParentSessionColumn();
 	await ensureDenormalizedColumns();
 	await ensureErrorMessageColumn();
+	await ensurePeopleInitialsColumn();
+	await ensureEventTypesInitialized();
 	await ensureEventStatsTables();
 	await ensureTeamsAndOrgsTables();
 	await ensureRememberTokensTable();
@@ -277,6 +295,145 @@ async function ensureErrorMessageColumn() {
 		}
 	} catch (error) {
 		console.error('Error ensuring error_message column:', error);
+	}
+}
+
+async function getEventTypeId(eventName) {
+	if (!eventName) {
+		return null;
+	}
+
+	if (!db) {
+		throw new Error('Database not initialized');
+	}
+
+	// Cache event type IDs to avoid repeated queries
+	if (!global.eventTypeCache) {
+		global.eventTypeCache = new Map();
+	}
+
+	if (global.eventTypeCache.has(eventName)) {
+		return global.eventTypeCache.get(eventName);
+	}
+
+	if (dbType === 'sqlite') {
+		const stmt = db.prepare('SELECT id FROM event_types WHERE name = ?');
+		const result = stmt.get(eventName);
+		const id = result ? result.id : null;
+		if (id) {
+			global.eventTypeCache.set(eventName, id);
+		}
+		return id;
+	} else if (dbType === 'postgresql') {
+		const result = await db.query('SELECT id FROM event_types WHERE name = $1', [eventName]);
+		const id = result.rows.length > 0 ? result.rows[0].id : null;
+		if (id) {
+			global.eventTypeCache.set(eventName, id);
+		}
+		return id;
+	}
+}
+
+async function getEventTypeName(eventId) {
+	if (!eventId) {
+		return null;
+	}
+
+	if (!db) {
+		throw new Error('Database not initialized');
+	}
+
+	// Cache event type names to avoid repeated queries
+	if (!global.eventTypeNameCache) {
+		global.eventTypeNameCache = new Map();
+	}
+
+	if (global.eventTypeNameCache.has(eventId)) {
+		return global.eventTypeNameCache.get(eventId);
+	}
+
+	if (dbType === 'sqlite') {
+		const stmt = db.prepare('SELECT name FROM event_types WHERE id = ?');
+		const result = stmt.get(eventId);
+		const name = result ? result.name : null;
+		if (name) {
+			global.eventTypeNameCache.set(eventId, name);
+		}
+		return name;
+	} else if (dbType === 'postgresql') {
+		const result = await db.query('SELECT name FROM event_types WHERE id = $1', [eventId]);
+		const name = result.rows.length > 0 ? result.rows[0].name : null;
+		if (name) {
+			global.eventTypeNameCache.set(eventId, name);
+		}
+		return name;
+	}
+}
+
+async function ensureEventTypesInitialized() {
+	if (!db) {
+		return;
+	}
+
+	try {
+		// Define the event types
+		const eventTypes = [
+			{ name: 'tool_call', description: 'Tool call event' },
+			{ name: 'tool_error', description: 'Tool error event' },
+			{ name: 'session_start', description: 'Session start event' },
+			{ name: 'session_end', description: 'Session end event' },
+			{ name: 'error', description: 'General error event' },
+			{ name: 'custom', description: 'Custom event' }
+		];
+
+		if (dbType === 'sqlite') {
+			// Check if event_types table has data
+			const count = db.prepare('SELECT COUNT(*) as count FROM event_types').get();
+			if (count.count === 0) {
+				const stmt = db.prepare('INSERT INTO event_types (name, description) VALUES (?, ?)');
+				for (const eventType of eventTypes) {
+					stmt.run(eventType.name, eventType.description);
+				}
+				console.log('Initialized event_types table with', eventTypes.length, 'event types');
+			}
+		} else if (dbType === 'postgresql') {
+			// Check if event_types table has data
+			const result = await db.query('SELECT COUNT(*) as count FROM event_types');
+			if (result.rows[0].count === 0) {
+				const query = 'INSERT INTO event_types (name, description) VALUES ($1, $2)';
+				for (const eventType of eventTypes) {
+					await db.query(query, [eventType.name, eventType.description]);
+				}
+				console.log('Initialized event_types table with', eventTypes.length, 'event types');
+			}
+		}
+	} catch (error) {
+		console.error('Error initializing event types:', error);
+	}
+}
+
+async function ensurePeopleInitialsColumn() {
+	if (!db) {
+		return;
+	}
+
+	try {
+		if (dbType === 'sqlite') {
+			const columns = db.prepare('PRAGMA table_info(people)').all();
+			const columnNames = columns.map(col => col.name);
+
+			// Add initials column if it doesn't exist
+			if (!columnNames.includes('initials')) {
+				db.exec('ALTER TABLE people ADD COLUMN initials TEXT');
+				console.log('Added initials column to people table');
+			}
+		} else if (dbType === 'postgresql') {
+			// PostgreSQL supports IF NOT EXISTS in ALTER TABLE
+			await db.query('ALTER TABLE IF EXISTS people ADD COLUMN IF NOT EXISTS initials TEXT');
+			console.log('Ensured initials column in people table');
+		}
+	} catch (error) {
+		console.error('Error ensuring initials column in people table:', error);
 	}
 }
 
@@ -638,7 +795,7 @@ async function computeParentSessionId(eventData, normalizedSessionId, normalized
 			const startRow = db.prepare(`
 				SELECT parent_session_id, session_id
 				FROM telemetry_events
-				WHERE session_id = ? AND event = 'session_start'
+				WHERE session_id = ? AND event_id = (SELECT id FROM event_types WHERE name = 'session_start')
 				ORDER BY timestamp ASC
 				LIMIT 1
 			`).get(normalizedSessionId);
@@ -649,7 +806,7 @@ async function computeParentSessionId(eventData, normalizedSessionId, normalized
 			const result = await db.query(
 				`SELECT parent_session_id, session_id
 				 FROM telemetry_events
-				 WHERE session_id = $1 AND event = 'session_start'
+				 WHERE session_id = $1 AND event_id = (SELECT id FROM event_types WHERE name = 'session_start')
 				 ORDER BY timestamp ASC
 				 LIMIT 1`,
 				[normalizedSessionId]
@@ -681,7 +838,7 @@ async function computeParentSessionId(eventData, normalizedSessionId, normalized
 		const lastStart = db.prepare(`
 			SELECT timestamp, parent_session_id, session_id
 			FROM telemetry_events
-			WHERE event = 'session_start'
+			WHERE event_id = (SELECT id FROM event_types WHERE name = 'session_start')
 			  AND server_id = ?
 			  AND user_id = ?
 			ORDER BY timestamp DESC
@@ -757,6 +914,13 @@ async function storeEvent(eventData, receivedAt) {
 			return false;
 		}
 
+		// Get event type ID
+		const eventTypeId = await getEventTypeId(eventData.event);
+		if (!eventTypeId) {
+			console.warn(`Unknown event type: ${eventData.event}, dropping event`);
+			return false;
+		}
+
 		const parentSessionId = await computeParentSessionId(
 			eventData,
 			normalizedSessionId,
@@ -787,12 +951,12 @@ async function storeEvent(eventData, receivedAt) {
 		if (dbType === 'sqlite') {
 			const stmt = getPreparedStatement('insertEvent', `
 				INSERT INTO telemetry_events
-				(event, timestamp, server_id, version, session_id, parent_session_id, user_id, data, received_at, org_id, user_name, tool_name, company_name, error_message, team_id)
+				(event_id, timestamp, server_id, version, session_id, parent_session_id, user_id, data, received_at, org_id, user_name, tool_name, company_name, error_message, team_id)
 				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 			`);
 
 			stmt.run(
-				eventData.event,
+				eventTypeId,
 				eventData.timestamp,
 				eventData.serverId || null,
 				eventData.version || null,
@@ -811,10 +975,10 @@ async function storeEvent(eventData, receivedAt) {
 		} else if (dbType === 'postgresql') {
 			await db.query(
 				`INSERT INTO telemetry_events
-				(event, timestamp, server_id, version, session_id, parent_session_id, user_id, data, received_at, org_id, user_name, tool_name, company_name, error_message, team_id)
+				(event_id, timestamp, server_id, version, session_id, parent_session_id, user_id, data, received_at, org_id, user_name, tool_name, company_name, error_message, team_id)
 				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
 				[
-					eventData.event,
+					eventTypeId,
 					eventData.timestamp,
 					eventData.serverId || null,
 					eventData.version || null,
@@ -948,13 +1112,13 @@ async function getEvents(options = {}) {
 
 	if (eventTypes && Array.isArray(eventTypes) && eventTypes.length > 0) {
 		if (eventTypes.length === 1) {
-			whereClause += dbType === 'sqlite' ? ' AND e.event = ?' : ` AND e.event = $${paramIndex++}`;
+			whereClause += dbType === 'sqlite' ? ' AND et.name = ?' : ` AND et.name = $${paramIndex++}`;
 			params.push(eventTypes[0]);
 		} else {
 			const placeholders = eventTypes.map(() => {
 				return dbType === 'sqlite' ? '?' : `$${paramIndex++}`;
 			}).join(', ');
-			whereClause += ` AND e.event IN (${placeholders})`;
+			whereClause += ` AND et.name IN (${placeholders})`;
 			params.push(...eventTypes);
 		}
 	}
@@ -997,7 +1161,7 @@ async function getEvents(options = {}) {
 	const shouldComputeTotal = offset === 0 || limit <= MAX_LIMIT_FOR_TOTAL_COMPUTATION;
 
 	if (shouldComputeTotal) {
-		const countQuery = `SELECT COUNT(*) as total FROM telemetry_events ${whereClause.replace(/e\./g, '')}`;
+		const countQuery = `SELECT COUNT(*) as total FROM telemetry_events e JOIN event_types et ON e.event_id = et.id ${whereClause}`;
 		if (dbType === 'sqlite') {
 			total = db.prepare(countQuery).get(...params).total;
 		} else {
@@ -1021,10 +1185,11 @@ async function getEvents(options = {}) {
 
 	const eventsQuery = `
 		SELECT
-			e.id, e.event, e.timestamp, e.server_id, e.version, e.session_id, e.parent_session_id,
+			e.id, et.name as event, e.timestamp, e.server_id, e.version, e.session_id, e.parent_session_id,
 			e.user_id, e.received_at, e.created_at, e.user_name, e.tool_name, e.company_name
 			${dbType === 'sqlite' ? ', e.error_message' : ', e.error_message'}
 		FROM telemetry_events e
+		JOIN event_types et ON e.event_id = et.id
 		${whereClause}
 		ORDER BY ${safeOrderBy} ${safeOrder}
 		LIMIT ${dbType === 'sqlite' ? '?' : `$${paramIndex++}`}
@@ -1061,7 +1226,7 @@ async function getEventById(id) {
 	}
 
 	if (dbType === 'sqlite') {
-		const event = db.prepare('SELECT id, event, timestamp, server_id, version, session_id, user_id, data, received_at, created_at, org_id, user_name, tool_name, company_name, error_message FROM telemetry_events WHERE id = ? AND deleted_at IS NULL').get(id);
+		const event = db.prepare('SELECT e.id, et.name as event, e.timestamp, e.server_id, e.version, e.session_id, e.user_id, e.data, e.received_at, e.created_at, e.org_id, e.user_name, e.tool_name, e.company_name, e.error_message FROM telemetry_events e JOIN event_types et ON e.event_id = et.id WHERE e.id = ? AND e.deleted_at IS NULL').get(id);
 		if (!event) {
 			return null;
 		}
@@ -1070,7 +1235,7 @@ async function getEventById(id) {
 			data: JSON.parse(event.data)
 		};
 	}
-	const result = await db.query('SELECT id, event, timestamp, server_id, version, session_id, user_id, data, received_at, created_at, org_id, user_name, tool_name, company_name, error_message FROM telemetry_events WHERE id = $1 AND deleted_at IS NULL', [id]);
+	const result = await db.query('SELECT e.id, et.name as event, e.timestamp, e.server_id, e.version, e.session_id, e.user_id, e.data, e.received_at, e.created_at, e.org_id, e.user_name, e.tool_name, e.company_name, e.error_message FROM telemetry_events e JOIN event_types et ON e.event_id = et.id WHERE e.id = $1 AND e.deleted_at IS NULL', [id]);
 	if (result.rows.length === 0) {
 		return null;
 	}
@@ -1819,7 +1984,7 @@ async function getDailyStatsByEventType(days = 30) {
 				session_id,
 				id
 			FROM telemetry_events
-			WHERE timestamp >= ? AND event = 'session_start'
+			WHERE timestamp >= ? AND event_id = (SELECT id FROM event_types WHERE name = 'session_start')
 				AND deleted_at IS NULL
 		`).all(startDateISO);
 
@@ -1855,7 +2020,7 @@ async function getDailyStatsByEventType(days = 30) {
 				date(timestamp, 'utc') as date,
 				COUNT(*) as count
 			FROM telemetry_events
-			WHERE timestamp >= ? AND event = 'tool_error'
+			WHERE timestamp >= ? AND event_id = (SELECT id FROM event_types WHERE name = 'tool_error')
 				AND deleted_at IS NULL
 			GROUP BY date(timestamp, 'utc')
 		`).all(startDateISO);
@@ -1891,7 +2056,7 @@ async function getDailyStatsByEventType(days = 30) {
 				session_id,
 				id
 			FROM telemetry_events
-			WHERE timestamp >= $1 AND event = 'session_start'
+			WHERE timestamp >= $1 AND event_id = (SELECT id FROM event_types WHERE name = 'session_start')
 				AND deleted_at IS NULL
 		`, [startDateISO]);
 
@@ -1925,7 +2090,7 @@ async function getDailyStatsByEventType(days = 30) {
 				DATE(timestamp AT TIME ZONE 'UTC') as date,
 				COUNT(*) as count
 			FROM telemetry_events
-			WHERE timestamp >= $1 AND event = 'tool_error'
+			WHERE timestamp >= $1 AND event_id = (SELECT id FROM event_types WHERE name = 'tool_error')
 				AND deleted_at IS NULL
 			GROUP BY DATE(timestamp AT TIME ZONE 'UTC')
 		`, [startDateISO]);

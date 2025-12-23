@@ -122,7 +122,7 @@ async function loadToolUsageChart(days = TOOL_USAGE_DEFAULT_DAYS) {
 	setToolUsageLoading(true);
 
 	try {
-		const response = await fetch(`/api/tool-usage-stats?days=${days}`, {credentials: 'include'});
+		const response = await window.ApiCache.cachedFetch(`/api/tool-usage-stats?days=${days}`, {credentials: 'include'});
 		if (response.status === 401) {
 			window.location.href = '/login';
 			return;
@@ -240,13 +240,28 @@ window.addEventListener('DOMContentLoaded', () => {
 // Also listen for soft navigation back to dashboard
 window.addEventListener('softNav:pageMounted', (event) => {
 	if (event.detail.path === '/') {
-		// Clean up existing chart and reload
-		cleanupToolUsageChart();
-		// Wait for echarts to be ready
-		if (typeof echarts === 'undefined') {
-			window.addEventListener('echartsLoaded', () => loadToolUsageChart(), {once: true});
+		const fromCache = event?.detail?.fromCache === true;
+		if (fromCache) {
+			// Page was restored from cache - just resume if needed
+			if (!toolUsageChartInstance && savedToolUsageOption) {
+				// Restore chart from saved option if available
+				const chartEl = document.getElementById('toolUsageChart');
+				if (chartEl && typeof echarts !== 'undefined') {
+					toolUsageChartInstance = echarts.init(chartEl);
+					toolUsageChartInstance.setOption(savedToolUsageOption, true);
+					toolUsageChartInitialized = true;
+					savedToolUsageOption = null;
+				}
+			}
 		} else {
-			loadToolUsageChart();
+			// New page load - full initialization
+			cleanupToolUsageChart();
+			// Wait for echarts to be ready
+			if (typeof echarts === 'undefined') {
+				window.addEventListener('echartsLoaded', () => loadToolUsageChart(), {once: true});
+			} else {
+				loadToolUsageChart();
+			}
 		}
 	}
 });
