@@ -261,6 +261,8 @@ async function init() {
 
 		await ensureUserRoleColumn();
 		await ensureTelemetryParentSessionColumn();
+		// ensureErrorMessageColumn must run before ensureDenormalizedColumns
+		// because populateDenormalizedColumns references the error_message column
 		await ensureErrorMessageColumn();
 		await ensureDenormalizedColumns();
 		await ensurePeopleInitialsColumn();
@@ -3434,7 +3436,7 @@ async function populateDenormalizedColumns() {
 			const result = db.prepare(`
         SELECT COUNT(*) as count
         FROM telemetry_events
-        WHERE (org_id IS NULL OR user_name IS NULL OR tool_name IS NULL OR error_message IS NULL OR team_id IS NULL OR event IS NULL)
+        WHERE (org_id IS NULL OR user_name IS NULL OR tool_name IS NULL OR error_message IS NULL OR team_id IS NULL)
           AND data IS NOT NULL
           AND data != ''
         LIMIT 1
@@ -3444,7 +3446,7 @@ async function populateDenormalizedColumns() {
 			const result = await db.query(`
         SELECT COUNT(*) as count
         FROM telemetry_events
-        WHERE (org_id IS NULL OR user_name IS NULL OR tool_name IS NULL OR team_id IS NULL OR event IS NULL)
+        WHERE (org_id IS NULL OR user_name IS NULL OR tool_name IS NULL OR team_id IS NULL)
           AND data IS NOT NULL
         LIMIT 1
       `);
@@ -3566,23 +3568,31 @@ async function populateDenormalizedColumns() {
 		}
 
 		// Populate event column from event_types table based on event_id (both SQLite and PostgreSQL)
-		console.log('Populating event column from event_types...');
+		// This runs separately from the JSON-based population above since event comes from a different table
 		if (dbType === 'sqlite') {
-			const result = db.prepare(`
-        UPDATE telemetry_events
-        SET event = (SELECT name FROM event_types WHERE id = telemetry_events.event_id)
-        WHERE event IS NULL AND event_id IS NOT NULL
-      `).run();
-			console.log(`Populated event column for ${result.changes} rows`);
+			const eventCheck = db.prepare('SELECT COUNT(*) as count FROM telemetry_events WHERE event IS NULL AND event_id IS NOT NULL LIMIT 1').get();
+			if (eventCheck && eventCheck.count > 0) {
+				console.log('Populating event column from event_types...');
+				const result = db.prepare(`
+          UPDATE telemetry_events
+          SET event = (SELECT name FROM event_types WHERE id = telemetry_events.event_id)
+          WHERE event IS NULL AND event_id IS NOT NULL
+        `).run();
+				console.log(`Populated event column for ${result.changes} rows`);
+			}
 		} else if (dbType === 'postgresql') {
-			const result = await db.query(`
-        UPDATE telemetry_events
-        SET event = event_types.name
-        FROM event_types
-        WHERE telemetry_events.event_id = event_types.id
-          AND telemetry_events.event IS NULL
-      `);
-			console.log(`Populated event column for ${result.rowCount} rows`);
+			const eventCheck = await db.query('SELECT COUNT(*) as count FROM telemetry_events WHERE event IS NULL AND event_id IS NOT NULL LIMIT 1');
+			if (eventCheck.rows.length > 0 && Number.parseInt(eventCheck.rows[0].count, 10) > 0) {
+				console.log('Populating event column from event_types...');
+				const result = await db.query(`
+          UPDATE telemetry_events
+          SET event = event_types.name
+          FROM event_types
+          WHERE telemetry_events.event_id = event_types.id
+            AND telemetry_events.event IS NULL
+        `);
+				console.log(`Populated event column for ${result.rowCount} rows`);
+			}
 		}
 
 		console.log('S\'ha acabat d\'emplenar les columnes denormalitzades');
