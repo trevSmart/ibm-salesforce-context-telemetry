@@ -38,6 +38,12 @@ const settingsModalStyles = `
 	max-width: 100%;
 }
 
+/* Wide modal for sections that need more space */
+.settings-modal-wide {
+	max-width: 90vw !important;
+	width: 90vw !important;
+}
+
 /* Login history table specific styling */
 #loginHistoryTable th:nth-child(3),
 #loginHistoryTable td:nth-child(3) {
@@ -738,6 +744,13 @@ async function openSettingsModal() {
 		const targetSection = modal.querySelector(sectionId);
 		if (targetSection) {
 			targetSection.style.display = 'block';
+		}
+
+		// Adjust modal size based on section
+		if (sectionId === '#settings-login-history') {
+			modal.className = 'confirm-modal settings-modal settings-modal-wide';
+		} else {
+			modal.className = 'confirm-modal settings-modal';
 		}
 
 		sidebarLinks.forEach(link => {
