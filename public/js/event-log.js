@@ -23,7 +23,7 @@ if (!window.__globalDataCache) {
 // Helper function to check if cached data is still fresh (less than 5 minutes old)
 function isCacheFresh(cacheKey) {
 	const lastUpdated = window.__globalDataCache.lastUpdated[cacheKey];
-	if (!lastUpdated) return false;
+	if (!lastUpdated) {return false;}
 	const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
 	return lastUpdated > fiveMinutesAgo;
 }
