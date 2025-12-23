@@ -2019,7 +2019,7 @@ async function getToolUsageStats(days = 30) {
 					AND tool_name != ''
 					AND deleted_at IS NULL
 				GROUP BY tool_name
-				ORDER BY (successful + errors) DESC
+				ORDER BY SUM(CASE WHEN event = 'tool_call' THEN 1 ELSE 0 END) + SUM(CASE WHEN event = 'tool_error' THEN 1 ELSE 0 END) DESC
 				LIMIT 6
 			`).all(startDateISO);
 
@@ -2042,7 +2042,7 @@ async function getToolUsageStats(days = 30) {
 					AND tool_name != ''
 					AND deleted_at IS NULL
 				GROUP BY tool_name
-				ORDER BY (successful + errors) DESC
+				ORDER BY SUM(CASE WHEN event = 'tool_call' THEN 1 ELSE 0 END) + SUM(CASE WHEN event = 'tool_error' THEN 1 ELSE 0 END) DESC
 				LIMIT 6
 			`, [startDateISO]);
 
