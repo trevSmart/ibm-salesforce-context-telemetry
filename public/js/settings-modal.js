@@ -928,6 +928,7 @@ async function openSettingsModal() {
                       <option value="basic" selected>Basic</option>
                       <option value="advanced">Advanced</option>
                       <option value="administrator">Administrator</option>
+                      ${isGod ? '<option value="god">God</option>' : ''}
                     </select>
                     <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                       <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5 text-gray-400">
@@ -1021,6 +1022,7 @@ async function openSettingsModal() {
                       <option value="basic" ${currentRole === 'basic' ? 'selected' : ''}>Basic</option>
                       <option value="advanced" ${currentRole === 'advanced' ? 'selected' : ''}>Advanced</option>
                       <option value="administrator" ${currentRole === 'administrator' ? 'selected' : ''}>Administrator</option>
+                      ${isGod ? `<option value="god" ${currentRole === 'god' ? 'selected' : ''}>God</option>` : ''}
                     </select>
                     <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                       <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5 text-gray-400">
