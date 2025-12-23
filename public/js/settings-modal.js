@@ -266,8 +266,8 @@ async function openSettingsModal() {
 		console.error('Error checking auth status:', error);
 	}
 
-	const isAdministrator = userRole === 'administrator';
-	const canDeleteAllEvents = userRole === 'advanced' || userRole === 'administrator';
+	const isAdministrator = userRole === 'administrator' || userRole === 'god';
+	const canDeleteAllEvents = userRole === 'advanced' || userRole === 'administrator' || userRole === 'god';
 	const usersLoadingRow = `
       <tr>
         <td colspan="4" class="settings-users-empty">

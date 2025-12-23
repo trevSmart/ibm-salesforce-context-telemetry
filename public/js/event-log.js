@@ -64,7 +64,7 @@ function safeShowToast(message, type = 'info') {
 				window.location.href = '/login';
 				return;
 			}
-			if (data.role !== 'advanced' && data.role !== 'administrator') {
+			if (data.role !== 'advanced' && data.role !== 'administrator' && data.role !== 'god') {
 				window.location.href = '/';
 				return;
 			}

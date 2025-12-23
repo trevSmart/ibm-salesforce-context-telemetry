@@ -208,7 +208,7 @@ async function initializeDashboardPage({resetState = false} = {}) {
 
 		const eventLogLink = document.getElementById('eventLogLink');
 		if (eventLogLink) {
-			if (data.role === 'advanced' || data.role === 'administrator') {
+			if (data.role === 'advanced' || data.role === 'administrator' || data.role === 'god') {
 				eventLogLink.style.display = '';
 			} else {
 				eventLogLink.style.display = 'none';
