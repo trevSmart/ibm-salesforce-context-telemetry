@@ -121,30 +121,7 @@ function recordServerStatsFetch(durationMs) {
 
 async function loadDashboardDatabaseSize() {
 	try {
-		const response = await fetch('/api/database-size', {
-			credentials: 'include'
-		});
-		if (!response.ok) {
-			return;
-		}
-		const data = await response.json();
-		if (data?.status !== 'ok') {
-			return;
-		}
-		const displayText = data.displayText || data.sizeFormatted;
-		const dbSizeElement = document.getElementById('serverStatsDbSize');
-		if (dbSizeElement && displayText) {
-			dbSizeElement.textContent = displayText;
-			if (data.percentage !== null && data.percentage !== undefined) {
-				if (data.percentage >= 80) {
-					dbSizeElement.style.color = 'var(--level-error)';
-				} else if (data.percentage >= 70) {
-					dbSizeElement.style.color = 'var(--level-warning)';
-				} else {
-					dbSizeElement.style.color = '';
-				}
-			}
-		}
+		return;
 	} catch (error) {
 		// Silently fail if database size is not available
 	}

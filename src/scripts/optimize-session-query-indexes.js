@@ -22,7 +22,7 @@
  * Usage: node src/scripts/optimize-session-query-indexes.js
  */
 
-import { init, close } from '../storage/database.js';
+import {init, close} from '../storage/database.js';
 
 async function main() {
 	console.log('🚀 Starting session query optimization...\n');

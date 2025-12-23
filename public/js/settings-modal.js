@@ -824,13 +824,19 @@ async function openSettingsModal() {
 
 				const setError = (message) => {
 					if (!errorDiv) {return;}
-					if (message) {
-						errorDiv.textContent = message;
-						errorDiv.style.display = 'block';
-					} else {
+					if (!message) {
 						errorDiv.textContent = '';
 						errorDiv.style.display = 'none';
+						return;
 					}
+					if (typeof window.showToast === 'function') {
+						window.showToast(message, 'error');
+						errorDiv.textContent = '';
+						errorDiv.style.display = 'none';
+						return;
+					}
+					errorDiv.textContent = message;
+					errorDiv.style.display = 'block';
 				};
 
 				cancelButtons.forEach((button) => {
@@ -874,15 +880,10 @@ async function openSettingsModal() {
 					await renderUsers(data.users || []);
 				} catch (error) {
 					console.error('Error loading users:', error);
-					if (usersTableBody) {
-						usersTableBody.innerHTML = `
-              <tr>
-                <td colspan="4" class="settings-users-empty">
-                  Error loading users: ${escapeHtml(error.message)}
-                </td>
-              </tr>
-            `;
+					if (typeof window.showToast === 'function') {
+						window.showToast(`Error loading users: ${error.message}`, 'error');
 					}
+					await renderUsers([]);
 				}
 			}
 
@@ -1242,13 +1243,16 @@ async function openSettingsModal() {
 
 			} catch (error) {
 				console.error('Error loading login history:', error);
+				if (typeof window.showToast === 'function') {
+					window.showToast(`Failed to load login history: ${error.message}`, 'error');
+				}
 				tableBody.innerHTML = `
 					<tr>
 						<td colspan="6" class="settings-users-empty">
-							<div class="settings-users-error">
-								<i class="fa-solid fa-exclamation-triangle settings-users-error-icon"></i>
-								<div class="settings-users-error-title">Failed to load login history</div>
-								<div class="settings-users-error-subtitle">${error.message}</div>
+							<div class="settings-users-empty-content">
+								<i class="fa-solid fa-clock-rotate-left settings-users-empty-icon"></i>
+								<div class="settings-users-empty-title">No login history</div>
+								<div class="settings-users-empty-subtitle">Login attempts will appear here</div>
 							</div>
 						</td>
 					</tr>

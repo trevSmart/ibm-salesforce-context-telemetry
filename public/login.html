@@ -554,23 +554,42 @@
 
 	<script src="/js/csrf-helper.js" defer></script>
 
-	<script>
+	<script type="module">
+		import {showToast} from '/js/notifications.js';
+
 		const form = document.getElementById('loginForm');
 		const errorMessage = document.getElementById('errorMessage');
 		const loginButton = document.getElementById('loginButton');
+		const showError = (message) => {
+			if (typeof showToast === 'function') {
+				showToast(message, 'error');
+				if (errorMessage) {
+					errorMessage.textContent = '';
+					errorMessage.classList.remove('show');
+				}
+				return;
+			}
+			if (errorMessage) {
+				errorMessage.textContent = message;
+				errorMessage.classList.add('show');
+			}
+		};
+		const clearError = () => {
+			if (errorMessage) {
+				errorMessage.textContent = '';
+				errorMessage.classList.remove('show');
+			}
+		};
 
 		// Check for error in URL parameters
 		const urlParams = new URLSearchParams(window.location.search);
 		const error = urlParams.get('error');
 		if (error === 'missing_credentials') {
-			errorMessage.textContent = 'Username and password are required';
-			errorMessage.classList.add('show');
+			showError('Username and password are required');
 		} else if (error === 'invalid_credentials') {
-			errorMessage.textContent = 'Invalid username or password';
-			errorMessage.classList.add('show');
+			showError('Invalid username or password');
 		} else if (error === 'server_error') {
-			errorMessage.textContent = 'An error occurred. Please try again.';
-			errorMessage.classList.add('show');
+			showError('An error occurred. Please try again.');
 		}
 
 		form.addEventListener('submit', async (e) => {
@@ -583,7 +602,7 @@
 			console.log('[TRACE] login: Attempting login for user:', username);
 
 			// Hide error
-			errorMessage.classList.remove('show');
+			clearError();
 			loginButton.disabled = true;
 
 			try {
@@ -608,13 +627,11 @@
 					window.location.href = '/';
 				} else {
 					// Show error
-					errorMessage.textContent = data.message || 'Invalid username or password';
-					errorMessage.classList.add('show');
+					showError(data.message || 'Invalid username or password');
 					loginButton.disabled = false;
 				}
 			} catch (error) {
-				errorMessage.textContent = 'An error occurred. Please try again.';
-				errorMessage.classList.add('show');
+				showError('An error occurred. Please try again.');
 				loginButton.disabled = false;
 			}
 		});

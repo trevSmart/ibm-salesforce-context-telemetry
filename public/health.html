@@ -12,7 +12,14 @@
 	<link rel="preload" href="/css/output.css" as="style">
 	<link rel="stylesheet" href="/css/output.css">
 	<script src="/js/polyfills.js" defer></script>
-	<script>
+	<script type="module">
+		import {showToast} from '/js/notifications.js';
+
+		const showError = (message) => {
+			if (typeof showToast === 'function') {
+				showToast(message, 'error');
+			}
+		};
 		// Apply theme immediately before page render to prevent flash
 		(function () {
 			const savedTheme = localStorage.getItem('theme');
@@ -492,17 +499,14 @@
 
 				const data = await response.json();
 				const badge = document.getElementById('statusBadge');
-				const errorMsg = document.getElementById('errorMessage');
 
 				if (data.status === 'healthy') {
 					badge.className = 'status-badge healthy';
 					badge.innerHTML = '<span class="status-indicator"></span><span>Healthy</span>';
-					errorMsg.style.display = 'none';
 				} else {
 					badge.className = 'status-badge unhealthy';
 					badge.innerHTML = '<span class="status-indicator"></span><span>Unhealthy</span>';
-					errorMsg.textContent = data.message || 'Server is experiencing issues';
-					errorMsg.style.display = 'block';
+					showError(data.message || 'Server is experiencing issues');
 				}
 
 				// Update stats
@@ -561,9 +565,7 @@
 				badge.className = 'status-badge unhealthy';
 				badge.innerHTML = '<span class="status-indicator"></span><span>Error</span>';
 
-				const errorMsg = document.getElementById('errorMessage');
-				errorMsg.textContent = `Failed to load health data: ${error.message}`;
-				errorMsg.style.display = 'block';
+				showError(`Failed to load health data: ${error.message}`);
 			} finally {
 				container.classList.remove('loading');
 			}
