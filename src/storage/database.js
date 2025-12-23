@@ -1626,6 +1626,22 @@ async function deleteEventsBySession(sessionId) {
 		throw new Error('Session ID is required to delete events by session');
 	}
 
+	// Detect pseudo-session: user-only session (format: user_<userId>_<date>)
+	const userSessionMatch = /^user_(.+)_(\d{4}-\d{2}-\d{2})$/.exec(sessionId);
+	if (userSessionMatch) {
+		const userId = userSessionMatch[1];
+		const date = userSessionMatch[2];
+		if (dbType === 'sqlite') {
+			const stmt = db.prepare('UPDATE telemetry_events SET deleted_at = ? WHERE user_id = ? AND date(timestamp) = ? AND session_id IS NULL AND parent_session_id IS NULL AND deleted_at IS NULL');
+			const result = stmt.run(new Date().toISOString(), userId, date);
+			return result.changes;
+		} else if (dbType === 'postgresql') {
+			const result = await db.query('UPDATE telemetry_events SET deleted_at = NOW() WHERE user_id = $1 AND DATE(timestamp) = $2 AND session_id IS NULL AND parent_session_id IS NULL AND deleted_at IS NULL', [userId, date]);
+			return result.rowCount;
+		}
+	}
+
+	// Normal session logic
 	if (dbType === 'sqlite') {
 		const stmt = db.prepare('UPDATE telemetry_events SET deleted_at = ? WHERE (parent_session_id = ? OR (parent_session_id IS NULL AND session_id = ?)) AND deleted_at IS NULL');
 		const result = stmt.run(new Date().toISOString(), sessionId, sessionId);
