@@ -1727,19 +1727,10 @@ function safeShowToast(message, type = 'info') {
 	}
 
 	function showGlobalError(message) {
-		const banner = document.getElementById('globalErrorBanner');
-		if (!banner || !message) {
-			return;
-		}
 		const formattedMessage = typeof message === 'string'? message: (message?.message || 'Unexpected error');
-		globalErrorMessages.unshift(formattedMessage);
-		if (globalErrorMessages.length > MAX_GLOBAL_ERROR_MESSAGES) {
-			globalErrorMessages.length = MAX_GLOBAL_ERROR_MESSAGES;
+		if (formattedMessage && typeof window.showToast === 'function') {
+			window.showToast(formattedMessage, 'error');
 		}
-		banner.innerHTML = globalErrorMessages
-			.map(msg => `<div>${escapeHtml(msg)}</div>`)
-			.join('');
-		banner.classList.remove('hidden');
 	}
 
 	function handleInitializationError(context, error) {
@@ -2787,10 +2778,7 @@ function safeShowToast(message, type = 'info') {
 			updateTeamEventCounts(allLoadedEvents);
 		} catch (error) {
 			console.error('Error loading events:', error);
-			if (errorMessageEl) {
-				errorMessageEl.textContent = `Error loading events: ${  error.message}`;
-				errorMessageEl.style.display = 'block';
-			}
+			safeShowToast(`Error loading events: ${  error.message}`, 'error');
 		} finally {
 			isLoadingMore = false;
 			// if (loadingMessageEl && !append) {
@@ -4655,10 +4643,7 @@ function safeShowToast(message, type = 'info') {
 			// Check if response is an error object
 			if (data && data.status === 'error') {
 				console.error('Error loading users:', data.message);
-				const optionsContainer = document.getElementById('userFilterOptions');
-				if (optionsContainer) {
-					optionsContainer.innerHTML = '<div class="user-filter-empty">Error loading users</div>';
-				}
+				safeShowToast('Error loading users', 'error');
 				return;
 			}
 

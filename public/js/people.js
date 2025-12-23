@@ -77,14 +77,8 @@ async function initPeoplePage() {
 
 	} catch (error) {
 		console.error('Error loading people:', error);
-		// Show error in the people list
-		const peopleListElement = document.getElementById('peopleList');
-		if (peopleListElement) {
-			peopleListElement.innerHTML = `
-				<div class="bg-white px-8 py-10 text-center">
-					<p class="text-red-600">Error loading people. <button onclick="initPeoplePage()" class="underline hover:no-underline">Retry</button></p>
-				</div>
-			`;
+		if (typeof window.showToast === 'function') {
+			window.showToast('Error loading people', 'error');
 		}
 	}
 }
@@ -462,8 +456,11 @@ async function loadPersonUsernames(personId) {
 	} catch (error) {
 		console.error('Error loading usernames:', error);
 		const usernamesListElement = document.getElementById('usernamesList');
+		if (typeof window.showToast === 'function') {
+			window.showToast('Error loading usernames', 'error');
+		}
 		if (usernamesListElement) {
-			usernamesListElement.innerHTML = '<p class="text-sm text-red-600">Error loading usernames</p>';
+			usernamesListElement.innerHTML = '';
 		}
 	}
 }

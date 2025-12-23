@@ -1269,7 +1269,7 @@ async function init() {
 					loadTeams().then(() => renderTeamsList());
 				} else {
 					console.error('Container still not found after retry');
-					document.body.innerHTML = '<div style="padding: 24px;"><p>Error: teamsContent container not found</p></div>';
+					showToast('Teams content container not found', 'error');
 				}
 			}, 100);
 			return;
@@ -1279,19 +1279,9 @@ async function init() {
 	} catch (error) {
 		console.error('Error initializing teams page:', error);
 		const container = document.getElementById('teamsContent');
+		showToast(`Error loading teams page: ${error.message || 'Unknown error'}`, 'error');
 		if (container) {
-			container.innerHTML = `
-        <div style="padding: 24px; text-align: center;">
-          <p style="color: red;">Error loading teams page. Please check the console for details.</p>
-          <p style="color: #666; margin-top: 8px;">${escapeHtml(error.message || 'Unknown error')}</p>
-        </div>
-      `;
-		} else {
-			document.body.innerHTML = `
-        <div style="padding: 24px;">
-          <p style="color: red;">Critical error: ${escapeHtml(error.message || 'Unknown error')}</p>
-        </div>
-      `;
+			container.innerHTML = '';
 		}
 	}
 }
