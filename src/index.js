@@ -1379,14 +1379,41 @@ app.get('/api/diagnostic', async (req, res) => {
 			sessionsTest = `error: ${error.message}`;
 		}
 
+		// Test getToolUsageStats
+		let toolStatsTest = 'not tested';
+		try {
+			const toolStats = await db.getToolUsageStats(7);
+			toolStatsTest = `success: ${toolStats.length} tools`;
+		} catch (error) {
+			toolStatsTest = `error: ${error.message}`;
+		}
+
+		// Test basic query on telemetry_events
+		let basicQueryTest = 'not tested';
+		try {
+			let result;
+			if (db.dbType === 'sqlite') {
+				result = db.db.prepare("SELECT COUNT(*) as count FROM telemetry_events WHERE event IN ('tool_call', 'tool_error')").get();
+			} else {
+				result = await db.db.query("SELECT COUNT(*) as count FROM telemetry_events WHERE event IN ('tool_call', 'tool_error')");
+				result = result.rows[0];
+			}
+			basicQueryTest = `success: ${result.count} events`;
+		} catch (error) {
+			basicQueryTest = `error: ${error.message}`;
+		}
+
 		res.json({
 			database_type: db.dbType,
 			tables: tables,
 			telemetry_events_columns: columns,
 			has_team_id: columns.includes('team_id'),
+			has_tool_name: columns.includes('tool_name'),
 			has_teams_table: tables.includes('teams'),
 			has_orgs_table: tables.includes('orgs'),
 			sessions_test: sessionsTest,
+			tool_stats_test: toolStatsTest,
+			basic_query_test: basicQueryTest,
 			timestamp: new Date().toISOString()
 		});
 	} catch (error) {
