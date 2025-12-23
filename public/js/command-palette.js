@@ -228,16 +228,27 @@
     for (const selector of modalSelectors) {
       const elements = document.querySelectorAll(selector);
       if (elements.length > 0) {
-        return true;
+        // Additional check: only consider it a modal if it's actually visible
+        for (const element of elements) {
+          const isVisible = window.getComputedStyle(element).display !== 'none' &&
+                           window.getComputedStyle(element).visibility !== 'hidden';
+          if (isVisible) {
+            return true;
+          }
+        }
       }
     }
 
-    // Additional check: look for elements with very high z-index that might be modals (exclude command palette)
+    // Additional check: look for VISIBLE elements with very high z-index that might be modals (exclude command palette)
     const allElements = document.querySelectorAll('*:not(#commandPaletteBackdrop)');
     for (const element of allElements) {
       const zIndex = window.getComputedStyle(element).zIndex;
-      if (zIndex && parseInt(zIndex) > 1000) {
-        // Elements with very high z-index are likely modals/overlays
+      const isVisible = window.getComputedStyle(element).display !== 'none' &&
+                       window.getComputedStyle(element).visibility !== 'hidden' &&
+                       element.offsetWidth > 0 && element.offsetHeight > 0;
+
+      if (zIndex && parseInt(zIndex) > 1000 && isVisible) {
+        // Elements with very high z-index that are actually visible are likely modals/overlays
         return true;
       }
     }
@@ -448,7 +459,13 @@
     // Close on escape
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && isOpen) {
-        hideCommandPalette();
+        // Don't close if user is editing in the command palette input
+        const activeElement = document.activeElement;
+        const isEditingInPalette = activeElement && activeElement.id === 'commandPaletteInput';
+
+        if (!isEditingInPalette) {
+          hideCommandPalette();
+        }
       }
     });
   }
@@ -557,7 +574,7 @@
   // Global keyboard shortcut (K) - registered immediately on initialization
   document.addEventListener('keydown', (e) => {
     if (e.key === 'k') {
-      console.log('K pressed - isOpen:', isOpen, 'isCommandPaletteVisible:', isCommandPaletteVisible(), 'commandPaletteElement exists:', !!commandPaletteElement, 'display:', commandPaletteElement?.style.display);
+
       // If palette is already open, close it (unless user is editing in palette input)
       if (isCommandPaletteVisible()) {
         const activeElement = document.activeElement;
@@ -580,7 +597,58 @@
       }
       // Don't open command palette if any modals or dialogs are open
       if (isModalOrDialogOpen()) {
-        console.log('Modal/dialog open, not opening');
+        console.log('Modal/dialog open, not opening - debugging modal detection...');
+
+        // Debug which modal is being detected
+        const ariaModalElements = document.querySelectorAll('[aria-modal="true"]:not(#commandPaletteBackdrop)');
+        const dialogElements = document.querySelectorAll('[role="dialog"]:not(#commandPaletteBackdrop)');
+        const modalSelectors = [
+          '.modal[style*="display: block"]:not(#commandPaletteBackdrop)',
+          '.modal.show:not(#commandPaletteBackdrop)',
+          '.modal.open:not(#commandPaletteBackdrop)',
+          '.modal.visible:not(#commandPaletteBackdrop)',
+          '.dialog[style*="display: block"]:not(#commandPaletteBackdrop)',
+          '.dialog.show:not(#commandPaletteBackdrop)',
+          '.dialog.open:not(#commandPaletteBackdrop)',
+          '.dialog.visible:not(#commandPaletteBackdrop)',
+          '[data-modal-open="true"]:not(#commandPaletteBackdrop)',
+          '[data-dialog-open="true"]:not(#commandPaletteBackdrop)',
+          '.backdrop:not(#commandPaletteBackdrop)',
+          '.modal-backdrop:not(#commandPaletteBackdrop)',
+          '.dialog-backdrop:not(#commandPaletteBackdrop)',
+          '.overlay[style*="display: block"]:not(#commandPaletteBackdrop)',
+          '.overlay.show:not(#commandPaletteBackdrop)',
+          '.overlay.visible:not(#commandPaletteBackdrop)',
+          '.confirm-modal-backdrop:not(#commandPaletteBackdrop)',
+          '.confirm-dialog-backdrop:not(#commandPaletteBackdrop)',
+          '.payload-modal-backdrop:not(#commandPaletteBackdrop)',
+          '.fixed.z-50:not(#commandPaletteBackdrop)',
+          '.absolute.z-50:not(#commandPaletteBackdrop)'
+        ];
+
+        console.log('Checking modal selectors...');
+        for (const selector of modalSelectors) {
+          const elements = document.querySelectorAll(selector);
+          if (elements.length > 0) {
+            console.log(`Found elements with selector "${selector}":`, elements);
+          }
+        }
+
+        console.log('aria-modal elements:', ariaModalElements);
+        console.log('dialog elements:', dialogElements);
+
+        // Check z-index elements
+        const allElements = document.querySelectorAll('*:not(#commandPaletteBackdrop)');
+        for (const element of allElements) {
+          const zIndex = window.getComputedStyle(element).zIndex;
+          const isVisible = window.getComputedStyle(element).display !== 'none' &&
+                           window.getComputedStyle(element).visibility !== 'hidden' &&
+                           element.offsetWidth > 0 && element.offsetHeight > 0;
+          if (zIndex && parseInt(zIndex) > 1000 && isVisible) {
+            console.log('Found visible high z-index element:', element, 'z-index:', zIndex);
+          }
+        }
+
         return;
       }
       console.log('Opening command palette');

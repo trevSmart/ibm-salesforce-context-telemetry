@@ -3,21 +3,19 @@
 
 /* Fonts locals per millorar performance */
 @font-face {
-  font-family: 'InterVariable';
+  font-family: 'ManropeVariable';
   font-style: normal;
   font-weight: 100 900;
   font-display: block;
-  src: url('/fonts/inter-variable.woff2') format('woff2-variations');
-  font-stretch: 75% 125%;
+  src: url('/fonts/Manrope/Manrope-VariableFont_wght.ttf') format('truetype-variations');
 }
 
 @font-face {
-  font-family: 'Inter';
+  font-family: 'Manrope';
   font-style: normal;
   font-weight: 100 900;
   font-display: block;
-  src: url('/fonts/inter-variable.woff2') format('woff2-variations');
-  font-stretch: 75% 125%;
+  src: url('/fonts/Manrope/Manrope-VariableFont_wght.ttf') format('truetype-variations');
 }
 
 /* Toggle knobs (manual peer-checked replacement) */
@@ -151,7 +149,7 @@
   }
 
   body {
-    font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    /* font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; */
     min-height: 100vh;
   }
 
@@ -187,11 +185,10 @@
     background: #18181b url("/resources/bg-01.jpg") center center / cover no-repeat fixed;
     background-blend-mode: soft-light;
   }
-
-  /* Card radius override */
+/* Card radius override
   .rounded-lg {
     border-radius: 20px !important;
-  }
+  } */
 
   /* Top navigation bar */
   .top-nav {
@@ -338,7 +335,7 @@
     color: #3a485f;
     text-decoration: none;
     font-size: 13.5px;
-    font-weight: 200;
+    font-weight: 300;
     letter-spacing: 0;
     padding: 0;
     position: relative;
@@ -1622,25 +1619,18 @@
   }
 
   .top-users-avatar {
-    width: 38px;
-    aspect-ratio: 1 / 1;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--text-primary);
-    font-weight: 700;
-    font-size: 14px;
-    border-radius: 50%;
-    background: #d8ebff;
-    letter-spacing: 0.03em;
-    order: solid 1px #4169e108;
+    @apply inline-flex size-10 items-center justify-center rounded-full bg-gray-500 dark:bg-gray-800 outline -outline-offset-1 outline-black/5 dark:outline-white/10 font-medium text-white;
   }
 
   .top-users-avatar--team {
-    border-radius: 50%;
-    background: #f3f3f3;
-    padding: 0;
-    color: inherit;
+    @apply inline-flex size-10 items-center justify-center rounded-full bg-gray-500 dark:bg-gray-800 outline -outline-offset-1 outline-black/5 dark:outline-white/10;
+  }
+
+  .card-avatar {
+    @apply inline-flex items-center justify-center rounded-lg text-sm font-semibold size-12;
+    color: #4f46e5;
+    background-color: #4f46e5;
+    border-radius: 9999px;
   }
 
   .top-users-info {
@@ -1769,6 +1759,11 @@
     background: #27272a;
     border-color: #0369a1;
     box-shadow: 0 0 0 3px rgba(3, 105, 161, 0.3);
+  }
+
+  .search-input-container {
+    display: flex;
+    align-items: center;
   }
 
   .control-select {
@@ -3399,7 +3394,7 @@
 
   .logs-table th.time-column,
   .log-time {
-    font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    /* font-family: 'Manrope', 'ManropeVariable', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; */
     font-weight: 300;
     min-width: 110px;
     white-space: nowrap;
@@ -4293,7 +4288,7 @@
     z-index: 9999;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.28s ease-out;
+    transition: opacity 0.15s ease-out;
   }
 
   .confirm-modal-backdrop.visible {
@@ -4321,8 +4316,8 @@
     opacity: 0;
     transform: scale(0.96) translateY(6px);
     transition:
-      opacity 0.28s ease-out,
-      transform 0.13s ease-out;
+      opacity 0.15s ease-out,
+      transform 0.08s ease-out;
   }
 
   .confirm-modal.confirm-dialog {
@@ -4502,8 +4497,8 @@
   }
 
   .confirm-modal-backdrop.visible .confirm-modal {
-    opacity: 1;
-    transform: scale(1) translateY(0);
+    opacity: 1 !important;
+    transform: scale(1) translateY(0) !important;
   }
 
   .confirm-modal-title {
@@ -4516,6 +4511,11 @@
     display: flex;
     justify-content: flex-end;
     gap: 8px;
+  }
+
+  /* Person dropdown menu */
+  .person-menu {
+    z-index: 50;
   }
 
   .btn {
@@ -4589,6 +4589,80 @@
 
   html:not(.dark) .confirm-modal-btn-confirm:hover {
     background-color: #2385b9;
+  }
+
+  /* People modal styles */
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .modal-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+  }
+
+  .modal-close-btn {
+    @apply p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors;
+    border: none;
+    background: none;
+    cursor: pointer;
+    color: var(--text-secondary);
+  }
+
+  .modal-body {
+    margin-bottom: 20px;
+  }
+
+  .modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-color);
+  }
+
+  .form-group {
+    margin-bottom: 16px;
+  }
+
+  .form-label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-bottom: 6px;
+  }
+
+  .form-input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 0.875rem;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .form-input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  .btn-secondary {
+    @apply px-4 py-2 text-sm font-medium rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors;
+  }
+
+  html.dark .btn-secondary {
+    @apply border-gray-600 bg-gray-800 text-gray-300 hover:bg-gray-700;
   }
 
   .org-team-actions {
@@ -5345,22 +5419,22 @@ html.dark .level-filters .level-filter-btn.level-error {
 /* Command palette states */
 .command-palette-backdrop-hidden {
 	opacity: 0;
-	transition: opacity 150ms ease-out;
+	transition: opacity 100ms ease-out;
 }
 
 .command-palette-backdrop-visible {
 	opacity: 1;
-	transition: opacity 150ms ease-out;
+	transition: opacity 100ms ease-out;
 }
 
 .command-palette-panel-hidden {
   transform: scale(0.95) !important;
   opacity: 0 !important;
-  transition: transform 150ms ease-out, opacity 150ms ease-out;
+  transition: transform 100ms ease-out, opacity 100ms ease-out;
 }
 
 .command-palette-panel-visible {
   transform: scale(1) !important;
   opacity: 1 !important;
-  transition: transform 150ms ease-out, opacity 150ms ease-out;
+  transition: transform 100ms ease-out, opacity 100ms ease-out;
 }

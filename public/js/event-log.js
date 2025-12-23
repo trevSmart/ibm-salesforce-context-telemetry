@@ -1309,7 +1309,7 @@ function safeShowToast(message, type = 'info') {
 		chartInstance.setOption({
 			...animationConfig,
 			textStyle: {
-				fontFamily: 'Inter, \'Inter\', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, \'Helvetica Neue\', Arial, sans-serif'
+				fontFamily: 'Manrope, \'Manrope\', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, \'Helvetica Neue\', Arial, sans-serif'
 			},
 			grid: {left: 45, right: 10, top: 15, bottom: 30},
 			xAxis: {
@@ -3905,6 +3905,23 @@ function safeShowToast(message, type = 'info') {
 
 	// Keyboard event handler
 	document.addEventListener('keydown', (e) => {
+		// Handle ESC key for modals first
+		if (e.key === 'Escape') {
+			// Close payload modal if open
+			const payloadModal = document.querySelector('.payload-modal-backdrop');
+			if (payloadModal) {
+				closePayloadModal();
+				return;
+			}
+
+			// Close confirm dialog if open
+			const confirmModal = document.querySelector('.confirm-dialog-backdrop');
+			if (confirmModal) {
+				confirmModal.remove();
+				return;
+			}
+		}
+
 		// Don't interfere with input fields or textareas
 		if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
 			return;

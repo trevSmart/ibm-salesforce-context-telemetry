@@ -1071,7 +1071,7 @@ app.get('/api/people', auth.requireAuth, auth.requireRole('administrator'), apiR
 
 app.post('/api/people', auth.requireAuth, auth.requireRole('administrator'), userManagementLimiter, async (req, res) => {
 	try {
-		const {name, email} = req.body;
+		const {name, email, initials} = req.body;
 
 		if (!name || name.trim() === '') {
 			return res.status(400).json({
@@ -1080,7 +1080,7 @@ app.post('/api/people', auth.requireAuth, auth.requireRole('administrator'), use
 			});
 		}
 
-		const person = await db.createPerson(name, email || null);
+		const person = await db.createPerson(name, email || null, initials || null);
 
 		res.status(201).json({
 			status: 'ok',
@@ -1092,6 +1092,175 @@ app.post('/api/people', auth.requireAuth, auth.requireRole('administrator'), use
 		res.status(500).json({
 			status: 'error',
 			message: error.message || 'Failed to create person'
+		});
+	}
+});
+
+app.put('/api/people/:id', auth.requireAuth, auth.requireRole('administrator'), userManagementLimiter, async (req, res) => {
+	try {
+		const personId = Number.parseInt(req.params.id, 10);
+		if (Number.isNaN(personId)) {
+			return res.status(400).json({
+				status: 'error',
+				message: 'Invalid person ID'
+			});
+		}
+
+		const {name, email, initials} = req.body;
+
+		if (!name || name.trim() === '') {
+			return res.status(400).json({
+				status: 'error',
+				message: 'Name is required'
+			});
+		}
+
+		// Verify person exists
+		const people = await db.getAllPeople();
+		const existingPerson = people.find(p => p.id === personId);
+		if (!existingPerson) {
+			return res.status(404).json({
+				status: 'error',
+				message: 'Person not found'
+			});
+		}
+
+		const updatedPerson = await db.updatePerson(personId, name, email || null, initials || null);
+
+		res.json({
+			status: 'ok',
+			person: updatedPerson,
+			message: 'Person updated successfully'
+		});
+	} catch (error) {
+		console.error('Error updating person:', error);
+		res.status(500).json({
+			status: 'error',
+			message: error.message || 'Failed to update person'
+		});
+	}
+});
+
+app.delete('/api/people/:id', auth.requireAuth, auth.requireRole('administrator'), userManagementLimiter, async (req, res) => {
+	try {
+		const personId = Number.parseInt(req.params.id, 10);
+		if (Number.isNaN(personId)) {
+			return res.status(400).json({
+				status: 'error',
+				message: 'Invalid person ID'
+			});
+		}
+
+		// Verify person exists
+		const people = await db.getAllPeople();
+		const existingPerson = people.find(p => p.id === personId);
+		if (!existingPerson) {
+			return res.status(404).json({
+				status: 'error',
+				message: 'Person not found'
+			});
+		}
+
+		await db.deletePerson(personId);
+
+		res.json({
+			status: 'ok',
+			message: 'Person deleted successfully'
+		});
+	} catch (error) {
+		console.error('Error deleting person:', error);
+		res.status(500).json({
+			status: 'error',
+			message: error.message || 'Failed to delete person'
+		});
+	}
+});
+
+// Person usernames API endpoints
+app.get('/api/people/:id/usernames', auth.requireAuth, auth.requireRole('administrator'), apiReadLimiter, async (req, res) => {
+	try {
+		const personId = Number.parseInt(req.params.id, 10);
+		if (Number.isNaN(personId)) {
+			return res.status(400).json({
+				status: 'error',
+				message: 'Invalid person ID'
+			});
+		}
+
+		// Verify person exists
+		const people = await db.getAllPeople();
+		const person = people.find(p => p.id === personId);
+		if (!person) {
+			return res.status(404).json({
+				status: 'error',
+				message: 'Person not found'
+			});
+		}
+
+		const usernames = await db.getPersonUsernames(personId);
+		res.json({
+			status: 'ok',
+			usernames: usernames
+		});
+	} catch (error) {
+		console.error('Error getting person usernames:', error);
+		res.status(500).json({
+			status: 'error',
+			message: 'Failed to get person usernames'
+		});
+	}
+});
+
+app.post('/api/people/:id/usernames', auth.requireAuth, auth.requireRole('administrator'), userManagementLimiter, async (req, res) => {
+	try {
+		const personId = Number.parseInt(req.params.id, 10);
+		if (Number.isNaN(personId)) {
+			return res.status(400).json({
+				status: 'error',
+				message: 'Invalid person ID'
+			});
+		}
+
+		const {username, org_id} = req.body;
+
+		if (!username || username.trim() === '') {
+			return res.status(400).json({
+				status: 'error',
+				message: 'Username is required'
+			});
+		}
+
+		// Verify person exists
+		const people = await db.getAllPeople();
+		const person = people.find(p => p.id === personId);
+		if (!person) {
+			return res.status(404).json({
+				status: 'error',
+				message: 'Person not found'
+			});
+		}
+
+		const usernameAssoc = await db.addUsernameToPerson(personId, username.trim(), org_id || null);
+
+		res.status(201).json({
+			status: 'ok',
+			username: usernameAssoc,
+			message: 'Username added successfully'
+		});
+	} catch (error) {
+		console.error('Error adding username to person:', error);
+
+		// Handle unique constraint violations
+		if (error.message && error.message.includes('already associated')) {
+			return res.status(409).json({
+				status: 'error',
+				message: error.message
+			});
+		}
+
+		res.status(500).json({
+			status: 'error',
+			message: 'Failed to add username to person'
 		});
 	}
 });
@@ -2292,6 +2461,16 @@ app.get('/logs', auth.requireAuth, auth.requireRole('advanced'), (_req, res) => 
 });
 
 app.get('/people', auth.requireAuth, auth.requireRole('administrator'), (_req, res) => {
+	const peoplePath = path.join(__dirname, '..', 'public', 'people.html');
+	if (fs.existsSync(peoplePath)) {
+		res.sendFile(peoplePath);
+	} else {
+		res.status(404).send('People page not found');
+	}
+});
+
+// Temporary debug route without authentication
+app.get('/people-debug', (_req, res) => {
 	const peoplePath = path.join(__dirname, '..', 'public', 'people.html');
 	if (fs.existsSync(peoplePath)) {
 		res.sendFile(peoplePath);

@@ -18,7 +18,7 @@ module.exports = {
 			},
 			fontFamily: {
 				sans: [
-					'InterVariable',
+					'ManropeVariable',
 					'ui-sans-serif',
 					'system-ui',
 					'-apple-system',

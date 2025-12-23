@@ -98,6 +98,18 @@ async function init() {
 				created_at TEXT DEFAULT CURRENT_TIMESTAMP
 			);
 
+			CREATE TABLE IF NOT EXISTS person_usernames (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				person_id INTEGER NOT NULL REFERENCES people(id) ON DELETE CASCADE,
+				username TEXT NOT NULL,
+				org_id TEXT,
+				is_primary BOOLEAN DEFAULT FALSE,
+				created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+				UNIQUE(person_id, username)
+			);
+			CREATE INDEX IF NOT EXISTS idx_person_usernames_person_id ON person_usernames(person_id);
+			CREATE INDEX IF NOT EXISTS idx_person_usernames_username ON person_usernames(username);
+
 			CREATE TABLE IF NOT EXISTS user_logins (
 				id INTEGER PRIMARY KEY AUTOINCREMENT,
 				username TEXT NOT NULL,
@@ -187,6 +199,18 @@ async function init() {
 				email TEXT,
 				created_at TIMESTAMPTZ DEFAULT NOW()
 			);
+
+			CREATE TABLE IF NOT EXISTS person_usernames (
+				id SERIAL PRIMARY KEY,
+				person_id INTEGER NOT NULL REFERENCES people(id) ON DELETE CASCADE,
+				username TEXT NOT NULL,
+				org_id TEXT,
+				is_primary BOOLEAN DEFAULT FALSE,
+				created_at TIMESTAMPTZ DEFAULT NOW(),
+				UNIQUE(person_id, username)
+			);
+			CREATE INDEX IF NOT EXISTS idx_person_usernames_person_id ON person_usernames(person_id);
+			CREATE INDEX IF NOT EXISTS idx_person_usernames_username ON person_usernames(username);
 
 			CREATE TABLE IF NOT EXISTS user_logins (
 				id SERIAL PRIMARY KEY,
@@ -4340,10 +4364,10 @@ async function getAllPeople() {
 
 	try {
 		if (dbType === 'sqlite') {
-			const stmt = db.prepare('SELECT id, name, email, created_at FROM people ORDER BY name ASC');
+			const stmt = db.prepare('SELECT id, name, email, initials, created_at FROM people ORDER BY name ASC');
 			return stmt.all();
 		} else if (dbType === 'postgresql') {
-			const result = await db.query('SELECT id, name, email, created_at FROM people ORDER BY name ASC');
+			const result = await db.query('SELECT id, name, email, initials, created_at FROM people ORDER BY name ASC');
 			return result.rows;
 		}
 	} catch (error) {
@@ -4358,7 +4382,7 @@ async function getAllPeople() {
  * @param {string|null} email - Person's email (optional)
  * @returns {Promise<object>} Created person object
  */
-async function createPerson(name, email = null) {
+async function createPerson(name, email = null, initials = null) {
 	if (!db) {
 		throw new Error('Database not initialized. Call init() first.');
 	}
@@ -4369,21 +4393,241 @@ async function createPerson(name, email = null) {
 
 	try {
 		if (dbType === 'sqlite') {
-			const stmt = db.prepare('INSERT INTO people (name, email) VALUES (?, ?)');
-			const result = stmt.run(name.trim(), email);
+			const stmt = db.prepare('INSERT INTO people (name, email, initials) VALUES (?, ?, ?)');
+			const result = stmt.run(name.trim(), email, initials);
 
 			// Get the created person
-			const person = db.prepare('SELECT id, name, email, created_at FROM people WHERE id = ?').get(result.lastInsertRowid);
+			const person = db.prepare('SELECT id, name, email, initials, created_at FROM people WHERE id = ?').get(result.lastInsertRowid);
 			return person;
 		} else if (dbType === 'postgresql') {
 			const result = await db.query(
-				'INSERT INTO people (name, email) VALUES ($1, $2) RETURNING id, name, email, created_at',
-				[name.trim(), email]
+				'INSERT INTO people (name, email, initials) VALUES ($1, $2, $3) RETURNING id, name, email, initials, created_at',
+				[name.trim(), email, initials]
 			);
 			return result.rows[0];
 		}
 	} catch (error) {
 		console.error('Error creating person:', error);
+		throw error;
+	}
+}
+
+/**
+ * Update a person's information
+ * @param {number} personId - Person ID
+ * @param {string} name - Person's name
+ * @param {string|null} email - Person's email (optional)
+ * @returns {Promise<object>} Updated person object
+ */
+async function updatePerson(personId, name, email = null, initials = null) {
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
+
+	if (!personId || isNaN(personId)) {
+		throw new Error('Valid person ID is required');
+	}
+
+	if (!name || name.trim() === '') {
+		throw new Error('Name is required');
+	}
+
+	try {
+		if (dbType === 'sqlite') {
+			const stmt = db.prepare('UPDATE people SET name = ?, email = ?, initials = ? WHERE id = ?');
+			const result = stmt.run(name.trim(), email, initials, personId);
+
+			if (result.changes === 0) {
+				throw new Error('Person not found');
+			}
+
+			// Get the updated person
+			const person = db.prepare('SELECT id, name, email, initials, created_at FROM people WHERE id = ?').get(personId);
+			return person;
+		} else if (dbType === 'postgresql') {
+			const result = await db.query(
+				'UPDATE people SET name = $1, email = $2, initials = $3 WHERE id = $4 RETURNING id, name, email, initials, created_at',
+				[name.trim(), email, initials, personId]
+			);
+
+			if (result.rows.length === 0) {
+				throw new Error('Person not found');
+			}
+
+			return result.rows[0];
+		}
+	} catch (error) {
+		console.error('Error updating person:', error);
+		throw error;
+	}
+}
+
+/**
+ * Delete a person and all associated usernames
+ * @param {number} personId - Person ID
+ * @returns {Promise<void>}
+ */
+async function deletePerson(personId) {
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
+
+	if (!personId || isNaN(personId)) {
+		throw new Error('Valid person ID is required');
+	}
+
+	try {
+		if (dbType === 'sqlite') {
+			// Check if person exists
+			const person = db.prepare('SELECT id FROM people WHERE id = ?').get(personId);
+			if (!person) {
+				throw new Error('Person not found');
+			}
+
+			// Delete person (usernames will be deleted automatically due to CASCADE)
+			const stmt = db.prepare('DELETE FROM people WHERE id = ?');
+			stmt.run(personId);
+		} else if (dbType === 'postgresql') {
+			// Check if person exists and delete in one query
+			const result = await db.query('DELETE FROM people WHERE id = $1 RETURNING id', [personId]);
+
+			if (result.rows.length === 0) {
+				throw new Error('Person not found');
+			}
+		}
+	} catch (error) {
+		console.error('Error deleting person:', error);
+		throw error;
+	}
+}
+
+/**
+ * Get usernames associated with a person
+ * @param {number} personId - Person ID
+ * @returns {Promise<Array>} Array of usernames for the person
+ */
+async function getPersonUsernames(personId) {
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
+
+	if (!personId || isNaN(personId)) {
+		throw new Error('Valid person ID is required');
+	}
+
+	try {
+		if (dbType === 'sqlite') {
+			const stmt = db.prepare(`
+				SELECT id, person_id, username, org_id, is_primary, created_at
+				FROM person_usernames
+				WHERE person_id = ?
+				ORDER BY is_primary DESC, username ASC
+			`);
+			return stmt.all(personId);
+		} else if (dbType === 'postgresql') {
+			const result = await db.query(`
+				SELECT id, person_id, username, org_id, is_primary, created_at
+				FROM person_usernames
+				WHERE person_id = $1
+				ORDER BY is_primary DESC, username ASC
+			`, [personId]);
+			return result.rows;
+		}
+	} catch (error) {
+		console.error('Error getting person usernames:', error);
+		throw error;
+	}
+}
+
+/**
+ * Add a username to a person
+ * @param {number} personId - Person ID
+ * @param {string} username - Username to add
+ * @param {string|null} orgId - Optional organization ID
+ * @returns {Promise<object>} Created username association object
+ */
+async function addUsernameToPerson(personId, username, orgId = null) {
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
+
+	if (!personId || isNaN(personId)) {
+		throw new Error('Valid person ID is required');
+	}
+
+	if (!username || username.trim() === '') {
+		throw new Error('Username is required');
+	}
+
+	try {
+		if (dbType === 'sqlite') {
+			const stmt = db.prepare(`
+				INSERT INTO person_usernames (person_id, username, org_id, is_primary)
+				VALUES (?, ?, ?, FALSE)
+			`);
+			const result = stmt.run(personId, username.trim(), orgId);
+			return {
+				id: result.lastInsertRowid,
+				person_id: personId,
+				username: username.trim(),
+				org_id: orgId,
+				is_primary: false,
+				created_at: new Date().toISOString()
+			};
+		} else if (dbType === 'postgresql') {
+			const result = await db.query(`
+				INSERT INTO person_usernames (person_id, username, org_id, is_primary)
+				VALUES ($1, $2, $3, FALSE)
+				RETURNING id, person_id, username, org_id, is_primary, created_at
+			`, [personId, username.trim(), orgId]);
+			return result.rows[0];
+		}
+	} catch (error) {
+		// Check if it's a unique constraint violation
+		if (error.message && error.message.includes('UNIQUE constraint failed')) {
+			throw new Error('This username is already associated with this person');
+		}
+		console.error('Error adding username to person:', error);
+		throw error;
+	}
+}
+
+/**
+ * Remove a username from a person
+ * @param {number} personId - Person ID
+ * @param {string} username - Username to remove
+ * @returns {Promise<boolean>} True if username was removed, false if not found
+ */
+async function removeUsernameFromPerson(personId, username) {
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
+
+	if (!personId || isNaN(personId)) {
+		throw new Error('Valid person ID is required');
+	}
+
+	if (!username || username.trim() === '') {
+		throw new Error('Username is required');
+	}
+
+	try {
+		if (dbType === 'sqlite') {
+			const stmt = db.prepare(`
+				DELETE FROM person_usernames
+				WHERE person_id = ? AND username = ?
+			`);
+			const result = stmt.run(personId, username.trim());
+			return result.changes > 0;
+		} else if (dbType === 'postgresql') {
+			const result = await db.query(`
+				DELETE FROM person_usernames
+				WHERE person_id = $1 AND username = $2
+			`, [personId, username.trim()]);
+			return result.rowCount > 0;
+		}
+	} catch (error) {
+		console.error('Error removing username from person:', error);
 		throw error;
 	}
 }
@@ -6029,6 +6273,11 @@ export {
 	// People management
 	getAllPeople,
 	createPerson,
+	updatePerson,
+	deletePerson,
+	getPersonUsernames,
+	addUsernameToPerson,
+	removeUsernameFromPerson,
 	// Event updates
 	updateEventData,
 	// User filtering

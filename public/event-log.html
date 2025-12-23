@@ -7,8 +7,8 @@
 	<title>IBM Salesforce Context Telemetry</title>
 	<link rel="icon" type="image/svg+xml" sizes="any" href="/resources/favicon.svg">
 	<link rel="icon" type="image/webp" sizes="32x32" href="/resources/favicon.webp">
-	<link rel="preload" href="/fonts/inter-variable.woff2" as="font" type="font/woff2" crossorigin>
-	<link rel="preload" href="/fonts/inter-variable.woff2" as="font" type="font/woff2" crossorigin>
+	<!-- <link rel="preload" href="/fonts/inter-variable.woff2" as="font" type="font/woff2" crossorigin> -->
+	<!-- <link rel="preload" href="/fonts/inter-variable.woff2" as="font" type="font/woff2" crossorigin> -->
 	<link rel="preload" href="/css/output.css" as="style">
 	<link rel="stylesheet" href="/css/output.css">
 	<link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
@@ -119,6 +119,10 @@
 							<button type="button" class="icon-btn" id="sortBtn" aria-label="Toggle sort order" title="Toggle sort order">
 								<img id="sortIcon" src="/resources/sort-desc" alt="Sort descending" width="18" height="18">
 							</button>
+
+							<div class="search-input-container">
+								<input type="text" id="searchInput" placeholder="Search events..." class="search-input">
+							</div>
 
 							<!--
 							<div class="user-filter-dropdown-container relative">

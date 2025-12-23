@@ -533,9 +533,9 @@ function renderTeamsList() {
 
 		// Logo or avatar
 		const logoOrAvatar = team.has_logo? `<img src="/api/teams/${team.id}/logo" alt="${escapeHtml(team.name)} logo" class="size-12 object-contain" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-         <span class="inline-flex items-center justify-center rounded-lg text-sm font-semibold size-12" style="display: none; color: ${accentColor}; background-color: ${accentBg};">
+         <span class="card-avatar" style="display: none; color: ${accentColor}; background-color: ${accentBg};">
            ${escapeHtml(initials)}
-         </span>`: `<span class="inline-flex items-center justify-center rounded-lg text-sm font-semibold size-12" style="color: ${accentColor}; background-color: ${accentBg};">
+         </span>`: `<span class="card-avatar" style="color: ${accentColor}; background-color: ${accentBg};">
            ${escapeHtml(initials)}
          </span>`;
 

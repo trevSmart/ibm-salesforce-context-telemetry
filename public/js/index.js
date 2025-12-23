@@ -1722,7 +1722,7 @@ async function loadChartData(days = currentDays) {
 		const option = {
 			textStyle: {
 				fontFamily:
-				'Inter, \'Inter\', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, \'Helvetica Neue\', Arial, sans-serif'
+				'Manrope, \'Manrope\', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, \'Helvetica Neue\', Arial, sans-serif'
 			},
 			animation: true,
 			animationDuration: 350,
@@ -1963,6 +1963,18 @@ window.addEventListener('softNav:pageMounted', async (event) => {
 		} else {
 			// New page load - full initialization
 			initializeDashboardPage({resetState: true});
+		}
+	}
+});
+
+// Global ESC key handler for modals (except settings modal)
+document.addEventListener('keydown', (e) => {
+	if (e.key === 'Escape') {
+		// Close confirm dialog if open
+		const confirmModal = document.querySelector('.confirm-dialog-backdrop');
+		if (confirmModal) {
+			confirmModal.remove();
+			
 		}
 	}
 });
