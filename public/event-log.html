@@ -177,23 +177,6 @@
 									<span class="level-count text-xs" id="count-tool_error">0</span>
 								</button>
 							</div>
-
-							<!-- Toggle to show users without formal sessions -->
-							<div class="flex items-center gap-2 mt-3">
-								<label for="showUsersWithoutSessions" class="text-sm text-gray-600 dark:text-gray-400 cursor-pointer">
-									Show users without sessions
-								</label>
-								<button
-									type="button"
-									id="showUsersWithoutSessions"
-									class="relative inline-flex h-6 w-11 items-center rounded-full bg-indigo-600 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2"
-									role="switch"
-									aria-checked="true"
-									onclick="toggleUsersWithoutSessions()">
-									<span class="sr-only">Show users without sessions</span>
-									<span class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform translate-x-6"></span>
-								</button>
-							</div>
 						</div>
 					</div>
 					<div class="main-content-body">
@@ -321,6 +304,7 @@
 				document.head.appendChild(script);
 			})();
 		</script>
+	<script src="/js/global-cache.js" defer></script>
 	<script src="/js/navigation.js" defer></script>
 	<script src="/js/user-menu.js" defer></script>
 	<script src="/js/csrf-helper.js" defer></script>

@@ -2205,7 +2205,7 @@ async function getDailyStatsByEventType(days = 30) {
 				date(timestamp, 'utc') as date,
 				COUNT(*) as count
 			FROM telemetry_events
-			WHERE timestamp >= ? AND event IN ('tool_call', 'tool_error')
+			WHERE timestamp >= ? AND event_id IN (SELECT id FROM event_types WHERE name IN ('tool_call', 'tool_error'))
 				AND deleted_at IS NULL
 			GROUP BY date(timestamp, 'utc')
 		`).all(startDateISO);
@@ -2276,7 +2276,7 @@ async function getDailyStatsByEventType(days = 30) {
 				DATE(timestamp AT TIME ZONE 'UTC') as date,
 				COUNT(*) as count
 			FROM telemetry_events
-			WHERE timestamp >= $1 AND event IN ('tool_call', 'tool_error')
+			WHERE timestamp >= $1 AND event_id IN (SELECT id FROM event_types WHERE name IN ('tool_call', 'tool_error'))
 				AND deleted_at IS NULL
 			GROUP BY DATE(timestamp AT TIME ZONE 'UTC')
 		`, [startDateISO]);

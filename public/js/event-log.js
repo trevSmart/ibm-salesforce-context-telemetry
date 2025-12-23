@@ -218,7 +218,6 @@ function safeShowToast(message, type = 'info') {
 	let activeFilters = new Set(['tool_call', 'session_start', 'custom', 'tool_error']);
 	let selectedUserIds = new Set(); // Will be populated with all users when loaded - all selected by default
 	let allUserIds = new Set(); // Track all available user IDs
-	let showUsersWithoutSessions = true; // Whether to show users that don't have formal sessions (enabled by default)
 	let selectedSessionsForDeletion = new Set(); // Track sessions selected for deletion
 	let selectionMode = false; // Track if selection mode is active
 	let lastSelectedSessionId = null; // Track last selected session for shift-click range selection
@@ -2025,10 +2024,8 @@ function safeShowToast(message, type = 'info') {
 			// Add limit for performance - load only recent sessions initially
 			params.append('limit', '50');
 
-			// Add parameter to include users without formal sessions if enabled
-			if (showUsersWithoutSessions) {
-				params.append('includeUsersWithoutSessions', 'true');
-			}
+			// Always include users without formal sessions
+			params.append('includeUsersWithoutSessions', 'true');
 
 			const queryString = params.toString();
 			const cacheKey = `sessions_${queryString || 'default'}`;
@@ -3337,28 +3334,6 @@ function safeShowToast(message, type = 'info') {
 		}
 	}
 
-	function toggleUsersWithoutSessions() {
-		showUsersWithoutSessions = !showUsersWithoutSessions;
-		const toggleBtn = document.getElementById('showUsersWithoutSessions');
-		const span = toggleBtn.querySelector('span:last-child');
-
-		if (showUsersWithoutSessions) {
-			toggleBtn.setAttribute('aria-checked', 'true');
-			toggleBtn.classList.remove('bg-gray-200', 'dark:bg-gray-700');
-			toggleBtn.classList.add('bg-indigo-600');
-			span.classList.remove('translate-x-1');
-			span.classList.add('translate-x-6');
-		} else {
-			toggleBtn.setAttribute('aria-checked', 'false');
-			toggleBtn.classList.remove('bg-indigo-600');
-			toggleBtn.classList.add('bg-gray-200', 'dark:bg-gray-700');
-			span.classList.remove('translate-x-6');
-			span.classList.add('translate-x-1');
-		}
-
-		// Reload sessions with new setting
-		loadSessions();
-	}
 
 	async function enableNotificationMode() {
 		if (!('Notification' in window)) {
