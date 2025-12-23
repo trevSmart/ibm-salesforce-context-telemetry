@@ -126,7 +126,12 @@
           <a href="/people" class="top-nav-link${activePage === '/people' ? ' active' : ''}">People</a>
         </div>
         <div class="top-nav-search">
-          <input type="text" class="top-nav-search-input" placeholder="Search" id="searchInput">
+          <div class="relative">
+            <input type="text" class="top-nav-search-input pr-4 pl-9" placeholder="Search" id="searchInput" readonly>
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="20" height="18" aria-hidden="true" class="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-600 dark:text-gray-300">
+              <path stroke-linecap="round" stroke-linejoin="round" d="m6.75 7.5 3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0 0 21 18V6a2.25 2.25 0 0 0-2.25-2.25H5.25A2.25 2.25 0 0 0 3 6v12a2.25 2.25 0 0 0 2.25 2.25Z" />
+            </svg>
+          </div>
         </div>
         <div class="top-nav-actions">
           <button type="button" class="icon-btn" ${refreshButtonId} aria-label="${refreshAriaLabel}" title="${refreshTitle}" onclick="${refreshOnClick}">
@@ -168,7 +173,55 @@
 			existingNav.outerHTML = buildHeaderHTML();
 		} else {
 			console.warn('No header placeholder or existing nav found');
+			return;
 		}
+
+		// Setup search input to open command palette
+		setupSearchInput();
+	}
+
+	/**
+	 * Setup search input event listeners
+	 */
+	function setupSearchInput() {
+		const searchInput = document.getElementById('searchInput');
+		if (searchInput) {
+			const openCommandPalette = (event) => {
+				// Prevent default behavior and stop propagation to avoid triggering backdrop click
+				event.preventDefault();
+				event.stopPropagation();
+
+				// Wait for command palette to be available
+				if (typeof window.showCommandPalette === 'function') {
+					window.showCommandPalette();
+				} else {
+					// Retry after a short delay if not yet loaded
+					setTimeout(() => {
+						if (typeof window.showCommandPalette === 'function') {
+							window.showCommandPalette();
+						}
+					}, 100);
+				}
+			};
+
+			searchInput.addEventListener('click', openCommandPalette);
+			searchInput.addEventListener('focus', (event) => {
+				// Only open on focus if it's not already open (to avoid reopening when clicking)
+				if (!window.isCommandPaletteOpen || typeof window.isCommandPaletteOpen !== 'function' || !window.isCommandPaletteOpen()) {
+					openCommandPalette(event);
+				}
+			});
+		}
+
+		// Add global keyboard shortcut (Cmd+K / Ctrl+K)
+		document.addEventListener('keydown', (e) => {
+			if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+				e.preventDefault();
+				if (typeof window.showCommandPalette === 'function') {
+					window.showCommandPalette();
+				}
+			}
+		});
 	}
 
 	// Expose globally
