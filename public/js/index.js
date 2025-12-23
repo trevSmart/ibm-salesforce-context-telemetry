@@ -12,6 +12,13 @@ let serverStatsLastFetchTime = null;
 let serverStatsUpdateIntervalId = null;
 let currentDays = DEFAULT_DASHBOARD_TIME_RANGE_DAYS;
 
+// Shared data cache for API responses across page navigations
+let cachedTopUsersData = null;
+let cachedTopTeamsData = null;
+let cachedTopUsersTimestamp = null;
+let cachedTopTeamsTimestamp = null;
+const CACHE_DURATION_MS = 5 * 60 * 1000; // 5 minutes
+
 // Helper function to escape HTML
 function escapeHtml(str) {
 	return String(str ?? '')
@@ -1013,10 +1020,18 @@ async function loadTopUsersToday() {
 		return;
 	}
 
+	// Check if we have valid cached data
+	const now = Date.now();
+	if (cachedTopUsersData && cachedTopUsersTimestamp &&
+		(now - cachedTopUsersTimestamp) < CACHE_DURATION_MS) {
+		renderTopUsers(cachedTopUsersData);
+		return;
+	}
+
 	renderTopUsersPlaceholder('Loading top users…');
 
 	try {
-		const response = await window.ApiCache.cachedFetch(`/api/top-users-today?days=${TOP_USERS_LOOKBACK_DAYS}&limit=${TOP_USERS_LIMIT}`, {
+		const response = await fetch(`/api/top-users-today?days=${TOP_USERS_LOOKBACK_DAYS}&limit=${TOP_USERS_LIMIT}`, {
 			credentials: 'include'
 		});
 
@@ -1031,6 +1046,8 @@ async function loadTopUsersToday() {
 
 		const payload = await response.json();
 		const users = Array.isArray(payload?.users) ? payload.users : [];
+		cachedTopUsersData = users;
+		cachedTopUsersTimestamp = now;
 		renderTopUsers(users);
 	} catch (error) {
 		console.error('Error loading top users:', error);
@@ -1044,6 +1061,14 @@ async function loadTopTeamsToday() {
 		return;
 	}
 
+	// Check if we have valid cached data
+	const now = Date.now();
+	if (cachedTopTeamsData && cachedTopTeamsTimestamp &&
+		(now - cachedTopTeamsTimestamp) < CACHE_DURATION_MS) {
+		renderTopTeams(cachedTopTeamsData);
+		return;
+	}
+
 	renderTopTeamsPlaceholder('Loading top teams…');
 
 	try {
@@ -1052,7 +1077,7 @@ async function loadTopTeamsToday() {
 			limit: TOP_TEAMS_LIMIT.toString()
 		});
 
-		const response = await window.ApiCache.cachedFetch(`/api/top-teams-today?${params}`, {
+		const response = await fetch(`/api/top-teams-today?${params}`, {
 			credentials: 'include'
 		});
 
@@ -1067,6 +1092,8 @@ async function loadTopTeamsToday() {
 
 		const payload = await response.json();
 		const teams = Array.isArray(payload?.teams) ? payload.teams : [];
+		cachedTopTeamsData = teams;
+		cachedTopTeamsTimestamp = now;
 		renderTopTeams(teams);
 	} catch (error) {
 		console.error('Error loading top teams:', error);

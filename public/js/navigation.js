@@ -11,10 +11,10 @@
 		'a[data-soft-nav]'
 	].join(',');
 	const PAGE_SCRIPTS = {
-		'/': [{src: '/js/cache.js'}, {src: '/js/index.js', type: 'module'}],
-		'/logs': [{src: '/js/cache.js'}, {src: '/js/event-log.js'}],
-		'/teams': [{src: '/js/cache.js'}, {src: '/js/teams.js', type: 'module'}],
-		'/people': [{src: '/js/cache.js'}, {src: '/js/people.js', type: 'module'}]
+		'/': [{src: '/js/index.js', type: 'module'}],
+		'/logs': [{src: '/js/event-log.js'}],
+		'/teams': [{src: '/js/teams.js', type: 'module'}],
+		'/people': [{src: '/js/people.js', type: 'module'}]
 	};
 
 	// Crossfade transition duration in milliseconds

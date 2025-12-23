@@ -7,6 +7,12 @@ let toolUsageChartInstance = null;
 let toolUsageResizeHandler = null; // Store resize handler to clean up properly
 let toolUsageChartInitialized = false;
 
+// Shared data cache for tool usage API responses
+let cachedToolUsageData = null;
+let cachedToolUsageDays = null;
+let cachedToolUsageTimestamp = null;
+const CACHE_DURATION_MS = 5 * 60 * 1000; // 5 minutes
+
 function cleanupToolUsageChart() {
 	if (toolUsageChartInstance) {
 		try {
@@ -109,30 +115,14 @@ function setToolUsageLoading(isLoading) {
 	card.setAttribute('data-loading', isLoading ? 'true' : 'false');
 }
 
-async function loadToolUsageChart(days = TOOL_USAGE_DEFAULT_DAYS) {
+function renderToolUsageChart(tools, days) {
 	// Clean up any existing chart first
 	cleanupToolUsageChart();
 
 	// Small delay to ensure cleanup is complete
-	await new Promise(resolve => setTimeout(resolve, 10));
-
-	const chart = initToolUsageChart();
-	if (!chart) {return;}
-
-	setToolUsageLoading(true);
-
-	try {
-		const response = await window.ApiCache.cachedFetch(`/api/tool-usage-stats?days=${days}`, {credentials: 'include'});
-		if (response.status === 401) {
-			window.location.href = '/login';
-			return;
-		}
-		if (!response.ok) {
-			throw new Error(`HTTP ${response.status}`);
-		}
-
-		const payload = await response.json();
-		const tools = Array.isArray(payload?.tools) ? payload.tools.slice(0, TOOL_USAGE_MAX_TOOLS) : [];
+	setTimeout(() => {
+		const chart = initToolUsageChart();
+		if (!chart) {return;}
 
 		if (tools.length === 0) {
 			renderToolUsageEmpty('No tool usage recorded yet.');
@@ -152,35 +142,43 @@ async function loadToolUsageChart(days = TOOL_USAGE_DEFAULT_DAYS) {
 			},
 			tooltip: {
 				trigger: 'axis',
-				axisPointer: {type: 'shadow'}
+				axisPointer: {type: 'shadow'},
+				backgroundColor: theme.tooltipBg,
+				borderColor: theme.tooltipBorder,
+				textStyle: {color: theme.tooltipText}
 			},
-			// legend: {
-			// 	data: ['Successful', 'Errors'],
-			// 	textStyle: { color: theme.text }
-			// },
+			legend: {
+				data: ['Success', 'Errors'],
+				textStyle: {color: theme.text},
+				top: 10
+			},
 			grid: {
-				left: '2%',
+				left: '3%',
 				right: '4%',
-				bottom: '6%',
-				top: 6,
+				bottom: '3%',
 				containLabel: true
 			},
 			xAxis: {
-				type: 'value',
-				minInterval: 1,
-				show: false,
-				splitLine: {show: false}
-			},
-			yAxis: {
 				type: 'category',
 				data: names,
-				axisTick: {alignWithLabel: false},
-				axisLine: {show: false},
-				axisLabel: {color: theme.text, fontSize: 10, fontWeight: 500, lineHeight: 14}
+				axisLabel: {
+					color: theme.text,
+					rotate: 45,
+					interval: 0
+				},
+				axisLine: {lineStyle: {color: theme.axis}},
+				axisTick: {lineStyle: {color: theme.axis}}
+			},
+			yAxis: {
+				type: 'value',
+				axisLabel: {color: theme.text},
+				axisLine: {lineStyle: {color: theme.axis}},
+				axisTick: {lineStyle: {color: theme.axis}},
+				splitLine: {lineStyle: {color: theme.grid}}
 			},
 			series: [
 				{
-					name: 'Successful',
+					name: 'Success',
 					type: 'bar',
 					stack: 'total',
 					label: {show: false},
@@ -219,6 +217,50 @@ async function loadToolUsageChart(days = TOOL_USAGE_DEFAULT_DAYS) {
 			console.warn('Error resizing tool usage chart:', error);
 		}
 		toolUsageChartInitialized = true;
+	}, 10);
+}
+
+async function loadToolUsageChart(days = TOOL_USAGE_DEFAULT_DAYS) {
+	// Check if we have valid cached data for the same days parameter
+	const now = Date.now();
+	if (cachedToolUsageData && cachedToolUsageDays === days && cachedToolUsageTimestamp &&
+		(now - cachedToolUsageTimestamp) < CACHE_DURATION_MS) {
+		// Use cached data
+		renderToolUsageChart(cachedToolUsageData, days);
+		return;
+	}
+
+	// Clean up any existing chart first
+	cleanupToolUsageChart();
+
+	// Small delay to ensure cleanup is complete
+	await new Promise(resolve => setTimeout(resolve, 10));
+
+	const chart = initToolUsageChart();
+	if (!chart) {return;}
+
+	setToolUsageLoading(true);
+
+	try {
+		const response = await fetch(`/api/tool-usage-stats?days=${days}`, {credentials: 'include'});
+		if (response.status === 401) {
+			window.location.href = '/login';
+			return;
+		}
+		if (!response.ok) {
+			throw new Error(`HTTP ${response.status}`);
+		}
+
+		const payload = await response.json();
+		const tools = Array.isArray(payload?.tools) ? payload.tools.slice(0, TOOL_USAGE_MAX_TOOLS) : [];
+
+		// Cache the data
+		cachedToolUsageData = tools;
+		cachedToolUsageDays = days;
+		cachedToolUsageTimestamp = now;
+
+		// Render using the shared function
+		renderToolUsageChart(tools, days);
 	} catch (error) {
 		console.error('Error fetching tool usage stats:', error);
 		renderToolUsageEmpty('Unable to load tool usage right now.');
@@ -240,28 +282,13 @@ window.addEventListener('DOMContentLoaded', () => {
 // Also listen for soft navigation back to dashboard
 window.addEventListener('softNav:pageMounted', (event) => {
 	if (event.detail.path === '/') {
-		const fromCache = event?.detail?.fromCache === true;
-		if (fromCache) {
-			// Page was restored from cache - just resume if needed
-			if (!toolUsageChartInstance && savedToolUsageOption) {
-				// Restore chart from saved option if available
-				const chartEl = document.getElementById('toolUsageChart');
-				if (chartEl && typeof echarts !== 'undefined') {
-					toolUsageChartInstance = echarts.init(chartEl);
-					toolUsageChartInstance.setOption(savedToolUsageOption, true);
-					toolUsageChartInitialized = true;
-					savedToolUsageOption = null;
-				}
-			}
+		// Clean up existing chart and reload
+		cleanupToolUsageChart();
+		// Wait for echarts to be ready
+		if (typeof echarts === 'undefined') {
+			window.addEventListener('echartsLoaded', () => loadToolUsageChart(), {once: true});
 		} else {
-			// New page load - full initialization
-			cleanupToolUsageChart();
-			// Wait for echarts to be ready
-			if (typeof echarts === 'undefined') {
-				window.addEventListener('echartsLoaded', () => loadToolUsageChart(), {once: true});
-			} else {
-				loadToolUsageChart();
-			}
+			loadToolUsageChart();
 		}
 	}
 });
