@@ -47,6 +47,14 @@
 			}, 5000);
 		})();
 	</script>
+	<style>
+		.server-stats-gradient {
+			background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #cbd5e1 100%);
+		}
+		html.dark .server-stats-gradient {
+			background: linear-gradient(135deg, #1e293b 0%, #334155 50%, #475569 100%);
+		}
+	</style>
 </head>
 
 <body class="index-page hydrating">
@@ -122,7 +130,7 @@
 							</ul>
 						</div>
 					</section>
-					<section class="overflow-hidden rounded-lg dark:bg-gray-800/50 dark:outline dark:-outline-offset-1 dark:outline-white/10 shadow-xs" id="serverStatsCard" style="text-align: left; background: #dfe6ee;">
+					<section class="overflow-hidden rounded-lg server-stats-gradient dark:outline dark:-outline-offset-1 dark:outline-white/10 shadow-xs" id="serverStatsCard" style="text-align: left;">
 						<div class="px-4 py-5 sm:px-6">
 							<h3 class="text-base font-semibold text-gray-900">Server stats</h3>
 							<p class="mt-1 text-sm text-gray-500">Live telemetry server metrics.</p>
