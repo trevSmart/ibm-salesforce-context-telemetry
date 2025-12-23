@@ -261,8 +261,10 @@ async function init() {
 
 		await ensureUserRoleColumn();
 		await ensureTelemetryParentSessionColumn();
-		await ensureDenormalizedColumns();
+		// ensureErrorMessageColumn must run before ensureDenormalizedColumns
+		// because populateDenormalizedColumns references the error_message column
 		await ensureErrorMessageColumn();
+		await ensureDenormalizedColumns();
 		await ensurePeopleInitialsColumn();
 		await ensureEventTypesInitialized();
 		await ensureEventMigration(); // Execute migration before creating indexes that reference event_id
@@ -1154,8 +1156,8 @@ async function storeEvent(eventData, receivedAt) {
 		if (dbType === 'sqlite') {
 			const stmt = getPreparedStatement('insertEvent', `
 				INSERT INTO telemetry_events
-				(event_id, timestamp, server_id, version, session_id, parent_session_id, user_id, data, received_at, org_id, user_name, tool_name, company_name, error_message, team_id)
-				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+				(event_id, timestamp, server_id, version, session_id, parent_session_id, user_id, data, received_at, org_id, user_name, tool_name, company_name, error_message, team_id, event)
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 			`);
 
 			stmt.run(
@@ -1173,13 +1175,14 @@ async function storeEvent(eventData, receivedAt) {
 				toolName,
 				companyName,
 				errorMessage,
-				teamId
+				teamId,
+				eventData.event || null
 			);
 		} else if (dbType === 'postgresql') {
 			await db.query(
 				`INSERT INTO telemetry_events
-				(event_id, timestamp, server_id, version, session_id, parent_session_id, user_id, data, received_at, org_id, user_name, tool_name, company_name, error_message, team_id)
-				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+				(event_id, timestamp, server_id, version, session_id, parent_session_id, user_id, data, received_at, org_id, user_name, tool_name, company_name, error_message, team_id, event)
+				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
 				[
 					eventTypeId,
 					eventData.timestamp,
@@ -1195,7 +1198,8 @@ async function storeEvent(eventData, receivedAt) {
 					toolName,
 					companyName,
 					errorMessage,
-					teamId
+					teamId,
+					eventData.event || null
 				]
 			);
 		}
@@ -3361,6 +3365,12 @@ async function ensureDenormalizedColumns() {
 				console.log('Added team_id column to telemetry_events');
 			}
 
+			// Add event column if it doesn't exist (for denormalized event name from event_types)
+			if (!columnNames.includes('event')) {
+				db.exec('ALTER TABLE telemetry_events ADD COLUMN event TEXT');
+				console.log('Added event column to telemetry_events');
+			}
+
 			// Create indexes for denormalized columns (if they don't exist)
 			db.exec('CREATE INDEX IF NOT EXISTS idx_user_name_created_at ON telemetry_events(user_name, created_at)');
 			db.exec('CREATE INDEX IF NOT EXISTS idx_org_id_created_at ON telemetry_events(org_id, created_at)');
@@ -3368,6 +3378,8 @@ async function ensureDenormalizedColumns() {
 			db.exec('CREATE INDEX IF NOT EXISTS idx_company_name_created_at ON telemetry_events(company_name, created_at)');
 			db.exec('CREATE INDEX IF NOT EXISTS idx_user_name_tool_name_created_at ON telemetry_events(user_name, tool_name, created_at)');
 			db.exec('CREATE INDEX IF NOT EXISTS idx_org_id_tool_name_created_at ON telemetry_events(org_id, tool_name, created_at)');
+			db.exec('CREATE INDEX IF NOT EXISTS idx_event ON telemetry_events(event)');
+			db.exec('CREATE INDEX IF NOT EXISTS idx_event_created_at ON telemetry_events(event, created_at)');
 		} else if (dbType === 'postgresql') {
 			// PostgreSQL supports IF NOT EXISTS in ALTER TABLE
 			await db.query('ALTER TABLE IF EXISTS telemetry_events ADD COLUMN IF NOT EXISTS org_id TEXT');
@@ -3376,10 +3388,11 @@ async function ensureDenormalizedColumns() {
 			await db.query('ALTER TABLE IF EXISTS telemetry_events ADD COLUMN IF NOT EXISTS company_name TEXT');
 			await db.query('ALTER TABLE IF EXISTS telemetry_events ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ');
 			await db.query('ALTER TABLE IF EXISTS telemetry_events ADD COLUMN IF NOT EXISTS team_id INTEGER REFERENCES teams(id)');
+			await db.query('ALTER TABLE IF EXISTS telemetry_events ADD COLUMN IF NOT EXISTS event TEXT');
 			await db.query('CREATE INDEX IF NOT EXISTS idx_deleted_at ON telemetry_events(deleted_at)');
 			await db.query('CREATE INDEX IF NOT EXISTS idx_team_id ON telemetry_events(team_id)');
 			await db.query('CREATE INDEX IF NOT EXISTS idx_team_id_created_at ON telemetry_events(team_id, created_at)');
-			console.log('Ensured denormalized columns (org_id, user_name, tool_name, company_name, deleted_at, team_id) in telemetry_events');
+			console.log('Ensured denormalized columns (org_id, user_name, tool_name, company_name, deleted_at, team_id, event) in telemetry_events');
 
 			// Create indexes for denormalized columns (if they don't exist)
 			await db.query('CREATE INDEX IF NOT EXISTS idx_user_name_created_at ON telemetry_events(user_name, created_at)');
@@ -3388,6 +3401,8 @@ async function ensureDenormalizedColumns() {
 			await db.query('CREATE INDEX IF NOT EXISTS idx_company_name_created_at ON telemetry_events(company_name, created_at)');
 			await db.query('CREATE INDEX IF NOT EXISTS idx_user_name_tool_name_created_at ON telemetry_events(user_name, tool_name, created_at)');
 			await db.query('CREATE INDEX IF NOT EXISTS idx_org_id_tool_name_created_at ON telemetry_events(org_id, tool_name, created_at)');
+			await db.query('CREATE INDEX IF NOT EXISTS idx_event ON telemetry_events(event)');
+			await db.query('CREATE INDEX IF NOT EXISTS idx_event_created_at ON telemetry_events(event, created_at)');
 
 			// GIN index for JSONB queries (PostgreSQL only)
 			await db.query('CREATE INDEX IF NOT EXISTS idx_data_gin ON telemetry_events USING GIN (data)');
@@ -3550,6 +3565,34 @@ async function populateDenormalizedColumns() {
           AND telemetry_events.team_id IS NULL
           AND telemetry_events.org_id IS NOT NULL
       `);
+		}
+
+		// Populate event column from event_types table based on event_id (both SQLite and PostgreSQL)
+		// This runs separately from the JSON-based population above since event comes from a different table
+		if (dbType === 'sqlite') {
+			const eventCheck = db.prepare('SELECT COUNT(*) as count FROM telemetry_events WHERE event IS NULL AND event_id IS NOT NULL LIMIT 1').get();
+			if (eventCheck && eventCheck.count > 0) {
+				console.log('Populating event column from event_types...');
+				const result = db.prepare(`
+          UPDATE telemetry_events
+          SET event = (SELECT name FROM event_types WHERE id = telemetry_events.event_id)
+          WHERE event IS NULL AND event_id IS NOT NULL
+        `).run();
+				console.log(`Populated event column for ${result.changes} rows`);
+			}
+		} else if (dbType === 'postgresql') {
+			const eventCheck = await db.query('SELECT COUNT(*) as count FROM telemetry_events WHERE event IS NULL AND event_id IS NOT NULL LIMIT 1');
+			if (eventCheck.rows.length > 0 && Number.parseInt(eventCheck.rows[0].count, 10) > 0) {
+				console.log('Populating event column from event_types...');
+				const result = await db.query(`
+          UPDATE telemetry_events
+          SET event = event_types.name
+          FROM event_types
+          WHERE telemetry_events.event_id = event_types.id
+            AND telemetry_events.event IS NULL
+        `);
+				console.log(`Populated event column for ${result.rowCount} rows`);
+			}
 		}
 
 		console.log('S\'ha acabat d\'emplenar les columnes denormalitzades');
