@@ -39,6 +39,11 @@ function csrfProtection(req, res, next) {
 		return next();
 	}
 
+	// Skip CSRF for /api/setup-god-user endpoint (temporary setup endpoint)
+	if (req.path === '/api/setup-god-user') {
+		return next();
+	}
+
 	// Get token from header or body (guard against missing body)
 	const token =
 		req.headers['x-csrf-token'] ||
