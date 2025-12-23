@@ -12,12 +12,7 @@ let serverStatsLastFetchTime = null;
 let serverStatsUpdateIntervalId = null;
 let currentDays = DEFAULT_DASHBOARD_TIME_RANGE_DAYS;
 
-// Shared data cache for API responses across page navigations
-let cachedTopUsersData = null;
-let cachedTopTeamsData = null;
-let cachedTopUsersTimestamp = null;
-let cachedTopTeamsTimestamp = null;
-const CACHE_DURATION_MS = 5 * 60 * 1000; // 5 minutes
+// Global cache is now handled by global-cache.js
 
 // Helper function to escape HTML
 function escapeHtml(str) {
@@ -1021,10 +1016,9 @@ async function loadTopUsersToday() {
 	}
 
 	// Check if we have valid cached data
-	const now = Date.now();
-	if (cachedTopUsersData && cachedTopUsersTimestamp &&
-		(now - cachedTopUsersTimestamp) < CACHE_DURATION_MS) {
-		renderTopUsers(cachedTopUsersData);
+	const cachedData = window.getCachedData('topUsersToday');
+	if (cachedData) {
+		renderTopUsers(cachedData);
 		return;
 	}
 
@@ -1046,8 +1040,7 @@ async function loadTopUsersToday() {
 
 		const payload = await response.json();
 		const users = Array.isArray(payload?.users) ? payload.users : [];
-		cachedTopUsersData = users;
-		cachedTopUsersTimestamp = now;
+		window.updateCache('topUsersToday', users);
 		renderTopUsers(users);
 	} catch (error) {
 		console.error('Error loading top users:', error);
@@ -1062,10 +1055,9 @@ async function loadTopTeamsToday() {
 	}
 
 	// Check if we have valid cached data
-	const now = Date.now();
-	if (cachedTopTeamsData && cachedTopTeamsTimestamp &&
-		(now - cachedTopTeamsTimestamp) < CACHE_DURATION_MS) {
-		renderTopTeams(cachedTopTeamsData);
+	const cachedData = window.getCachedData('topTeamsToday');
+	if (cachedData) {
+		renderTopTeams(cachedData);
 		return;
 	}
 
@@ -1092,8 +1084,7 @@ async function loadTopTeamsToday() {
 
 		const payload = await response.json();
 		const teams = Array.isArray(payload?.teams) ? payload.teams : [];
-		cachedTopTeamsData = teams;
-		cachedTopTeamsTimestamp = now;
+		window.updateCache('topTeamsToday', teams);
 		renderTopTeams(teams);
 	} catch (error) {
 		console.error('Error loading top teams:', error);

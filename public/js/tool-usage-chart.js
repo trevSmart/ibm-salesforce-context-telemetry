@@ -7,11 +7,7 @@ let toolUsageChartInstance = null;
 let toolUsageResizeHandler = null; // Store resize handler to clean up properly
 let toolUsageChartInitialized = false;
 
-// Shared data cache for tool usage API responses
-let cachedToolUsageData = null;
-let cachedToolUsageDays = null;
-let cachedToolUsageTimestamp = null;
-const CACHE_DURATION_MS = 5 * 60 * 1000; // 5 minutes
+// Global cache is now handled by global-cache.js
 
 function cleanupToolUsageChart() {
 	if (toolUsageChartInstance) {
@@ -222,11 +218,11 @@ function renderToolUsageChart(tools, days) {
 
 async function loadToolUsageChart(days = TOOL_USAGE_DEFAULT_DAYS) {
 	// Check if we have valid cached data for the same days parameter
-	const now = Date.now();
-	if (cachedToolUsageData && cachedToolUsageDays === days && cachedToolUsageTimestamp &&
-		(now - cachedToolUsageTimestamp) < CACHE_DURATION_MS) {
+	const cacheKey = `toolUsageStats_${days}`;
+	const cachedData = window.getCachedData(cacheKey);
+	if (cachedData) {
 		// Use cached data
-		renderToolUsageChart(cachedToolUsageData, days);
+		renderToolUsageChart(cachedData, days);
 		return;
 	}
 
@@ -255,9 +251,8 @@ async function loadToolUsageChart(days = TOOL_USAGE_DEFAULT_DAYS) {
 		const tools = Array.isArray(payload?.tools) ? payload.tools.slice(0, TOOL_USAGE_MAX_TOOLS) : [];
 
 		// Cache the data
-		cachedToolUsageData = tools;
-		cachedToolUsageDays = days;
-		cachedToolUsageTimestamp = now;
+		const cacheKey = `toolUsageStats_${days}`;
+		window.updateCache(cacheKey, tools);
 
 		// Render using the shared function
 		renderToolUsageChart(tools, days);

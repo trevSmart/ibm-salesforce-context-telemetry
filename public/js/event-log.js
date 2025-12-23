@@ -7,32 +7,7 @@ if (window.__EVENT_LOG_LOADED__) {
 } else {
 	window.__EVENT_LOG_LOADED__ = true;
 
-// Initialize global data cache to avoid redundant API calls between page navigations
-if (!window.__globalDataCache) {
-	window.__globalDataCache = {
-		auth: null,
-		sessions: null,
-		telemetryUsers: null,
-		eventTypes: null,
-		teamStats: null,
-		databaseSize: null,
-		lastUpdated: {}
-	};
-}
-
-// Helper function to check if cached data is still fresh (less than 5 minutes old)
-function isCacheFresh(cacheKey) {
-	const lastUpdated = window.__globalDataCache.lastUpdated[cacheKey];
-	if (!lastUpdated) {return false;}
-	const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
-	return lastUpdated > fiveMinutesAgo;
-}
-
-// Helper function to update cache
-function updateCache(cacheKey, data) {
-	window.__globalDataCache[cacheKey] = data;
-	window.__globalDataCache.lastUpdated[cacheKey] = Date.now();
-}
+// Global data cache functions are now loaded from global-cache.js
 
 
 // Safe wrapper for showToast function
@@ -1989,7 +1964,7 @@ function safeShowToast(message, type = 'info') {
 
 			// Check if we have fresh cached event types data and no filters applied
 			let stats;
-			if (isCacheFresh('eventTypes') && queryString === '') {
+			if (window.isCacheFresh('eventTypes') && queryString === '') {
 				console.info('[Event Log] Using cached event types data');
 				stats = window.__globalDataCache.eventTypes;
 			} else {
@@ -2003,7 +1978,7 @@ function safeShowToast(message, type = 'info') {
 
 				// Cache the data if no filters were applied
 				if (queryString === '') {
-					updateCache('eventTypes', stats);
+					window.updateCache('eventTypes', stats);
 				}
 			}
 
@@ -2060,7 +2035,7 @@ function safeShowToast(message, type = 'info') {
 
 			// Check if we have fresh cached data and no filters applied
 			let sessions;
-			if (isCacheFresh(cacheKey) && params.toString() === '') {
+			if (window.isCacheFresh(cacheKey) && params.toString() === '') {
 				console.info('[Event Log] Using cached sessions data');
 				sessions = window.__globalDataCache.sessions;
 			} else {
@@ -2074,7 +2049,7 @@ function safeShowToast(message, type = 'info') {
 
 				// Cache the data if no filters were applied
 				if (params.toString() === '') {
-					updateCache('sessions', sessions);
+					window.updateCache('sessions', sessions);
 				}
 			}
 			const sessionList = document.getElementById('sessionList');
@@ -2476,7 +2451,7 @@ function safeShowToast(message, type = 'info') {
 			try {
 				// Check if we have fresh cached team stats data
 				let statsData;
-				if (isCacheFresh('teamStats')) {
+				if (window.isCacheFresh('teamStats')) {
 					console.info('[Event Log] Using cached team stats data');
 					statsData = window.__globalDataCache.teamStats;
 				} else {
@@ -2486,7 +2461,7 @@ function safeShowToast(message, type = 'info') {
 					const validStatsResponse = await handleApiResponse(statsResponse);
 					if (validStatsResponse) {
 						statsData = await validStatsResponse.json();
-						updateCache('teamStats', statsData);
+						window.updateCache('teamStats', statsData);
 					}
 				}
 				if (statsData && Array.isArray(statsData.teams)) {
@@ -4726,7 +4701,7 @@ function safeShowToast(message, type = 'info') {
 		try {
 			// Check if we have fresh cached telemetry users data
 			let data;
-			if (isCacheFresh('telemetryUsers')) {
+			if (window.isCacheFresh('telemetryUsers')) {
 				console.info('[Event Log] Using cached telemetry users data');
 				data = window.__globalDataCache.telemetryUsers;
 			} else {
@@ -4736,7 +4711,7 @@ function safeShowToast(message, type = 'info') {
 				const validResponse = await handleApiResponse(response);
 				if (!validResponse) {return;}
 				data = await validResponse.json();
-				updateCache('telemetryUsers', data);
+				window.updateCache('telemetryUsers', data);
 			}
 
 			// Check if response is an error object
