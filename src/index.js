@@ -1294,6 +1294,8 @@ app.get('/api/event-types', auth.requireAuth, auth.requireRole('advanced'), apiR
 
 app.get('/api/sessions', auth.requireAuth, auth.requireRole('advanced'), apiReadLimiter, async (req, res) => {
 	try {
+		// Clear sessions cache to avoid corrupted cached data
+		sessionsCache.clear();
 		const {userId, limit, offset, includeUsersWithoutSessions} = req.query;
 		// Handle multiple userId values (Express converts them to an array)
 		const userIds = Array.isArray(userId) ? userId : (userId ? [userId] : []);
@@ -1334,9 +1336,13 @@ app.get('/api/sessions', auth.requireAuth, auth.requireRole('advanced'), apiRead
 		res.json(sessions);
 	} catch (error) {
 		console.error('Error fetching sessions:', error);
+		console.error('Error stack:', error.stack);
+		console.error('Request query:', req.query);
+		console.error('User:', req.user);
 		res.status(500).json({
 			status: 'error',
-			message: 'Failed to fetch sessions'
+			message: 'Failed to fetch sessions',
+			details: error.message
 		});
 	}
 });

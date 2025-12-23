@@ -1254,6 +1254,8 @@ async function getSessions(options = {}) {
 				is_active: isActive
 			};
 		});
+
+		return mappedResult;
 	}
 		let whereClause = `WHERE deleted_at IS NULL AND (
 			(session_id IS NOT NULL OR parent_session_id IS NOT NULL)${includeUsersWithoutSessions ? ' OR user_id IS NOT NULL' : ''}
