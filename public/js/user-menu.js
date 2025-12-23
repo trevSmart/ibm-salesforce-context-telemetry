@@ -7,7 +7,7 @@
 		const themeLabel = isDark ? 'Light theme' : 'Dark theme';
 		const baseButtonClasses = [
 			'group/item user-menu-item flex w-full items-center gap-3 px-4 py-2 text-sm',
-			'text-gray-700 hover:bg-gray-100 hover:text-gray-900 focus-visible:bg-gray-100 focus-visible:text-gray-900',
+			'text-gray-700 hover:text-gray-900 focus-visible:bg-gray-100 focus-visible:text-gray-900',
 			'dark:text-gray-100 dark:hover:bg-white/10 dark:focus-visible:bg-white/10 dark:hover:text-white',
 			'transition-colors cursor-pointer focus-visible:outline-none'
 		].join(' ');

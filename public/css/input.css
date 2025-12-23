@@ -291,12 +291,25 @@
     border-radius: 9999px;
     font-size: 0.875rem;
     background: var(--button-bg);
-    color: var(--text-primary);
   }
 
   .top-nav-actions .icon-btn:hover {
     background: var(--button-bg);
     color: var(--text-primary);
+  }
+
+  .top-nav-actions .icon-btn.settings-toggle {
+    border-radius: 9999px 0 0 9999px;
+  }
+
+  .top-nav-actions .icon-btn.user-btn {
+    border-radius: 0 9999px 9999px 0;
+  }
+
+  .navbar-btn-icon {
+    color: #6b7280;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   }
 
   /* Card titles (excluding main chart h1) */
@@ -1568,6 +1581,14 @@
     line-height: 1.4;
   }
 
+  #userMenu button:hover {
+    transition: background-color 200ms ease-out;
+  }
+
+  #userMenu button:hover {
+    background-color: #eaeaeaaa;
+  }
+
   #userMenu .user-menu-item svg {
     display: block;
     color: var(--text-secondary);
@@ -1811,7 +1832,6 @@
     font-size: 1.125rem;
     line-height: 1.75rem;
     transition: background-color 0.2s ease, color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
-    color: var(--text-primary);
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
     position: relative;
     outline: 2px solid transparent;
