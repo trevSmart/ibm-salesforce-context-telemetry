@@ -1255,7 +1255,6 @@ async function getSessions(options = {}) {
 			};
 		});
 
-		return mappedResult;
 	} else if (dbType === 'postgresql') {
 		// PostgreSQL implementation
 		let whereClause = `WHERE deleted_at IS NULL AND (`;
