@@ -121,7 +121,30 @@ function recordServerStatsFetch(durationMs) {
 
 async function loadDashboardDatabaseSize() {
 	try {
-		return;
+		const response = await fetch('/api/database-size', {
+			credentials: 'include'
+		});
+		if (!response.ok) {
+			return;
+		}
+		const data = await response.json();
+		if (data?.status !== 'ok') {
+			return;
+		}
+		const displayText = data.displayText || data.sizeFormatted;
+		const dbSizeElement = document.getElementById('serverStatsDbSize');
+		if (dbSizeElement && displayText) {
+			dbSizeElement.textContent = displayText;
+			if (data.percentage !== null && data.percentage !== undefined) {
+				if (data.percentage >= 80) {
+					dbSizeElement.style.color = 'var(--level-error)';
+				} else if (data.percentage >= 70) {
+					dbSizeElement.style.color = 'var(--level-warning)';
+				} else {
+					dbSizeElement.style.color = '';
+				}
+			}
+		}
 	} catch (error) {
 		// Silently fail if database size is not available
 	}
@@ -209,7 +232,14 @@ async function initializeDashboardPage({resetState = false} = {}) {
 			console.warn('Failed to load top teams data:', error);
 		}
 		try {
-			await loadDashboardDatabaseSize();
+			// Delay database size load slightly to prioritize critical data
+			setTimeout(async () => {
+				try {
+					await loadDashboardDatabaseSize();
+				} catch (error) {
+					console.warn('Failed to load database size:', error);
+				}
+			}, 2000);
 		} catch (error) {
 			console.warn('Failed to load database size:', error);
 		}

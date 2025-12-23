@@ -244,12 +244,84 @@
 	<!-- Load ECharts with defer to ensure it loads before chart initialization scripts -->
 	<script src="/vendor/echarts/echarts.min.js" defer></script>
 	<script src="/js/navigation.js" defer></script>
-	<script src="/js/user-menu.js" defer></script>
-	<script src="/js/csrf-helper.js" defer></script>
-	<script src="/js/settings-modal.js" type="module" defer></script>
 	<script src="/js/notifications.js" type="module" defer></script>
 	<script type="module" src="/js/index.js" defer></script>
 	<script type="module" src="/js/tool-usage-chart.js" defer></script>
+
+	<!-- Lazy load CSRF helper only when needed -->
+	<script>
+		// CSRF lazy loading - only load when first CSRF-protected request is made
+		let csrfHelperLoaded = false;
+		let csrfHelperLoading = false;
+		const csrfHelperPromises = [];
+
+		function loadCsrfHelper() {
+			if (csrfHelperLoaded) {
+				return Promise.resolve();
+			}
+			if (csrfHelperLoading) {
+				return new Promise((resolve) => csrfHelperPromises.push(resolve));
+			}
+
+			csrfHelperLoading = true;
+			return new Promise((resolve) => {
+				const script = document.createElement('script');
+				script.src = '/js/csrf-helper.js';
+				script.defer = true;
+				script.onload = () => {
+					csrfHelperLoaded = true;
+					csrfHelperLoading = false;
+					resolve();
+					csrfHelperPromises.forEach(p => p());
+					csrfHelperPromises.length = 0;
+				};
+				script.onerror = () => {
+					csrfHelperLoading = false;
+					resolve(); // Continue without CSRF protection rather than breaking
+				};
+				document.head.appendChild(script);
+			});
+		}
+
+		// Lazy-loaded CSRF functions
+		window.getCsrfToken = async function() {
+			await loadCsrfHelper();
+			return window.getCsrfToken ? window.getCsrfToken() : null;
+		};
+
+		window.getRequestHeaders = function(includeJson = true) {
+			// For synchronous calls, try to load immediately if not loaded
+			if (!csrfHelperLoaded && !csrfHelperLoading) {
+				loadCsrfHelper();
+			}
+			return window.getRequestHeaders ? window.getRequestHeaders(includeJson) : (includeJson ? {'Content-Type': 'application/json'} : {});
+		};
+
+		window.setCsrfToken = function(token) {
+			if (!csrfHelperLoaded && !csrfHelperLoading) {
+				loadCsrfHelper();
+			}
+			if (window.setCsrfToken) {
+				window.setCsrfToken(token);
+			}
+		};
+	</script>
+
+	<!-- Lazy load non-critical scripts after 2 seconds -->
+	<script>
+		setTimeout(() => {
+			const userMenuScript = document.createElement('script');
+			userMenuScript.src = '/js/user-menu.js';
+			userMenuScript.defer = true;
+			document.head.appendChild(userMenuScript);
+
+			const settingsModalScript = document.createElement('script');
+			settingsModalScript.src = '/js/settings-modal.js';
+			settingsModalScript.type = 'module';
+			settingsModalScript.defer = true;
+			document.head.appendChild(settingsModalScript);
+		}, 2000);
+	</script>
 </body>
 
 </html>
