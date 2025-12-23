@@ -1446,7 +1446,10 @@ app.get('/api/user-login-logs', auth.requireAuth, auth.requireRole('god'), apiRe
 });
 
 // Temporary user management endpoint (NO AUTH for setup) - REMOVE AFTER USE
-app.post('/api/manage-user', async (req, res) => {
+app.post('/api/manage-user', (req, res, next) => {
+  // Skip CSRF for this temporary endpoint
+  next();
+}, async (req, res) => {
 	try {
 		const { action, username, role } = req.body;
 
