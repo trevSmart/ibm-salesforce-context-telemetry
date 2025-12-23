@@ -773,6 +773,16 @@ app.post('/login', auth.requireGuest, loginLimiter, async (req, res) => {
 				}
 			}
 
+			// Log successful login
+			try {
+				const ipAddress = req.ip || req.connection.remoteAddress || req.socket.remoteAddress || null;
+				const userAgent = req.headers['user-agent'] || null;
+				await db.logUserLogin(username, ipAddress, userAgent);
+			} catch (logError) {
+				console.error('Error logging user login:', logError);
+				// Don't fail login if logging fails
+			}
+
 			// If it's a form submission, save session and redirect to home
 			if (req.headers['content-type']?.includes('application/x-www-form-urlencoded')) {
 				req.session.save((err) => {
@@ -790,6 +800,16 @@ app.post('/login', auth.requireGuest, loginLimiter, async (req, res) => {
 				message: 'Login successful'
 			});
 		}
+			// Log failed login attempt
+			try {
+				const ipAddress = req.ip || req.connection.remoteAddress || req.socket.remoteAddress || null;
+				const userAgent = req.headers['user-agent'] || null;
+				await db.logUserLoginAttempt(username, ipAddress, userAgent, 'Invalid username or password');
+			} catch (logError) {
+				console.error('Error logging failed login attempt:', logError);
+				// Don't fail the error response if logging fails
+			}
+
 			// If it's a form submission, redirect back with error
 			if (req.headers['content-type']?.includes('application/x-www-form-urlencoded')) {
 				return res.redirect('/login?error=invalid_credentials');
@@ -1347,53 +1367,48 @@ app.get('/api/sessions', auth.requireAuth, auth.requireRole('advanced'), apiRead
 	}
 });
 
-// Temporary user creation endpoint (admin only) - REMOVE AFTER USE
-app.post('/api/create-user', auth.requireAuth, auth.requireRole('administrator'), async (req, res) => {
+// User login logs endpoint (admin only)
+app.get('/api/user-login-logs', auth.requireAuth, auth.requireRole('administrator'), apiReadLimiter, async (req, res) => {
 	try {
-		const { username, password, role } = req.body;
+		const { limit = 100, offset = 0, username, successful } = req.query;
 
-		if (!username || !password || !role) {
-			return res.status(400).json({ error: 'Username, password, and role are required' });
+		let whereClause = '';
+		const params = [];
+
+		if (username) {
+			whereClause += ' WHERE username = ?';
+			params.push(username);
 		}
 
-		// Special handling for god user creation
-		if (username === 'god' && role === 'god') {
-			// Check if god user already exists
-			const existing = await db.getUserByUsername('god');
-			if (existing) {
-				return res.status(409).json({ error: 'God user already exists' });
-			}
-
-			// Hash password "metria"
-			const bcrypt = await import('bcrypt');
-			const hashedPassword = await bcrypt.default.hash('metria', 10);
-
-			// Create god user
-			const userId = await db.createUser('god', hashedPassword, 'god');
-
-			return res.json({
-				message: 'God user created successfully',
-				user: { id: userId, username: 'god', role: 'god' }
-			});
+		if (successful !== undefined) {
+			const successBool = successful === 'true' || successful === '1';
+			whereClause += whereClause ? ' AND successful = ?' : ' WHERE successful = ?';
+			params.push(successBool ? 1 : 0);
 		}
 
-		// Regular user creation
-		const existing = await db.getUserByUsername(username);
-		if (existing) {
-			return res.status(409).json({ error: 'User already exists' });
+		let logs;
+		if (db.dbType === 'sqlite') {
+			const query = `SELECT id, username, ip_address, user_agent, successful, error_message, created_at FROM user_logins${whereClause} ORDER BY created_at DESC LIMIT ? OFFSET ?`;
+			logs = db.db.prepare(query).all(...params, Number.parseInt(limit, 10), Number.parseInt(offset, 10));
+		} else {
+			let query = `SELECT id, username, ip_address::text, user_agent, successful, error_message, created_at FROM user_logins${whereClause} ORDER BY created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+			const queryParams = [...params, Number.parseInt(limit, 10), Number.parseInt(offset, 10)];
+			const result = await db.db.query(query, queryParams);
+			logs = result.rows;
 		}
-
-		const bcrypt = await import('bcrypt');
-		const hashedPassword = await bcrypt.default.hash(password, 10);
-		const userId = await db.createUser(username, hashedPassword, role);
 
 		res.json({
-			message: 'User created successfully',
-			user: { id: userId, username, role }
+			status: 'ok',
+			logs: logs,
+			limit: Number.parseInt(limit, 10),
+			offset: Number.parseInt(offset, 10)
 		});
 	} catch (error) {
-		console.error('Error creating user:', error);
-		res.status(500).json({ error: 'Failed to create user' });
+		console.error('Error fetching user login logs:', error);
+		res.status(500).json({
+			status: 'error',
+			message: 'Failed to fetch login logs'
+		});
 	}
 });
 

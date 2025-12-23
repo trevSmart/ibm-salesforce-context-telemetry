@@ -98,6 +98,16 @@ async function init() {
 				created_at TEXT DEFAULT CURRENT_TIMESTAMP
 			);
 
+			CREATE TABLE IF NOT EXISTS user_logins (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				username TEXT NOT NULL,
+				ip_address TEXT,
+				user_agent TEXT,
+				successful BOOLEAN NOT NULL DEFAULT 1,
+				error_message TEXT,
+				created_at TEXT DEFAULT CURRENT_TIMESTAMP
+			);
+
 			CREATE INDEX IF NOT EXISTS idx_event ON telemetry_events(event);
 			CREATE INDEX IF NOT EXISTS idx_timestamp ON telemetry_events(timestamp);
 			CREATE INDEX IF NOT EXISTS idx_server_id ON telemetry_events(server_id);
@@ -108,6 +118,9 @@ async function init() {
 			CREATE INDEX IF NOT EXISTS idx_username ON users(username);
 			CREATE INDEX IF NOT EXISTS idx_event_created_at ON telemetry_events(event, created_at);
 			CREATE INDEX IF NOT EXISTS idx_user_created_at ON telemetry_events(user_id, created_at);
+			CREATE INDEX IF NOT EXISTS idx_user_logins_username ON user_logins(username);
+			CREATE INDEX IF NOT EXISTS idx_user_logins_created_at ON user_logins(created_at);
+			CREATE INDEX IF NOT EXISTS idx_user_logins_successful ON user_logins(successful);
 		`);
 
 		console.log(`SQLite database initialized at: ${dbPath}`);
@@ -175,6 +188,16 @@ async function init() {
 				created_at TIMESTAMPTZ DEFAULT NOW()
 			);
 
+			CREATE TABLE IF NOT EXISTS user_logins (
+				id SERIAL PRIMARY KEY,
+				username TEXT NOT NULL,
+				ip_address INET,
+				user_agent TEXT,
+				successful BOOLEAN NOT NULL DEFAULT true,
+				error_message TEXT,
+				created_at TIMESTAMPTZ DEFAULT NOW()
+			);
+
 			CREATE INDEX IF NOT EXISTS idx_event ON telemetry_events(event);
 			CREATE INDEX IF NOT EXISTS idx_timestamp ON telemetry_events(timestamp);
 			CREATE INDEX IF NOT EXISTS idx_server_id ON telemetry_events(server_id);
@@ -185,6 +208,9 @@ async function init() {
 			CREATE INDEX IF NOT EXISTS idx_username ON users(username);
 			CREATE INDEX IF NOT EXISTS idx_event_created_at ON telemetry_events(event, created_at);
 			CREATE INDEX IF NOT EXISTS idx_user_created_at ON telemetry_events(user_id, created_at);
+			CREATE INDEX IF NOT EXISTS idx_user_logins_username ON user_logins(username);
+			CREATE INDEX IF NOT EXISTS idx_user_logins_created_at ON user_logins(created_at);
+			CREATE INDEX IF NOT EXISTS idx_user_logins_successful ON user_logins(successful);
 		`);
 
 		db = pool;
@@ -5859,6 +5885,45 @@ async function recalculateTeamIdsForOrg(orgId) {
 	}
 }
 
+/**
+ * Log a successful user login
+ * @param {string} username - Username that logged in
+ * @param {string} ipAddress - IP address of the login
+ * @param {string} userAgent - User agent string
+ * @returns {Promise<void>}
+ */
+async function logUserLogin(username, ipAddress, userAgent) {
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
+
+	if (dbType === 'sqlite') {
+		db.prepare('INSERT INTO user_logins (username, ip_address, user_agent, successful) VALUES (?, ?, ?, 1)').run(username, ipAddress || null, userAgent || null);
+	} else if (dbType === 'postgresql') {
+		await db.query('INSERT INTO user_logins (username, ip_address, user_agent, successful) VALUES ($1, $2, $3, true)', [username, ipAddress || null, userAgent || null]);
+	}
+}
+
+/**
+ * Log a failed user login attempt
+ * @param {string} username - Username that attempted to log in
+ * @param {string} ipAddress - IP address of the attempt
+ * @param {string} userAgent - User agent string
+ * @param {string} errorMessage - Error message for the failed attempt
+ * @returns {Promise<void>}
+ */
+async function logUserLoginAttempt(username, ipAddress, userAgent, errorMessage) {
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
+
+	if (dbType === 'sqlite') {
+		db.prepare('INSERT INTO user_logins (username, ip_address, user_agent, successful, error_message) VALUES (?, ?, ?, 0, ?)').run(username, ipAddress || null, userAgent || null, errorMessage || null);
+	} else if (dbType === 'postgresql') {
+		await db.query('INSERT INTO user_logins (username, ip_address, user_agent, successful, error_message) VALUES ($1, $2, $3, false, $4)', [username, ipAddress || null, userAgent || null, errorMessage || null]);
+	}
+}
+
 export {
 	init,
 	storeEvent,
@@ -5883,6 +5948,8 @@ export {
 	getDeletedEvents,
 	getDatabaseSize,
 	close,
+	logUserLogin,
+	logUserLoginAttempt,
 	// Utility functions
 	extractNormalizedFields,
 	DEFAULT_MAX_DB_SIZE,
