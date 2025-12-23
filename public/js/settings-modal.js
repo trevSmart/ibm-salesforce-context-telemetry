@@ -6,6 +6,40 @@
 
 import {showToast} from './notifications.js';
 
+/* Custom styles for settings modal */
+const settingsModalStyles = `
+<style>
+/* Table scroll styling */
+.settings-users-table-container::-webkit-scrollbar,
+.settings-users-table-wrapper::-webkit-scrollbar {
+	height: 8px;
+}
+
+.settings-users-table-container::-webkit-scrollbar-track,
+.settings-users-table-wrapper::-webkit-scrollbar-track {
+	background: var(--bg-secondary);
+	border-radius: 4px;
+}
+
+.settings-users-table-container::-webkit-scrollbar-thumb,
+.settings-users-table-wrapper::-webkit-scrollbar-thumb {
+	background: var(--border-color);
+	border-radius: 4px;
+}
+
+.settings-users-table-container::-webkit-scrollbar-thumb:hover,
+.settings-users-table-wrapper::-webkit-scrollbar-thumb:hover {
+	background: var(--text-secondary);
+}
+
+/* Ensure tables don't break layout */
+.settings-users-table-container,
+.settings-users-table-wrapper {
+	max-width: 100%;
+}
+</style>
+`;
+
 // Utility function to escape HTML and prevent XSS
 function escapeHtml(unsafe) {
 	return String(unsafe)
@@ -400,8 +434,8 @@ async function openSettingsModal() {
 									Add User
 								</button>
 							</div>
-							<div class="settings-users-table-wrapper">
-								<table id="usersTable" class="settings-users-table">
+							<div class="settings-users-table-wrapper" style="overflow-x: auto;">
+								<table id="usersTable" class="settings-users-table" style="min-width: 600px;">
 									<thead>
 										<tr>
 											<th>Username</th>
@@ -472,8 +506,8 @@ async function openSettingsModal() {
 										<div class="settings-users-title">Recent login attempts</div>
 										<div class="settings-users-subtitle">View all login attempts across the system</div>
 									</div>
-									<div class="settings-users-table-container">
-										<table class="settings-users-table" id="loginHistoryTable">
+									<div class="settings-users-table-container" style="overflow-x: auto;">
+										<table class="settings-users-table" id="loginHistoryTable" style="min-width: 800px;">
 											<thead>
 												<tr>
 													<th class="settings-users-th">Username</th>
@@ -574,6 +608,15 @@ async function openSettingsModal() {
 	`;
 
 	backdrop.appendChild(modal);
+
+	// Inject custom styles for table scrolling
+	if (!document.querySelector('#settings-modal-custom-styles')) {
+		const styleElement = document.createElement('div');
+		styleElement.id = 'settings-modal-custom-styles';
+		styleElement.innerHTML = settingsModalStyles;
+		document.head.appendChild(styleElement);
+	}
+
 	document.body.appendChild(backdrop);
 
 	requestAnimationFrame(() => {
