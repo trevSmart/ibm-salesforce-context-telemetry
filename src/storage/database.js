@@ -5924,6 +5924,50 @@ async function logUserLoginAttempt(username, ipAddress, userAgent, errorMessage)
 	}
 }
 
+/**
+ * Get user login logs with filtering and pagination
+ * @param {object} options - Query options
+ * @param {number} options.limit - Maximum number of logs to return (default: 100)
+ * @param {number} options.offset - Number of logs to skip (default: 0)
+ * @param {string} options.username - Filter by username
+ * @param {boolean} options.successful - Filter by success status
+ * @returns {Promise<Array>} Array of login log objects
+ */
+async function getUserLoginLogs(options = {}) {
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
+
+	const { limit = 100, offset = 0, username, successful } = options;
+
+	let whereClause = '';
+	const params = [];
+
+	if (username) {
+		whereClause += ' WHERE username = ?';
+		params.push(username);
+	}
+
+	if (successful !== undefined) {
+		const successBool = successful === true || successful === 'true' || successful === '1';
+		whereClause += whereClause ? ' AND successful = ?' : ' WHERE successful = ?';
+		params.push(successBool ? 1 : 0);
+	}
+
+	if (dbType === 'sqlite') {
+		const query = `SELECT id, username, ip_address, user_agent, successful, error_message, created_at FROM user_logins${whereClause} ORDER BY created_at DESC LIMIT ? OFFSET ?`;
+		const result = db.prepare(query).all(...params, Number.parseInt(limit, 10), Number.parseInt(offset, 10));
+		return result;
+	} else if (dbType === 'postgresql') {
+		let query = `SELECT id, username, ip_address::text, user_agent, successful, error_message, created_at FROM user_logins${whereClause} ORDER BY created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+		const queryParams = [...params, Number.parseInt(limit, 10), Number.parseInt(offset, 10)];
+		const result = await db.query(query, queryParams);
+		return result.rows;
+	}
+
+	return [];
+}
+
 export {
 	init,
 	storeEvent,
@@ -5950,6 +5994,7 @@ export {
 	close,
 	logUserLogin,
 	logUserLoginAttempt,
+	getUserLoginLogs,
 	// Utility functions
 	extractNormalizedFields,
 	DEFAULT_MAX_DB_SIZE,

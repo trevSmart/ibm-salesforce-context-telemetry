@@ -1410,41 +1410,31 @@ app.get('/api/check-user-logins-table', async (req, res) => {
 	}
 });
 
-// User login logs endpoint (admin only)
-app.get('/api/user-login-logs', auth.requireAuth, auth.requireRole('administrator'), apiReadLimiter, async (req, res) => {
+// User login logs endpoint (god only)
+app.get('/api/user-login-logs', auth.requireAuth, auth.requireRole('god'), apiReadLimiter, async (req, res) => {
 	try {
 		const { limit = 100, offset = 0, username, successful } = req.query;
 
-		let whereClause = '';
-		const params = [];
+		const options = {
+			limit: Number.parseInt(limit, 10),
+			offset: Number.parseInt(offset, 10)
+		};
 
 		if (username) {
-			whereClause += ' WHERE username = ?';
-			params.push(username);
+			options.username = username;
 		}
 
 		if (successful !== undefined) {
-			const successBool = successful === 'true' || successful === '1';
-			whereClause += whereClause ? ' AND successful = ?' : ' WHERE successful = ?';
-			params.push(successBool ? 1 : 0);
+			options.successful = successful === 'true' || successful === '1';
 		}
 
-		let logs;
-		if (db.dbType === 'sqlite') {
-			const query = `SELECT id, username, ip_address, user_agent, successful, error_message, created_at FROM user_logins${whereClause} ORDER BY created_at DESC LIMIT ? OFFSET ?`;
-			logs = db.db.prepare(query).all(...params, Number.parseInt(limit, 10), Number.parseInt(offset, 10));
-		} else {
-			let query = `SELECT id, username, ip_address::text, user_agent, successful, error_message, created_at FROM user_logins${whereClause} ORDER BY created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
-			const queryParams = [...params, Number.parseInt(limit, 10), Number.parseInt(offset, 10)];
-			const result = await db.db.query(query, queryParams);
-			logs = result.rows;
-		}
+		const logs = await db.getUserLoginLogs(options);
 
 		res.json({
 			status: 'ok',
 			logs: logs,
-			limit: Number.parseInt(limit, 10),
-			offset: Number.parseInt(offset, 10)
+			limit: options.limit,
+			offset: options.offset
 		});
 	} catch (error) {
 		console.error('Error fetching user login logs:', error);
