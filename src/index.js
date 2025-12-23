@@ -1309,8 +1309,8 @@ app.get('/api/sessions', auth.requireAuth, auth.requireRole('advanced'), apiRead
 		const includeUsersWithoutSessionsBool = includeUsersWithoutSessions === 'true' || includeUsersWithoutSessions === '1';
 
 		// Use cache for session queries (sanitize key to avoid cache pollution)
-		// Only cache when no pagination is applied and not including users without sessions
-		const shouldCache = !limitNum && offsetNum === 0 && !includeUsersWithoutSessionsBool;
+		// Only cache when no pagination is applied and including users without sessions (new default behavior)
+		const shouldCache = !limitNum && offsetNum === 0 && includeUsersWithoutSessionsBool;
 		const cacheKey = shouldCache ? `sessions:${JSON.stringify(userIds.sort())}` : null;
 		if (cacheKey) {
 			const cached = sessionsCache.get(cacheKey);

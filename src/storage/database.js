@@ -1092,7 +1092,7 @@ async function getEventTypeStats(options = {}) {
  * @returns {Array} Sessions with count and latest timestamp
  */
 async function getSessions(options = {}) {
-	const {userIds, limit, offset, includeUsersWithoutSessions = false} = options || {};
+	const {userIds, limit, offset, includeUsersWithoutSessions = true} = options || {};
 	if (!db) {
 		throw new Error('Database not initialized. Call init() first.');
 	}
