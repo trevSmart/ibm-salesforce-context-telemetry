@@ -1367,6 +1367,49 @@ app.get('/api/sessions', auth.requireAuth, auth.requireRole('advanced'), apiRead
 	}
 });
 
+// Check if user_logins table exists (temporary endpoint)
+app.get('/api/check-user-logins-table', async (req, res) => {
+	try {
+		let tableExists = false;
+		let recordCount = 0;
+
+		if (db.dbType === 'sqlite') {
+			const result = db.db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='user_logins'").get();
+			tableExists = !!result;
+
+			if (tableExists) {
+				const countResult = db.db.prepare("SELECT COUNT(*) as count FROM user_logins").get();
+				recordCount = countResult.count;
+			}
+		} else {
+			try {
+				const result = await db.db.query("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'user_logins') as exists");
+				tableExists = result.rows[0].exists;
+
+				if (tableExists) {
+					const countResult = await db.db.query("SELECT COUNT(*) as count FROM user_logins");
+					recordCount = Number.parseInt(countResult.rows[0].count, 10);
+				}
+			} catch (error) {
+				// Table might not exist
+				tableExists = false;
+			}
+		}
+
+		res.json({
+			database_type: db.dbType,
+			user_logins_table_exists: tableExists,
+			user_logins_record_count: recordCount,
+			message: tableExists ? 'User logins table is ready' : 'User logins table does not exist'
+		});
+	} catch (error) {
+		res.status(500).json({
+			error: error.message,
+			message: 'Error checking user_logins table'
+		});
+	}
+});
+
 // User login logs endpoint (admin only)
 app.get('/api/user-login-logs', auth.requireAuth, auth.requireRole('administrator'), apiReadLimiter, async (req, res) => {
 	try {
