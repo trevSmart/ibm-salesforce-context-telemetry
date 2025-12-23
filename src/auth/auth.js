@@ -16,13 +16,17 @@ const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toSt
 const ROLE_HIERARCHY = {
 	basic: 1,
 	advanced: 2,
-	administrator: 3
+	administrator: 3,
+	god: 4
 };
 const ROLE_ALIASES = {
 	admin: 'administrator',
 	superadmin: 'administrator',
 	super_admin: 'administrator',
-	superadministrator: 'administrator'
+	superadministrator: 'administrator',
+	superuser: 'god',
+	root: 'god',
+	supreme: 'god'
 };
 const VALID_ROLES = Object.keys(ROLE_HIERARCHY);
 

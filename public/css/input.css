@@ -159,7 +159,8 @@
   body.event-log-page,
   body.teams-page,
   body.login-page,
-  body.health-page {
+  body.health-page,
+  body.users-page {
     background: #8896b5;
     padding: 20px;
     position: relative;
@@ -169,7 +170,8 @@
   html.dark body.event-log-page,
   html.dark body.teams-page,
   html.dark body.login-page,
-  html.dark body.health-page {
+  html.dark body.health-page,
+  html.dark body.users-page {
     background: #18181b url("/resources/bg-01.jpg") center center / cover no-repeat fixed;
     background-blend-mode: soft-light;
   }
