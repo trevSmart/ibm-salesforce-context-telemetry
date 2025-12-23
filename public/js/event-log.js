@@ -7,6 +7,33 @@ if (window.__EVENT_LOG_LOADED__) {
 } else {
 	window.__EVENT_LOG_LOADED__ = true;
 
+// Initialize global data cache to avoid redundant API calls between page navigations
+if (!window.__globalDataCache) {
+	window.__globalDataCache = {
+		auth: null,
+		sessions: null,
+		telemetryUsers: null,
+		eventTypes: null,
+		teamStats: null,
+		databaseSize: null,
+		lastUpdated: {}
+	};
+}
+
+// Helper function to check if cached data is still fresh (less than 5 minutes old)
+function isCacheFresh(cacheKey) {
+	const lastUpdated = window.__globalDataCache.lastUpdated[cacheKey];
+	if (!lastUpdated) return false;
+	const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
+	return lastUpdated > fiveMinutesAgo;
+}
+
+// Helper function to update cache
+function updateCache(cacheKey, data) {
+	window.__globalDataCache[cacheKey] = data;
+	window.__globalDataCache.lastUpdated[cacheKey] = Date.now();
+}
+
 
 // Safe wrapper for showToast function
 
@@ -55,6 +82,22 @@ function safeShowToast(message, type = 'info') {
 	let cachedAuthData = null;
 	(async () => {
 		try {
+			// Check if we already have cached auth data from previous page loads
+			if (window.__cachedAuthData && window.__cachedAuthData.authenticated) {
+				console.info('[Event Log] Using cached auth data from previous page load');
+				cachedAuthData = window.__cachedAuthData;
+				// Verify the cached data is still valid (basic check)
+				if (cachedAuthData.role !== 'advanced' && cachedAuthData.role !== 'administrator' && cachedAuthData.role !== 'god') {
+					window.location.href = '/';
+					return;
+				}
+				// Ensure CSRF token is set
+				if (cachedAuthData.csrfToken) {
+					window.setCsrfToken(cachedAuthData.csrfToken);
+				}
+				return;
+			}
+
 			const response = await fetch('/api/auth/status', {
 				credentials: 'include' // Ensure cookies are sent
 			});
@@ -1943,13 +1986,26 @@ function safeShowToast(message, type = 'info') {
 			}
 			// If all users are selected (selectedUserIds.size === allUserIds.size), don't add any userId param
 			const queryString = params.toString();
-			const url = queryString ? `/api/event-types?${queryString}` : '/api/event-types';
-			const response = await fetch(url, {
-				credentials: 'include' // Ensure cookies are sent
-			});
-			const validResponse = await handleApiResponse(response);
-			if (!validResponse) {return;}
-			const stats = await validResponse.json();
+
+			// Check if we have fresh cached event types data and no filters applied
+			let stats;
+			if (isCacheFresh('eventTypes') && queryString === '') {
+				console.info('[Event Log] Using cached event types data');
+				stats = window.__globalDataCache.eventTypes;
+			} else {
+				const url = queryString ? `/api/event-types?${queryString}` : '/api/event-types';
+				const response = await fetch(url, {
+					credentials: 'include' // Ensure cookies are sent
+				});
+				const validResponse = await handleApiResponse(response);
+				if (!validResponse) {return;}
+				stats = await validResponse.json();
+
+				// Cache the data if no filters were applied
+				if (queryString === '') {
+					updateCache('eventTypes', stats);
+				}
+			}
 
 			stats.forEach(stat => {
 				const countEl = document.getElementById(`count-${stat.event}`);
@@ -2000,13 +2056,27 @@ function safeShowToast(message, type = 'info') {
 			}
 
 			const queryString = params.toString();
-			const url = queryString ? `/api/sessions?${queryString}` : '/api/sessions';
-			const response = await fetch(url, {
-				credentials: 'include' // Ensure cookies are sent
-			});
-			const validResponse = await handleApiResponse(response);
-			if (!validResponse) {return;}
-			const sessions = await validResponse.json();
+			const cacheKey = `sessions_${queryString || 'default'}`;
+
+			// Check if we have fresh cached data and no filters applied
+			let sessions;
+			if (isCacheFresh(cacheKey) && params.toString() === '') {
+				console.info('[Event Log] Using cached sessions data');
+				sessions = window.__globalDataCache.sessions;
+			} else {
+				const url = queryString ? `/api/sessions?${queryString}` : '/api/sessions';
+				const response = await fetch(url, {
+					credentials: 'include' // Ensure cookies are sent
+				});
+				const validResponse = await handleApiResponse(response);
+				if (!validResponse) {return;}
+				sessions = await validResponse.json();
+
+				// Cache the data if no filters were applied
+				if (params.toString() === '') {
+					updateCache('sessions', sessions);
+				}
+			}
 			const sessionList = document.getElementById('sessionList');
 
 			if (!sessionList) {
@@ -2404,15 +2474,23 @@ function safeShowToast(message, type = 'info') {
 			let aggregatedTeams = [];
 
 			try {
-				const teamStatsUrl = '/api/team-stats';
-				logChartTrace('loadTeamsList: fetching aggregated team stats', {url: teamStatsUrl});
-				const statsResponse = await fetch(teamStatsUrl, {credentials: 'include'});
-				const validStatsResponse = await handleApiResponse(statsResponse);
-				if (validStatsResponse) {
-					const statsData = await validStatsResponse.json();
-					if (statsData && Array.isArray(statsData.teams)) {
-						aggregatedTeams = statsData.teams;
+				// Check if we have fresh cached team stats data
+				let statsData;
+				if (isCacheFresh('teamStats')) {
+					console.info('[Event Log] Using cached team stats data');
+					statsData = window.__globalDataCache.teamStats;
+				} else {
+					const teamStatsUrl = '/api/team-stats';
+					logChartTrace('loadTeamsList: fetching aggregated team stats', {url: teamStatsUrl});
+					const statsResponse = await fetch(teamStatsUrl, {credentials: 'include'});
+					const validStatsResponse = await handleApiResponse(statsResponse);
+					if (validStatsResponse) {
+						statsData = await validStatsResponse.json();
+						updateCache('teamStats', statsData);
 					}
+				}
+				if (statsData && Array.isArray(statsData.teams)) {
+					aggregatedTeams = statsData.teams;
 				}
 			} catch (error) {
 				logChartTrace('loadTeamsList: aggregated team stats failed', {
@@ -4593,12 +4671,25 @@ function safeShowToast(message, type = 'info') {
 
 	async function loadDatabaseSize() {
 		try {
-			const response = await fetch('/api/database-size', {
-				credentials: 'include' // Ensure cookies are sent
-			});
-			const validResponse = await handleApiResponse(response);
-			if (!validResponse) {return;}
-			const data = await validResponse.json();
+			// Check if we have fresh cached database size data (cache for 30 seconds since it updates frequently)
+			let data;
+			const cacheKey = 'databaseSize';
+			const thirtySecondsAgo = Date.now() - (30 * 1000);
+			const lastUpdated = window.__globalDataCache.lastUpdated[cacheKey];
+
+			if (lastUpdated && lastUpdated > thirtySecondsAgo && window.__globalDataCache[cacheKey]) {
+				console.info('[Event Log] Using cached database size data');
+				data = window.__globalDataCache[cacheKey];
+			} else {
+				const response = await fetch('/api/database-size', {
+					credentials: 'include' // Ensure cookies are sent
+				});
+				const validResponse = await handleApiResponse(response);
+				if (!validResponse) {return;}
+				data = await validResponse.json();
+				window.__globalDataCache[cacheKey] = data;
+				window.__globalDataCache.lastUpdated[cacheKey] = Date.now();
+			}
 			if (data.status === 'ok') {
 				const displayText = data.displayText || data.sizeFormatted;
 				if (displayText) {
@@ -4633,12 +4724,20 @@ function safeShowToast(message, type = 'info') {
 	// User filter dropdown management
 	async function loadUsers() {
 		try {
-			const response = await fetch('/api/telemetry-users?limit=50', {
-				credentials: 'include'
-			});
-			const validResponse = await handleApiResponse(response);
-			if (!validResponse) {return;}
-			const data = await validResponse.json();
+			// Check if we have fresh cached telemetry users data
+			let data;
+			if (isCacheFresh('telemetryUsers')) {
+				console.info('[Event Log] Using cached telemetry users data');
+				data = window.__globalDataCache.telemetryUsers;
+			} else {
+				const response = await fetch('/api/telemetry-users?limit=50', {
+					credentials: 'include'
+				});
+				const validResponse = await handleApiResponse(response);
+				if (!validResponse) {return;}
+				data = await validResponse.json();
+				updateCache('telemetryUsers', data);
+			}
 
 			// Check if response is an error object
 			if (data && data.status === 'error') {
