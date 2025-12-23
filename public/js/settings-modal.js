@@ -37,6 +37,15 @@ const settingsModalStyles = `
 .settings-users-table-wrapper {
 	max-width: 100%;
 }
+
+/* Login history table specific styling */
+#loginHistoryTable th:nth-child(3),
+#loginHistoryTable td:nth-child(3) {
+	max-width: 150px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
 </style>
 `;
 
