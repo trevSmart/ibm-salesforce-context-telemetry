@@ -517,10 +517,6 @@ async function openSettingsModal() {
 							<div class="settings-modal-placeholder-title">Login history</div>
 							<div class="settings-modal-placeholder-text">
 								<div class="settings-users-section">
-									<div class="settings-users-header">
-										<div class="settings-users-title">Recent login attempts</div>
-										<div class="settings-users-subtitle">View all login attempts across the system</div>
-									</div>
 									<div class="settings-users-table-container" style="overflow-x: auto;">
 										<table class="settings-users-table" id="loginHistoryTable" style="min-width: 800px;">
 											<thead>
@@ -1178,7 +1174,7 @@ async function openSettingsModal() {
 			const tableBody = modal.querySelector('#loginHistoryTableBody');
 			const refreshBtn = modal.querySelector('#refreshLoginHistoryBtn');
 
-			if (!tableBody) return;
+			if (!tableBody) {return;}
 
 			try {
 				if (refreshBtn) {

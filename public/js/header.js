@@ -147,7 +147,7 @@
                   <path d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" fill-rule="evenodd" />
                 </svg>
               </button>
-              <el-menu id="userMenu" anchor="bottom end" popover class="w-56 origin-top-right divide-y divide-gray-100 rounded-md bg-white/70 dark:bg-gray-800/70 text-gray-900 shadow-2xl outline-1 outline-black/5 dark:outline-white/10 backdrop-blur-sm backdrop-filter transition transition-discrete dark:divide-white/10 dark:text-gray-50 [--anchor-gap:--spacing(2)] data-closed:-translate-y-2 data-closed:scale-95 data-closed:transform data-closed:opacity-0 data-enter:duration-250 data-enter:ease-out data-leave:duration-200 data-leave:ease-in"></el-menu>
+              <el-menu id="userMenu" anchor="bottom end" popover class="origin-top-right divide-y divide-gray-100 rounded-md bg-white/70 dark:bg-gray-800/70 text-gray-900 shadow-2xl outline-1 outline-black/5 dark:outline-white/10 backdrop-blur-sm backdrop-filter transition transition-discrete dark:divide-white/10 dark:text-gray-50 [--anchor-gap:--spacing(2)] data-closed:-translate-y-2 data-closed:scale-95 data-closed:transform data-closed:opacity-0 data-enter:duration-250 data-enter:ease-out data-leave:duration-200 data-leave:ease-in"></el-menu>
             </el-dropdown>
           </div>
         </div>
@@ -171,7 +171,7 @@
 			existingNav.outerHTML = buildHeaderHTML();
 		} else {
 			console.warn('No header placeholder or existing nav found');
-			return;
+
 		}
 
 	}

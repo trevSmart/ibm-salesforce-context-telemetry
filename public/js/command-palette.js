@@ -184,45 +184,45 @@
    * Check if any modals or dialogs are currently open
    */
   function isModalOrDialogOpen() {
-    // Check for elements with aria-modal="true"
-    const ariaModalElements = document.querySelectorAll('[aria-modal="true"]');
+    // Check for elements with aria-modal="true" (exclude command palette)
+    const ariaModalElements = document.querySelectorAll('[aria-modal="true"]:not(#commandPaletteBackdrop)');
     if (ariaModalElements.length > 0) {
       return true;
     }
 
-    // Check for elements with role="dialog"
-    const dialogElements = document.querySelectorAll('[role="dialog"]');
+    // Check for elements with role="dialog" (exclude command palette)
+    const dialogElements = document.querySelectorAll('[role="dialog"]:not(#commandPaletteBackdrop)');
     if (dialogElements.length > 0) {
       return true;
     }
 
-    // Check for common modal classes/backdrop patterns
+    // Check for common modal classes/backdrop patterns (exclude command palette)
     const modalSelectors = [
-      '.modal[style*="display: block"]',
-      '.modal.show',
-      '.modal.open',
-      '.modal.visible',
-      '.dialog[style*="display: block"]',
-      '.dialog.show',
-      '.dialog.open',
-      '.dialog.visible',
-      '[data-modal-open="true"]',
-      '[data-dialog-open="true"]',
-      // Check for backdrop elements that might indicate modals
-      '.backdrop',
-      '.modal-backdrop',
-      '.dialog-backdrop',
-      '.overlay[style*="display: block"]',
-      '.overlay.show',
-      '.overlay.visible',
-      // Common framework modal classes
-      '.MuiModal-root[aria-hidden="false"]',
-      '.chakra-modal__content',
-      '.ant-modal-mask',
-      '.el-overlay',
-      // Fixed positioned elements that might be modals
-      '.fixed.z-50',
-      '.absolute.z-50'
+      '.modal[style*="display: block"]:not(#commandPaletteBackdrop)',
+      '.modal.show:not(#commandPaletteBackdrop)',
+      '.modal.open:not(#commandPaletteBackdrop)',
+      '.modal.visible:not(#commandPaletteBackdrop)',
+      '.dialog[style*="display: block"]:not(#commandPaletteBackdrop)',
+      '.dialog.show:not(#commandPaletteBackdrop)',
+      '.dialog.open:not(#commandPaletteBackdrop)',
+      '.dialog.visible:not(#commandPaletteBackdrop)',
+      '[data-modal-open="true"]:not(#commandPaletteBackdrop)',
+      '[data-dialog-open="true"]:not(#commandPaletteBackdrop)',
+      // Check for backdrop elements that might indicate modals (exclude command palette)
+      '.backdrop:not(#commandPaletteBackdrop)',
+      '.modal-backdrop:not(#commandPaletteBackdrop)',
+      '.dialog-backdrop:not(#commandPaletteBackdrop)',
+      '.overlay[style*="display: block"]:not(#commandPaletteBackdrop)',
+      '.overlay.show:not(#commandPaletteBackdrop)',
+      '.overlay.visible:not(#commandPaletteBackdrop)',
+      // Common framework modal classes (exclude command palette)
+      '.MuiModal-root[aria-hidden="false"]:not(#commandPaletteBackdrop)',
+      '.chakra-modal__content:not(#commandPaletteBackdrop)',
+      '.ant-modal-mask:not(#commandPaletteBackdrop)',
+      '.el-overlay:not(#commandPaletteBackdrop)',
+      // Fixed positioned elements that might be modals (exclude command palette)
+      '.fixed.z-50:not(#commandPaletteBackdrop)',
+      '.absolute.z-50:not(#commandPaletteBackdrop)'
     ];
 
     for (const selector of modalSelectors) {
@@ -232,8 +232,8 @@
       }
     }
 
-    // Additional check: look for elements with very high z-index that might be modals
-    const allElements = document.querySelectorAll('*');
+    // Additional check: look for elements with very high z-index that might be modals (exclude command palette)
+    const allElements = document.querySelectorAll('*:not(#commandPaletteBackdrop)');
     for (const element of allElements) {
       const zIndex = window.getComputedStyle(element).zIndex;
       if (zIndex && parseInt(zIndex) > 1000) {
@@ -249,11 +249,14 @@
    * Show command palette
    */
   function showCommandPalette() {
+    console.log('showCommandPalette called - initializing if needed');
     if (!commandPaletteElement) {
+      console.log('Initializing command palette');
       initializeCommandPalette();
     }
 
     if (commandPaletteElement) {
+      console.log('Showing command palette element');
       // Make element visible first
       commandPaletteElement.style.display = 'block';
       commandPaletteElement.style.visibility = 'visible';
@@ -273,6 +276,7 @@
       });
 
       document.body.style.overflow = 'hidden'; // Prevent background scrolling
+      console.log('Setting isOpen to true');
       isOpen = true;
 
       // No longer ignore backdrop clicks - let user close immediately if needed
@@ -296,6 +300,7 @@
    * Hide command palette
    */
   function hideCommandPalette() {
+    console.log('hideCommandPalette called');
     if (commandPaletteElement) {
       // Use requestAnimationFrame to ensure class changes trigger transitions
       requestAnimationFrame(() => {
@@ -310,6 +315,7 @@
         }
       });
 
+      console.log('Setting isOpen to false');
       isOpen = false;
 
       // Wait for transition to complete before hiding element
@@ -385,6 +391,7 @@
    * Initialize command palette
    */
   function initializeCommandPalette() {
+    console.log('initializeCommandPalette called');
     // Create command palette element
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = buildCommandPaletteHTML();
@@ -539,29 +546,50 @@
    * Action helpers
    */
 
+  /**
+   * Check if command palette is currently visible
+   */
+  function isCommandPaletteVisible() {
+    // Use the isOpen variable as the single source of truth
+    return isOpen;
+  }
+
   // Global keyboard shortcut (K) - registered immediately on initialization
   document.addEventListener('keydown', (e) => {
     if (e.key === 'k') {
+      console.log('K pressed - isOpen:', isOpen, 'isCommandPaletteVisible:', isCommandPaletteVisible(), 'commandPaletteElement exists:', !!commandPaletteElement, 'display:', commandPaletteElement?.style.display);
       // If palette is already open, close it (unless user is editing in palette input)
-      if (isOpen) {
+      if (isCommandPaletteVisible()) {
         const activeElement = document.activeElement;
         const isEditingInPalette = activeElement && activeElement.id === 'commandPaletteInput';
+        console.log('Palette is visible, isEditingInPalette:', isEditingInPalette);
         if (!isEditingInPalette) {
           e.preventDefault();
-          hideCommandPalette();
+          try {
+            hideCommandPalette();
+          } catch (error) {
+            console.error('Error hiding command palette:', error);
+          }
         }
         return;
       }
       // Don't open command palette if user is editing in an input/textarea
       if (isUserEditing()) {
+        console.log('User is editing, not opening');
         return;
       }
       // Don't open command palette if any modals or dialogs are open
       if (isModalOrDialogOpen()) {
+        console.log('Modal/dialog open, not opening');
         return;
       }
+      console.log('Opening command palette');
       e.preventDefault();
-      showCommandPalette();
+      try {
+        showCommandPalette();
+      } catch (error) {
+        console.error('Error opening command palette:', error);
+      }
     }
   });
 
