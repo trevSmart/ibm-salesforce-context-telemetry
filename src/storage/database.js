@@ -1256,8 +1256,158 @@ async function getSessions(options = {}) {
 		});
 
 		return mappedResult;
+	} else if (dbType === 'postgresql') {
+		// PostgreSQL implementation
+		let whereClause = `WHERE deleted_at IS NULL AND (`;
+		const params = [];
+		let paramIndex = 1;
+
+		if (includeUsersWithoutSessions) {
+			whereClause += `(session_id IS NOT NULL OR parent_session_id IS NOT NULL) OR user_id IS NOT NULL`;
+		} else {
+			whereClause += `(session_id IS NOT NULL OR parent_session_id IS NOT NULL)`;
+		}
+		whereClause += `)`;
+
+		if (userIds && Array.isArray(userIds) && userIds.length > 0) {
+			const placeholders = userIds.map(() => `$${paramIndex++}`).join(', ');
+			whereClause += ` AND user_id IN (${placeholders})`;
+			params.push(...userIds);
+		}
+
+		let query;
+		const queryParams = params.slice();
+
+		if (includeUsersWithoutSessions) {
+			query = `
+				WITH session_aggregates AS (
+					SELECT
+						COALESCE(parent_session_id, session_id) AS logical_session_id,
+						COUNT(*) as count,
+						MIN(timestamp) as first_event,
+						MAX(timestamp) as last_event,
+						SUM(CASE WHEN event = 'session_start' THEN 1 ELSE 0 END) as has_start,
+						SUM(CASE WHEN event = 'session_end' THEN 1 ELSE 0 END) as has_end,
+						(SELECT user_id FROM telemetry_events
+						 WHERE COALESCE(parent_session_id, session_id) = COALESCE(te.parent_session_id, te.session_id)
+						   AND deleted_at IS NULL
+						 ORDER BY timestamp ASC LIMIT 1) as user_id,
+						(SELECT data FROM telemetry_events
+						 WHERE COALESCE(parent_session_id, session_id) = COALESCE(te.parent_session_id, te.session_id)
+						   AND event = 'session_start'
+						   AND deleted_at IS NULL
+						 ORDER BY timestamp ASC LIMIT 1) as session_start_data
+					FROM telemetry_events te
+					WHERE (session_id IS NOT NULL OR parent_session_id IS NOT NULL) AND deleted_at IS NULL
+					${userIds && userIds.length > 0 ? `AND user_id IN (${userIds.map(() => `$${paramIndex++}`).join(', ')})` : ''}
+					GROUP BY COALESCE(parent_session_id, session_id)
+				),
+				user_aggregates AS (
+					SELECT
+						'user_' || user_id || '_' || DATE(timestamp) AS logical_session_id,
+						COUNT(*) as count,
+						MIN(timestamp) as first_event,
+						MAX(timestamp) as last_event,
+						0 as has_start,
+						0 as has_end,
+						user_id,
+						NULL as session_start_data
+					FROM telemetry_events
+					WHERE session_id IS NULL AND parent_session_id IS NULL AND user_id IS NOT NULL AND deleted_at IS NULL
+					${userIds && userIds.length > 0 ? `AND user_id IN (${userIds.map(() => `$${paramIndex++}`).join(', ')})` : ''}
+					GROUP BY user_id, DATE(timestamp)
+				)
+				SELECT * FROM session_aggregates
+				UNION ALL
+				SELECT * FROM user_aggregates
+				ORDER BY last_event DESC
+				${limit ? `LIMIT $${paramIndex++}` : ''}
+				${offset ? `OFFSET $${paramIndex++}` : ''}
+			`;
+
+			// Add userIds again for the user_aggregates part
+			if (userIds && userIds.length > 0) {
+				queryParams.push(...userIds);
+			}
+		} else {
+			query = `
+				WITH session_aggregates AS (
+					SELECT
+						COALESCE(parent_session_id, session_id) AS logical_session_id,
+						COUNT(*) as count,
+						MIN(timestamp) as first_event,
+						MAX(timestamp) as last_event,
+						SUM(CASE WHEN event = 'session_start' THEN 1 ELSE 0 END) as has_start,
+						SUM(CASE WHEN event = 'session_end' THEN 1 ELSE 0 END) as has_end
+					FROM telemetry_events
+					${whereClause}
+					GROUP BY COALESCE(parent_session_id, session_id)
+				)
+				SELECT
+					sa.logical_session_id,
+					sa.count,
+					sa.first_event,
+					sa.last_event,
+					(SELECT user_id FROM telemetry_events
+					 WHERE COALESCE(parent_session_id, session_id) = sa.logical_session_id
+					   AND deleted_at IS NULL
+					 ORDER BY timestamp ASC LIMIT 1) as user_id,
+					(SELECT data FROM telemetry_events
+					 WHERE COALESCE(parent_session_id, session_id) = sa.logical_session_id
+					   AND event = 'session_start'
+					   AND deleted_at IS NULL
+					 ORDER BY timestamp ASC LIMIT 1) as session_start_data,
+					sa.has_start,
+					sa.has_end
+				FROM session_aggregates sa
+				WHERE sa.count > 0
+				ORDER BY sa.last_event DESC
+				${limit ? `LIMIT $${paramIndex++}` : ''}
+				${offset ? `OFFSET $${paramIndex++}` : ''}
+			`;
+		}
+
+		if (limit) queryParams.push(limit);
+		if (offset) queryParams.push(offset);
+
+		const result = await db.query(query, queryParams);
+
+		const mappedResult = result.rows.map(row => {
+			let user_name = null;
+			if (row.session_start_data) {
+				try {
+					const data = JSON.parse(row.session_start_data);
+					// Try multiple paths: userName (camelCase), user_name (snake_case), or data.user.name (nested)
+					if (data) {
+						user_name = data.userName || data.user_name || (data.user && data.user.name) || null;
+					}
+				} catch {
+					// If parsing fails, ignore and use user_id
+				}
+			}
+
+			// Determine if session is active
+			const hasStart = Number.parseInt(row.has_start, 10) > 0;
+			const hasEnd = Number.parseInt(row.has_end, 10) > 0;
+			const lastEvent = new Date(row.last_event);
+			const now = new Date();
+			const hoursSinceLastEvent = (now - lastEvent) / (1000 * 60 * 60);
+			const isActive = hasStart && !hasEnd && hoursSinceLastEvent < 2;
+
+			return {
+				session_id: row.logical_session_id,
+				count: Number.parseInt(row.count, 10),
+				first_event: row.first_event,
+				last_event: row.last_event,
+				user_id: row.user_id,
+				user_name: user_name,
+				is_active: isActive
+			};
+		});
+
+		return mappedResult;
 	}
-		let whereClause = `WHERE deleted_at IS NULL AND (
+	let whereClause = `WHERE deleted_at IS NULL AND (
 			(session_id IS NOT NULL OR parent_session_id IS NOT NULL)${includeUsersWithoutSessions ? ' OR user_id IS NOT NULL' : ''}
 		)`;
 		const params = [];

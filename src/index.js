@@ -1347,6 +1347,56 @@ app.get('/api/sessions', auth.requireAuth, auth.requireRole('advanced'), apiRead
 	}
 });
 
+// Temporary diagnostic endpoint
+app.get('/api/diagnostic', async (req, res) => {
+	try {
+		// Check database tables
+		const tables = [];
+		if (db.dbType === 'sqlite') {
+			const result = db.db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all();
+			tables.push(...result.map(r => r.name));
+		} else {
+			const result = await db.db.query("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'");
+			tables.push(...result.rows.map(r => r.table_name));
+		}
+
+		// Check telemetry_events columns
+		let columns = [];
+		if (db.dbType === 'sqlite') {
+			const result = db.db.prepare("PRAGMA table_info(telemetry_events)").all();
+			columns = result.map(r => r.name);
+		} else {
+			const result = await db.db.query("SELECT column_name FROM information_schema.columns WHERE table_name = 'telemetry_events'");
+			columns = result.rows.map(r => r.column_name);
+		}
+
+		// Test getSessions
+		let sessionsTest = 'not tested';
+		try {
+			const sessions = await db.getSessions({limit: 1, includeUsersWithoutSessions: true});
+			sessionsTest = `success: ${sessions.length} sessions`;
+		} catch (error) {
+			sessionsTest = `error: ${error.message}`;
+		}
+
+		res.json({
+			database_type: db.dbType,
+			tables: tables,
+			telemetry_events_columns: columns,
+			has_team_id: columns.includes('team_id'),
+			has_teams_table: tables.includes('teams'),
+			has_orgs_table: tables.includes('orgs'),
+			sessions_test: sessionsTest,
+			timestamp: new Date().toISOString()
+		});
+	} catch (error) {
+		res.status(500).json({
+			error: error.message,
+			stack: error.stack
+		});
+	}
+});
+
 app.get('/api/daily-stats', dashboardStatsLimiter, auth.requireAuth, async (req, res) => {
 	try {
 		const days = Number.parseInt(req.query.days, 10) || 30;
