@@ -4593,7 +4593,38 @@ function safeShowToast(message, type = 'info') {
 
 	async function loadDatabaseSize() {
 		try {
-			return;
+			const response = await fetch('/api/database-size', {
+				credentials: 'include' // Ensure cookies are sent
+			});
+			const validResponse = await handleApiResponse(response);
+			if (!validResponse) {return;}
+			const data = await validResponse.json();
+			if (data.status === 'ok') {
+				const displayText = data.displayText || data.sizeFormatted;
+				if (displayText) {
+					const dbSizeElement = document.getElementById('dbSize');
+					if (!dbSizeElement) {
+						return;
+					}
+					dbSizeElement.textContent = displayText;
+
+					// Apply color based on percentage
+					if (data.percentage !== null && data.percentage !== undefined) {
+						if (data.percentage >= 80) {
+							// Red for 80% or more
+							dbSizeElement.style.color = 'var(--level-error)';
+						} else if (data.percentage >= 70) {
+							// Orange for 70% or more
+							dbSizeElement.style.color = 'var(--level-warning)';
+						} else {
+							// Default color (inherit from parent)
+							dbSizeElement.style.color = '';
+						}
+					}
+
+					document.getElementById('dbSizeInfo').style.display = '';
+				}
+			}
 		} catch (error) {
 			// Silently fail if database size is not available
 		}
@@ -5010,7 +5041,7 @@ function safeShowToast(message, type = 'info') {
 		// Lazy load database size and users list - they're not critical for initial render
 		runSafeAsyncInitStep('database size', () => {
 			// Delay database size load slightly to prioritize critical data
-			setTimeout(() => loadDatabaseSize(), 500);
+			setTimeout(() => loadDatabaseSize(), 2000);
 		});
 		runSafeAsyncInitStep('users list', () => {
 			// Delay users list load slightly to prioritize critical data

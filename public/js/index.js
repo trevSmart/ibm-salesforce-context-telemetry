@@ -1909,6 +1909,18 @@ async function resumeDashboardPage() {
 			chart.resize();
 			// Clear saved option after restoration
 			savedChartOption = null;
+
+			// Always refresh top users and teams data when returning to dashboard
+			try {
+				await loadTopUsersToday();
+			} catch (error) {
+				console.warn('Failed to refresh top users data on resume:', error);
+			}
+			try {
+				await loadTopTeamsToday();
+			} catch (error) {
+				console.warn('Failed to refresh top teams data on resume:', error);
+			}
 		}
 	} else if (chart === null) {
 		// No saved option, load chart data normally
