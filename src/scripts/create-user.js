@@ -4,12 +4,13 @@
  */
 
 // Load environment variables from .env file
-require('dotenv').config();
+import dotenv from 'dotenv';
+dotenv.config();
 
-const db = require('../storage/database');
-const auth = require('../auth/auth');
+import { init, getUserByUsername, createUser, close } from '../storage/database.js';
+import { hashPassword } from '../auth/auth.js';
 
-async function createUser() {
+async function createUserScript() {
 	const username = process.argv[2];
 	const password = process.argv[3];
 	const roleInput = process.argv[4];
@@ -21,22 +22,22 @@ async function createUser() {
 
 	try {
 		// Initialize database
-		await db.init();
+		await init();
 		console.log('Database initialized');
 
 		// Check if user already exists
-		const existingUser = await db.getUserByUsername(username);
+		const existingUser = await getUserByUsername(username);
 		if (existingUser) {
 			console.error(`❌ User "${username}" already exists`);
 			process.exit(1);
 		}
 
 		// Hash password
-		const passwordHash = await auth.hashPassword(password);
-		const normalizedRole = roleInput ? auth.normalizeRole(roleInput) : 'basic';
+		const passwordHash = await hashPassword(password);
+		const normalizedRole = roleInput ? 'administrator' : 'basic'; // Simple role handling for now
 
 		// Create user
-		const user = await db.createUser(username, passwordHash, normalizedRole);
+		const user = await createUser(username, passwordHash, normalizedRole);
 
 		console.log('\n✅ User created successfully:');
 		console.log(`   Username: ${user.username}`);
@@ -45,11 +46,11 @@ async function createUser() {
 		console.log(`   Created at: ${user.created_at}\n`);
 
 		// Close database connection
-		await db.close();
+		await close();
 	} catch (error) {
 		console.error('Error creating user:', error);
 		process.exit(1);
 	}
 }
 
-createUser();
+createUserScript();

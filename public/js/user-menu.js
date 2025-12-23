@@ -246,8 +246,10 @@
 		};
 
 		const scheduleHide = () => {
+			console.log('[TRACE] user-menu scheduleHide: Scheduling hide in', USER_MENU_HIDE_DELAY_MS, 'ms');
 			cancelHide();
 			userMenuHideTimeout = setTimeout(() => {
+				console.log('[TRACE] user-menu scheduleHide: Timeout fired, calling hideUserMenu');
 				hideUserMenu();
 			}, USER_MENU_HIDE_DELAY_MS);
 		};
@@ -271,10 +273,28 @@
 
 		const handleMouseLeave = (event) => {
 			const nextTarget = event?.relatedTarget;
+			console.log('[TRACE] user-menu handleMouseLeave:', {
+				currentTarget: event.currentTarget.tagName,
+				nextTarget: nextTarget?.tagName,
+				isInsideMenuRegion: nextTarget ? isInsideMenuRegion(nextTarget) : false
+			});
 			if (nextTarget && isInsideMenuRegion(nextTarget)) {
+				console.log('[TRACE] user-menu: Staying visible due to menu region');
 				return;
 			}
-			scheduleHide();
+			// If leaving the userMenu specifically, always schedule hide
+			if (event.currentTarget === userMenu) {
+				console.log('[TRACE] user-menu: Leaving userMenu, scheduling hide');
+				scheduleHide();
+				return;
+			}
+			// For container, only hide if not moving to userMenu
+			if (event.currentTarget === container && (!nextTarget || !userMenu.contains(nextTarget))) {
+				console.log('[TRACE] user-menu: Leaving container, scheduling hide');
+				scheduleHide();
+			} else {
+				console.log('[TRACE] user-menu: Staying visible due to userMenu hover');
+			}
 		};
 
 		container.addEventListener('mouseenter', handleMouseEnter);

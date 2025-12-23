@@ -23,13 +23,8 @@
 			if (theme === 'dark') {
 				document.documentElement.classList.add('dark');
 			}
-			// Make body visible after theme is applied
+			// Make body visible after theme is applied (focus will be handled later)
 			function makeBodyVisible() {
-				const usernameInput = document.getElementById('username');
-				if (usernameInput) {
-					usernameInput.focus();
-					usernameInput.offsetHeight;
-				}
 				document.body.style.visibility = 'visible';
 			}
 			if (document.readyState === 'loading') {
@@ -519,7 +514,7 @@
 						<svg xmlns="http://www.w3.org/2000/svg" class="input-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="20" height="20">
 							<path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
 						</svg>
-						<input type="text" class="login-input" id="username" name="username" aria-label="Email" required autofocus>
+						<input type="text" class="login-input" id="username" name="username" aria-label="Email" required>
 					</div>
 				</div>
 
@@ -585,6 +580,8 @@
 			const password = document.getElementById('password').value;
 			const rememberMe = document.getElementById('rememberMe').checked;
 
+			console.log('[TRACE] login: Attempting login for user:', username);
+
 			// Hide error
 			errorMessage.classList.remove('show');
 			loginButton.disabled = true;
@@ -595,13 +592,16 @@
 					'Content-Type': 'application/json'
 				};
 
+				console.log('[TRACE] login: Sending login request...');
 				const response = await fetch('/login', {
 					method: 'POST',
 					headers: headers,
 					body: JSON.stringify({ username, password, rememberMe })
 				});
 
+				console.log('[TRACE] login: Login response status:', response.status);
 				const data = await response.json();
+				console.log('[TRACE] login: Login response data:', data);
 
 				if (response.ok && data.status === 'ok') {
 					// Redirect to home page
@@ -622,11 +622,26 @@
 		// Wait for CSRF helper to load, then check if already logged in
 		(async () => {
 			try {
+				console.log('[TRACE] login: Checking auth status...');
 				const response = await fetch('/api/auth/status');
-				const data = await response.json();
-				if (data.authenticated) {
-					window.location.href = '/';
+				console.log('[TRACE] login: Auth status response:', response.status);
+
+				// 401 is expected when not authenticated - don't treat as error
+				if (response.status === 401) {
+					console.log('[TRACE] login: User not authenticated (expected 401)');
+					// User not authenticated, focus on username field
+					const usernameField = document.getElementById('username');
+					if (usernameField) {
+						setTimeout(() => {
+							usernameField.focus();
+						}, 100);
+					}
+					return;
 				}
+
+				const data = await response.json();
+				console.log('[TRACE] login: Auth data:', data);
+
 				// Store CSRF token (CSRF helper loaded first via script tag)
 				if (window.setCsrfToken && data.csrfToken) {
 					window.setCsrfToken(data.csrfToken);
@@ -637,19 +652,29 @@
 					}
 				}
 
-				// Focus on username field if not authenticated
-				if (!data.authenticated) {
-					const usernameField = document.getElementById('username');
-					if (usernameField) {
+				if (data.authenticated) {
+					// User is already authenticated, redirect to home
+					window.location.href = '/';
+					return;
+				}
+
+				// User not authenticated, focus on username field
+				const usernameField = document.getElementById('username');
+				if (usernameField) {
+					// Use setTimeout to ensure DOM is fully ready
+					setTimeout(() => {
 						usernameField.focus();
-					}
+					}, 100);
 				}
 
 			} catch (error) {
-				// Ignore errors and still try to focus
+				console.error('Auth status check failed:', error);
+				// On error, still try to focus
 				const usernameField = document.getElementById('username');
 				if (usernameField) {
-					usernameField.focus();
+					setTimeout(() => {
+						usernameField.focus();
+					}, 100);
 				}
 			}
 		})();

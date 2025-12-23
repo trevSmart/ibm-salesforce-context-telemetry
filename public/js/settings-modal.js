@@ -286,38 +286,51 @@ async function loadTrashInfo() {
 }
 
 async function openSettingsModal() {
+	console.log('[TRACE] openSettingsModal: Starting...');
 	const existing = document.querySelector('.confirm-modal-backdrop.settings-backdrop');
 	if (existing) {
+		console.log('[TRACE] openSettingsModal: Modal already exists, returning early');
 		return;
 	}
+	console.log('[TRACE] openSettingsModal: No existing modal found, proceeding...');
 
 	// Check user role to determine if admin-only sections should be shown
 	// Reuse cached auth data if available to avoid redundant API call
 	let userRole = 'basic';
 	try {
 		let authData = null;
+		console.log('[TRACE] openSettingsModal: Checking auth status...');
 		if (window.__cachedAuthData) {
+			console.log('[TRACE] openSettingsModal: Using cached auth data');
 			authData = window.__cachedAuthData;
 		} else {
+			console.log('[TRACE] openSettingsModal: Fetching fresh auth data...');
 			const authResponse = await fetch('/api/auth/status', {
 				credentials: 'include'
 			});
 			if (authResponse.ok) {
 				authData = await authResponse.json();
+				console.log('[TRACE] openSettingsModal: Auth response:', authData);
 				// Cache for future use
 				window.__cachedAuthData = authData;
+			} else {
+				console.log('[TRACE] openSettingsModal: Auth response not OK:', authResponse.status);
 			}
 		}
 		if (authData) {
 			userRole = authData.role || 'basic';
+			console.log('[TRACE] openSettingsModal: User role determined:', userRole);
+		} else {
+			console.log('[TRACE] openSettingsModal: No auth data available');
 		}
 	} catch (error) {
-		console.error('Error checking auth status:', error);
+		console.error('[TRACE] openSettingsModal: Error checking auth status:', error);
 	}
 
 	const isAdministrator = userRole === 'administrator' || userRole === 'god';
 	const isGod = userRole === 'god';
 	const canDeleteAllEvents = userRole === 'advanced' || userRole === 'administrator' || userRole === 'god';
+	console.log('[TRACE] openSettingsModal: Permissions determined:', {isAdministrator, isGod, canDeleteAllEvents});
 	const usersLoadingRow = `
       <tr>
         <td colspan="4" class="settings-users-empty">
@@ -329,11 +342,13 @@ async function openSettingsModal() {
       </tr>
     `;
 
+	console.log('[TRACE] openSettingsModal: Creating modal elements...');
 	const backdrop = document.createElement('div');
 	backdrop.className = 'confirm-modal-backdrop settings-backdrop';
 
 	const modal = document.createElement('div');
 	modal.className = 'confirm-modal settings-modal';
+	console.log('[TRACE] openSettingsModal: Modal elements created');
 
 	// Get current settings
 	const savedTheme = localStorage.getItem('theme') || 'light';
@@ -392,11 +407,9 @@ async function openSettingsModal() {
 
 	modal.innerHTML = `
 		<div class="settings-modal-header">
-			<div class="confirm-modal-title">Settings</div>
 		</div>
-		<div class="settings-modal-content">
-			<div class="settings-layout flex flex-col md:flex-row md:gap-8 mt-2">
-				<aside class="settings-sidebar-nav md:w-56 border-b md:border-b-0 md:border-r border-(--border-color) pb-3 md:pb-0 md:pr-3">
+			<div class="settings-layout flex flex-col md:flex-row md:gap-8 mt-2 flex-1 overflow-hidden">
+				<aside class="settings-sidebar-nav md:w-44 border-b md:border-b-0 md:border-r border-(--border-color) pb-3 md:pb-0 md:pr-3">
 					<nav class="flex md:flex-col gap-2 text-sm" aria-label="Settings sections">
 						${sidebarNav}
 					</nav>
@@ -608,7 +621,6 @@ async function openSettingsModal() {
 						</section>
 					</div>
 				</div>
-			</div>
 		<div class="settings-modal-footer">
 			<div class="confirm-modal-actions">
 				<button type="button" class="confirm-modal-btn confirm-modal-btn-cancel" id="settingsCloseBtn">
@@ -618,20 +630,27 @@ async function openSettingsModal() {
 		</div>
 	`;
 
+	console.log('[TRACE] openSettingsModal: Appending modal to backdrop...');
 	backdrop.appendChild(modal);
 
 	// Inject custom styles for table scrolling
 	if (!document.querySelector('#settings-modal-custom-styles')) {
+		console.log('[TRACE] openSettingsModal: Injecting custom styles...');
 		const styleElement = document.createElement('div');
 		styleElement.id = 'settings-modal-custom-styles';
 		styleElement.innerHTML = settingsModalStyles;
 		document.head.appendChild(styleElement);
+	} else {
+		console.log('[TRACE] openSettingsModal: Custom styles already exist');
 	}
 
+	console.log('[TRACE] openSettingsModal: Appending backdrop to body...');
 	document.body.appendChild(backdrop);
 
+	console.log('[TRACE] openSettingsModal: Making modal visible...');
 	requestAnimationFrame(() => {
 		backdrop.classList.add('visible');
+		console.log('[TRACE] openSettingsModal: Modal should now be visible');
 	});
 
 	// Define the ESC handler function first so it can be properly referenced by closeSettingsModal
@@ -656,14 +675,18 @@ async function openSettingsModal() {
 
 	// Define closeSettingsModal after escHandler so it can remove the listener correctly
 	function closeSettingsModal() {
+		console.log('[TRACE] closeSettingsModal: Starting modal close...');
 		// Remove ESC key listener
 		document.removeEventListener('keydown', escHandler);
 
 		backdrop.classList.remove('visible');
 		backdrop.classList.add('hiding');
+		console.log('[TRACE] closeSettingsModal: Transition classes applied');
 		const handleTransitionEnd = () => {
+			console.log('[TRACE] closeSettingsModal: Transition ended, removing modal...');
 			backdrop.removeEventListener('transitionend', handleTransitionEnd);
 			backdrop.remove();
+			console.log('[TRACE] closeSettingsModal: Modal removed from DOM');
 		};
 		backdrop.addEventListener('transitionend', handleTransitionEnd);
 		setTimeout(() => {
@@ -684,33 +707,43 @@ async function openSettingsModal() {
 
 	// ESC key handling is configured via `escHandler` earlier; no additional listener needed here.
 	const darkThemeToggle = modal.querySelector('#darkThemeToggle');
+	console.log('[TRACE] openSettingsModal: Dark theme toggle element:', darkThemeToggle ? 'found' : 'not found');
 	if (darkThemeToggle) {
 		darkThemeToggle.addEventListener('change', (e) => {
 			const newTheme = e.target.checked ? 'dark' : 'light';
+			console.log('[TRACE] darkThemeToggle: Theme change to:', newTheme);
 			localStorage.setItem('theme', newTheme);
 
 			// Apply theme directly
 			if (newTheme === 'dark') {
 				document.documentElement.classList.add('dark');
+				console.log('[TRACE] darkThemeToggle: Added dark class to documentElement');
 			} else {
 				document.documentElement.classList.remove('dark');
+				console.log('[TRACE] darkThemeToggle: Removed dark class from documentElement');
 			}
 
 			// Update theme menu item if it exists
 			if (typeof window.updateThemeMenuItem === 'function') {
+				console.log('[TRACE] darkThemeToggle: Updating theme menu item...');
 				window.updateThemeMenuItem(newTheme);
+			} else {
+				console.log('[TRACE] darkThemeToggle: updateThemeMenuItem function not found');
 			}
 		});
 	}
 
 	const autoRefreshIntervalSelect = modal.querySelector('#autoRefreshInterval');
+	console.log('[TRACE] openSettingsModal: Auto refresh select element:', autoRefreshIntervalSelect ? 'found' : 'not found');
 	if (autoRefreshIntervalSelect) {
 		const handleAutoRefreshChange = (e) => {
 			const interval = (e.target.value || '').trim();
+			console.log('[TRACE] handleAutoRefreshChange: New interval:', interval);
 
 			// Store in localStorage for persistence
 			localStorage.setItem('autoRefreshIntervalMinutes', interval);
 			localStorage.setItem('autoRefreshEnabledState', interval !== '' ? 'true' : 'false');
+			console.log('[TRACE] handleAutoRefreshChange: Saved to localStorage:', {interval, enabled: interval !== ''});
 
 			// Update global variables if they exist (for backward compatibility)
 			if (typeof window.autoRefreshIntervalMinutes !== 'undefined') {
@@ -1435,6 +1468,7 @@ async function openSettingsModal() {
 	if (canDeleteAllEvents) {
 		loadTrashInfo();
 	}
+	console.log('[TRACE] openSettingsModal: Function completed successfully');
 }
 
 // Export settings modal opener to global scope for HTML and other scripts
