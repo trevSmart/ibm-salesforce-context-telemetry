@@ -34,6 +34,11 @@ function csrfProtection(req, res, next) {
 		return next();
 	}
 
+	// Skip CSRF for /api/manage-user endpoint (temporary admin endpoint)
+	if (req.path === '/api/manage-user') {
+		return next();
+	}
+
 	// Get token from header or body (guard against missing body)
 	const token =
 		req.headers['x-csrf-token'] ||
