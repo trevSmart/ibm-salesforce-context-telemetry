@@ -501,6 +501,28 @@ async function ensureEventMigration() {
 			if (!hasEventIdColumn) {
 				console.log('Starting event types migration...');
 
+				// Log total rows in telemetry_events
+				const totalRowsResult = await db.query('SELECT COUNT(*) as count FROM telemetry_events');
+				console.log(`Total rows in telemetry_events: ${totalRowsResult.rows[0].count}`);
+
+				// Ensure event_types table has data before migration
+				const eventTypesCount = await db.query('SELECT COUNT(*) as count FROM event_types');
+				if (eventTypesCount.rows[0].count === 0) {
+					console.log('Event types table is empty, populating it first...');
+					const eventTypes = [
+						{name: 'tool_call', description: 'Tool call event'},
+						{name: 'tool_error', description: 'Tool error event'},
+						{name: 'session_start', description: 'Session start event'},
+						{name: 'session_end', description: 'Session end event'},
+						{name: 'error', description: 'General error event'},
+						{name: 'custom', description: 'Custom event'}
+					];
+					for (const eventType of eventTypes) {
+						await db.query('INSERT INTO event_types (name, description) VALUES ($1, $2)', [eventType.name, eventType.description]);
+					}
+					console.log('Populated event_types table with', eventTypes.length, 'types');
+				}
+
 				// Start transaction for PostgreSQL
 				await db.query('BEGIN');
 
@@ -527,11 +549,18 @@ async function ensureEventMigration() {
 							console.log(`Found ${nullCount} rows with NULL event_id, assigning default 'custom' event type`);
 							// Assign default event type (custom) for NULL values
 							const defaultEventResult = await db.query('SELECT id FROM event_types WHERE name = $1', ['custom']);
+							console.log(`Default event query result:`, defaultEventResult.rows);
 							if (defaultEventResult.rows.length > 0) {
 								const defaultEventId = defaultEventResult.rows[0].id;
+								console.log(`Using default event_id: ${defaultEventId}`);
 								const updateResult = await db.query('UPDATE telemetry_events SET event_id = $1 WHERE event_id IS NULL', [defaultEventId]);
 								console.log(`Assigned default event_id to ${updateResult.rowCount} rows`);
+							} else {
+								console.error('Could not find default event type "custom"');
+								throw new Error('Default event type "custom" not found in event_types table');
 							}
+						} else {
+							console.log('No NULL event_id values found');
 						}
 					}
 
@@ -546,8 +575,10 @@ async function ensureEventMigration() {
 						}
 					}
 
-					// Drop old event column
-					await db.query('ALTER TABLE telemetry_events DROP COLUMN event');
+					// Drop old event column if it exists
+					if (hasEventColumn) {
+						await db.query('ALTER TABLE telemetry_events DROP COLUMN event');
+					}
 
 					// Make event_id NOT NULL (after ensuring no NULL values exist)
 					const nullCheckResult = await db.query('SELECT COUNT(*) as count FROM telemetry_events WHERE event_id IS NULL');
