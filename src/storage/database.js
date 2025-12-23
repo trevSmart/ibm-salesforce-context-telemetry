@@ -1286,20 +1286,30 @@ async function getSessions(options = {}) {
 						MIN(timestamp) as first_event,
 						MAX(timestamp) as last_event,
 						SUM(CASE WHEN event = 'session_start' THEN 1 ELSE 0 END) as has_start,
-						SUM(CASE WHEN event = 'session_end' THEN 1 ELSE 0 END) as has_end,
-						(SELECT user_id FROM telemetry_events
-						 WHERE COALESCE(parent_session_id, session_id) = COALESCE(te.parent_session_id, te.session_id)
-						   AND deleted_at IS NULL
-						 ORDER BY timestamp ASC LIMIT 1) as user_id,
-						(SELECT data FROM telemetry_events
-						 WHERE COALESCE(parent_session_id, session_id) = COALESCE(te.parent_session_id, te.session_id)
-						   AND event = 'session_start'
-						   AND deleted_at IS NULL
-						 ORDER BY timestamp ASC LIMIT 1) as session_start_data
+						SUM(CASE WHEN event = 'session_end' THEN 1 ELSE 0 END) as has_end
 					FROM telemetry_events te
 					WHERE (session_id IS NOT NULL OR parent_session_id IS NOT NULL) AND deleted_at IS NULL
 					${userIds && userIds.length > 0 ? `AND user_id IN (${userIds.map(() => `$${paramIndex++}`).join(', ')})` : ''}
 					GROUP BY COALESCE(parent_session_id, session_id)
+				),
+				session_details AS (
+					SELECT
+						sa.logical_session_id,
+						sa.count,
+						sa.first_event,
+						sa.last_event,
+						sa.has_start,
+						sa.has_end,
+						(SELECT user_id FROM telemetry_events
+						 WHERE COALESCE(parent_session_id, session_id) = sa.logical_session_id
+						   AND deleted_at IS NULL
+						 ORDER BY timestamp ASC LIMIT 1) as user_id,
+						(SELECT data FROM telemetry_events
+						 WHERE COALESCE(parent_session_id, session_id) = sa.logical_session_id
+						   AND event = 'session_start'
+						   AND deleted_at IS NULL
+						 ORDER BY timestamp ASC LIMIT 1) as session_start_data
+					FROM session_aggregates sa
 				),
 				user_aggregates AS (
 					SELECT
@@ -1316,7 +1326,7 @@ async function getSessions(options = {}) {
 					${userIds && userIds.length > 0 ? `AND user_id IN (${userIds.map(() => `$${paramIndex++}`).join(', ')})` : ''}
 					GROUP BY user_id, DATE(timestamp)
 				)
-				SELECT * FROM session_aggregates
+				SELECT * FROM session_details
 				UNION ALL
 				SELECT * FROM user_aggregates
 				ORDER BY last_event DESC
