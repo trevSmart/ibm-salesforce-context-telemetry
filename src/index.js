@@ -438,38 +438,6 @@ app.use(async (req, res, next) => {
 	next();
 });
 
-// Temporary setup endpoint before CSRF middleware - REMOVE AFTER USE
-app.post('/api/setup-god-user', async (req, res) => {
-	try {
-		const { action, username, role } = req.body;
-
-		if (!action || !username) {
-			return res.status(400).json({ error: 'Action and username are required' });
-		}
-
-		// Special action to change user role to god
-		if (action === 'make_god' && username && role === 'god') {
-			const user = await db.getUserByUsername(username);
-			if (!user) {
-				return res.status(404).json({ error: 'User not found' });
-			}
-
-			// Update user role to god
-			await db.updateUserRole(user.id, 'god');
-
-			return res.json({
-				message: `User ${username} role changed to god successfully`,
-				user: { id: user.id, username, role: 'god' }
-			});
-		}
-
-		return res.status(400).json({ error: 'Invalid action' });
-	} catch (error) {
-		console.error('Error managing user:', error);
-		res.status(500).json({ error: 'Failed to manage user' });
-	}
-});
-
 // CSRF Protection
 // Set CSRF token cookie for all requests
 app.use(csrf.setCsrfToken);
@@ -1477,6 +1445,115 @@ app.get('/api/user-login-logs', auth.requireAuth, auth.requireRole('god'), apiRe
 	}
 });
 
+// Temporary user info endpoint (admin only) - REMOVE AFTER USE
+app.get('/api/user-info/:username', auth.requireAuth, auth.requireRole('administrator'), async (req, res) => {
+	try {
+		const { username } = req.params;
+
+		if (!username) {
+			return res.status(400).json({ error: 'Username is required' });
+		}
+
+		const user = await db.getUserByUsername(username);
+		if (!user) {
+			return res.status(404).json({ error: 'User not found' });
+		}
+
+		// Return user info without sensitive data
+		res.json({
+			username: user.username,
+			role: user.role,
+			id: user.id,
+			created_at: user.created_at,
+			last_login: user.last_login
+		});
+	} catch (error) {
+		console.error('Error getting user info:', error);
+		res.status(500).json({ error: 'Failed to get user info' });
+	}
+});
+
+// Temporary user management endpoint (admin only) - REMOVE AFTER USE
+app.post('/api/manage-user', auth.requireAuth, auth.requireRole('administrator'), async (req, res) => {
+	try {
+		const { action, username, role } = req.body;
+
+		if (!action || !username) {
+			return res.status(400).json({ error: 'Action and username are required' });
+		}
+
+		// Special action to change user role to god
+		if (action === 'make_god' && username && role === 'god') {
+			const user = await db.getUserByUsername(username);
+			if (!user) {
+				return res.status(404).json({ error: 'User not found' });
+			}
+
+			// Update user role to god
+			await db.updateUserRole(user.id, 'god');
+
+			return res.json({
+				message: `User ${username} role changed to god successfully`,
+				user: { id: user.id, username, role: 'god' }
+			});
+		}
+
+		return res.status(400).json({ error: 'Invalid action' });
+	} catch (error) {
+		console.error('Error managing user:', error);
+		res.status(500).json({ error: 'Failed to manage user' });
+	}
+});
+
+// Temporary user creation endpoint (admin only) - REMOVE AFTER USE
+app.post('/api/create-user', auth.requireAuth, auth.requireRole('administrator'), async (req, res) => {
+	try {
+		const { username, password, role } = req.body;
+
+		if (!username || !password || !role) {
+			return res.status(400).json({ error: 'Username, password, and role are required' });
+		}
+
+		// Special handling for god user creation
+		if (username === 'god' && role === 'god') {
+			// Check if god user already exists
+			const existing = await db.getUserByUsername('god');
+			if (existing) {
+				return res.status(409).json({ error: 'God user already exists' });
+			}
+
+			// Hash password "metria"
+			const bcrypt = await import('bcrypt');
+			const hashedPassword = await bcrypt.default.hash('metria', 10);
+
+			// Create god user
+			const userId = await db.createUser('god', hashedPassword, 'god');
+
+			return res.json({
+				message: 'God user created successfully',
+				user: { id: userId, username: 'god', role: 'god' }
+			});
+		}
+
+		// Regular user creation
+		const existing = await db.getUserByUsername(username);
+		if (existing) {
+			return res.status(409).json({ error: 'User already exists' });
+		}
+
+		const bcrypt = await import('bcrypt');
+		const hashedPassword = await bcrypt.default.hash(password, 10);
+		const userId = await db.createUser(username, hashedPassword, role);
+
+		res.json({
+			message: 'User created successfully',
+			user: { id: userId, username, role }
+		});
+	} catch (error) {
+		console.error('Error creating user:', error);
+		res.status(500).json({ error: 'Failed to create user' });
+	}
+});
 
 app.get('/api/daily-stats', dashboardStatsLimiter, auth.requireAuth, async (req, res) => {
 	try {
