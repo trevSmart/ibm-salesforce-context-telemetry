@@ -397,14 +397,18 @@ async function ensureEventTypesInitialized() {
 				console.log('Initialized event_types table with', eventTypes.length, 'event types');
 			}
 		} else if (dbType === 'postgresql') {
-			// Check if event_types table has data
-			const result = await db.query('SELECT COUNT(*) as count FROM event_types');
-			if (result.rows[0].count === 0) {
-				const query = 'INSERT INTO event_types (name, description) VALUES ($1, $2)';
-				for (const eventType of eventTypes) {
-					await db.query(query, [eventType.name, eventType.description]);
+			// Use ON CONFLICT DO NOTHING to safely insert all event types
+			// This ensures all required types exist even if table has partial data
+			const query = 'INSERT INTO event_types (name, description) VALUES ($1, $2) ON CONFLICT (name) DO NOTHING';
+			let insertedCount = 0;
+			for (const eventType of eventTypes) {
+				const result = await db.query(query, [eventType.name, eventType.description]);
+				if (result.rowCount > 0) {
+					insertedCount++;
 				}
-				console.log('Initialized event_types table with', eventTypes.length, 'event types');
+			}
+			if (insertedCount > 0) {
+				console.log(`Initialized event_types table with ${insertedCount} new event types`);
 			}
 		}
 	} catch (error) {
@@ -508,6 +512,7 @@ async function ensureEventMigration() {
 				console.log(`Total rows in telemetry_events: ${totalRowsResult.rows[0].count}`);
 
 				// Ensure event_types table has data before migration
+				// This is a safety check - ensureEventTypesInitialized() should have already run
 				const eventTypesCount = await db.query('SELECT COUNT(*) as count FROM event_types');
 				if (eventTypesCount.rows[0].count === 0) {
 					console.log('Event types table is empty, populating it first...');
@@ -520,7 +525,7 @@ async function ensureEventMigration() {
 						{name: 'custom', description: 'Custom event'}
 					];
 					for (const eventType of eventTypes) {
-						await db.query('INSERT INTO event_types (name, description) VALUES ($1, $2)', [eventType.name, eventType.description]);
+						await db.query('INSERT INTO event_types (name, description) VALUES ($1, $2) ON CONFLICT (name) DO NOTHING', [eventType.name, eventType.description]);
 					}
 					console.log('Populated event_types table with', eventTypes.length, 'types');
 				}
