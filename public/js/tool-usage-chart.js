@@ -126,80 +126,92 @@ function renderToolUsageChart(tools, days) {
 		}
 
 		const theme = getToolUsageChartTheme();
-		const names = tools.map(t => t.tool || 'Unknown');
-		const successData = tools.map(t => t.successful || 0);
-		const errorData = tools.map(t => t.errors || 0);
+
+		// Color palette based on brand strategy (softened for chart use)
+		const brandColors = [
+			'#7DD3C0', // Teal/Turquoise (Dark Blue - softened)
+			'#FFD93D', // Gold/Yellow (softened)
+			'#FF6B6B', // Red (softened)
+			'#9B7EDE', // Purple (softened)
+			'#FFA07A', // Orange (softened)
+			'#95A5A6', // Medium Gray
+			'#6C7A89', // Dark Gray
+			'#BDC3C7'  // Light Gray
+		];
+
+		// Prepare data for pie chart - combine success and errors for each tool
+		const pieData = tools.map((t, index) => {
+			const total = (t.successful || 0) + (t.errors || 0);
+			const success = t.successful || 0;
+			const errors = t.errors || 0;
+			const name = t.tool || 'Unknown';
+
+			return {
+				name: name,
+				value: total,
+				itemStyle: {
+					color: brandColors[index % brandColors.length]
+				},
+				label: {
+					formatter: `{b}\n{success|${success}} {error|${errors}}`,
+					fontFamily: 'Manrope',
+					rich: {
+						success: {color: theme.success, fontWeight: 600},
+						error: {color: theme.error, fontWeight: 600}
+					}
+				}
+			};
+		}).filter(item => item.value > 0); // Only show tools with usage
 
 		const option = {
 			backgroundColor: theme.bg,
 			textStyle: {
-				fontFamily:
-					'Manrope, \'Manrope\', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, \'Helvetica Neue\', Arial, sans-serif'
+				fontFamily: 'Manrope'
 			},
 			tooltip: {
-				trigger: 'axis',
-				axisPointer: {type: 'shadow'},
-				backgroundColor: theme.tooltipBg,
-				borderColor: theme.tooltipBorder,
-				textStyle: {color: theme.tooltipText}
-			},
-			legend: {
-				data: ['Success', 'Errors'],
-				textStyle: {color: theme.text},
-				top: 10
-			},
-			grid: {
-				left: '3%',
-				right: '4%',
-				bottom: '3%',
-				containLabel: true
-			},
-			xAxis: {
-				type: 'category',
-				data: names,
-				axisLabel: {
-					color: theme.text,
-					rotate: 45,
-					interval: 0
-				},
-				axisLine: {lineStyle: {color: theme.axis}},
-				axisTick: {lineStyle: {color: theme.axis}}
-			},
-			yAxis: {
-				type: 'value',
-				axisLabel: {color: theme.text},
-				axisLine: {lineStyle: {color: theme.axis}},
-				axisTick: {lineStyle: {color: theme.axis}},
-				splitLine: {lineStyle: {color: theme.grid}}
+				trigger: 'item',
+				formatter: '{a} <br/>{b}: {c} ({d}%)',
+				backgroundColor: theme.bg,
+				borderColor: theme.axis,
+				textStyle: {color: theme.text, fontFamily: 'Manrope'}
 			},
 			series: [
 				{
-					name: 'Success',
-					type: 'bar',
-					stack: 'total',
-					label: {show: false},
-					itemStyle: {color: theme.success, borderRadius: [0, 0, 0, 0]},
-					data: successData
-				},
-				{
-					name: 'Errors',
-					type: 'bar',
-					stack: 'total',
+					name: 'Tool Usage',
+					type: 'pie',
+					radius: '50%',
+					center: ['50%', '50%'],
+					data: pieData,
 					label: {
 						show: true,
-						position: 'right',
-						distance: 8,
-						formatter: (params) => {
-							const idx = params.dataIndex;
-							return `{success|${successData[idx]}}/{error|${errorData[idx]}}`;
+						position: 'outside',
+						formatter: '{b}\n{d}%',
+						fontSize: 11,
+						fontFamily: 'Manrope',
+						overflow: 'truncate'
+					},
+					labelLine: {
+						show: true,
+						length: 20,
+						length2: 10,
+						smooth: true
+					},
+					emphasis: {
+						label: {
+							show: true,
+							fontSize: 14,
+							fontWeight: 'bold',
+							fontFamily: 'Manrope'
 						},
-						rich: {
-							success: {color: theme.success, fontWeight: 600},
-							error: {color: theme.error, fontWeight: 600}
+						labelLine: {
+							show: true
 						}
 					},
-					itemStyle: {color: theme.error, borderRadius: [0, 10, 10, 0]},
-					data: errorData
+					itemStyle: {
+						borderRadius: 4,
+						borderColor: theme.bg,
+						borderWidth: 2
+					}
 				}
 			]
 		};
