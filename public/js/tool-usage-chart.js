@@ -156,7 +156,7 @@ function renderToolUsageChart(tools, days) {
 					formatter: `{b}\n{success|${success}} {error|${errors}}`,
 					fontFamily: 'Manrope',
 					rich: {
-						success: {color: theme.success, fontWeight: 600},
+						success: {color: '#2195cf', fontWeight: 600},
 						error: {color: theme.error, fontWeight: 600}
 					}
 				}
