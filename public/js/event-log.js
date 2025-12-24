@@ -672,7 +672,10 @@ function safeShowToast(message, type = 'info') {
 			newHeight = Math.max(190, Math.min(600, newHeight));
 			activityCard.style.height = `${newHeight}px`;
 			if (sessionActivityChart) {
-				sessionActivityChart.resize();
+				const chartEl = document.getElementById('sessionActivityChart');
+				if (chartEl) {
+					sessionActivityChart.resize();
+				}
 			}
 		};
 
@@ -699,7 +702,10 @@ function safeShowToast(message, type = 'info') {
 				}
 				if (sessionActivityChart) {
 					setTimeout(() => {
-						sessionActivityChart.resize();
+						const chartEl = document.getElementById('sessionActivityChart');
+						if (chartEl) {
+							sessionActivityChart.resize();
+						}
 					}, 0);
 				}
 			};
@@ -743,7 +749,10 @@ function safeShowToast(message, type = 'info') {
 				document.removeEventListener('touchcancel', stopResize);
 				if (sessionActivityChart) {
 					setTimeout(() => {
-						sessionActivityChart.resize();
+						const chartEl = document.getElementById('sessionActivityChart');
+						if (chartEl) {
+							sessionActivityChart.resize();
+						}
 					}, 0);
 				}
 			};
@@ -809,7 +818,12 @@ function safeShowToast(message, type = 'info') {
 			renderSessionActivityChart(payload.events, payload.options || {});
 		}
 		window.addEventListener('resize', () => {
-			sessionActivityChart?.resize();
+			if (sessionActivityChart) {
+				const chartEl = document.getElementById('sessionActivityChart');
+				if (chartEl) {
+					sessionActivityChart.resize();
+				}
+			}
 		});
 		return sessionActivityChart;
 	}
@@ -850,7 +864,13 @@ function safeShowToast(message, type = 'info') {
 		}
 		// Resize chart to fit the new available space
 		if (sessionActivityChart) {
-			sessionActivityChart.resize();
+			// Check if the chart container still exists in the DOM
+			const chartEl = document.getElementById('sessionActivityChart');
+			if (chartEl) {
+				sessionActivityChart.resize();
+			} else {
+				logChartTrace('showSessionActivityCard: chart container element not found, skipping resize');
+			}
 		}
 	}
 
@@ -1931,7 +1951,10 @@ function safeShowToast(message, type = 'info') {
 		if (lastSessionActivityEvents.length > 0) {
 			renderSessionActivityChart(lastSessionActivityEvents);
 		} else if (sessionActivityChart) {
-			sessionActivityChart.resize();
+			const chartEl = document.getElementById('sessionActivityChart');
+			if (chartEl) {
+				sessionActivityChart.resize();
+			}
 		}
 	}
 
@@ -5062,11 +5085,19 @@ function safeShowToast(message, type = 'info') {
 				// Initialize new chart instance
 				sessionActivityChart = echarts.init(chartEl);
 				window.addEventListener('resize', () => {
-					sessionActivityChart?.resize();
+					if (sessionActivityChart) {
+						const chartEl = document.getElementById('sessionActivityChart');
+						if (chartEl) {
+							sessionActivityChart.resize();
+						}
+					}
 				});
 				// Restore the saved option (notMerge: true to replace entirely)
 				sessionActivityChart.setOption(savedSessionActivityChartOption, true);
-				sessionActivityChart.resize();
+				const chartEl = document.getElementById('sessionActivityChart');
+				if (chartEl) {
+					sessionActivityChart.resize();
+				}
 				// Clear saved option after restoration
 				savedSessionActivityChartOption = null;
 			}
