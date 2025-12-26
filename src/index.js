@@ -2883,11 +2883,14 @@ async function startServer() {
 async function gracefulShutdown(signal) {
 	console.log(`${signal} received, closing connections...`);
 	
-	// Close Redis session client if it exists
+	// Close Redis session client if it exists and is connected
 	if (redisSessionClient) {
 		try {
-			await redisSessionClient.quit();
-			console.log('Redis session client closed');
+			// Only quit if the client is connected (lazyConnect: true means it may not be)
+			if (redisSessionClient.isOpen) {
+				await redisSessionClient.quit();
+				console.log('Redis session client closed');
+			}
 		} catch (error) {
 			console.error('Error closing Redis session client:', error.message);
 		}
