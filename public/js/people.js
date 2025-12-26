@@ -785,8 +785,7 @@ window.addEventListener('softNav:pageMounted', async (event) => {
 
 // Legacy functions for backward compatibility
 async function showPersonDetails(personId) {
-	// eslint-disable-next-line no-undef
-	await viewPersonDetail(personId);
+	await window.viewPersonDetail(personId);
 }
 
 // Function to load usernames for a person in detail view
