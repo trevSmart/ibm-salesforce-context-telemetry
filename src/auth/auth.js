@@ -111,6 +111,10 @@ function initSessionMiddleware() {
 				console.error('❌ Redis session store error:', err.message);
 			});
 
+			// Explicitly initiate Redis connection without blocking startup
+			redisClient.connect().catch((err) => {
+				console.error('❌ Failed to connect to Redis for session store:', err.message);
+			});
 			store = new RedisStore({
 				client: redisClient,
 				prefix: 'session:',
