@@ -1,18 +1,18 @@
 /**
  * Script to create a test template database for GitHub Copilot
- * 
+ *
  * This creates a SQLite database template for testing and development with:
  * - Complete schema (all tables and migrations)
  * - Single user "copilot" with role "god"
  * - Test telemetry data (generated using generate-test-data.js)
- * 
+ *
  * This template is intended for GitHub Copilot environments and can be committed
  * to the repository, allowing quick database initialization without running
  * migrations from scratch.
- * 
- * Usage: 
+ *
+ * Usage:
  *   node src/scripts/create-test-template-database.js
- * 
+ *
  * Environment variables:
  *   COPILOT_USERNAME - Username for Copilot user (default: copilot)
  *   COPILOT_PASSWORD - Password for Copilot user (default: copilot)
@@ -117,12 +117,12 @@ async function createTestTemplateDatabase() {
 async function generateTestDataForTemplate(dbModule) {
 	return new Promise((resolve) => {
 		const scriptPath = path.join(__dirname, 'generate-test-data.js');
-		
+
 		// Calculate a date 3 days ago as the center point for 1 week of data
 		const targetDate = new Date();
 		targetDate.setDate(targetDate.getDate() - 3);
 		const targetDateStr = targetDate.toISOString().split('T')[0];
-		
+
 		const nodeProcess = spawn('node', [
 			scriptPath,
 			targetDateStr,

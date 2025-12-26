@@ -1,17 +1,17 @@
 /**
  * Script to create an initial template database for production
- * 
+ *
  * This creates a SQLite database template with:
  * - Complete schema (all tables and migrations)
  * - Single user "god" with role "god"
  * - No test data
- * 
+ *
  * This template is intended for production deployments where you want
  * a clean database with only the schema initialized.
- * 
- * Usage: 
+ *
+ * Usage:
  *   node src/scripts/create-initial-template-database.js
- * 
+ *
  * Environment variables:
  *   INITIAL_TEMPLATE_DB_PATH - Path where to create initial template (default: src/data/database-base-template.db)
  */
