@@ -103,7 +103,7 @@ function openConfirmModal({title, message, confirmLabel = 'Confirm', cancelLabel
 				</div>
 			</div>
 			<div class="confirm-dialog-actions">
-				<button type="button" class="text-sm btn confirm-modal-btn-cancel">${escapeHtml(cancelLabel)}</button>
+				<button type="button" class="text-sm btn">${escapeHtml(cancelLabel)}</button>
 				<button type="button" class="btn ${destructive ? 'inline-flex w-full justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-red-500 sm:ml-3 sm:w-auto' : 'confirm-modal-btn-confirm'}">${escapeHtml(confirmLabel)}</button>
 			</div>
 		`;
@@ -621,7 +621,7 @@ async function openSettingsModal() {
 				</div>
 		<div class="settings-modal-footer">
 			<div class="confirm-modal-actions">
-				<button type="button" class="btn confirm-modal-btn-cancel" id="settingsCloseBtn">
+				<button type="button" class="btn" id="settingsCloseBtn">
 					Close
 				</button>
 			</div>
@@ -777,7 +777,7 @@ async function openSettingsModal() {
 				userFormContainer.innerHTML = `
             <div class="settings-users-form-header" style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
               <div class="settings-modal-placeholder-title" style="margin: 0;">${title}</div>
-              <button type="button" class="btn confirm-modal-btn-cancel" data-action="cancel-user-form" style="padding: 6px 10px;">
+              <button type="button" class="btn" data-action="cancel-user-form" style="padding: 6px 10px;">
                 Close
               </button>
             </div>
@@ -786,10 +786,10 @@ async function openSettingsModal() {
               ${fieldsHtml}
               <div class="settings-users-form-error" style="color: #dc2626; font-size: 13px; display: none;"></div>
               <div class="confirm-modal-actions">
-                <button type="button" class="btn confirm-modal-btn-cancel" data-action="cancel-user-form">
+                <button type="button" class="btn" data-action="cancel-user-form">
                   Cancel
                 </button>
-                <button type="submit" class="btn confirm-modal-btn-confirm">
+                <button type="submit" class="btn">
                   ${submitLabel}
                 </button>
               </div>

@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { toggleTheme, updateThemeMenuItem, initializeTheme } from './theme.js';
+import {toggleTheme, updateThemeMenuItem, initializeTheme} from './theme.js';
 
 // Dashboard constants
 const SESSION_START_SERIES_COLOR = '#2195cf';
@@ -336,7 +336,7 @@ function openConfirmModal({title, message, confirmLabel = 'Confirm', cancelLabel
 				</div>
 			</div>
 			<div class="confirm-dialog-actions">
-				<button type="button" class="text-sm btn confirm-modal-btn-cancel">${escapeHtml(cancelLabel)}</button>
+				<button type="button" class="text-sm btn">${escapeHtml(cancelLabel)}</button>
 				<button type="button" class="btn ${destructive ? 'inline-flex w-full justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-red-500 sm:ml-3 sm:w-auto' : 'confirm-modal-btn-confirm'}">${escapeHtml(confirmLabel)}</button>
 			</div>
 		`;

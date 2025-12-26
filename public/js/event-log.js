@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { toggleTheme, updateThemeMenuItem, applyTheme } from './theme.js';
+import {toggleTheme, updateThemeMenuItem, applyTheme} from './theme.js';
 
 // Prevent double execution when soft navigation re-injects the script
 if (window.__EVENT_LOG_LOADED__) {
@@ -388,7 +388,7 @@ function safeShowToast(message, type = 'info') {
 					</div>
 				</div>
 				<div class="confirm-dialog-actions">
-					<button type="button" class="btn confirm-modal-btn-cancel">${escapeHtml(cancelLabel)}</button>
+					<button type="button" class="btn">${escapeHtml(cancelLabel)}</button>
 					<button type="button" class="btn ${destructive ? 'text-sm inline-flex w-full justify-center rounded-md bg-red-600 px-3 py-2 font-semibold text-white shadow-xs hover:bg-red-500 sm:ml-3 sm:w-auto' : 'confirm-modal-btn-confirm'}">${escapeHtml(confirmLabel)}</button>
 				</div>
 			`;

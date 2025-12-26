@@ -1,7 +1,7 @@
 // @ts-nocheck
 // Teams management page
 import {showToast} from './notifications.js';
-import { toggleTheme } from './theme.js';
+import {toggleTheme} from './theme.js';
 
 const REFRESH_ICON_ANIMATION_DURATION_MS = 700;
 let currentView = 'list'; // 'list' or 'detail'
@@ -92,7 +92,7 @@ function showConfirmDialog({title, message, confirmText = 'Confirm', cancelText 
 	return new Promise((resolve) => {
 		const isDark = document.documentElement.classList.contains('dark');
 		const dialogId = `confirm-dialog-${Date.now()}`;
-		
+
 		// Icon for destructive vs normal actions
 		const iconHtml = destructive ? `
 			<div class="mx-auto flex shrink-0 items-center justify-center rounded-full ${isDark ? 'bg-red-500/10' : 'bg-red-100'} sm:mx-0 sm:size-10" style="width: 3rem; height: 3rem;">
@@ -210,7 +210,7 @@ async function clearLocalData() {
 		cancelText: 'Cancel',
 		destructive: false
 	});
-	
+
 	if (confirmed) {
 		localStorage.clear();
 		showToast('Local data cleared. Page will reload.', 'info');
@@ -595,7 +595,7 @@ async function renderTeamDetail(teamId) {
       <div class="divide-y divide-gray-200 dark:divide-gray-700 overflow-hidden rounded-lg bg-white dark:bg-gray-800/50 dark:outline dark:-outline-offset-1 dark:outline-white/10 shadow-sm">
         <div class="px-4 py-5 sm:px-6" style="display: flex; justify-content: space-between; align-items: center;">
           <h2 style="margin: 0; font-size: 1.1rem; font-weight: 600;">Organizations</h2>
-          <button id="addOrgBtn" class="btn confirm-modal-btn-cancel" onclick="showAddOrgModalForTeam(${teamId})">
+          <button id="addOrgBtn" class="btn" onclick="showAddOrgModalForTeam(${teamId})">
             <i class="fas fa-plus" style="margin-right: 4px;"></i>Add Org
           </button>
         </div>
@@ -608,7 +608,7 @@ async function renderTeamDetail(teamId) {
       <div class="divide-y divide-gray-200 dark:divide-gray-700 overflow-hidden rounded-lg bg-white dark:bg-gray-800/50 dark:outline dark:-outline-offset-1 dark:outline-white/10 shadow-sm">
         <div class="px-4 py-5 sm:px-6" style="display: flex; justify-content: space-between; align-items: center;">
           <h2 style="margin: 0; font-size: 1.1rem; font-weight: 600;">Users</h2>
-          <button id="addUserBtn" class="btn confirm-modal-btn-cancel" onclick="showAddUserModalForTeam(${teamId})">
+          <button id="addUserBtn" class="btn" onclick="showAddUserModalForTeam(${teamId})">
             <i class="fas fa-plus" style="margin-right: 4px;"></i>Add User
           </button>
         </div>
@@ -718,7 +718,7 @@ function showTeamFormModal(team = null) {
         </label>
       </div>
       <div style="display: flex; gap: 8px; margin-top: 20px; justify-content: flex-end;">
-        <button type="button" class="btn confirm-modal-btn-cancel" id="cancelTeamFormBtn">
+        <button type="button" class="btn" id="cancelTeamFormBtn">
           Cancel
         </button>
         <button type="submit" class="btn confirm-modal-btn-confirm">
@@ -822,7 +822,7 @@ function showTeamFormModal(team = null) {
 				cancelText: 'Cancel',
 				destructive: false
 			});
-			
+
 			if (confirmed) {
 				removeLogo = true;
 				const logoPreview = document.getElementById('logoPreview');
@@ -877,7 +877,7 @@ async function showDeleteTeamConfirm(team) {
 		cancelText: 'Cancel',
 		destructive: true
 	});
-	
+
 	if (!confirmed) {
 		return;
 	}
@@ -945,7 +945,7 @@ async function showAddOrgModal(teamId) {
       </div>
     ` : ''}
     <div style="display: flex; gap: 8px; justify-content: flex-end;">
-      <button type="button" class="btn confirm-modal-btn-cancel" id="cancelAddOrgBtn">
+      <button type="button" class="btn" id="cancelAddOrgBtn">
         Cancel
       </button>
       <button type="button" class="btn confirm-modal-btn-confirm" id="saveAddOrgBtn">
@@ -1064,7 +1064,7 @@ async function showAddUserModal(teamId) {
       </label>
     </div>
     <div style="display: flex; gap: 8px; justify-content: flex-end;">
-      <button type="button" class="btn confirm-modal-btn-cancel" id="cancelAddUserBtn">
+      <button type="button" class="btn" id="cancelAddUserBtn">
         Cancel
       </button>
       <button type="button" class="btn confirm-modal-btn-confirm" id="saveAddUserBtn">
@@ -1134,7 +1134,7 @@ async function removeOrgFromTeam(orgId, teamId) {
 		cancelText: 'Cancel',
 		destructive: true
 	});
-	
+
 	if (!confirmed) {
 		return;
 	}
@@ -1156,7 +1156,7 @@ async function removeUserFromTeam(userName, teamId) {
 		cancelText: 'Cancel',
 		destructive: true
 	});
-	
+
 	if (!confirmed) {
 		return;
 	}
