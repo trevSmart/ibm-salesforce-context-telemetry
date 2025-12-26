@@ -1127,7 +1127,7 @@ async function storeEvent(eventData, receivedAt) {
 				}
 			} catch (error) {
 				// Log error but don't fail event insertion
-				console.warn(`Could not resolve team_id for org_id ${orgId}:`, error.message);
+				console.warn('Could not resolve team_id for org_id %s:', orgId, error.message);
 			}
 		}
 
