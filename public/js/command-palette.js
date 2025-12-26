@@ -591,52 +591,6 @@
 			}
 			// Don't open command palette if any modals or dialogs are open
 			if (isModalOrDialogOpen()) {
-
-				// Check for modal elements
-				const modalSelectors = [
-					'.modal[style*="display: block"]:not(#commandPaletteBackdrop)',
-					'.modal.show:not(#commandPaletteBackdrop)',
-					'.modal.open:not(#commandPaletteBackdrop)',
-					'.modal.visible:not(#commandPaletteBackdrop)',
-					'.dialog[style*="display: block"]:not(#commandPaletteBackdrop)',
-					'.dialog.show:not(#commandPaletteBackdrop)',
-					'.dialog.open:not(#commandPaletteBackdrop)',
-					'.dialog.visible:not(#commandPaletteBackdrop)',
-					'[data-modal-open="true"]:not(#commandPaletteBackdrop)',
-					'[data-dialog-open="true"]:not(#commandPaletteBackdrop)',
-					'.backdrop:not(#commandPaletteBackdrop)',
-					'.modal-backdrop:not(#commandPaletteBackdrop)',
-					'.dialog-backdrop:not(#commandPaletteBackdrop)',
-					'.overlay[style*="display: block"]:not(#commandPaletteBackdrop)',
-					'.overlay.show:not(#commandPaletteBackdrop)',
-					'.overlay.visible:not(#commandPaletteBackdrop)',
-					'.confirm-modal-backdrop:not(#commandPaletteBackdrop)',
-					'.confirm-dialog-backdrop:not(#commandPaletteBackdrop)',
-					'.payload-modal-backdrop:not(#commandPaletteBackdrop)',
-					'.fixed.z-50:not(#commandPaletteBackdrop)',
-					'.absolute.z-50:not(#commandPaletteBackdrop)'
-				];
-
-				for (const selector of modalSelectors) {
-					const elements = document.querySelectorAll(selector);
-					if (elements.length > 0) {
-						return true;
-					}
-				}
-
-
-				// Check z-index elements
-				const allElements = document.querySelectorAll('*:not(#commandPaletteBackdrop)');
-				for (const element of allElements) {
-					const zIndex = window.getComputedStyle(element).zIndex;
-					const isVisible = window.getComputedStyle(element).display !== 'none' &&
-						window.getComputedStyle(element).visibility !== 'hidden' &&
-						element.offsetWidth > 0 && element.offsetHeight > 0;
-					if (zIndex && Number.parseInt(zIndex, 10) > 1000 && isVisible) {
-						return true;
-					}
-				}
-
 				return;
 			}
 			e.preventDefault();
