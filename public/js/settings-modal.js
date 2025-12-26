@@ -40,14 +40,26 @@ const settingsModalStyles = `
 
 /* Wide modal for sections that need more space */
 .settings-modal-wide {
-	max-width: 90vw !important;
-	width: 90vw !important;
+	max-width: 1000px !important;
+}
+
+/* Login history table container with scrolling */
+.settings-login-history-table-container {
+	max-height: 400px;
+	overflow-y: auto;
+	border: 1px solid var(--border-color);
+	border-radius: 6px;
 }
 
 /* Login history table specific styling */
+#loginHistoryTable {
+	width: 100%;
+	border-collapse: collapse;
+}
+
 #loginHistoryTable th:nth-child(3),
 #loginHistoryTable td:nth-child(3) {
-	max-width: 150px;
+	max-width: 200px;
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -523,34 +535,29 @@ async function openSettingsModal() {
 						<section id="settings-login-history" class="settings-section" style="display: none;">
 							<div class="settings-modal-placeholder-title">Login history</div>
 							<div class="settings-modal-placeholder-text">
-								<div class="settings-users-section">
-									<div class="settings-users-table-container">
-										<table class="settings-users-table" id="loginHistoryTable" style="min-width: 800px;">
-											<thead>
-												<tr>
-													<th class="settings-users-th">Username</th>
-													<th class="settings-users-th">IP Address</th>
-													<th class="settings-users-th">User Agent</th>
-													<th class="settings-users-th">Status</th>
-													<th class="settings-users-th">Time</th>
-													<th class="settings-users-th">Error</th>
-												</tr>
-											</thead>
-											<div class="table-body-scroll">
-												<tbody id="loginHistoryTableBody">
-												<tr>
-													<td colspan="6" class="settings-users-empty">
-														<div class="settings-users-loading" role="status" aria-live="polite">
-															<span class="settings-users-spinner" aria-hidden="true"></span>
-															<span class="settings-users-loading-text">Loading login history...</span>
-														</div>
-													</td>
-												</tr>
-												</tbody>
-											</div>
-										</table>
-									</div>
-
+								<div class="settings-login-history-table-container">
+									<table id="loginHistoryTable">
+										<thead>
+											<tr>
+												<th class="settings-users-th">Username</th>
+												<th class="settings-users-th">IP Address</th>
+												<th class="settings-users-th">User Agent</th>
+												<th class="settings-users-th">Status</th>
+												<th class="settings-users-th">Time</th>
+												<th class="settings-users-th">Error</th>
+											</tr>
+										</thead>
+										<tbody id="loginHistoryTableBody">
+										<tr>
+											<td colspan="6" class="settings-users-empty">
+												<div class="settings-users-loading" role="status" aria-live="polite">
+													<span class="settings-users-spinner" aria-hidden="true"></span>
+													<span class="settings-users-loading-text">Loading login history...</span>
+												</div>
+											</td>
+										</tr>
+										</tbody>
+									</table>
 								</div>
 							</div>
 						</section>
