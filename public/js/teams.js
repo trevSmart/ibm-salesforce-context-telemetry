@@ -657,10 +657,10 @@ async function renderTeamDetail(teamId) {
 
 	// Sanitize team color to prevent XSS
 	const sanitizedTeamColor = sanitizeCssColor(team.color);
-	
+
 	// Get team initials for fallback avatar
 	const initials = team.name.split(' ').map(word => word[0]).join('').substring(0, 2).toUpperCase();
-	
+
 	// Logo or avatar with cache busting
 	const logoOrAvatar = team.has_logo ? `<img src="/api/teams/${team.id}/logo?t=${teamsCacheBuster}" alt="${escapeHtml(team.name)} logo" style="width: 32px; height: 32px; object-contain; margin-right: 8px; border-radius: 4px;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
 		<span class="card-avatar" style="display: none; width: 32px; height: 32px; margin-right: 8px;">
@@ -1402,7 +1402,7 @@ window.addEventListener('softNav:pageMounted', async (event) => {
 		const fromCache = event?.detail?.fromCache === true;
 		// Always reset to list view when entering teams page
 		currentView = 'list';
-		
+
 		if (fromCache) {
 			// Page was restored from cache - always show list view
 			await loadTeams();
