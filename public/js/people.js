@@ -1,7 +1,6 @@
 // @ts-nocheck
 // People management page
 import {showToast} from './notifications.js';
-import {toggleTheme} from './theme.js';
 
 const REFRESH_ICON_ANIMATION_DURATION_MS = 700;
 // Transition duration in milliseconds (matches navigation.js)
@@ -29,7 +28,6 @@ function escapeHtml(text) {
 function showConfirmDialog({title, message, confirmText = 'Confirm', cancelText = 'Cancel', destructive = false}) {
 	return new Promise((resolve) => {
 		const isDark = document.documentElement.classList.contains('dark');
-		const dialogId = `confirm-dialog-${Date.now()}`;
 
 		// Icon for destructive vs normal actions
 		const iconHtml = destructive ? `
@@ -170,7 +168,8 @@ async function transitionPeopleContent(newContent) {
 	container.appendChild(newContent);
 
 	// Trigger reflow to ensure opacity:0 is applied
-	void newContent.offsetHeight;
+	// eslint-disable-next-line no-unused-expressions
+	newContent.offsetHeight;
 
 	// Start crossfade: fade out old, fade in new
 	currentContent.style.transition = `opacity ${PEOPLE_TRANSITION_DURATION_MS}ms ease-out`;
@@ -315,7 +314,7 @@ async function renderPersonDetail(personId) {
 	});
 	contentContainer.querySelector('#deletePersonBtn')?.addEventListener('click', () => {
 		console.log('Delete button clicked for person:', person);
-		showDeletePersonConfirm(person);
+		window.showDeletePersonConfirm(person);
 	});
 
 	return contentContainer.firstElementChild;
@@ -527,7 +526,7 @@ async function updatePerson(personId, updates) {
 	return data.person;
 }
 
-async function deletePerson(personId, personName) {
+async function deletePerson(personId, _personName) {
 	const headers = await getRequestHeaders(false);
 	const response = await fetch(`/api/people/${personId}`, {
 		method: 'DELETE',
@@ -735,44 +734,6 @@ function renderPeopleList() {
 	return container.firstElementChild;
 }
 
-// Function to fetch username counts for multiple people (sync version for renderPeopleList)
-function fetchUsernameCounts(people) {
-	const counts = {};
-
-	if (window.location.pathname === '/people-debug') {
-		// Return mock counts for debugging
-		people.forEach(person => {
-			counts[person.id] = person.username_count || 0;
-		});
-		return counts;
-	}
-
-	// For now, return the counts we already have from the API
-	people.forEach(person => {
-		counts[person.id] = person.username_count || 0;
-	});
-
-	return counts;
-}
-
-// Helper function to get time ago string
-function getTimeAgo(date) {
-	const now = new Date();
-	const diffInMs = now - date;
-	const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
-	const diffInDays = Math.floor(diffInHours / 24);
-
-	if (diffInHours < 1) {
-		return 'just now';
-	} else if (diffInHours < 24) {
-		return `${diffInHours}h ago`;
-	} else if (diffInDays < 30) {
-		return `${diffInDays}d ago`;
-	}
-		return date.toLocaleDateString();
-
-}
-
 
 // Initialize when DOM is ready
 if (document.readyState === 'loading') {
@@ -822,57 +783,9 @@ window.addEventListener('softNav:pageMounted', async (event) => {
 });
 
 
-// Function to handle person creation
-async function handleCreatePerson(event) {
-	event.preventDefault();
-
-	const formData = new FormData(event.target);
-	const personData = {
-		name: formData.get('name').trim(),
-		email: formData.get('email')?.trim() || null,
-		initials: formData.get('initials')?.trim() || null
-	};
-
-	if (!personData.name) {
-		window.showToast('Please enter a name', 'error');
-		return;
-	}
-
-	try {
-		const response = await fetch('/api/people', {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json',
-				...(await getRequestHeaders())
-			},
-			body: JSON.stringify(personData)
-		});
-
-		if (!response.ok) {
-			const errorData = await response.json();
-			throw new Error(errorData.message || 'Failed to create person');
-		}
-
-		await response.json();
-
-		// Close the modal
-		closeCreatePersonModal();
-
-		// Refresh the people list
-		await initPeoplePage();
-
-		// Show success message
-		showToast('Person added successfully', 'success');
-
-	} catch (error) {
-		console.error('Error creating person:', error);
-		showToast(`Error creating person: ${  error.message}`, 'error');
-	}
-}
-
 // Legacy functions for backward compatibility
 async function showPersonDetails(personId) {
-	await viewPersonDetail(personId);
+	await window.viewPersonDetail(personId);
 }
 
 // Function to load usernames for a person in detail view
@@ -1101,7 +1014,7 @@ async function showAddUsernameModalForPerson(personId) {
 }
 
 // Function to remove a username from a person
-async function removeUsernameFromPerson(username, personId) {
+async function removeUsernameFromPerson(username, _personId) {
 	const confirmed = await showConfirmDialog({
 		title: 'Remove username',
 		message: `Remove the username "${username}" from this person?`,

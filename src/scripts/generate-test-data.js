@@ -13,9 +13,9 @@
  * - Very low activity on weekends (5% vs 60% on weekdays)
  */
 
-require('dotenv').config();
-const db = require('../storage/database');
-const {v4: uuidv4} = require('uuid');
+import 'dotenv/config';
+import * as db from '../storage/database.js';
+import {v4 as uuidv4} from 'uuid';
 
 // Configuration
 const NUM_USERS = 20;
@@ -459,12 +459,20 @@ async function generateTestData(targetDay, shouldDeleteExisting) {
 		} else if (!environment || environment.trim() === '') {
 			if (!hasDisableEnvCheckFlag) {
 				console.error('❌ ENVIRONMENT variable not set. Use --disable-env-check flag to bypass this check in development.');
+				console.error('   Usage: node src/scripts/generate-test-data.js [--disable-env-check] [YYYY-MM-DD] [true|false]');
+				console.error('   Examples:');
+				console.error('     ENVIRONMENT=dev node src/scripts/generate-test-data.js');
+				console.error('     node src/scripts/generate-test-data.js --disable-env-check true');
+				console.error('     node src/scripts/generate-test-data.js 2025-12-01 false');
 				process.exit(1);
 			}
 		}
 
-		const dayArg = process.argv[2];
-		const deleteArg = process.argv[3];
+		// Parse arguments, filtering out flags
+		const args = process.argv.slice(2).filter(arg => !arg.startsWith('--'));
+
+		const dayArg = args[0];
+		const deleteArg = args[1];
 		let targetDay = null;
 		let shouldDeleteExisting = false;
 

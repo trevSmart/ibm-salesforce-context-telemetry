@@ -11,7 +11,6 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import {fileURLToPath} from 'node:url';
 import {dirname} from 'node:path';
-import {format} from 'node:util';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -343,42 +342,6 @@ async function getEventTypeId(eventName) {
 	}
 }
 
-async function getEventTypeName(eventId) {
-	if (!eventId) {
-		return null;
-	}
-
-	if (!db) {
-		throw new Error('Database not initialized');
-	}
-
-	// Cache event type names to avoid repeated queries
-	if (!global.eventTypeNameCache) {
-		global.eventTypeNameCache = new Map();
-	}
-
-	if (global.eventTypeNameCache.has(eventId)) {
-		return global.eventTypeNameCache.get(eventId);
-	}
-
-	if (dbType === 'sqlite') {
-		const stmt = db.prepare('SELECT name FROM event_types WHERE id = ?');
-		const result = stmt.get(eventId);
-		const name = result ? result.name : null;
-		if (name) {
-			global.eventTypeNameCache.set(eventId, name);
-		}
-		return name;
-	} else if (dbType === 'postgresql') {
-		const result = await db.query('SELECT name FROM event_types WHERE id = $1', [eventId]);
-		const name = result.rows.length > 0 ? result.rows[0].name : null;
-		if (name) {
-			global.eventTypeNameCache.set(eventId, name);
-		}
-		return name;
-	}
-}
-
 async function ensureEventTypesInitialized() {
 	if (!db) {
 		return;
@@ -416,6 +379,7 @@ async function ensureEventTypesInitialized() {
 				}
 			}
 			if (insertedCount > 0) {
+				console.log(`Initialized ${insertedCount} new event types`);
 			}
 		}
 	} catch (error) {
@@ -450,7 +414,7 @@ async function ensureEventMigration() {
 						SET event_id = (SELECT id FROM event_types WHERE name = telemetry_events.event)
 						WHERE event_id IS NULL
 					`);
-					const result = updateStmt.run();
+					updateStmt.run();
 				} else {
 					// Check if there are NULL event_id values that need a default
 					const nullCount = db.prepare('SELECT COUNT(*) as count FROM telemetry_events WHERE event_id IS NULL').get();
@@ -459,7 +423,7 @@ async function ensureEventMigration() {
 						const defaultEventId = db.prepare('SELECT id FROM event_types WHERE name = ?').get('custom');
 						if (defaultEventId) {
 							const updateStmt = db.prepare('UPDATE telemetry_events SET event_id = ? WHERE event_id IS NULL');
-							const result = updateStmt.run(defaultEventId.id);
+							updateStmt.run(defaultEventId.id);
 						}
 					}
 				}
@@ -484,7 +448,9 @@ async function ensureEventMigration() {
 				db.exec('CREATE INDEX IF NOT EXISTS idx_event_id_created_at ON telemetry_events(event_id, created_at)');
 
 			} else if (hasEventIdColumn) {
+				console.log('Event migration already completed - event_id column exists');
 			} else {
+				console.log('Unexpected state: neither event nor event_id column found');
 			}
 
 		} else 		if (dbType === 'postgresql') {
@@ -503,7 +469,7 @@ async function ensureEventMigration() {
 			if (!hasEventIdColumn) {
 
 				// Log total rows in telemetry_events
-				const totalRowsResult = await db.query('SELECT COUNT(*) as count FROM telemetry_events');
+				await db.query('SELECT COUNT(*) as count FROM telemetry_events');
 
 				// Ensure event_types table has data before migration
 				// This is a safety check - ensureEventTypesInitialized() should have already run
@@ -531,7 +497,7 @@ async function ensureEventMigration() {
 
 					// Migrate data from event to event_id if event column exists
 					if (hasEventColumn) {
-						const updateResult = await db.query(`
+						await db.query(`
 							UPDATE telemetry_events
 							SET event_id = event_types.id
 							FROM event_types
@@ -548,12 +514,13 @@ async function ensureEventMigration() {
 						const defaultEventResult = await db.query('SELECT id FROM event_types WHERE name = $1', ['custom']);
 						if (defaultEventResult.rows.length > 0) {
 							const defaultEventId = defaultEventResult.rows[0].id;
-							const updateResult = await db.query('UPDATE telemetry_events SET event_id = $1 WHERE event_id IS NULL', [defaultEventId]);
+							await db.query('UPDATE telemetry_events SET event_id = $1 WHERE event_id IS NULL', [defaultEventId]);
 						} else {
 							console.error('Could not find default event type "custom"');
 							throw new Error('Default event type "custom" not found in event_types table');
 						}
 					} else {
+						console.log('All event_id values are already set, no default assignment needed');
 					}
 
 					// Drop old indexes that reference the event column
@@ -588,7 +555,9 @@ async function ensureEventMigration() {
 					throw error;
 				}
 			} else if (hasEventIdColumn) {
+				console.log('Event migration already completed - event_id column exists');
 			} else {
+				console.log('Unexpected state: event_id column not found');
 			}
 		}
 	} catch (error) {
@@ -2038,10 +2007,10 @@ async function deleteEventsBySession(sessionId) {
 	}
 
 	// Detect pseudo-session: user-only session (format: user_<userId>_<date>)
-	const userSessionMatch = /^user_(.+)_(\d{4}-\d{2}-\d{2})$/.exec(sessionId);
+	const userSessionMatch = /^user_(?<userId>.+)_(?<date>\d{4}-\d{2}-\d{2})$/.exec(sessionId);
 	if (userSessionMatch) {
-		const userId = userSessionMatch[1];
-		const date = userSessionMatch[2];
+		const userId = userSessionMatch.groups.userId;
+		const date = userSessionMatch.groups.date;
 		if (dbType === 'sqlite') {
 			const stmt = db.prepare('UPDATE telemetry_events SET deleted_at = ? WHERE user_id = ? AND date(timestamp) = ? AND session_id IS NULL AND parent_session_id IS NULL AND deleted_at IS NULL');
 			const result = stmt.run(new Date().toISOString(), userId, date);
@@ -3551,7 +3520,7 @@ async function populateDenormalizedColumns() {
 		if (dbType === 'sqlite') {
 			const eventCheck = db.prepare('SELECT COUNT(*) as count FROM telemetry_events WHERE event IS NULL AND event_id IS NOT NULL LIMIT 1').get();
 			if (eventCheck && eventCheck.count > 0) {
-				const result = db.prepare(`
+				db.prepare(`
           UPDATE telemetry_events
           SET event = (SELECT name FROM event_types WHERE id = telemetry_events.event_id)
           WHERE event IS NULL AND event_id IS NOT NULL
@@ -3560,7 +3529,7 @@ async function populateDenormalizedColumns() {
 		} else if (dbType === 'postgresql') {
 			const eventCheck = await db.query('SELECT COUNT(*) as count FROM telemetry_events WHERE event IS NULL AND event_id IS NOT NULL LIMIT 1');
 			if (eventCheck.rows.length > 0 && Number.parseInt(eventCheck.rows[0].count, 10) > 0) {
-				const result = await db.query(`
+				await db.query(`
           UPDATE telemetry_events
           SET event = event_types.name
           FROM event_types
@@ -4846,7 +4815,7 @@ async function updatePerson(personId, name, email = null, initials = null) {
 		throw new Error('Database not initialized. Call init() first.');
 	}
 
-	if (!personId || isNaN(personId)) {
+	if (!personId || Number.isNaN(personId)) {
 		throw new Error('Valid person ID is required');
 	}
 
@@ -4894,7 +4863,7 @@ async function deletePerson(personId) {
 		throw new Error('Database not initialized. Call init() first.');
 	}
 
-	if (!personId || isNaN(personId)) {
+	if (!personId || Number.isNaN(personId)) {
 		throw new Error('Valid person ID is required');
 	}
 
@@ -4933,7 +4902,7 @@ async function getPersonUsernames(personId) {
 		throw new Error('Database not initialized. Call init() first.');
 	}
 
-	if (!personId || isNaN(personId)) {
+	if (!personId || Number.isNaN(personId)) {
 		throw new Error('Valid person ID is required');
 	}
 
@@ -4973,7 +4942,7 @@ async function addUsernameToPerson(personId, username, orgId = null) {
 		throw new Error('Database not initialized. Call init() first.');
 	}
 
-	if (!personId || isNaN(personId)) {
+	if (!personId || Number.isNaN(personId)) {
 		throw new Error('Valid person ID is required');
 	}
 
@@ -5025,7 +4994,7 @@ async function removeUsernameFromPerson(personId, username) {
 		throw new Error('Database not initialized. Call init() first.');
 	}
 
-	if (!personId || isNaN(personId)) {
+	if (!personId || Number.isNaN(personId)) {
 		throw new Error('Valid person ID is required');
 	}
 

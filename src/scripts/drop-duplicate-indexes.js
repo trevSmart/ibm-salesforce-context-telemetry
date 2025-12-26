@@ -32,7 +32,7 @@
  * Usage: node src/scripts/drop-duplicate-indexes.js
  */
 
-import { init, close, getSqliteDb, getPostgresPool } from '../storage/database.js';
+import {init, close, getSqliteDb, getPostgresPool} from '../storage/database.js';
 
 async function main() {
 	console.log('🚀 Starting duplicate indexes removal...\n');

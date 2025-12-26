@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-
 /**
  * Migration script to normalize event types
  *
@@ -12,22 +11,21 @@
  * 6. Updates indexes
  */
 
-import { createRequire } from 'module';
+import {createRequire} from 'node:module';
 const require = createRequire(import.meta.url);
 
-const path = require('path');
-const fs = require('fs');
+const path = require('node:path');
 
 const DB_PATH = process.env.DB_PATH || path.join(process.cwd(), 'src', 'data', 'telemetry.db');
 
 // Event types to create
 const EVENT_TYPES = [
-	{ name: 'tool_call', description: 'Tool call event' },
-	{ name: 'tool_error', description: 'Tool error event' },
-	{ name: 'session_start', description: 'Session start event' },
-	{ name: 'session_end', description: 'Session end event' },
-	{ name: 'error', description: 'General error event' },
-	{ name: 'custom', description: 'Custom event' }
+	{name: 'tool_call', description: 'Tool call event'},
+	{name: 'tool_error', description: 'Tool error event'},
+	{name: 'session_start', description: 'Session start event'},
+	{name: 'session_end', description: 'Session end event'},
+	{name: 'error', description: 'General error event'},
+	{name: 'custom', description: 'Custom event'}
 ];
 
 async function migrateEventTypes() {
@@ -177,4 +175,4 @@ if (import.meta.url === `file://${process.argv[1]}`) {
 		});
 }
 
-export { migrateEventTypes };
+export {migrateEventTypes};

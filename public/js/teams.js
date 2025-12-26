@@ -1,14 +1,12 @@
 // @ts-nocheck
 // Teams management page
 import {showToast} from './notifications.js';
-import {toggleTheme} from './theme.js';
 
 const REFRESH_ICON_ANIMATION_DURATION_MS = 700;
 // Transition duration in milliseconds (matches navigation.js)
 const TEAMS_TRANSITION_DURATION_MS = 150;
 let currentView = 'list'; // 'list' or 'detail'
 let teams = [];
-let _currentTeamId = null;
 // Cache busting timestamp for team logos - updated when teams data changes
 let teamsCacheBuster = Date.now();
 
@@ -54,7 +52,8 @@ async function transitionTeamsContent(newContent) {
 	container.appendChild(newContent);
 
 	// Trigger reflow to ensure opacity:0 is applied
-	void newContent.offsetHeight;
+	// eslint-disable-next-line no-unused-expressions
+	newContent.offsetHeight;
 
 	// Start crossfade: fade out old, fade in new
 	currentContent.style.transition = `opacity ${TEAMS_TRANSITION_DURATION_MS}ms ease-out`;
@@ -126,7 +125,7 @@ function sanitizeCssColor(color) {
 		return null;
 	}
 	// Only allow hex colors in format #RGB or #RRGGBB
-	const hexColorPattern = /^#([\dA-Fa-f]{3}|[\dA-Fa-f]{6})$/;
+	const hexColorPattern = /^#(?:[\dA-Fa-f]{3}|[\dA-Fa-f]{6})$/;
 	if (hexColorPattern.test(color.trim())) {
 		return color.trim();
 	}
@@ -566,8 +565,8 @@ function renderTeamsList() {
 	teamsList.innerHTML = teams.map(team => {
 		// Sanitize color values to prevent XSS
 		const sanitizedColor = sanitizeCssColor(team.color);
-		const accentColor = sanitizedColor || '#4f46e5';
-		const accentBg = sanitizedColor ? (hexToRgba(sanitizedColor, 0.14) || 'rgba(79, 70, 229, 0.12)') : 'rgba(79, 70, 229, 0.12)';
+		const _accentColor = sanitizedColor || '#4f46e5';
+		const _accentBg = sanitizedColor ? (hexToRgba(sanitizedColor, 0.14) || 'rgba(79, 70, 229, 0.12)') : 'rgba(79, 70, 229, 0.12)';
 
 		// Get team initials for fallback avatar
 		const initials = team.name.split(' ').map(word => word[0]).join('').substring(0, 2).toUpperCase();
@@ -658,10 +657,10 @@ async function renderTeamDetail(teamId) {
 
 	// Sanitize team color to prevent XSS
 	const sanitizedTeamColor = sanitizeCssColor(team.color);
-	
+
 	// Get team initials for fallback avatar
 	const initials = team.name.split(' ').map(word => word[0]).join('').substring(0, 2).toUpperCase();
-	
+
 	// Logo or avatar with cache busting
 	const logoOrAvatar = team.has_logo ? `<img src="/api/teams/${team.id}/logo?t=${teamsCacheBuster}" alt="${escapeHtml(team.name)} logo" style="width: 32px; height: 32px; object-contain; margin-right: 8px; border-radius: 4px;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
 		<span class="card-avatar" style="display: none; width: 32px; height: 32px; margin-right: 8px;">
@@ -746,7 +745,6 @@ async function renderTeamDetail(teamId) {
 	// Event listeners
 	contentContainer.querySelector('#backToTeamsBtn')?.addEventListener('click', async () => {
 		currentView = 'list';
-		_currentTeamId = null;
 		const listContent = renderTeamsList();
 		await transitionTeamsContent(listContent);
 	});
@@ -978,7 +976,6 @@ async function showDeleteTeamConfirm(team) {
 	deleteTeam(team.id).then(async () => {
 		showToast('Team deleted successfully', 'success');
 		currentView = 'list';
-		_currentTeamId = null;
 		await loadTeams();
 		const listContent = renderTeamsList();
 		await transitionTeamsContent(listContent);
@@ -1277,7 +1274,6 @@ async function removeUserFromTeam(userName, teamId) {
 // Global functions for onclick handlers
 window.viewTeamDetail = async (teamId) => {
 	currentView = 'detail';
-	_currentTeamId = teamId;
 	const detailContent = await renderTeamDetail(teamId);
 	await transitionTeamsContent(detailContent);
 };
@@ -1397,7 +1393,6 @@ window.addEventListener('softNav:pagePausing', (event) => {
 		pauseTeamsPage();
 		// Reset state when leaving teams page
 		currentView = 'list';
-		_currentTeamId = null;
 	}
 });
 
@@ -1407,8 +1402,7 @@ window.addEventListener('softNav:pageMounted', async (event) => {
 		const fromCache = event?.detail?.fromCache === true;
 		// Always reset to list view when entering teams page
 		currentView = 'list';
-		_currentTeamId = null;
-		
+
 		if (fromCache) {
 			// Page was restored from cache - always show list view
 			await loadTeams();

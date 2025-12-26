@@ -8,7 +8,7 @@ import session from 'express-session';
 import crypto from 'node:crypto';
 import pgSession from 'connect-pg-simple';
 import redis from 'redis';
-import { RedisStore } from 'connect-redis';
+import {RedisStore} from 'connect-redis';
 
 // Get credentials from environment variables (for backward compatibility)
 const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin';
