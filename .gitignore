@@ -23,8 +23,9 @@ storage/*.sqlite
 storage/*.sqlite3
 *.db-wal
 *.db-shm
-# Exception: seed database can be committed for GitHub Copilot
-!src/data/telemetry.seed.db
+# Exceptions: template databases can be committed
+!src/data/database-test-template.db
+!src/data/database-base-template.db
 
 # OS files
 .DS_Store

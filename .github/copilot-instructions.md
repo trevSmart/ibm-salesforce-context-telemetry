@@ -99,7 +99,8 @@ npm run dist:mac          # Build macOS app (.app + .dmg)
 # Database Management
 npm run export-database   # Export data to JSON
 npm run import-database   # Import data from JSON
-npm run create-seed-database  # Create minimal seed database for GitHub Copilot
+npm run create-test-template-database  # Create test template database (with users and test data) for GitHub Copilot
+npm run create-initial-template-database  # Create initial template database (schema only, no users/data) for production
 ```
 
 ### Testing
@@ -164,14 +165,14 @@ curl -X POST http://localhost:3100/telemetry \
   - `DB_PATH`: SQLite file path (e.g., `./data/telemetry.db`)
   - `DATABASE_URL`: PostgreSQL connection string
   - `DATABASE_SSL`: Enable SSL for PostgreSQL (`true`/`false`)
-- **Seed Database**: A pre-initialized database (`src/data/telemetry.seed.db`) is available for quick setup. If `telemetry.db` doesn't exist, it will be automatically copied from the seed database on first run. The seed database includes:
+- **Test Template Database**: A pre-initialized test template database (`src/data/database-test-template.db`) is available for quick setup in development/testing environments. If `telemetry.db` doesn't exist, it will be automatically copied from the test template database on first run. The test template includes:
   - Complete schema with all tables and migrations
-  - Example users for each role:
-    - `basic-user` / `basic` (role: basic)
-    - `advanced-user` / `advanced` (role: advanced)
-    - `admin-user` / `admin` (role: administrator)
-    - `copilot` / `copilot` (role: god - full access, if COPILOT_USERNAME/COPILOT_PASSWORD are set)
+  - Single user `copilot` / `copilot` (role: god - full access)
   - Test telemetry data (sessions, tool calls, events) for testing and development
+- **Base Template Database**: A clean base template database (`src/data/database-base-template.db`) is available for production deployments. It contains:
+  - Complete schema (all tables and migrations)
+  - Single user `god` / `god` (role: god - full access)
+  - No test data
 - **Copilot User Auto-Creation**: If `COPILOT_USERNAME` and `COPILOT_PASSWORD` environment variables are set, a user will be automatically created on database initialization with the `god` role (highest level of access). This is useful for GitHub Copilot environments.
 
 ### Authentication and Security
