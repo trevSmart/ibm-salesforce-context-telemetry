@@ -31,7 +31,7 @@
 /* Remove font-size from form elements */
 @layer base {
   :root {
-    --button-bg: #f1f5f9;
+    --button-bg: #fcfcfc;
   }
 
   /* Global button styles */
@@ -4375,7 +4375,22 @@
     flex-wrap: wrap;
   }
 
-  .confirm-modal.settings-modal {
+  .settings-modal {
+    width: 100%;
+    font-size: var(--text-sm);
+    line-height: var(--tw-leading, var(--text-sm--line-height));
+    margin: 0 16px;
+    padding: 18px 20px 16px 20px;
+    border-radius: 12px;
+    background: var(--bg-primary);
+    color: var(--color-gray-500);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02), 0 0 1px rgba(0, 0, 0, 0.01), 0 2px 3px rgba(0, 0, 0, 0.03);
+    border: 1px solid var(--border-color);
+    opacity: 0;
+    transform: scale(0.96) translateY(6px);
+    transition:
+      opacity 0.15s ease-out,
+      transform 0.08s ease-out;
     max-width: 840px;
     max-height: 85vh;
     min-height: 460px;
@@ -4400,7 +4415,7 @@
     margin-top: 8px;
   }
 
-  .confirm-modal.settings-modal .confirm-modal-title {
+  .settings-modal .confirm-modal-title {
     font-size: 1.05rem;
     font-weight: 600;
     letter-spacing: 0.03em;
@@ -4408,14 +4423,14 @@
     margin-bottom: 10px;
   }
 
-  .confirm-modal.settings-modal .confirm-modal-message {
+  .settings-modal .confirm-modal-message {
     padding-top: 4px;
     padding-bottom: 12px;
     border-bottom: 1px solid var(--border-color);
     margin-bottom: 14px;
   }
 
-  .confirm-modal.settings-modal.closing {
+  .settings-modal.closing {
     opacity: 0;
     transform: scale(0.96) translateY(6px);
   }
@@ -4507,6 +4522,11 @@
     transform: scale(1) translateY(0) !important;
   }
 
+  .confirm-modal-backdrop.visible .settings-modal {
+    opacity: 1 !important;
+    transform: scale(1) translateY(0) !important;
+  }
+
   .confirm-modal-title {
     font-size: 0.95rem;
     font-weight: 600;
@@ -4527,6 +4547,12 @@
   .btn {
     @apply inline-flex items-center justify-center gap-2 rounded-sm px-2 py-1 text-xs font-semibold text-gray-900 shadow-xs inset-ring inset-ring-gray-300 bg-white hover:bg-gray-50 transition-colors duration-150;
     line-height: 1.25;
+    height: 30px;
+    font-size: 13px;
+    font-weight: 400;
+    padding: 0 11px;
+    border-radius: 5px;
+    background-color: var(--button-bg);
   }
 
   html.dark .btn {
@@ -4563,15 +4589,6 @@
     background-color: #b91c1c;
   }
 
-  .confirm-modal-btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-sm px-2 py-1 text-xs font-semibold text-gray-900 shadow-xs inset-ring inset-ring-gray-300 bg-white hover:bg-gray-50 transition-colors duration-150;
-    line-height: 1.25;
-    min-width: 90px;
-  }
-
-  html.dark .confirm-modal-btn {
-    @apply bg-white/10 text-white inset-ring inset-ring-white/5 hover:bg-white/20;
-  }
 
   .confirm-modal-btn-cancel {
     @apply inline-flex items-center justify-center gap-2 rounded-sm px-2 py-1 text-xs font-semibold text-gray-900 shadow-xs inset-ring inset-ring-gray-300 bg-white hover:bg-gray-50 transition-colors duration-150;
@@ -4769,6 +4786,22 @@
     color: var(--text-primary);
   }
 
+.settings-modal-placeholder-text,
+.settings-users-section,
+.settings-users-table-container,
+.settings-users-table {
+  height: 100%;
+  max-height: 100%;
+}
+
+.settings-users-table-container {
+  position: relative;
+  max-height: 300px;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+}
+
   .settings-toggle-row {
     margin-top: 10px;
     padding: 10px 0;
@@ -4867,6 +4900,11 @@
 
   .settings-users-section {
     padding-top: 10px;
+    height: 100%;
+  }
+
+  .settings-login-history-section {
+    height: 100%;
   }
 
   .settings-users-header {
@@ -4885,28 +4923,120 @@
     border-bottom: none;
   }
 
-  .settings-users-add-btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-sm px-2 py-1 text-xs font-semibold text-gray-900 shadow-xs inset-ring inset-ring-gray-300 bg-white hover:bg-gray-50 transition-colors duration-150;
-  }
-
-  html.dark .settings-users-add-btn {
-    @apply bg-white/10 text-white inset-ring inset-ring-white/5 hover:bg-white/20;
-  }
-
-  .settings-users-add-btn i {
-    font-size: 0.65rem;
-  }
 
   .settings-users-table-wrapper {
-    overflow-x: auto;
     border: 1px solid var(--border-color);
     border-radius: 6px;
+    position: relative;
+    max-height: 300px;
+    overflow: hidden;
   }
 
-  .settings-users-table {
+  .settings-users-table-wrapper table {
     width: 100%;
     border-collapse: collapse;
     font-size: 0.75rem;
+    display: block;
+  }
+
+  .settings-users-table-wrapper thead {
+    position: sticky;
+    top: 0;
+    background: var(--bg-primary);
+    z-index: 1;
+    display: block;
+    width: 100%;
+  }
+
+  .settings-users-table-wrapper .table-body-scroll {
+    max-height: 250px;
+    overflow-y: auto;
+    display: block;
+    width: 100%;
+  }
+
+  .settings-users-table-wrapper tbody {
+    display: block;
+    width: 100%;
+  }
+
+  .settings-users-table-wrapper tr {
+    display: flex;
+    width: 100%;
+  }
+
+  .settings-users-table-wrapper th,
+  .settings-users-table-wrapper td {
+    flex: 1;
+    padding: 8px 10px;
+    text-align: left;
+  }
+
+  .settings-users-table-wrapper th:nth-child(1),
+  .settings-users-table-wrapper td:nth-child(1) {
+    flex: 2;
+    min-width: 120px;
+  }
+
+  .settings-users-table-wrapper th:nth-child(4),
+  .settings-users-table-wrapper td:nth-child(4) {
+    flex: 0 0 100px;
+  }
+
+  .settings-users-table-container table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.75rem;
+    display: block;
+  }
+
+  .settings-users-table-container thead {
+    position: sticky;
+    top: 0;
+    background: var(--bg-primary);
+    z-index: 1;
+    display: block;
+    width: 100%;
+  }
+
+  .settings-users-table-container .table-body-scroll {
+    max-height: 250px;
+    overflow-y: auto;
+    display: block;
+    width: 100%;
+  }
+
+  .settings-users-table-container tbody {
+    display: block;
+    width: 100%;
+  }
+
+  .settings-users-table-container tr {
+    display: flex;
+    width: 100%;
+  }
+
+  .settings-users-table-container th,
+  .settings-users-table-container td {
+    flex: 1;
+    padding: 8px 10px;
+    text-align: left;
+  }
+
+  .settings-users-table-container th:nth-child(1),
+  .settings-users-table-container td:nth-child(1) {
+    flex: 2;
+    min-width: 120px;
+  }
+
+  .settings-users-table-container th:nth-child(4),
+  .settings-users-table-container td:nth-child(4) {
+    flex: 0 0 100px;
+  }
+
+  .settings-users-table-container th:nth-child(6),
+  .settings-users-table-container td:nth-child(6) {
+    flex: 0 0 120px;
   }
 
   .settings-users-table thead tr {

@@ -260,14 +260,11 @@
    * Show command palette
    */
   function showCommandPalette() {
-    console.log('showCommandPalette called - initializing if needed');
     if (!commandPaletteElement) {
-      console.log('Initializing command palette');
       initializeCommandPalette();
     }
 
     if (commandPaletteElement) {
-      console.log('Showing command palette element');
       // Make element visible first
       commandPaletteElement.style.display = 'block';
       commandPaletteElement.style.visibility = 'visible';
@@ -287,7 +284,6 @@
       });
 
       document.body.style.overflow = 'hidden'; // Prevent background scrolling
-      console.log('Setting isOpen to true');
       isOpen = true;
 
       // No longer ignore backdrop clicks - let user close immediately if needed
@@ -311,7 +307,6 @@
    * Hide command palette
    */
   function hideCommandPalette() {
-    console.log('hideCommandPalette called');
     if (commandPaletteElement) {
       // Use requestAnimationFrame to ensure class changes trigger transitions
       requestAnimationFrame(() => {
@@ -326,7 +321,6 @@
         }
       });
 
-      console.log('Setting isOpen to false');
       isOpen = false;
 
       // Wait for transition to complete before hiding element
@@ -402,7 +396,6 @@
    * Initialize command palette
    */
   function initializeCommandPalette() {
-    console.log('initializeCommandPalette called');
     // Create command palette element
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = buildCommandPaletteHTML();
@@ -579,7 +572,6 @@
       if (isCommandPaletteVisible()) {
         const activeElement = document.activeElement;
         const isEditingInPalette = activeElement && activeElement.id === 'commandPaletteInput';
-        console.log('Palette is visible, isEditingInPalette:', isEditingInPalette);
         if (!isEditingInPalette) {
           e.preventDefault();
           try {
@@ -592,12 +584,10 @@
       }
       // Don't open command palette if user is editing in an input/textarea
       if (isUserEditing()) {
-        console.log('User is editing, not opening');
         return;
       }
       // Don't open command palette if any modals or dialogs are open
       if (isModalOrDialogOpen()) {
-        console.log('Modal/dialog open, not opening - debugging modal detection...');
 
         // Debug which modal is being detected
         const ariaModalElements = document.querySelectorAll('[aria-modal="true"]:not(#commandPaletteBackdrop)');
@@ -626,16 +616,12 @@
           '.absolute.z-50:not(#commandPaletteBackdrop)'
         ];
 
-        console.log('Checking modal selectors...');
         for (const selector of modalSelectors) {
           const elements = document.querySelectorAll(selector);
           if (elements.length > 0) {
-            console.log(`Found elements with selector "${selector}":`, elements);
           }
         }
 
-        console.log('aria-modal elements:', ariaModalElements);
-        console.log('dialog elements:', dialogElements);
 
         // Check z-index elements
         const allElements = document.querySelectorAll('*:not(#commandPaletteBackdrop)');
@@ -645,13 +631,11 @@
                            window.getComputedStyle(element).visibility !== 'hidden' &&
                            element.offsetWidth > 0 && element.offsetHeight > 0;
           if (zIndex && parseInt(zIndex) > 1000 && isVisible) {
-            console.log('Found visible high z-index element:', element, 'z-index:', zIndex);
           }
         }
 
         return;
       }
-      console.log('Opening command palette');
       e.preventDefault();
       try {
         showCommandPalette();

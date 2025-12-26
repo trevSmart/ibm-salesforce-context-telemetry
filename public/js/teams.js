@@ -1,6 +1,7 @@
 // @ts-nocheck
 // Teams management page
 import {showToast} from './notifications.js';
+import { toggleTheme } from './theme.js';
 
 const REFRESH_ICON_ANIMATION_DURATION_MS = 700;
 let currentView = 'list'; // 'list' or 'detail'
@@ -200,34 +201,6 @@ function showConfirmDialog({title, message, confirmText = 'Confirm', cancelText 
 	});
 }
 
-function toggleTheme() {
-	const isDark = document.documentElement.classList.contains('dark');
-	const newTheme = isDark ? 'light' : 'dark';
-	localStorage.setItem('theme', newTheme);
-
-	if (newTheme === 'dark') {
-		document.documentElement.classList.add('dark');
-	} else {
-		document.documentElement.classList.remove('dark');
-	}
-
-	// Update theme menu item if it exists
-	const btn = document.getElementById('themeToggleMenuItem');
-	if (btn) {
-		const lightThemeIcon = `
-      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="user-menu-icon" width="16" height="16" aria-hidden="true">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z" />
-      </svg>
-    `;
-		const darkThemeIcon = `
-      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="user-menu-icon" width="16" height="16" aria-hidden="true">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z" />
-      </svg>
-    `;
-		const label = newTheme === 'dark' ? 'Light theme' : 'Dark theme';
-		btn.innerHTML = `${newTheme === 'dark' ? darkThemeIcon : lightThemeIcon}${label}`;
-	}
-}
 
 async function clearLocalData() {
 	const confirmed = await showConfirmDialog({
@@ -250,7 +223,6 @@ async function clearLocalData() {
 // Make functions available globally
 // Note: showUserMenu and handleLogout are now exposed by user-menu.js
 // Note: openSettingsModal is now exposed by settings-modal.js
-window.toggleTheme = toggleTheme;
 window.clearLocalData = clearLocalData;
 
 // API functions
@@ -623,7 +595,7 @@ async function renderTeamDetail(teamId) {
       <div class="divide-y divide-gray-200 dark:divide-gray-700 overflow-hidden rounded-lg bg-white dark:bg-gray-800/50 dark:outline dark:-outline-offset-1 dark:outline-white/10 shadow-sm">
         <div class="px-4 py-5 sm:px-6" style="display: flex; justify-content: space-between; align-items: center;">
           <h2 style="margin: 0; font-size: 1.1rem; font-weight: 600;">Organizations</h2>
-          <button id="addOrgBtn" class="confirm-modal-btn confirm-modal-btn-cancel" onclick="showAddOrgModalForTeam(${teamId})">
+          <button id="addOrgBtn" class="btn confirm-modal-btn-cancel" onclick="showAddOrgModalForTeam(${teamId})">
             <i class="fas fa-plus" style="margin-right: 4px;"></i>Add Org
           </button>
         </div>
@@ -636,7 +608,7 @@ async function renderTeamDetail(teamId) {
       <div class="divide-y divide-gray-200 dark:divide-gray-700 overflow-hidden rounded-lg bg-white dark:bg-gray-800/50 dark:outline dark:-outline-offset-1 dark:outline-white/10 shadow-sm">
         <div class="px-4 py-5 sm:px-6" style="display: flex; justify-content: space-between; align-items: center;">
           <h2 style="margin: 0; font-size: 1.1rem; font-weight: 600;">Users</h2>
-          <button id="addUserBtn" class="confirm-modal-btn confirm-modal-btn-cancel" onclick="showAddUserModalForTeam(${teamId})">
+          <button id="addUserBtn" class="btn confirm-modal-btn-cancel" onclick="showAddUserModalForTeam(${teamId})">
             <i class="fas fa-plus" style="margin-right: 4px;"></i>Add User
           </button>
         </div>
@@ -746,10 +718,10 @@ function showTeamFormModal(team = null) {
         </label>
       </div>
       <div style="display: flex; gap: 8px; margin-top: 20px; justify-content: flex-end;">
-        <button type="button" class="confirm-modal-btn confirm-modal-btn-cancel" id="cancelTeamFormBtn">
+        <button type="button" class="btn confirm-modal-btn-cancel" id="cancelTeamFormBtn">
           Cancel
         </button>
-        <button type="submit" class="confirm-modal-btn confirm-modal-btn-confirm">
+        <button type="submit" class="btn confirm-modal-btn-confirm">
           ${isEdit ? 'Update' : 'Create'}
         </button>
       </div>
@@ -973,10 +945,10 @@ async function showAddOrgModal(teamId) {
       </div>
     ` : ''}
     <div style="display: flex; gap: 8px; justify-content: flex-end;">
-      <button type="button" class="confirm-modal-btn confirm-modal-btn-cancel" id="cancelAddOrgBtn">
+      <button type="button" class="btn confirm-modal-btn-cancel" id="cancelAddOrgBtn">
         Cancel
       </button>
-      <button type="button" class="confirm-modal-btn confirm-modal-btn-confirm" id="saveAddOrgBtn">
+      <button type="button" class="btn confirm-modal-btn-confirm" id="saveAddOrgBtn">
         Add Org
       </button>
     </div>
@@ -1092,10 +1064,10 @@ async function showAddUserModal(teamId) {
       </label>
     </div>
     <div style="display: flex; gap: 8px; justify-content: flex-end;">
-      <button type="button" class="confirm-modal-btn confirm-modal-btn-cancel" id="cancelAddUserBtn">
+      <button type="button" class="btn confirm-modal-btn-cancel" id="cancelAddUserBtn">
         Cancel
       </button>
-      <button type="button" class="confirm-modal-btn confirm-modal-btn-confirm" id="saveAddUserBtn">
+      <button type="button" class="btn confirm-modal-btn-confirm" id="saveAddUserBtn">
         Add User
       </button>
     </div>

@@ -1,5 +1,5 @@
 // @ts-nocheck
-
+import { toggleTheme, updateThemeMenuItem, applyTheme } from './theme.js';
 
 // Prevent double execution when soft navigation re-injects the script
 if (window.__EVENT_LOG_LOADED__) {
@@ -341,38 +341,16 @@ function safeShowToast(message, type = 'info') {
 		hoverTimeoutId = null;
 	}
 
-	function applyTheme(theme) {
-		if (theme === 'dark') {
-			document.documentElement.classList.add('dark');
-		} else {
-			document.documentElement.classList.remove('dark');
-		}
-		updateThemeIcon(theme);
-		// Update toggle in settings modal if it exists
-		const darkThemeToggle = document.querySelector('#darkThemeToggle');
-		if (darkThemeToggle) {
-			darkThemeToggle.checked = theme === 'dark';
-		}
-	}
-
 	function initTheme() {
-		const savedTheme = localStorage.getItem('theme');
-		const theme = savedTheme || 'light';
-		applyTheme(theme);
+		// Theme initialization is now handled by the theme module in app.js
 		// Wire up theme toggle if present
 		const darkThemeToggle = document.querySelector('#darkThemeToggle');
 		if (darkThemeToggle) {
-			darkThemeToggle.addEventListener('change', toggleTheme);
+			darkThemeToggle.addEventListener('change', () => {
+				toggleTheme();
+				refreshSessionActivityTheme();
+			});
 		}
-	}
-
-
-	function toggleTheme() {
-		const isDark = document.documentElement.classList.contains('dark');
-		const newTheme = isDark ? 'light' : 'dark';
-		localStorage.setItem('theme', newTheme);
-		applyTheme(newTheme);
-		refreshSessionActivityTheme();
 	}
 
 
@@ -410,8 +388,8 @@ function safeShowToast(message, type = 'info') {
 					</div>
 				</div>
 				<div class="confirm-dialog-actions">
-					<button type="button" class="confirm-modal-btn confirm-modal-btn-cancel">${escapeHtml(cancelLabel)}</button>
-					<button type="button" class="confirm-modal-btn ${destructive ? 'text-sm inline-flex w-full justify-center rounded-md bg-red-600 px-3 py-2 font-semibold text-white shadow-xs hover:bg-red-500 sm:ml-3 sm:w-auto' : 'confirm-modal-btn-confirm'}">${escapeHtml(confirmLabel)}</button>
+					<button type="button" class="btn confirm-modal-btn-cancel">${escapeHtml(cancelLabel)}</button>
+					<button type="button" class="btn ${destructive ? 'text-sm inline-flex w-full justify-center rounded-md bg-red-600 px-3 py-2 font-semibold text-white shadow-xs hover:bg-red-500 sm:ml-3 sm:w-auto' : 'confirm-modal-btn-confirm'}">${escapeHtml(confirmLabel)}</button>
 				</div>
 			`;
 
@@ -444,7 +422,7 @@ function safeShowToast(message, type = 'info') {
 				resolve(result);
 			}
 
-			const [cancelBtn, confirmBtn] = modal.querySelectorAll('.confirm-modal-btn');
+			const [cancelBtn, confirmBtn] = modal.querySelectorAll('.btn');
 			const handleCancel = () => {
 				if (typeof onCancel === 'function') {
 					try {
@@ -490,26 +468,6 @@ function safeShowToast(message, type = 'info') {
 		});
 	}
 
-	function updateThemeIcon(theme) {
-		const btn = document.getElementById('themeToggleMenuItem');
-		if (!btn) {
-			return;
-		}
-
-		const isDark = theme === 'dark';
-		const lightThemeIcon = `
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="user-menu-icon" width="16" height="16" aria-hidden="true">
-      <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z" />
-    </svg>
-  `;
-		const darkThemeIcon = `
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="user-menu-icon" width="16" height="16" aria-hidden="true">
-      <path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z" />
-    </svg>
-  `;
-		const label = isDark ? 'Light theme' : 'Dark theme';
-		btn.innerHTML = `${isDark ? lightThemeIcon : darkThemeIcon}${label}`;
-	}
 
 	// Listen for system theme changes and update if no manual preference is set
 	if (window.matchMedia) {
@@ -5150,10 +5108,9 @@ function safeShowToast(message, type = 'info') {
 		initializeApp();
 	};
 
-	// Expose pause/resume hooks and theme functions for soft navigation
+	// Expose pause/resume hooks for soft navigation
 	window.pauseEventLogPage = pauseEventLogPage;
 	window.resumeEventLogPage = resumeEventLogPage;
-	window.applyTheme = applyTheme;
 
 	// Listen for soft navigation events
 	window.addEventListener('softNav:pagePausing', (event) => {
@@ -5298,7 +5255,6 @@ function safeShowToast(message, type = 'info') {
 	window.refreshLogs = refreshLogs;
 	window.toggleNotificationMode = toggleNotificationMode;
 	window.toggleSelectionMode = toggleSelectionMode;
-	window.toggleTheme = toggleTheme;
 	// Load and display event payload in a modal
 	async function loadEventPayload(eventId) {
 		try {
@@ -5354,8 +5310,8 @@ function safeShowToast(message, type = 'info') {
 			</div>
 			<div class="payload-modal-footer">
 				<div class="confirm-modal-actions">
-					<button type="button" class="confirm-modal-btn" data-action="copy-json">Copy JSON</button>
-					<button type="button" class="confirm-modal-btn confirm-modal-btn-confirm" data-action="close-modal">Close</button>
+					<button type="button" class="btn" data-action="copy-json">Copy JSON</button>
+					<button type="button" class="btn confirm-modal-btn-confirm" data-action="close-modal">Close</button>
 				</div>
 			</div>
 		`;

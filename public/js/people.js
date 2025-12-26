@@ -34,7 +34,6 @@ async function initPeoplePage() {
 		// Check if we're on debug mode (no auth required)
 		if (window.location.pathname === '/people-debug') {
 			// Use mock data for debugging
-			console.log('=== DEBUG MODE: Using mock data ===');
 			people = [
 				{
 					id: 1,

@@ -221,20 +221,9 @@
 	<script src="/js/notifications.js" type="module" defer></script>
 	<script type="module" src="/js/index.js" defer></script>
 	<script type="module" src="/js/tool-usage-chart.js" defer></script>
-	<script>
-		setTimeout(() => {
-			const userMenuScript = document.createElement('script');
-			userMenuScript.src = '/js/user-menu.js';
-			userMenuScript.defer = true;
-			document.head.appendChild(userMenuScript);
-
-			const settingsModalScript = document.createElement('script');
-			settingsModalScript.src = '/js/settings-modal.js';
-			settingsModalScript.type = 'module';
-			settingsModalScript.defer = true;
-			document.head.appendChild(settingsModalScript);
-		}, 2000);
-	</script>
+	<script type="module" src="/js/user-menu.js" defer></script>
+	<script type="module" src="/js/settings-modal.js" defer></script>
+	<script type="module" src="/js/app.js" defer></script>
 </body>
 
 </html>

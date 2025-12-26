@@ -12,7 +12,7 @@
 	].join(',');
 	const PAGE_SCRIPTS = {
 		'/': [{src: '/js/global-cache.js'}, {src: '/js/index.js', type: 'module'}],
-		'/logs': [{src: '/js/global-cache.js'}, {src: '/js/event-log.js'}],
+		'/logs': [{src: '/js/global-cache.js'}, {src: '/js/event-log.js', type: 'module'}],
 		'/teams': [{src: '/js/global-cache.js'}, {src: '/js/teams.js', type: 'module'}],
 		'/people': [{src: '/js/global-cache.js'}, {src: '/js/people.js', type: 'module'}]
 	};

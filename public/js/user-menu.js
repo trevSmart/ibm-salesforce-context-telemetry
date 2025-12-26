@@ -32,11 +32,11 @@
         </div>
       </div>
       <div class="py-1">
-        <button type="button" class="${baseButtonClasses}" id="themeToggleMenuItem" onclick="toggleTheme()">
+        <button type="button" class="${baseButtonClasses}" id="themeToggleMenuItem">
           ${themeIcon}
           <span>${themeLabel}</span>
         </button>
-        <button type="button" class="${baseButtonClasses}" onclick="openSettingsModal()">
+        <button type="button" class="${baseButtonClasses}" data-action="open-settings">
           <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke="currentColor" class="${iconClasses}" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75" />
           </svg>
@@ -246,10 +246,8 @@
 		};
 
 		const scheduleHide = () => {
-			console.log('[TRACE] user-menu scheduleHide: Scheduling hide in', USER_MENU_HIDE_DELAY_MS, 'ms');
 			cancelHide();
 			userMenuHideTimeout = setTimeout(() => {
-				console.log('[TRACE] user-menu scheduleHide: Timeout fired, calling hideUserMenu');
 				hideUserMenu();
 			}, USER_MENU_HIDE_DELAY_MS);
 		};
@@ -273,27 +271,17 @@
 
 		const handleMouseLeave = (event) => {
 			const nextTarget = event?.relatedTarget;
-			console.log('[TRACE] user-menu handleMouseLeave:', {
-				currentTarget: event.currentTarget.tagName,
-				nextTarget: nextTarget?.tagName,
-				isInsideMenuRegion: nextTarget ? isInsideMenuRegion(nextTarget) : false
-			});
 			if (nextTarget && isInsideMenuRegion(nextTarget)) {
-				console.log('[TRACE] user-menu: Staying visible due to menu region');
 				return;
 			}
 			// If leaving the userMenu specifically, always schedule hide
 			if (event.currentTarget === userMenu) {
-				console.log('[TRACE] user-menu: Leaving userMenu, scheduling hide');
 				scheduleHide();
 				return;
 			}
 			// For container, only hide if not moving to userMenu
 			if (event.currentTarget === container && (!nextTarget || !userMenu.contains(nextTarget))) {
-				console.log('[TRACE] user-menu: Leaving container, scheduling hide');
 				scheduleHide();
-			} else {
-				console.log('[TRACE] user-menu: Staying visible due to userMenu hover');
 			}
 		};
 
@@ -352,7 +340,6 @@
 				window.location.href = '/login';
 			}
 		} catch (error) {
-			console.error('Logout error:', error);
 			window.location.href = '/login';
 		}
 	}

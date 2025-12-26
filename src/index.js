@@ -344,11 +344,9 @@ if (isDevelopment) {
 		}));
 
 		liveReloadServer.server?.once('listening', () => {
-			console.log(`🔄 Live reload enabled on port ${livereloadPort}`);
 		});
 	} catch {
 		// Live reload dependencies not installed, continue without it
-		console.log('⚠️  Live reload not available (install dev dependencies: npm install)');
 	}
 }
 
@@ -564,7 +562,6 @@ app.post('/telemetry', telemetryLimiter, (req, res) => {
 			});
 		}
 
-		console.log(`[${timestamp}] Telemetry event:`, JSON.stringify(telemetryData, null, 2));
 
 		// Store in database (non-blocking - don't await to avoid blocking response)
 		db.storeEvent(telemetryData, timestamp).then((stored) => {
@@ -1908,7 +1905,6 @@ app.post('/api/teams', auth.requireAuth, auth.requireRole('administrator'), team
 				req.file.size = processed.size;
 
 				// Log processing info
-				console.log(`Logo processed: resized=${processed.resized}, converted=${processed.converted}, size: ${processed.originalSize} -> ${processed.size} bytes`);
 			} catch (processError) {
 				console.error('Logo processing error:', processError);
 				return res.status(400).json({
@@ -1991,7 +1987,6 @@ app.put('/api/teams/:id', auth.requireAuth, auth.requireRole('administrator'), t
 				req.file.size = processed.size;
 
 				// Log processing info
-				console.log(`Logo processed: resized=${processed.resized}, converted=${processed.converted}, size: ${processed.originalSize} -> ${processed.size} bytes`);
 			} catch (processError) {
 				console.error('Logo processing error:', processError);
 				return res.status(400).json({
@@ -2823,15 +2818,12 @@ app.post('/api/database/import', auth.requireAuth, auth.requireRole('administrat
 async function startServer() {
 	try {
 		await db.init();
-		console.log('Database initialized successfully');
 
 		// Initialize authentication with database
 		auth.init(db);
-		console.log('Authentication initialized with database support');
 
 		// Now that database is initialized, upgrade session middleware to use PostgreSQL store if available
 		sessionMiddleware = auth.initSessionMiddleware();
-		console.log('Session middleware initialized with database support');
 
 		app.listen(port, () => {
 			console.log(`\n${  '='.repeat(60)}`);

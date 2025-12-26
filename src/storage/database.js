@@ -144,7 +144,6 @@ async function init() {
 			CREATE INDEX IF NOT EXISTS idx_user_logins_successful ON user_logins(successful);
 		`);
 
-		console.log(`SQLite database initialized at: ${dbPath}`);
 
 	} else if (dbType === 'postgresql') {
 		const {Pool} = await import('pg');
@@ -254,7 +253,6 @@ async function init() {
 		`);
 
 		db = pool;
-		console.log('PostgreSQL database initialized');
 	} else {
 		throw new Error(`Unsupported database type: ${dbType}`);
 	}
@@ -287,13 +285,11 @@ async function ensureErrorMessageColumn() {
 			if (!columnNames.includes('error_message')) {
 				db.exec('ALTER TABLE telemetry_events ADD COLUMN error_message TEXT');
 				db.exec('CREATE INDEX IF NOT EXISTS idx_error_message ON telemetry_events(error_message)');
-				console.log('Added error_message column to telemetry_events');
 			}
 		} else if (dbType === 'postgresql') {
 			// PostgreSQL supports IF NOT EXISTS in ALTER TABLE
 			await db.query('ALTER TABLE IF EXISTS telemetry_events ADD COLUMN IF NOT EXISTS error_message TEXT');
 			await db.query('CREATE INDEX IF NOT EXISTS idx_error_message ON telemetry_events(error_message)');
-			console.log('Ensured error_message column in telemetry_events');
 		}
 	} catch (error) {
 		console.error('Error ensuring error_message column:', error);
@@ -396,7 +392,6 @@ async function ensureEventTypesInitialized() {
 				for (const eventType of eventTypes) {
 					stmt.run(eventType.name, eventType.description);
 				}
-				console.log('Initialized event_types table with', eventTypes.length, 'event types');
 			}
 		} else if (dbType === 'postgresql') {
 			// Use ON CONFLICT DO NOTHING to safely insert all event types
@@ -410,7 +405,6 @@ async function ensureEventTypesInitialized() {
 				}
 			}
 			if (insertedCount > 0) {
-				console.log(`Initialized event_types table with ${insertedCount} new event types`);
 			}
 		}
 	} catch (error) {
@@ -424,7 +418,6 @@ async function ensureEventMigration() {
 	}
 
 	try {
-		console.log('Checking for event migration...');
 
 		if (dbType === 'sqlite') {
 			// Check if migration is needed (event_id column missing)
@@ -435,7 +428,6 @@ async function ensureEventMigration() {
 			const hasEventIdColumn = columnNames.includes('event_id');
 
 			if (!hasEventIdColumn) {
-				console.log('Starting event types migration...');
 
 				// Add event_id column if it doesn't exist (nullable initially)
 				db.exec('ALTER TABLE telemetry_events ADD COLUMN event_id INTEGER REFERENCES event_types(id)');
@@ -448,19 +440,15 @@ async function ensureEventMigration() {
 						WHERE event_id IS NULL
 					`);
 					const result = updateStmt.run();
-					console.log(`Migrated ${result.changes} rows from event to event_id`);
 				} else {
-					console.log('No event column found, checking for NULL event_id values');
 					// Check if there are NULL event_id values that need a default
 					const nullCount = db.prepare('SELECT COUNT(*) as count FROM telemetry_events WHERE event_id IS NULL').get();
 					if (nullCount.count > 0) {
-						console.log(`Found ${nullCount.count} rows with NULL event_id, assigning default 'custom' event type`);
 						// Assign default event type (custom) for NULL values
 						const defaultEventId = db.prepare('SELECT id FROM event_types WHERE name = ?').get('custom');
 						if (defaultEventId) {
 							const updateStmt = db.prepare('UPDATE telemetry_events SET event_id = ? WHERE event_id IS NULL');
 							const result = updateStmt.run(defaultEventId.id);
-							console.log(`Assigned default event_id to ${result.changes} rows`);
 						}
 					}
 				}
@@ -470,7 +458,6 @@ async function ensureEventMigration() {
 				for (const indexName of indexesToDrop) {
 					try {
 						db.exec(`DROP INDEX IF EXISTS ${indexName}`);
-						console.log(`Dropped index: ${indexName}`);
 					} catch (e) {
 						console.warn(`Could not drop index ${indexName}:`, e.message);
 					}
@@ -485,11 +472,8 @@ async function ensureEventMigration() {
 				db.exec('CREATE INDEX IF NOT EXISTS idx_event_id ON telemetry_events(event_id)');
 				db.exec('CREATE INDEX IF NOT EXISTS idx_event_id_created_at ON telemetry_events(event_id, created_at)');
 
-				console.log('Event migration completed successfully!');
 			} else if (hasEventIdColumn) {
-				console.log('Event migration already completed');
 			} else {
-				console.log('No event migration needed');
 			}
 
 		} else 		if (dbType === 'postgresql') {
@@ -504,20 +488,16 @@ async function ensureEventMigration() {
 			const hasEventColumn = columnNames.includes('event');
 			const hasEventIdColumn = columnNames.includes('event_id');
 
-			console.log(`Migration check - hasEventColumn: ${hasEventColumn}, hasEventIdColumn: ${hasEventIdColumn}`);
 
 			if (!hasEventIdColumn) {
-				console.log('Starting event types migration...');
 
 				// Log total rows in telemetry_events
 				const totalRowsResult = await db.query('SELECT COUNT(*) as count FROM telemetry_events');
-				console.log(`Total rows in telemetry_events: ${totalRowsResult.rows[0].count}`);
 
 				// Ensure event_types table has data before migration
 				// This is a safety check - ensureEventTypesInitialized() should have already run
 				const eventTypesCount = await db.query('SELECT COUNT(*) as count FROM event_types');
 				if (eventTypesCount.rows[0].count === 0) {
-					console.log('Event types table is empty, populating it first...');
 					const eventTypes = [
 						{name: 'tool_call', description: 'Tool call event'},
 						{name: 'tool_error', description: 'Tool error event'},
@@ -529,7 +509,6 @@ async function ensureEventMigration() {
 					for (const eventType of eventTypes) {
 						await db.query('INSERT INTO event_types (name, description) VALUES ($1, $2) ON CONFLICT (name) DO NOTHING', [eventType.name, eventType.description]);
 					}
-					console.log('Populated event_types table with', eventTypes.length, 'types');
 				}
 
 				// Start transaction for PostgreSQL
@@ -548,28 +527,22 @@ async function ensureEventMigration() {
 							WHERE event_types.name = telemetry_events.event
 							AND telemetry_events.event_id IS NULL
 						`);
-						console.log(`Migrated ${updateResult.rowCount} rows from event to event_id`);
 					}
 
 					// Check if there are still NULL event_id values that need a default (regardless of event column)
 					const nullCountResult = await db.query('SELECT COUNT(*) as count FROM telemetry_events WHERE event_id IS NULL');
 					const nullCount = nullCountResult.rows[0].count;
 					if (nullCount > 0) {
-						console.log(`Found ${nullCount} rows with NULL event_id, assigning default 'custom' event type`);
 						// Assign default event type (custom) for NULL values
 						const defaultEventResult = await db.query('SELECT id FROM event_types WHERE name = $1', ['custom']);
-						console.log(`Default event query result:`, defaultEventResult.rows);
 						if (defaultEventResult.rows.length > 0) {
 							const defaultEventId = defaultEventResult.rows[0].id;
-							console.log(`Using default event_id: ${defaultEventId}`);
 							const updateResult = await db.query('UPDATE telemetry_events SET event_id = $1 WHERE event_id IS NULL', [defaultEventId]);
-							console.log(`Assigned default event_id to ${updateResult.rowCount} rows`);
 						} else {
 							console.error('Could not find default event type "custom"');
 							throw new Error('Default event type "custom" not found in event_types table');
 						}
 					} else {
-						console.log('No NULL event_id values found after migration');
 					}
 
 					// Drop old indexes that reference the event column
@@ -577,7 +550,6 @@ async function ensureEventMigration() {
 					for (const indexName of indexesToDrop) {
 						try {
 							await db.query(`DROP INDEX IF EXISTS ${indexName}`);
-							console.log(`Dropped index: ${indexName}`);
 						} catch (e) {
 							console.warn(`Could not drop index ${indexName}:`, e.message);
 						}
@@ -600,15 +572,12 @@ async function ensureEventMigration() {
 					await db.query('CREATE INDEX IF NOT EXISTS idx_event_id_created_at ON telemetry_events(event_id, created_at)');
 
 					await db.query('COMMIT');
-					console.log('Event migration completed successfully!');
 				} catch (error) {
 					await db.query('ROLLBACK');
 					throw error;
 				}
 			} else if (hasEventIdColumn) {
-				console.log('Event migration already completed');
 			} else {
-				console.log('No event migration needed');
 			}
 		}
 	} catch (error) {
@@ -630,12 +599,10 @@ async function ensurePeopleInitialsColumn() {
 			// Add initials column if it doesn't exist
 			if (!columnNames.includes('initials')) {
 				db.exec('ALTER TABLE people ADD COLUMN initials TEXT');
-				console.log('Added initials column to people table');
 			}
 		} else if (dbType === 'postgresql') {
 			// PostgreSQL supports IF NOT EXISTS in ALTER TABLE
 			await db.query('ALTER TABLE IF EXISTS people ADD COLUMN IF NOT EXISTS initials TEXT');
-			console.log('Ensured initials column in people table');
 		}
 	} catch (error) {
 		console.error('Error ensuring initials column in people table:', error);
@@ -3339,32 +3306,27 @@ async function ensureDenormalizedColumns() {
 			// Add org_id column if it doesn't exist
 			if (!columnNames.includes('org_id')) {
 				db.exec('ALTER TABLE telemetry_events ADD COLUMN org_id TEXT');
-				console.log('Added org_id column to telemetry_events');
 			}
 
 			// Add user_name column if it doesn't exist
 			if (!columnNames.includes('user_name')) {
 				db.exec('ALTER TABLE telemetry_events ADD COLUMN user_name TEXT');
-				console.log('Added user_name column to telemetry_events');
 			}
 
 			// Add tool_name column if it doesn't exist
 			if (!columnNames.includes('tool_name')) {
 				db.exec('ALTER TABLE telemetry_events ADD COLUMN tool_name TEXT');
-				console.log('Added tool_name column to telemetry_events');
 			}
 
 			// Add company_name column if it doesn't exist
 			if (!columnNames.includes('company_name')) {
 				db.exec('ALTER TABLE telemetry_events ADD COLUMN company_name TEXT');
-				console.log('Added company_name column to telemetry_events');
 			}
 
 			// Add deleted_at column if it doesn't exist (for soft delete/trash functionality)
 			if (!columnNames.includes('deleted_at')) {
 				db.exec('ALTER TABLE telemetry_events ADD COLUMN deleted_at TEXT');
 				db.exec('CREATE INDEX IF NOT EXISTS idx_deleted_at ON telemetry_events(deleted_at)');
-				console.log('Added deleted_at column to telemetry_events');
 			}
 
 			// Add team_id column if it doesn't exist (for pre-calculated team association)
@@ -3372,13 +3334,11 @@ async function ensureDenormalizedColumns() {
 				db.exec('ALTER TABLE telemetry_events ADD COLUMN team_id INTEGER REFERENCES teams(id)');
 				db.exec('CREATE INDEX IF NOT EXISTS idx_team_id ON telemetry_events(team_id)');
 				db.exec('CREATE INDEX IF NOT EXISTS idx_team_id_created_at ON telemetry_events(team_id, created_at)');
-				console.log('Added team_id column to telemetry_events');
 			}
 
 			// Add event column if it doesn't exist (for denormalized event name from event_types)
 			if (!columnNames.includes('event')) {
 				db.exec('ALTER TABLE telemetry_events ADD COLUMN event TEXT');
-				console.log('Added event column to telemetry_events');
 			}
 
 			// Create indexes for denormalized columns (if they don't exist)
@@ -3402,7 +3362,6 @@ async function ensureDenormalizedColumns() {
 			await db.query('CREATE INDEX IF NOT EXISTS idx_deleted_at ON telemetry_events(deleted_at)');
 			await db.query('CREATE INDEX IF NOT EXISTS idx_team_id ON telemetry_events(team_id)');
 			await db.query('CREATE INDEX IF NOT EXISTS idx_team_id_created_at ON telemetry_events(team_id, created_at)');
-			console.log('Ensured denormalized columns (org_id, user_name, tool_name, company_name, deleted_at, team_id, event) in telemetry_events');
 
 			// Create indexes for denormalized columns (if they don't exist)
 			await db.query('CREATE INDEX IF NOT EXISTS idx_user_name_created_at ON telemetry_events(user_name, created_at)');
@@ -3467,7 +3426,6 @@ async function populateDenormalizedColumns() {
 			return; // No data to populate
 		}
 
-		console.log('Emplenat columnes denormalitzades amb dades existents...');
 
 		if (dbType === 'sqlite') {
 			// Per SQLite, actualitzem en lots per evitar bloquejos de base de dades
@@ -3582,18 +3540,15 @@ async function populateDenormalizedColumns() {
 		if (dbType === 'sqlite') {
 			const eventCheck = db.prepare('SELECT COUNT(*) as count FROM telemetry_events WHERE event IS NULL AND event_id IS NOT NULL LIMIT 1').get();
 			if (eventCheck && eventCheck.count > 0) {
-				console.log('Populating event column from event_types...');
 				const result = db.prepare(`
           UPDATE telemetry_events
           SET event = (SELECT name FROM event_types WHERE id = telemetry_events.event_id)
           WHERE event IS NULL AND event_id IS NOT NULL
         `).run();
-				console.log(`Populated event column for ${result.changes} rows`);
 			}
 		} else if (dbType === 'postgresql') {
 			const eventCheck = await db.query('SELECT COUNT(*) as count FROM telemetry_events WHERE event IS NULL AND event_id IS NOT NULL LIMIT 1');
 			if (eventCheck.rows.length > 0 && Number.parseInt(eventCheck.rows[0].count, 10) > 0) {
-				console.log('Populating event column from event_types...');
 				const result = await db.query(`
           UPDATE telemetry_events
           SET event = event_types.name
@@ -3601,11 +3556,9 @@ async function populateDenormalizedColumns() {
           WHERE telemetry_events.event_id = event_types.id
             AND telemetry_events.event IS NULL
         `);
-				console.log(`Populated event column for ${result.rowCount} rows`);
 			}
 		}
 
-		console.log('S\'ha acabat d\'emplenar les columnes denormalitzades');
 	} catch (error) {
 		console.error('Error emplenant columnes denormalitzades:', error);
 	}
@@ -6547,11 +6500,9 @@ async function recalculateTeamIdsForOrg(orgId) {
 		// Update all events for this org with the new team_id
 		if (dbType === 'sqlite') {
 			const result = db.prepare('UPDATE telemetry_events SET team_id = ? WHERE org_id = ?').run(teamId, orgId);
-			console.log(`Updated team_id for ${result.changes} events of org ${orgId} to team ${teamId}`);
 			return result.changes;
 		} else if (dbType === 'postgresql') {
 			const result = await db.query('UPDATE telemetry_events SET team_id = $1 WHERE org_id = $2', [teamId, orgId]);
-			console.log(`Updated team_id for ${result.rowCount} events of org ${orgId} to team ${teamId}`);
 			return result.rowCount;
 		}
 

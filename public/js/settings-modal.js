@@ -91,8 +91,8 @@ function openConfirmModal({title, message, confirmLabel = 'Confirm', cancelLabel
 				</div>
 			</div>
 			<div class="confirm-dialog-actions">
-				<button type="button" class="text-sm confirm-modal-btn confirm-modal-btn-cancel">${escapeHtml(cancelLabel)}</button>
-				<button type="button" class="confirm-modal-btn ${destructive ? 'inline-flex w-full justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-red-500 sm:ml-3 sm:w-auto' : 'confirm-modal-btn-confirm'}">${escapeHtml(confirmLabel)}</button>
+				<button type="button" class="text-sm btn confirm-modal-btn-cancel">${escapeHtml(cancelLabel)}</button>
+				<button type="button" class="btn ${destructive ? 'inline-flex w-full justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-red-500 sm:ml-3 sm:w-auto' : 'confirm-modal-btn-confirm'}">${escapeHtml(confirmLabel)}</button>
 			</div>
 		`;
 
@@ -120,7 +120,7 @@ function openConfirmModal({title, message, confirmLabel = 'Confirm', cancelLabel
 			resolve(result);
 		}
 
-		const [cancelBtn, confirmBtn] = modal.querySelectorAll('.confirm-modal-btn');
+		const [cancelBtn, confirmBtn] = modal.querySelectorAll('.btn');
 		cancelBtn.addEventListener('click', () => animateAndResolve(false));
 		confirmBtn.addEventListener('click', () => animateAndResolve(true));
 
@@ -286,42 +286,32 @@ async function loadTrashInfo() {
 }
 
 async function openSettingsModal() {
-	console.log('[TRACE] openSettingsModal: Starting...');
 	const existing = document.querySelector('.confirm-modal-backdrop.settings-backdrop');
 	if (existing) {
-		console.log('[TRACE] openSettingsModal: Modal already exists, returning early');
 		return;
 	}
-	console.log('[TRACE] openSettingsModal: No existing modal found, proceeding...');
 
 	// Check user role to determine if admin-only sections should be shown
 	// Reuse cached auth data if available to avoid redundant API call
 	let userRole = 'basic';
 	try {
 		let authData = null;
-		console.log('[TRACE] openSettingsModal: Checking auth status...');
 		if (window.__cachedAuthData) {
-			console.log('[TRACE] openSettingsModal: Using cached auth data');
 			authData = window.__cachedAuthData;
 		} else {
-			console.log('[TRACE] openSettingsModal: Fetching fresh auth data...');
 			const authResponse = await fetch('/api/auth/status', {
 				credentials: 'include'
 			});
 			if (authResponse.ok) {
 				authData = await authResponse.json();
-				console.log('[TRACE] openSettingsModal: Auth response:', authData);
 				// Cache for future use
 				window.__cachedAuthData = authData;
 			} else {
-				console.log('[TRACE] openSettingsModal: Auth response not OK:', authResponse.status);
 			}
 		}
 		if (authData) {
 			userRole = authData.role || 'basic';
-			console.log('[TRACE] openSettingsModal: User role determined:', userRole);
 		} else {
-			console.log('[TRACE] openSettingsModal: No auth data available');
 		}
 	} catch (error) {
 		console.error('[TRACE] openSettingsModal: Error checking auth status:', error);
@@ -330,7 +320,6 @@ async function openSettingsModal() {
 	const isAdministrator = userRole === 'administrator' || userRole === 'god';
 	const isGod = userRole === 'god';
 	const canDeleteAllEvents = userRole === 'advanced' || userRole === 'administrator' || userRole === 'god';
-	console.log('[TRACE] openSettingsModal: Permissions determined:', {isAdministrator, isGod, canDeleteAllEvents});
 	const usersLoadingRow = `
       <tr>
         <td colspan="4" class="settings-users-empty">
@@ -342,13 +331,11 @@ async function openSettingsModal() {
       </tr>
     `;
 
-	console.log('[TRACE] openSettingsModal: Creating modal elements...');
 	const backdrop = document.createElement('div');
 	backdrop.className = 'confirm-modal-backdrop settings-backdrop';
 
 	const modal = document.createElement('div');
-	modal.className = 'confirm-modal settings-modal';
-	console.log('[TRACE] openSettingsModal: Modal elements created');
+	modal.className = 'settings-modal';
 
 	// Get current settings
 	const savedTheme = localStorage.getItem('theme') || 'light';
@@ -419,7 +406,7 @@ async function openSettingsModal() {
               <div class="settings-modal-placeholder-title">General</div>
 							<label class="flex items-center justify-between cursor-pointer py-2">
 								<div class="flex flex-col">
-									<span class="text-sm font-medium text-[color:var(--text-primary)]">Dark theme</span>
+									<span class="settings-toggle-title">Dark theme</span>
 									<span class="text-xs text-(--text-primary)">Switch between light and dark color scheme.</span>
 								</div>
 								<div class="group relative inline-flex w-11 shrink-0 rounded-full bg-gray-200 p-0.5 inset-ring inset-ring-gray-900/5 outline-offset-2 outline-indigo-600 transition-colors duration-200 ease-in-out has-checked:bg-indigo-600 has-focus-visible:outline-2">
@@ -455,14 +442,19 @@ async function openSettingsModal() {
 						</section>
 						${isAdministrator ? `
 						<section id="settings-users" class="settings-section settings-users-section" style="display: none;">
-							<div class="settings-users-header">
-								<div class="settings-modal-placeholder-title settings-users-title">User Management</div>
-								<button type="button" class="confirm-modal-btn settings-users-add-btn" id="addUserBtn">
-									<i class="fa-solid fa-plus"></i>
-									Add User
-								</button>
+							<div class="settings-modal-placeholder-title">
+								<div style="display: flex; justify-content: space-between; align-items: center;">
+									<div>User Management</div>
+									<div>
+										<button type="button" class="btn" id="addUserBtn">
+											<i class="fa-solid fa-plus"></i>
+											Add User
+										</button>
+									</div>
+								</div>
 							</div>
-							<div class="settings-users-table-wrapper" style="overflow-x: auto;">
+
+							<div class="settings-users-table-wrapper">
 								<table id="usersTable" class="settings-users-table" style="min-width: 600px;">
 									<thead>
 										<tr>
@@ -472,9 +464,11 @@ async function openSettingsModal() {
 											<th class="settings-users-actions-column">Actions</th>
 										</tr>
 									</thead>
-									<tbody id="usersTableBody">
-										${usersLoadingRow}
-									</tbody>
+									<div class="table-body-scroll">
+										<tbody id="usersTableBody">
+											${usersLoadingRow}
+										</tbody>
+									</div>
 								</table>
 							</div>
 							<div id="userFormContainer" class="settings-users-inline-form" style="display: none;"></div>
@@ -492,7 +486,7 @@ async function openSettingsModal() {
 										</div>
 									</div>
 									<div class="settings-toggle-actions" style="display: flex; width: 100%; justify-content: flex-start;">
-										<button type="button" class="confirm-modal-btn" id="exportDatabaseBtn">
+										<button type="button" class="btn" id="exportDatabaseBtn">
 											<i class="fa-solid fa-download"></i>
 											Export database
 										</button>
@@ -507,7 +501,7 @@ async function openSettingsModal() {
 									</div>
 									<div class="settings-toggle-actions" style="display: flex; width: 100%; justify-content: flex-start;">
 										<input type="file" id="importDatabaseInput" accept=".json" style="display: none;">
-										<button type="button" class="confirm-modal-btn" id="importDatabaseBtn">
+										<button type="button" class="btn" id="importDatabaseBtn">
 											<i class="fa-solid fa-upload"></i>
 											Import database
 										</button>
@@ -530,7 +524,7 @@ async function openSettingsModal() {
 							<div class="settings-modal-placeholder-title">Login history</div>
 							<div class="settings-modal-placeholder-text">
 								<div class="settings-users-section">
-									<div class="settings-users-table-container" style="overflow-x: auto;">
+									<div class="settings-users-table-container">
 										<table class="settings-users-table" id="loginHistoryTable" style="min-width: 800px;">
 											<thead>
 												<tr>
@@ -542,7 +536,8 @@ async function openSettingsModal() {
 													<th class="settings-users-th">Error</th>
 												</tr>
 											</thead>
-											<tbody id="loginHistoryTableBody">
+											<div class="table-body-scroll">
+												<tbody id="loginHistoryTableBody">
 												<tr>
 													<td colspan="6" class="settings-users-empty">
 														<div class="settings-users-loading" role="status" aria-live="polite">
@@ -551,15 +546,11 @@ async function openSettingsModal() {
 														</div>
 													</td>
 												</tr>
-											</tbody>
+												</tbody>
+											</div>
 										</table>
 									</div>
-									<div class="settings-users-actions">
-										<button type="button" class="confirm-modal-btn" id="refreshLoginHistoryBtn">
-											<i class="fa-solid fa-refresh"></i>
-											Refresh
-										</button>
-									</div>
+
 								</div>
 							</div>
 						</section>
@@ -575,7 +566,7 @@ async function openSettingsModal() {
 										</div>
 									</div>
 								<div class="settings-toggle-actions">
-									<button type="button" class="confirm-modal-btn" id="clearLocalDataBtn">
+									<button type="button" class="btn" id="clearLocalDataBtn">
 										<i class="fa-solid fa-broom"></i>
 										Clear local data
 									</button>
@@ -590,7 +581,7 @@ async function openSettingsModal() {
 									</div>
                 <div class="settings-toggle-actions">
                   ${canDeleteAllEvents ? `
-                    <button type="button" class="confirm-modal-btn" id="deleteAllEventsBtn">
+                    <button type="button" class="btn" id="deleteAllEventsBtn">
                       <i class="fa-solid fa-trash-can"></i>
                       Delete all events
                     </button>
@@ -608,7 +599,7 @@ async function openSettingsModal() {
 									</div>
                 <div class="settings-toggle-actions">
                   ${canDeleteAllEvents ? `
-                    <button type="button" class="confirm-modal-btn" id="emptyTrashBtn">
+                    <button type="button" class="btn" id="emptyTrashBtn">
                       <i class="fa-solid fa-dumpster-fire"></i>
                       Empty trash
                     </button>
@@ -623,48 +614,38 @@ async function openSettingsModal() {
 				</div>
 		<div class="settings-modal-footer">
 			<div class="confirm-modal-actions">
-				<button type="button" class="confirm-modal-btn confirm-modal-btn-cancel" id="settingsCloseBtn">
+				<button type="button" class="btn confirm-modal-btn-cancel" id="settingsCloseBtn">
 					Close
 				</button>
 			</div>
 		</div>
 	`;
 
-	console.log('[TRACE] openSettingsModal: Appending modal to backdrop...');
 	backdrop.appendChild(modal);
 
 	// Inject custom styles for table scrolling
 	if (!document.querySelector('#settings-modal-custom-styles')) {
-		console.log('[TRACE] openSettingsModal: Injecting custom styles...');
 		const styleElement = document.createElement('div');
 		styleElement.id = 'settings-modal-custom-styles';
 		styleElement.innerHTML = settingsModalStyles;
 		document.head.appendChild(styleElement);
 	} else {
-		console.log('[TRACE] openSettingsModal: Custom styles already exist');
 	}
 
-	console.log('[TRACE] openSettingsModal: Appending backdrop to body...');
 	document.body.appendChild(backdrop);
 
-	console.log('[TRACE] openSettingsModal: Making modal visible...');
 	requestAnimationFrame(() => {
 		backdrop.classList.add('visible');
-		console.log('[TRACE] openSettingsModal: Modal should now be visible');
 	});
 
 	// Define closeSettingsModal function
 	function closeSettingsModal() {
-		console.log('[TRACE] closeSettingsModal: Starting modal close...');
 
 		backdrop.classList.remove('visible');
 		backdrop.classList.add('hiding');
-		console.log('[TRACE] closeSettingsModal: Transition classes applied');
 		const handleTransitionEnd = () => {
-			console.log('[TRACE] closeSettingsModal: Transition ended, removing modal...');
 			backdrop.removeEventListener('transitionend', handleTransitionEnd);
 			backdrop.remove();
-			console.log('[TRACE] closeSettingsModal: Modal removed from DOM');
 		};
 		backdrop.addEventListener('transitionend', handleTransitionEnd);
 		setTimeout(() => {
@@ -682,43 +663,34 @@ async function openSettingsModal() {
 
 	// ESC key handling is configured via `escHandler` earlier; no additional listener needed here.
 	const darkThemeToggle = modal.querySelector('#darkThemeToggle');
-	console.log('[TRACE] openSettingsModal: Dark theme toggle element:', darkThemeToggle ? 'found' : 'not found');
 	if (darkThemeToggle) {
 		darkThemeToggle.addEventListener('change', (e) => {
 			const newTheme = e.target.checked ? 'dark' : 'light';
-			console.log('[TRACE] darkThemeToggle: Theme change to:', newTheme);
 			localStorage.setItem('theme', newTheme);
 
 			// Apply theme directly
 			if (newTheme === 'dark') {
 				document.documentElement.classList.add('dark');
-				console.log('[TRACE] darkThemeToggle: Added dark class to documentElement');
 			} else {
 				document.documentElement.classList.remove('dark');
-				console.log('[TRACE] darkThemeToggle: Removed dark class from documentElement');
 			}
 
 			// Update theme menu item if it exists
 			if (typeof window.updateThemeMenuItem === 'function') {
-				console.log('[TRACE] darkThemeToggle: Updating theme menu item...');
 				window.updateThemeMenuItem(newTheme);
 			} else {
-				console.log('[TRACE] darkThemeToggle: updateThemeMenuItem function not found');
 			}
 		});
 	}
 
 	const autoRefreshIntervalSelect = modal.querySelector('#autoRefreshInterval');
-	console.log('[TRACE] openSettingsModal: Auto refresh select element:', autoRefreshIntervalSelect ? 'found' : 'not found');
 	if (autoRefreshIntervalSelect) {
 		const handleAutoRefreshChange = (e) => {
 			const interval = (e.target.value || '').trim();
-			console.log('[TRACE] handleAutoRefreshChange: New interval:', interval);
 
 			// Store in localStorage for persistence
 			localStorage.setItem('autoRefreshIntervalMinutes', interval);
 			localStorage.setItem('autoRefreshEnabledState', interval !== '' ? 'true' : 'false');
-			console.log('[TRACE] handleAutoRefreshChange: Saved to localStorage:', {interval, enabled: interval !== ''});
 
 			// Update global variables if they exist (for backward compatibility)
 			if (typeof window.autoRefreshIntervalMinutes !== 'undefined') {
@@ -752,9 +724,9 @@ async function openSettingsModal() {
 
 		// Adjust modal size based on section
 		if (sectionId === '#settings-login-history') {
-			modal.className = 'confirm-modal settings-modal settings-modal-wide';
+			modal.className = 'settings-modal settings-modal-wide';
 		} else {
-			modal.className = 'confirm-modal settings-modal';
+			modal.className = 'settings-modal';
 		}
 
 		sidebarLinks.forEach(link => {
@@ -798,7 +770,7 @@ async function openSettingsModal() {
 				userFormContainer.innerHTML = `
             <div class="settings-users-form-header" style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
               <div class="settings-modal-placeholder-title" style="margin: 0;">${title}</div>
-              <button type="button" class="confirm-modal-btn confirm-modal-btn-cancel" data-action="cancel-user-form" style="padding: 6px 10px;">
+              <button type="button" class="btn confirm-modal-btn-cancel" data-action="cancel-user-form" style="padding: 6px 10px;">
                 Close
               </button>
             </div>
@@ -807,10 +779,10 @@ async function openSettingsModal() {
               ${fieldsHtml}
               <div class="settings-users-form-error" style="color: #dc2626; font-size: 13px; display: none;"></div>
               <div class="confirm-modal-actions">
-                <button type="button" class="confirm-modal-btn confirm-modal-btn-cancel" data-action="cancel-user-form">
+                <button type="button" class="btn confirm-modal-btn-cancel" data-action="cancel-user-form">
                   Cancel
                 </button>
-                <button type="submit" class="confirm-modal-btn confirm-modal-btn-confirm">
+                <button type="submit" class="btn confirm-modal-btn-confirm">
                   ${submitLabel}
                 </button>
               </div>
@@ -1447,9 +1419,7 @@ async function openSettingsModal() {
 	if (canDeleteAllEvents) {
 		loadTrashInfo();
 	}
-	console.log('[TRACE] openSettingsModal: Function completed successfully');
 }
 
-// Export settings modal opener to global scope for HTML and other scripts
-// The settings modal is now completely self-contained and can be used from any page
-window.openSettingsModal = openSettingsModal;
+// Export the openSettingsModal function for use by other modules
+export {openSettingsModal};
