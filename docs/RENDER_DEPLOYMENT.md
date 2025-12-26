@@ -30,6 +30,24 @@ DATABASE_URL=<Internal Database URL de Render>
 DATABASE_SSL=true
 ```
 
+### Configuració d'Emmagatzematge de Sessions (Opcional però Recomanat)
+
+Per defecte, les sessions s'emmagatzemen a PostgreSQL (que ja has configurat). Però si vols una alternativa o si tens problemes amb les sessions, pots configurar Redis:
+
+1. **Crear Redis a Render**:
+   - Al dashboard de Render, crea un **Redis** service
+   - Clic a "New +" → "Redis"
+   - Escull un nom (ex: `telemetry-redis`)
+   - Escull la mateixa regió que el teu servei web
+   - Clic a "Create Redis"
+
+2. **Afegir variable d'entorn**:
+```
+REDIS_URL=<Redis Internal URL de Render>
+```
+
+**Nota**: Si no configures Redis, el sistema utilitzarà PostgreSQL per les sessions, que és adequat per la majoria dels casos.
+
 **On trobar la Internal Database URL:**
 - Al dashboard de la teva base de dades PostgreSQL
 - A la secció "Connections" → "Internal Database URL"
@@ -164,6 +182,23 @@ console.log(`Migrated ${events.length} events`);
 ```
 
 ## Troubleshooting
+
+### Avís: "connect.session() MemoryStore is not designed for a production environment"
+
+Aquest avís apareix quan les sessions s'emmagatzemen a memòria (MemoryStore) en comptes d'una base de dades persistent.
+
+**Solucions**:
+1. **Assegura't que PostgreSQL està configurat**:
+   - Verifica `DB_TYPE=postgresql`
+   - Comprova que `DATABASE_URL` apunta a la base de dades PostgreSQL
+   - Assegura't que `DATABASE_SSL=true`
+
+2. **Configura Redis com alternativa** (opcional):
+   - Afegeix `REDIS_URL=<Redis Internal URL>` a les variables d'entorn
+   - Crear un servei Redis a Render si no en tens
+
+3. **Reinicia el servei**:
+   - Força un nou deploy per assegurar que la configuració s'apliqui
 
 ### Error: "Cannot find module 'pg'"
 

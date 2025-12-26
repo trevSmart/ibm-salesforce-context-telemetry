@@ -8,6 +8,17 @@ import session from 'express-session';
 import crypto from 'node:crypto';
 import pgSession from 'connect-pg-simple';
 
+// Optional Redis imports (only loaded if Redis is configured)
+let redis = null;
+let RedisStore = null;
+
+try {
+	redis = (await import('redis')).default;
+	RedisStore = (await import('connect-redis')).default;
+} catch {
+	// Redis not available, continue without it
+}
+
 // Get credentials from environment variables (for backward compatibility)
 const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin';
 const ADMIN_PASSWORD_HASH = process.env.ADMIN_PASSWORD_HASH || null;
@@ -55,11 +66,11 @@ function normalizeRole(role) {
 
 /**
  * Initialize session middleware
- * Uses PostgreSQL store if available, otherwise falls back to MemoryStore
+ * Uses PostgreSQL store if available, otherwise Redis, otherwise MemoryStore
  *
  * NOTE: This function should be called AFTER the database is initialized
  * to properly support PostgreSQL session store. If called before database
- * initialization, it will fall back to MemoryStore.
+ * initialization, it will fall back to Redis or MemoryStore.
  */
 function initSessionMiddleware() {
 	const isProduction = process.env.NODE_ENV === 'production';
@@ -69,29 +80,64 @@ function initSessionMiddleware() {
 	if (db) {
 		const postgresPool = db.getPostgresPool ? db.getPostgresPool() : null;
 		if (postgresPool) {
-			// Use PostgreSQL store for sessions
-			// connect-pg-simple is a factory function that needs to be called with the session module
-			const PgSession = pgSession(session);
-			store = new PgSession({
-				pool: postgresPool,
-				tableName: 'session', // Table name for sessions
-				createTableIfMissing: true // Automatically create session table if it doesn't exist
-			});
-			console.log('✅ Session store: PostgreSQL');
+			try {
+				// Use PostgreSQL store for sessions
+				// connect-pg-simple is a factory function that needs to be called with the session module
+				const PgSession = pgSession(session);
+				store = new PgSession({
+					pool: postgresPool,
+					tableName: 'session', // Table name for sessions
+					createTableIfMissing: true // Automatically create session table if it doesn't exist
+				});
+				console.log('✅ Session store: PostgreSQL');
+			} catch (error) {
+				console.error('❌ Failed to initialize PostgreSQL session store:', error.message);
+				console.warn('⚠️  Falling back to alternative session store');
+			}
 		}
 	}
 
-	// If no PostgreSQL store, MemoryStore will be used
+	// If PostgreSQL failed or not available, try Redis
+	if (!store && RedisStore && redis && process.env.REDIS_URL) {
+		try {
+			const redisClient = redis.createClient({
+				url: process.env.REDIS_URL,
+				socket: {
+					connectTimeout: 60000,
+					lazyConnect: true
+				}
+			});
+
+			// Handle Redis connection errors gracefully
+			redisClient.on('error', (err) => {
+				console.error('❌ Redis session store error:', err.message);
+			});
+
+			store = new RedisStore({
+				client: redisClient,
+				prefix: 'session:',
+				ttl: 24 * 60 * 60 * 1000 // 24 hours in milliseconds
+			});
+
+			console.log('✅ Session store: Redis');
+		} catch (error) {
+			console.error('❌ Failed to initialize Redis session store:', error.message);
+			console.warn('⚠️  Falling back to MemoryStore for sessions');
+		}
+	}
+
+	// If no persistent store available, use MemoryStore
 	if (!store) {
 		if (isProduction) {
 			console.warn('⚠️  WARNING: Using MemoryStore for sessions in production. Sessions will not persist across server restarts.');
-			console.warn('⚠️  For production deployments with PostgreSQL, ensure initSessionMiddleware() is called after database initialization.');
+			console.warn('⚠️  To fix this, configure one of:');
+			console.warn('⚠️    - PostgreSQL: Set DB_TYPE=postgresql and DATABASE_URL');
+			console.warn('⚠️    - Redis: Set REDIS_URL environment variable');
 		} else {
 			console.log('📦 Session store: MemoryStore (development)');
 		}
 	}
 
-	// If no PostgreSQL store, MemoryStore will be used (with warning in production)
 	const sessionConfig = {
 		secret: SESSION_SECRET,
 		resave: false,
@@ -104,7 +150,7 @@ function initSessionMiddleware() {
 		}
 	};
 
-	// Only set store if we have PostgreSQL, otherwise use default MemoryStore
+	// Only set store if we have a working store, otherwise use default MemoryStore
 	if (store) {
 		sessionConfig.store = store;
 	}
