@@ -14,7 +14,8 @@
 	try {
 		Object.defineProperty(patched, 'name', {value: 'includes'});
 	} catch (_err) {
-		console.error('Failed to redefine name of patched includes function:', _err);
+		// Intentionally ignore: function name redefinition may fail in older environments,
+		// but this is non-critical and should not affect runtime behavior.
 	}
 
 	// eslint-disable-next-line no-extend-native
