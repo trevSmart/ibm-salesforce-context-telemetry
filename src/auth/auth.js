@@ -109,6 +109,8 @@ function initSessionMiddleware() {
 				url: process.env.REDIS_URL,
 				socket: {
 					connectTimeout: 60000,
+					// Use lazy connection to defer connection until first use
+					// This prevents connection errors from blocking server startup
 					lazyConnect: true
 				}
 			});

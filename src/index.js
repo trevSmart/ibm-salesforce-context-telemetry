@@ -2890,6 +2890,8 @@ async function gracefulShutdown(signal) {
 			if (redisSessionClient.isOpen) {
 				await redisSessionClient.quit();
 				console.log('Redis session client closed');
+			} else {
+				console.log('Redis session client was not connected (skipped cleanup)');
 			}
 		} catch (error) {
 			console.error('Error closing Redis session client:', error.message);
