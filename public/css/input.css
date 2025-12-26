@@ -1714,8 +1714,8 @@
     will-change: width;
     padding: 6px 12px;
     border: 1px solid #d4d4d82e;
-    border-radius: 22px;
-    font-size: 0.875rem;
+    border-radius: 12px;
+    font-size: 12.8px;
     line-height: 1.25rem;
     width: 160px;
     min-width: 100px;
@@ -1723,6 +1723,7 @@
     color: #3d4152;
     transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease, width 0.2s ease;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02), 0 0 1px rgba(0, 0, 0, 0.01), 0 2px 3px rgba(0, 0, 0, 0.03);
+    height: 30px;
   }
 
   html.dark .search-input {
@@ -1755,6 +1756,10 @@
   .search-input-container {
     display: flex;
     align-items: center;
+  }
+
+  .search-input-container input {
+    padding: 6px 12px;
   }
 
   .control-select {
@@ -1822,6 +1827,7 @@
     position: relative;
     outline: 2px solid transparent;
     outline-offset: 2px;
+    width: 30px;
   }
 
   .icon-btn:hover:not(.delete-all-btn):not(.notification-toggle.active):not(.auto-refresh-active) {
@@ -5395,7 +5401,7 @@ html.dark .level-filters .level-filter-btn.level-error {
 /* User filter autocomplete styling */
 .user-filter-autocomplete {
 	font-size: 0.75rem;
-	width: 160px;
+	width: 100px;
 }
 
 /* Command palette styles */
@@ -5460,4 +5466,12 @@ html.dark .level-filters .level-filter-btn.level-error {
 
 .shadow-s {
 	box-shadow: 0 1px 2px 0px #e1e1e1;
+}
+
+.el-autocomplete > input {
+  font-size: 12.8px;
+}
+
+section > div > h3 + p {
+  font-size: 0.86rem;
 }
