@@ -99,7 +99,7 @@ function openConfirmModal({title, message, confirmLabel = 'Confirm', cancelLabel
 				if (event.target !== backdrop) {
 					return;
 				}
-				backdrop.ontransitionend = null;
+				backdrop.removeEventListener('transitionend', handleTransitionEnd);
 				backdrop.remove();
 			};
 
@@ -300,11 +300,13 @@ async function openSettingsModal() {
 				// Cache for future use
 				window.__cachedAuthData = authData;
 			} else {
+				// No cached data available, will fetch fresh data
 			}
 		}
 		if (authData) {
 			userRole = authData.role || 'basic';
 		} else {
+			// No auth data available, will use default role
 		}
 	} catch (error) {
 		console.error('[TRACE] openSettingsModal: Error checking auth status:', error);
@@ -618,6 +620,7 @@ async function openSettingsModal() {
 		styleElement.innerHTML = settingsModalStyles;
 		document.head.appendChild(styleElement);
 	} else {
+		// Styles already exist, no need to add them again
 	}
 
 	document.body.appendChild(backdrop);
@@ -667,6 +670,7 @@ async function openSettingsModal() {
 			if (typeof window.updateThemeMenuItem === 'function') {
 				window.updateThemeMenuItem(newTheme);
 			} else {
+				// Theme menu update function not available
 			}
 		});
 	}
@@ -1323,7 +1327,7 @@ async function openSettingsModal() {
 					let importData;
 					try {
 						importData = JSON.parse(fileContent);
-					} catch (_parseError) {
+					} catch {
 						throw new Error('Invalid JSON file format');
 					}
 

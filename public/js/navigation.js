@@ -1,5 +1,4 @@
 // @ts-nocheck
-/* global DOMParser */
 // Lightweight client-side navigation to avoid repainting shared chrome
 (() => {
 	const SUPPORTED_PATHS = ['/', '/logs', '/teams', '/people'];
@@ -27,7 +26,7 @@
 		Array.from(document.querySelectorAll('script[src]')).map((script) => {
 			try {
 				return new URL(script.src, window.location.href).pathname;
-			} catch (_e) {
+			} catch {
 				return script.src;
 			}
 		})
@@ -38,7 +37,7 @@
 	function getPath(href) {
 		try {
 			return new URL(href, window.location.href).pathname;
-		} catch (_e) {
+		} catch {
 			return href;
 		}
 	}
@@ -113,7 +112,7 @@
 					loadedScripts.add(src);
 					resolve();
 				});
-				script.onerror = (err) => reject(err);
+				script.addEventListener('error', (err) => reject(err));
 				document.body.appendChild(script);
 			});
 		}
@@ -165,7 +164,7 @@
 			if (permission === 'default') {
 				try {
 					permission = await Notification.requestPermission();
-				} catch (_e) {
+				} catch {
 					permission = 'denied';
 				}
 			}
@@ -210,7 +209,7 @@
 		}
 		try {
 			pageCache.set(window.location.pathname, document.documentElement.outerHTML);
-		} catch (_e) {
+		} catch {
 			// Swallow caching errors; navigation will still work without cache
 		}
 	}
@@ -336,7 +335,8 @@
 			await ensurePageScripts(targetPath);
 
 			// Trigger reflow to ensure opacity:0 is applied before transition
-			void nextContent.offsetHeight;
+			// eslint-disable-next-line no-unused-expressions
+			nextContent.offsetHeight;
 
 			// Start crossfade: fade out old, fade in new
 			container.style.transition = `opacity ${TRANSITION_DURATION_MS}ms ease-out`;

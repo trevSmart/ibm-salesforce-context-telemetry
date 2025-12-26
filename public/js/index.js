@@ -1,5 +1,5 @@
 // @ts-nocheck
-import {toggleTheme, updateThemeMenuItem, initializeTheme} from './theme.js';
+import {toggleTheme, initializeTheme} from './theme.js';
 
 // Dashboard constants
 const SESSION_START_SERIES_COLOR = '#2195cf';
@@ -156,13 +156,13 @@ async function loadDashboardDatabaseSize() {
 				}
 			}
 		}
-	} catch (error) {
+	} catch {
 		// Silently fail if database size is not available
 	}
 }
 
 // Initial bootstrap
-void initializeDashboardPage();
+initializeDashboardPage();
 
 // Initialize dashboard; reused on first load and on soft navigation
 async function initializeDashboardPage({resetState = false} = {}) {
@@ -459,6 +459,7 @@ function setupIconButtonsGroupHover() {
 				iconButtonsGroup.setAttribute('data-hover-index', index);
 
 				// Force a reflow to ensure the position is set before removing no-transition
+				// eslint-disable-next-line no-unused-expressions
 				iconButtonsGroup.offsetHeight;
 
 				// Remove no-transition after a short delay to allow smooth transitions between buttons
@@ -1546,7 +1547,7 @@ async function loadChartData(days = currentDays) {
 			// Triple the Y values for errors trend line visibility
 			const errorsDenseTrendScaled = errorsDenseTrend.map(([x, y]) => {
 				const scaled = (y || 0) * 3;
-				return [x, isFinite(scaled) ? scaled : 0];
+				return [x, Number.isFinite(scaled) ? scaled : 0];
 			});
 			const errorsDenseTrendCompressed = compressYAroundMean(errorsDenseTrendScaled, TREND_Y_COMPRESSION);
 

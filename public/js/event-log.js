@@ -1,5 +1,5 @@
 // @ts-nocheck
-import {toggleTheme, updateThemeMenuItem, applyTheme} from './theme.js';
+import {toggleTheme, applyTheme} from './theme.js';
 
 // Prevent double execution when soft navigation re-injects the script
 if (window.__EVENT_LOG_LOADED__) {
@@ -273,7 +273,7 @@ function safeShowToast(message, type = 'info') {
 	];
 	const OFFICE_START = {hour: 8, minute: 30};
 	const OFFICE_END = {hour: 18, minute: 30};
-	const logChartTrace = (message, details = {}) => {
+	const logChartTrace = (message, _details = {}) => {
 		try {
 			// Lightweight tracing to understand intermittent chart load issues
 			// Tracing disabled in production
@@ -288,8 +288,6 @@ function safeShowToast(message, type = 'info') {
 	let isResizingActivity = false;
 	let activityResizeStartY = 0;
 	let activityResizeStartHeight = 0;
-	const globalErrorMessages = [];
-	const MAX_GLOBAL_ERROR_MESSAGES = 3;
 	let pendingChartRender = null; // Stores events/options when ECharts isn't ready yet
 
 	function resetEventLogState() {
@@ -1813,8 +1811,11 @@ function safeShowToast(message, type = 'info') {
 		if (Number.isNaN(bigint)) {
 			return `rgba(83, 207, 152, ${alpha})`;
 		}
+		// eslint-disable-next-line no-bitwise
 		const r = (bigint >> 16) & 255;
+		// eslint-disable-next-line no-bitwise
 		const g = (bigint >> 8) & 255;
+		// eslint-disable-next-line no-bitwise
 		const b = bigint & 255;
 		return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 	}
@@ -2980,7 +2981,6 @@ function safeShowToast(message, type = 'info') {
 			const levelClass = getLevelClass(event.event);
 			const levelBadgeClass = getLevelBadgeClass(event.event);
 			const description = formatDescription(event);
-			const descriptionPretty = formatDescriptionPretty(event);
 			const eventData = normalizeEventData(event.data);
 			const clientName = event.company_name || '';
 			const userLabel = extractUserLabelFromEvent(event, eventData);
@@ -3160,7 +3160,7 @@ function safeShowToast(message, type = 'info') {
 
 	function createEventDetailsForm(event) {
 		const payload = buildEventPayload(event);
-		
+
 		// Helper function to format value for display
 		const formatValue = (value) => {
 			if (value === null || value === undefined) {
@@ -3232,7 +3232,7 @@ function safeShowToast(message, type = 'info') {
 		// Server ID and Version row
 		const hasServerId = payload.serverId !== undefined;
 		const hasVersion = payload.version !== undefined;
-		
+
 		// Timestamp (full width)
 		const timestampContainer = document.createElement('div');
 		timestampContainer.className = 'col-span-2 -mt-px';
@@ -3248,7 +3248,7 @@ function safeShowToast(message, type = 'info') {
 			timestampRounded
 		));
 		eventGrid.appendChild(timestampContainer);
-		
+
 		if (hasServerId && hasVersion) {
 			// Both fields: side by side
 			const serverIdContainer = document.createElement('div');
@@ -3433,16 +3433,13 @@ function safeShowToast(message, type = 'info') {
 
 	function formatDescription(event) {
 		// If event doesn't have data field (payload not loaded), return special marker
-		if (!event.hasOwnProperty('data')) {
+		if (!Object.hasOwn(event, 'data')) {
 			return '__VIEW_PAYLOAD_BUTTON__';
 		}
 
 		return JSON.stringify(buildEventPayload(event));
 	}
 
-	function formatDescriptionPretty(event) {
-		return JSON.stringify(buildEventPayload(event), null, 2);
-	}
 
 	function toggleRowExpand(eventId) {
 		const expandedRow = document.getElementById(`expanded-${eventId}`);
@@ -3661,7 +3658,7 @@ function safeShowToast(message, type = 'info') {
 		setRefreshButtonAutoState(enabled, intervalMinutes);
 
 		if (enabled && intervalMinutes && intervalMinutes !== '') {
-			const intervalMs = Number.parseInt(intervalMinutes) * 60 * 1000;
+			const intervalMs = Number.parseInt(intervalMinutes, 10) * 60 * 1000;
 			autoRefreshIntervalId = setInterval(() => {
 				refreshLogs();
 			}, intervalMs);
@@ -3794,6 +3791,7 @@ function safeShowToast(message, type = 'info') {
 		const body = newSessionsCount === 1? '1 new session started.': `${newSessionsCount} new sessions started.`;
 
 		try {
+			// eslint-disable-next-line no-new
 			new Notification(title, {
 				body,
 				tag: 'telemetry-sessions',
@@ -4897,7 +4895,7 @@ function safeShowToast(message, type = 'info') {
 					document.getElementById('dbSizeInfo').style.display = '';
 				}
 			}
-		} catch (error) {
+		} catch {
 			// Silently fail if database size is not available
 		}
 	}
@@ -5339,7 +5337,7 @@ function safeShowToast(message, type = 'info') {
 
 		// Listen for chart rendering completion
 		window.addEventListener('chartRenderComplete', (event) => {
-			const {isInitialLoad, sessionId, eventCount, timestamp} = event.detail;
+			const {isInitialLoad} = event.detail;
 			if (isInitialLoad) {
 				// Show the page once initial chart render is complete
 				revealEventLogShell();

@@ -13,9 +13,9 @@
  * - Very low activity on weekends (5% vs 60% on weekdays)
  */
 
-require('dotenv').config();
-const db = require('../storage/database');
-const {v4: uuidv4} = require('uuid');
+import 'dotenv/config';
+import * as db from '../storage/database.js';
+import {v4 as uuidv4} from 'uuid';
 
 // Configuration
 const NUM_USERS = 20;

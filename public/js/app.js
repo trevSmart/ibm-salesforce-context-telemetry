@@ -39,18 +39,18 @@ function setupInputEscHandler() {
         }
 
         const activeElement = document.activeElement;
-        
+
         // Only handle INPUT and TEXTAREA elements
         if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
             const hasValue = activeElement.value && activeElement.value.trim().length > 0;
-            
+
             if (hasValue) {
                 // Clear the input value
                 activeElement.value = '';
-                
+
                 // Trigger input event to notify any listeners
-                activeElement.dispatchEvent(new Event('input', { bubbles: true }));
-                
+                activeElement.dispatchEvent(new Event('input', {bubbles: true}));
+
                 // Stop propagation so ESC doesn't trigger other handlers (like closing modals)
                 e.stopPropagation();
             }
