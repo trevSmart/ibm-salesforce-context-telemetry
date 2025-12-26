@@ -6,6 +6,8 @@ const REFRESH_ICON_ANIMATION_DURATION_MS = 700;
 let currentView = 'list'; // 'list' or 'detail'
 let teams = [];
 let _currentTeamId = null;
+// Cache busting timestamp for team logos - updated when teams data changes
+let teamsCacheBuster = Date.now();
 
 // Utility functions
 async function buildCsrfHeaders(includeJson = true) {
@@ -531,8 +533,8 @@ function renderTeamsList() {
 		// Get team initials for fallback avatar
 		const initials = team.name.split(' ').map(word => word[0]).join('').substring(0, 2).toUpperCase();
 
-		// Logo or avatar
-		const logoOrAvatar = team.has_logo? `<img src="/api/teams/${team.id}/logo" alt="${escapeHtml(team.name)} logo" class="size-12 object-contain" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+		// Logo or avatar with cache busting for proper caching
+		const logoOrAvatar = team.has_logo? `<img src="/api/teams/${team.id}/logo?t=${teamsCacheBuster}" alt="${escapeHtml(team.name)} logo" class="size-12 object-contain" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
          <span class="card-avatar" style="display: none; color: ${accentColor}; background-color: ${accentBg};">
            ${escapeHtml(initials)}
          </span>`: `<span class="card-avatar" style="color: ${accentColor}; background-color: ${accentBg};">
@@ -707,7 +709,7 @@ function showTeamFormModal(team = null) {
 
 	const modal = document.createElement('div');
 	modal.className = 'confirm-modal';
-	const logoPreviewUrl = team && team.has_logo ? `/api/teams/${team.id}/logo` : null;
+	const logoPreviewUrl = team && team.has_logo ? `/api/teams/${team.id}/logo?t=${teamsCacheBuster}` : null;
 	modal.innerHTML = `
     <h2 style="margin: 0 0 16px 0;">${isEdit ? 'Edit Team' : 'Create Team'}</h2>
     <form id="teamForm" enctype="multipart/form-data">
@@ -1229,6 +1231,8 @@ window.refreshTeams = async function refreshTeams(event) {
 	try {
 		await loadTeams();
 		renderTeamsList();
+		// Update cache buster when manually refreshing to ensure any logo changes are visible
+		teamsCacheBuster = Date.now();
 	} catch (error) {
 		console.error('Error refreshing teams:', error);
 		showToast('Failed to refresh teams', 'error');
@@ -1250,6 +1254,8 @@ window.refreshTeams = async function refreshTeams(event) {
 async function loadTeams() {
 	try {
 		teams = await fetchTeams();
+		// Update cache buster when teams data changes to ensure logos refresh
+		teamsCacheBuster = Date.now();
 	} catch (error) {
 		console.error('Error loading teams:', error);
 		showToast('Failed to load teams', 'error');

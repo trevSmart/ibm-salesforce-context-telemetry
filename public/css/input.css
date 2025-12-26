@@ -808,7 +808,7 @@
     padding: 6px 14px;
     /* font-size: 11.5px; */
     /* font-weight: 500; */
-    background: rgba(255, 255, 255, 0.72);
+    background: rgba(255, 255, 255, 0.76);
     /* border-radius: 999px; */
     box-shadow: 0 1px 1px rgba(15, 23, 42, 0.05);
     color: #374151;
@@ -3840,8 +3840,17 @@
       height: auto;
     }
 
-    #topTeamsList > .top-users-item:nth-child(n + 5) {
-      display: none;
+    /* Make top teams list responsive - show max 4 items on small screens */
+    #topTeamsList {
+      max-height: calc(4 * (10px + 10px + 40px + 2px)); /* 4 items * (padding-top + padding-bottom + approx content + border) */
+      overflow: hidden;
+    }
+
+    /* On larger screens, allow up to 5 items */
+    @media (min-height: 900px) {
+      #topTeamsList {
+        max-height: calc(5 * (10px + 10px + 40px + 2px));
+      }
     }
 
 

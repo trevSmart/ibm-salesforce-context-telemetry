@@ -1381,9 +1381,19 @@ async function getEvents(options = {}) {
 	const validOrderBy = ['id', 'event', 'timestamp', 'created_at', 'server_id'];
 	const validOrder = ['ASC', 'DESC'];
 	// Only select orderBy and order values from predefined lists without using user data directly
-	let safeOrderBy = 'created_at';
+	let safeOrderBy = 'e.created_at';
 	if (validOrderBy.includes(orderBy)) {
-		safeOrderBy = orderBy;
+		if (orderBy === 'created_at') {
+			safeOrderBy = 'e.created_at';
+		} else if (orderBy === 'timestamp') {
+			safeOrderBy = 'e.timestamp';
+		} else if (orderBy === 'id') {
+			safeOrderBy = 'e.id';
+		} else if (orderBy === 'server_id') {
+			safeOrderBy = 'e.server_id';
+		} else {
+			safeOrderBy = orderBy;
+		}
 	}
 	let safeOrder = 'DESC';
 	if (typeof order === 'string' && validOrder.includes(order.toUpperCase())) {
