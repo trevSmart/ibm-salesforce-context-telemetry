@@ -512,11 +512,9 @@ async function openSettingsModal() {
 						${isGod ? `
 						<section id="settings-login-history" class="settings-section" style="display: none;">
 							<div class="settings-modal-placeholder-title">Login history</div>
-							<div class="mt-4 flow-root">
-								<div class="-mx-4 -my-2">
-									<div class="inline-block min-w-full py-2 align-middle">
-										<div class="overflow-y-auto max-h-96 border border-gray-300 rounded-md">
-											<table id="loginHistoryTable" class="min-w-full border-separate border-spacing-0">
+							<div class="mt-4">
+								<div class="overflow-x-auto overflow-y-auto max-h-96 border border-gray-300 rounded-md">
+									<table id="loginHistoryTable" class="border-separate border-spacing-0">
 												<thead>
 													<tr>
 														<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 py-3.5 pr-3 pl-4 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:bg-gray-800/75 dark:text-gray-100">Username</th>
@@ -540,8 +538,6 @@ async function openSettingsModal() {
 											</table>
 										</div>
 									</div>
-								</div>
-							</div>
 						</section>
 						` : ''}
 						<section id="settings-danger" class="settings-danger-section">
@@ -1182,7 +1178,7 @@ async function openSettingsModal() {
 								<td class="border-b border-gray-200 px-3 py-4 text-sm text-gray-500 dark:text-gray-400 max-w-xs truncate" title="${escapeHtml(log.user_agent || '')}">${escapeHtml(log.user_agent || 'N/A')}</td>
 								<td class="border-b border-gray-200 px-3 py-4 text-sm whitespace-nowrap ${statusClass} font-medium">${statusText}</td>
 								<td class="border-b border-gray-200 px-3 py-4 text-sm whitespace-nowrap text-gray-500 dark:text-gray-400">${timestamp}</td>
-								<td class="border-b border-gray-200 py-4 pr-4 pl-3 text-sm whitespace-nowrap text-gray-500 dark:text-gray-400">${errorText}</td>
+								<td class="border-b border-gray-200 py-4 pr-4 pl-3 text-sm text-gray-500 dark:text-gray-400 max-w-xs truncate" title="${escapeHtml(log.error_message || '')}">${errorText}</td>
 							</tr>
 						`;
 					}).join('');
