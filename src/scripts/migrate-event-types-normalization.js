@@ -15,7 +15,6 @@ import {createRequire} from 'node:module';
 const require = createRequire(import.meta.url);
 
 const path = require('node:path');
-const fs = require('node:fs');
 
 const DB_PATH = process.env.DB_PATH || path.join(process.cwd(), 'src', 'data', 'telemetry.db');
 
