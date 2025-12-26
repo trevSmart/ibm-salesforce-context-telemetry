@@ -5595,3 +5595,7 @@ html.dark .level-filters .level-filter-btn.level-error {
 section > div > h3 + p {
   font-size: 0.86rem;
 }
+
+.settings-sidebar-nav > nav {
+  width: max-content;
+}
