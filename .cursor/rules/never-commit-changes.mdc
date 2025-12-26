@@ -1,6 +1,6 @@
 ---
 name: never-commit-changes
-description: Never commit changes to the repository without first discussing it with the team.
+description: If not in the "copilot" environment, never commit changes to the repository without first discussing it with the user.
 ---
 
 # Overview
