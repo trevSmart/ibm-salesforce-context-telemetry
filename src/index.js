@@ -2876,9 +2876,14 @@ async function startServer() {
 	}
 }
 
-// Graceful shutdown
-process.on('SIGTERM', async () => {
-	console.log('SIGTERM received, closing connections...');
+/**
+ * Graceful shutdown handler
+ * Closes all active connections (Redis, database) before exiting
+ */
+async function gracefulShutdown(signal) {
+	console.log(`${signal} received, closing connections...`);
+	
+	// Close Redis session client if it exists
 	if (redisSessionClient) {
 		try {
 			await redisSessionClient.quit();
@@ -2887,31 +2892,20 @@ process.on('SIGTERM', async () => {
 			console.error('Error closing Redis session client:', error.message);
 		}
 	}
+	
+	// Close database connection
 	try {
 		await db.close();
 	} catch (error) {
 		console.error('Error closing database:', error.message);
 	}
+	
 	process.exit(0);
-});
+}
 
-process.on('SIGINT', async () => {
-	console.log('SIGINT received, closing connections...');
-	if (redisSessionClient) {
-		try {
-			await redisSessionClient.quit();
-			console.log('Redis session client closed');
-		} catch (error) {
-			console.error('Error closing Redis session client:', error.message);
-		}
-	}
-	try {
-		await db.close();
-	} catch (error) {
-		console.error('Error closing database:', error.message);
-	}
-	process.exit(0);
-});
+// Graceful shutdown
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 // Start the server
 startServer();
