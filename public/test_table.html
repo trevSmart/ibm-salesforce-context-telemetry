@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Login History Table Test</title>
+<style>
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    padding: 20px;
+    background: #f5f5f5;
+  }
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.5);
+  }
+  .settings-modal {
+    width: 100%;
+    max-width: 1000px;
+    max-height: 85vh;
+    margin: 0 16px;
+    padding: 18px 20px 16px 20px;
+    border-radius: 12px;
+    background: white;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+    border: 1px solid #e5e7eb;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .mt-4 { margin-top: 1rem; }
+  .flow-root { display: flow-root; }
+  .-mx-4 { margin-left: -1rem; margin-right: -1rem; }
+  .-my-2 { margin-top: -0.5rem; margin-bottom: -0.5rem; }
+  .inline-block { display: inline-block; }
+  .min-w-full { min-width: 100%; }
+  .py-2 { padding-top: 0.5rem; padding-bottom: 0.5rem; }
+  .align-middle { vertical-align: middle; }
+  .overflow-y-auto { overflow-y: auto; }
+  .max-h-96 { max-height: 24rem; }
+  .border { border-width: 1px; }
+  .border-gray-300 { border-color: #d1d5db; }
+  .rounded-md { border-radius: 0.375rem; }
+  .border-separate { border-collapse: separate; }
+  .border-spacing-0 { border-spacing: 0; }
+  .sticky { position: sticky; }
+  .top-0 { top: 0; }
+  .z-10 { z-index: 10; }
+  .border-b { border-bottom-width: 1px; }
+  .bg-white\/75 { background-color: rgba(255, 255, 255, 0.75); }
+  .py-3\.5 { padding-top: 0.875rem; padding-bottom: 0.875rem; }
+  .px-3 { padding-left: 0.75rem; padding-right: 0.75rem; }
+  .pl-4 { padding-left: 1rem; }
+  .pr-3 { padding-right: 0.75rem; }
+  .pr-4 { padding-right: 1rem; }
+  .pl-3 { padding-left: 0.75rem; }
+  .text-left { text-align: left; }
+  .text-sm { font-size: 0.875rem; line-height: 1.25rem; }
+  .font-semibold { font-weight: 600; }
+  .text-gray-900 { color: #111827; }
+  .backdrop-blur-sm { backdrop-filter: blur(4px); }
+  .backdrop-filter { backdrop-filter: var(--tw-backdrop-blur); }
+  .py-4 { padding-top: 1rem; padding-bottom: 1rem; }
+  .px-4 { padding-left: 1rem; padding-right: 1rem; }
+  .whitespace-nowrap { white-space: nowrap; }
+  .font-medium { font-weight: 500; }
+  .text-gray-100 { color: #f3f4f6; }
+  .border-gray-200 { border-color: #e5e7eb; }
+  .text-gray-500 { color: #6b7280; }
+  .font-mono { font-family: ui-monospace, monospace; }
+  .text-gray-400 { color: #9ca3af; }
+  .max-w-xs { max-width: 20rem; }
+  .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .text-green-600 { color: #16a34a; }
+  .text-red-600 { color: #dc2626; }
+  .hover\:bg-gray-50:hover { background-color: #f9fafb; }
+</style>
+</head>
+<body>
+<div class="modal-backdrop">
+  <div class="settings-modal">
+    <h2 style="margin: 0 0 1rem 0;">Login History</h2>
+    <div class="mt-4 flow-root">
+      <div class="-mx-4 -my-2">
+        <div class="inline-block min-w-full py-2 align-middle">
+          <div class="overflow-y-auto max-h-96 border border-gray-300 rounded-md">
+            <table class="min-w-full border-separate border-spacing-0">
+              <thead>
+                <tr>
+                  <th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 py-3.5 pr-3 pl-4 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter">Username</th>
+                  <th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 px-3 py-3.5 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter">IP Address</th>
+                  <th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 px-3 py-3.5 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter">User Agent</th>
+                  <th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 px-3 py-3.5 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter">Status</th>
+                  <th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 px-3 py-3.5 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter">Time</th>
+                  <th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 py-3.5 pr-4 pl-3 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter">Error</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="hover:bg-gray-50">
+                  <td class="border-b border-gray-200 py-4 pr-3 pl-4 text-sm font-medium whitespace-nowrap text-gray-900">testuser1</td>
+                  <td class="border-b border-gray-200 px-3 py-4 text-sm whitespace-nowrap text-gray-500 font-mono">192.168.1.100</td>
+                  <td class="border-b border-gray-200 px-3 py-4 text-sm text-gray-500 max-w-xs truncate" title="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36">Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36</td>
+                  <td class="border-b border-gray-200 px-3 py-4 text-sm whitespace-nowrap text-green-600 font-medium">Success</td>
+                  <td class="border-b border-gray-200 px-3 py-4 text-sm whitespace-nowrap text-gray-500">12/26/2025, 4:00:00 AM</td>
+                  <td class="border-b border-gray-200 py-4 pr-4 pl-3 text-sm whitespace-nowrap text-gray-500"></td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                  <td class="border-b border-gray-200 py-4 pr-3 pl-4 text-sm font-medium whitespace-nowrap text-gray-900">testgod</td>
+                  <td class="border-b border-gray-200 px-3 py-4 text-sm whitespace-nowrap text-gray-500 font-mono">127.0.0.1</td>
+                  <td class="border-b border-gray-200 px-3 py-4 text-sm text-gray-500 max-w-xs truncate" title="Very very long user agent string that goes on and on">Very very long user agent string that goes on and on and contains lots of information about the browser and operating system and many other details that make this line extremely wide</td>
+                  <td class="border-b border-gray-200 px-3 py-4 text-sm whitespace-nowrap text-red-600 font-medium">Failed</td>
+                  <td class="border-b border-gray-200 px-3 py-4 text-sm whitespace-nowrap text-gray-500">12/25/2025, 11:00:00 PM</td>
+                  <td class="border-b border-gray-200 py-4 pr-4 pl-3 text-sm whitespace-nowrap text-gray-500">This is a very long error message that describes in great detail what went wrong</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
