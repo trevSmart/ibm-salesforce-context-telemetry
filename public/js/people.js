@@ -314,8 +314,7 @@ async function renderPersonDetail(personId) {
 	});
 	contentContainer.querySelector('#deletePersonBtn')?.addEventListener('click', () => {
 		console.log('Delete button clicked for person:', person);
-		// eslint-disable-next-line no-undef
-		showDeletePersonConfirm(person);
+		window.showDeletePersonConfirm(person);
 	});
 
 	return contentContainer.firstElementChild;
