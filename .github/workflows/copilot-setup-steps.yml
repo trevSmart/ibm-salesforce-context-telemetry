@@ -54,4 +54,5 @@ jobs:
         env:
           DB_TYPE: sqlite
           DB_PATH: ./src/data/telemetry.db
+          ENVIRONMENT: ${{ env.ENVIRONMENT }}
         run: node src/scripts/generate-test-data.js
