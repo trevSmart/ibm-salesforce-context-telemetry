@@ -408,6 +408,8 @@ The server will start on port 3100 by default, or the port specified in the `POR
 
 **Note**: For multi-user authentication, create users in the database using the API or scripts. Environment variables are used as a fallback for backward compatibility.
 
+**Seed Database**: A pre-initialized database (`src/data/telemetry.seed.db`) is available for quick setup. It includes the complete schema, example users for each role (basic, advanced, administrator, god), and test telemetry data. The seed database can be committed to the repository. If `telemetry.db` doesn't exist, it will be automatically copied from the seed database on first run. Create it with `npm run create-seed-database`.
+
 ## Architecture
 
 The server stores telemetry events and user data in a database:

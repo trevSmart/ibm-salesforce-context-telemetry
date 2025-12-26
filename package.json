@@ -19,6 +19,7 @@
     "generate-test-data": "node src/scripts/generate-test-data.js",
     "generate-password-hash": "node src/scripts/generate-password-hash.js",
     "create-user": "node src/scripts/create-user.js",
+    "create-seed-database": "node src/scripts/create-seed-database.js",
     "update-user-role": "node src/scripts/update-user-role.js",
     "update-admin-role": "node src/scripts/update-admin-role.js",
     "export-database": "node src/scripts/export-database.js",

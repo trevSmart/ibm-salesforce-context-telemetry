@@ -99,6 +99,7 @@ npm run dist:mac          # Build macOS app (.app + .dmg)
 # Database Management
 npm run export-database   # Export data to JSON
 npm run import-database   # Import data from JSON
+npm run create-seed-database  # Create minimal seed database for GitHub Copilot
 ```
 
 ### Testing
@@ -163,6 +164,15 @@ curl -X POST http://localhost:3100/telemetry \
   - `DB_PATH`: SQLite file path (e.g., `./data/telemetry.db`)
   - `DATABASE_URL`: PostgreSQL connection string
   - `DATABASE_SSL`: Enable SSL for PostgreSQL (`true`/`false`)
+- **Seed Database**: A pre-initialized database (`src/data/telemetry.seed.db`) is available for quick setup. If `telemetry.db` doesn't exist, it will be automatically copied from the seed database on first run. The seed database includes:
+  - Complete schema with all tables and migrations
+  - Example users for each role:
+    - `basic-user` / `basic` (role: basic)
+    - `advanced-user` / `advanced` (role: advanced)
+    - `admin-user` / `admin` (role: administrator)
+    - `copilot` / `copilot` (role: god - full access, if COPILOT_USERNAME/COPILOT_PASSWORD are set)
+  - Test telemetry data (sessions, tool calls, events) for testing and development
+- **Copilot User Auto-Creation**: If `COPILOT_USERNAME` and `COPILOT_PASSWORD` environment variables are set, a user will be automatically created on database initialization with the `god` role (highest level of access). This is useful for GitHub Copilot environments.
 
 ### Authentication and Security
 
