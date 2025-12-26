@@ -106,13 +106,11 @@
 				userMenu.togglePopover(shouldOpen);
 				return;
 			} catch (error) {
-				// Handle AbortError (user aborted request) - this is expected behavior
-				if (error.name !== 'AbortError') {
-					// For other errors, fall back to show/hide specific methods
-				} else {
-					// AbortError means the operation was cancelled, which is fine
-					return;
+				// Log AbortError for debugging but don't handle it
+				if (error.name === 'AbortError') {
+					console.warn('[UserMenu] AbortError in togglePopover:', error);
 				}
+				// Ignore and fall back to show/hide specific methods.
 			}
 		}
 
@@ -121,12 +119,11 @@
 			try {
 				userMenu[method]();
 			} catch (error) {
-				// Handle AbortError gracefully
+				// Log AbortError for debugging but don't handle it
 				if (error.name === 'AbortError') {
-					// Operation was cancelled, which is expected
-					return;
+					console.warn('[UserMenu] AbortError in', method + ':', error);
 				}
-				// Swallow InvalidStateError (already in requested state) and other non-critical errors
+				// Swallow InvalidStateError (already in requested state).
 			}
 		}
 	}
