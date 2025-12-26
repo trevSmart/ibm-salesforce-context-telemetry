@@ -1210,7 +1210,6 @@ function safeShowToast(message, type = 'info') {
 				subtitle.textContent = `${formattedDate} · ${totalEvents} ${eventLabel}`;
 			}
 		}
-		showSessionActivityCard();
 
 		const themeIsDark = document.documentElement.classList.contains('dark');
 		const axisColor = themeIsDark ? '#a1a1aa' : '#52525b';
@@ -1262,6 +1261,7 @@ function safeShowToast(message, type = 'info') {
 			// Remove the listener after it fires once
 			chartInstance.off('finished', onChartFinished);
 			ensureChartVisible();
+			showSessionActivityCard();
 
 			// Call the callback if provided
 			if (options.onRenderComplete && typeof options.onRenderComplete === 'function') {
