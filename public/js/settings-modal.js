@@ -619,8 +619,6 @@ async function openSettingsModal() {
 		styleElement.id = 'settings-modal-custom-styles';
 		styleElement.innerHTML = settingsModalStyles;
 		document.head.appendChild(styleElement);
-	} else {
-		// Styles already exist, no need to add them again
 	}
 
 	document.body.appendChild(backdrop);
