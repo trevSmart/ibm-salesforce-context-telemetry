@@ -22,8 +22,10 @@
  * - idx_pagination_created_at (covered by idx_created_at_org_id)
  * - idx_created_at (covered by idx_created_at_org_id)
  * - idx_event (covered by idx_event_created_at)
+ * - idx_event_id (covered by idx_event_id_created_at)
+ * - idx_parent_session_id (covered by idx_parent_session_timestamp)
+ * - idx_session_id (covered by idx_session_timestamp)
  * - idx_team_id (covered by idx_team_id_created_at)
- * - idx_timestamp (covered by idx_timestamp_event)
  * - idx_user_id (covered by idx_user_created_at)
  *
  * On users:
@@ -93,8 +95,10 @@ async function dropSQLiteIndexes() {
 		'idx_pagination_created_at',
 		'idx_created_at',
 		'idx_event',
+		'idx_event_id',
+		'idx_parent_session_id',
+		'idx_session_id',
 		'idx_team_id',
-		'idx_timestamp',
 		'idx_user_id',
 		// users table
 		'idx_username'
@@ -144,8 +148,10 @@ async function dropPostgreSQLIndexes() {
 		'idx_pagination_created_at',
 		'idx_created_at',
 		'idx_event',
+		'idx_event_id',
+		'idx_parent_session_id',
+		'idx_session_id',
 		'idx_team_id',
-		'idx_timestamp',
 		'idx_user_id',
 		// users table
 		'idx_username'
