@@ -2887,7 +2887,11 @@ process.on('SIGTERM', async () => {
 			console.error('Error closing Redis session client:', error.message);
 		}
 	}
-	await db.close();
+	try {
+		await db.close();
+	} catch (error) {
+		console.error('Error closing database:', error.message);
+	}
 	process.exit(0);
 });
 
@@ -2901,7 +2905,11 @@ process.on('SIGINT', async () => {
 			console.error('Error closing Redis session client:', error.message);
 		}
 	}
-	await db.close();
+	try {
+		await db.close();
+	} catch (error) {
+		console.error('Error closing database:', error.message);
+	}
 	process.exit(0);
 });
 
