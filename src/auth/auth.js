@@ -62,12 +62,17 @@ function normalizeRole(role) {
  * NOTE: This function should be called AFTER the database is initialized
  * to properly support PostgreSQL session store. If called before database
  * initialization, it will fall back to Redis or MemoryStore.
+ *
+ * @returns {Object} Object containing:
+ *   - middleware: The session middleware
+ *   - redisClient: The Redis client instance (if Redis is used), otherwise null
  */
 function initSessionMiddleware() {
 	const isProduction = process.env.NODE_ENV === 'production';
 
 	// Try to get PostgreSQL pool from database module
 	let store = null;
+	let redisClient = null;
 	if (db) {
 		const postgresPool = db.getPostgresPool ? db.getPostgresPool() : null;
 		if (postgresPool) {
@@ -91,10 +96,13 @@ function initSessionMiddleware() {
 	// If PostgreSQL failed or not available, try Redis
 	if (!store && process.env.REDIS_URL) {
 		try {
-			const redisClient = redis.createClient({
+			redisClient = redis.createClient({
 				url: process.env.REDIS_URL,
 				socket: {
-					connectTimeout: 60000
+					connectTimeout: 60000,
+					// Use lazy connection to defer connection until first use
+					// This prevents connection errors from blocking server startup
+					lazyConnect: true
 				}
 			});
 
@@ -113,6 +121,8 @@ function initSessionMiddleware() {
 		} catch (error) {
 			console.error('❌ Failed to initialize Redis session store:', error.message);
 			console.warn('⚠️  Falling back to MemoryStore for sessions');
+			// If Redis initialization failed, clear the client reference
+			redisClient = null;
 		}
 	}
 
@@ -145,7 +155,10 @@ function initSessionMiddleware() {
 		sessionConfig.store = store;
 	}
 
-	return session(sessionConfig);
+	return {
+		middleware: session(sessionConfig),
+		redisClient
+	};
 }
 
 /**

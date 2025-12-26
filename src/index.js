@@ -366,6 +366,7 @@ const tempSession = session({
 });
 
 let sessionMiddleware = null;
+let redisSessionClient = null; // Track Redis client for graceful shutdown
 app.use((req, res, next) => {
 	if (sessionMiddleware) {
 		return sessionMiddleware(req, res, next);
@@ -2854,7 +2855,9 @@ async function startServer() {
 		auth.init(db);
 
 		// Now that database is initialized, upgrade session middleware to use PostgreSQL store if available
-		sessionMiddleware = auth.initSessionMiddleware();
+		const sessionResult = auth.initSessionMiddleware();
+		sessionMiddleware = sessionResult.middleware;
+		redisSessionClient = sessionResult.redisClient;
 
 		app.listen(port, () => {
 			console.log(`\n${  '='.repeat(60)}`);
@@ -2873,18 +2876,41 @@ async function startServer() {
 	}
 }
 
-// Graceful shutdown
-process.on('SIGTERM', async () => {
-	console.log('SIGTERM received, closing database...');
-	await db.close();
+/**
+ * Graceful shutdown handler
+ * Closes all active connections (Redis, database) before exiting
+ */
+async function gracefulShutdown(signal) {
+	console.log(`${signal} received, closing connections...`);
+	
+	// Close Redis session client if it exists and is connected
+	if (redisSessionClient) {
+		try {
+			// Only quit if the client is connected (lazyConnect: true means it may not be)
+			if (redisSessionClient.isOpen) {
+				await redisSessionClient.quit();
+				console.log('Redis session client closed');
+			} else {
+				console.log('Redis session client was not connected (skipped cleanup)');
+			}
+		} catch (error) {
+			console.error('Error closing Redis session client:', error.message);
+		}
+	}
+	
+	// Close database connection
+	try {
+		await db.close();
+	} catch (error) {
+		console.error('Error closing database:', error.message);
+	}
+	
 	process.exit(0);
-});
+}
 
-process.on('SIGINT', async () => {
-	console.log('SIGINT received, closing database...');
-	await db.close();
-	process.exit(0);
-});
+// Graceful shutdown
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 // Start the server
 startServer();
