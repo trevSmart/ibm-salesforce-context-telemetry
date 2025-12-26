@@ -3,8 +3,8 @@
  * Coordinates all modules and sets up event listeners
  */
 
-import { openSettingsModal } from './settings-modal.js';
-import { toggleTheme, initializeTheme } from './theme.js';
+import {openSettingsModal} from './settings-modal.js';
+import {toggleTheme, initializeTheme} from './theme.js';
 
 // Export openSettingsModal to window for command palette and other global access
 window.openSettingsModal = openSettingsModal;
