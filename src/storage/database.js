@@ -6586,7 +6586,7 @@ async function recalculateTeamIdsForOrg(orgId) {
 
 		return 0;
 	} catch (error) {
-		console.error(`Error recalculating team_ids for org ${orgId}:`, error);
+		console.error('Error recalculating team_ids for org %s:', orgId, error);
 		throw new Error(`Failed to recalculate team_ids: ${error.message}`);
 	}
 }
