@@ -121,7 +121,18 @@ function initSessionMiddleware() {
 		} catch (error) {
 			console.error('❌ Failed to initialize Redis session store:', error.message);
 			console.warn('⚠️  Falling back to MemoryStore for sessions');
-			// If Redis initialization failed, clear the client reference
+			// If Redis initialization failed, try to cleanly disconnect the Redis client
+			if (redisClient) {
+				try {
+					// Prefer a graceful disconnect if available
+					if (typeof redisClient.disconnect === 'function') {
+						redisClient.disconnect();
+					}
+				} catch (disconnectError) {
+					console.error('⚠️  Error while disconnecting Redis client after initialization failure:', disconnectError.message);
+				}
+			}
+			// Clear the client reference to avoid leaking the instance
 			redisClient = null;
 		}
 	}
