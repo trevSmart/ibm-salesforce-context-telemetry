@@ -6,6 +6,9 @@
 import { openSettingsModal } from './settings-modal.js';
 import { toggleTheme, initializeTheme } from './theme.js';
 
+// Export openSettingsModal to window for command palette and other global access
+window.openSettingsModal = openSettingsModal;
+
 // Initialize the application when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
 
