@@ -366,6 +366,7 @@ const tempSession = session({
 });
 
 let sessionMiddleware = null;
+let redisSessionClient = null; // Track Redis client for graceful shutdown
 app.use((req, res, next) => {
 	if (sessionMiddleware) {
 		return sessionMiddleware(req, res, next);
@@ -2854,7 +2855,9 @@ async function startServer() {
 		auth.init(db);
 
 		// Now that database is initialized, upgrade session middleware to use PostgreSQL store if available
-		sessionMiddleware = auth.initSessionMiddleware();
+		const sessionResult = auth.initSessionMiddleware();
+		sessionMiddleware = sessionResult.middleware;
+		redisSessionClient = sessionResult.redisClient;
 
 		app.listen(port, () => {
 			console.log(`\n${  '='.repeat(60)}`);
@@ -2875,13 +2878,29 @@ async function startServer() {
 
 // Graceful shutdown
 process.on('SIGTERM', async () => {
-	console.log('SIGTERM received, closing database...');
+	console.log('SIGTERM received, closing connections...');
+	if (redisSessionClient) {
+		try {
+			await redisSessionClient.quit();
+			console.log('Redis session client closed');
+		} catch (error) {
+			console.error('Error closing Redis session client:', error.message);
+		}
+	}
 	await db.close();
 	process.exit(0);
 });
 
 process.on('SIGINT', async () => {
-	console.log('SIGINT received, closing database...');
+	console.log('SIGINT received, closing connections...');
+	if (redisSessionClient) {
+		try {
+			await redisSessionClient.quit();
+			console.log('Redis session client closed');
+		} catch (error) {
+			console.error('Error closing Redis session client:', error.message);
+		}
+	}
 	await db.close();
 	process.exit(0);
 });
