@@ -3092,11 +3092,9 @@ function safeShowToast(message, type = 'info') {
 			expandedTd.colSpan = showUserColumn ? 10 : 9;
 			expandedTd.className = 'log-description-expanded px-3 py-4';
 
-			const pre = document.createElement('pre');
-			pre.className = 'json-pretty';
-			pre.textContent = descriptionPretty;
-
-			expandedTd.appendChild(pre);
+			// Create form with event details instead of JSON
+			const formContainer = createEventDetailsForm(event);
+			expandedTd.appendChild(formContainer);
 
 			expandedRow.appendChild(expandedTd);
 			tbody.appendChild(expandedRow);
@@ -3159,6 +3157,258 @@ function safeShowToast(message, type = 'info') {
 		return `level-badge ${levelClass}`;
 	}
 
+
+	function createEventDetailsForm(event) {
+		const payload = buildEventPayload(event);
+		
+		// Helper function to format value for display
+		const formatValue = (value) => {
+			if (value === null || value === undefined) {
+				return '';
+			}
+			if (typeof value === 'object') {
+				return JSON.stringify(value, null, 2);
+			}
+			return String(value);
+		};
+
+		// Helper function to create input field
+		const createInput = (id, name, label, value, placeholder = '', type = 'text', roundedClasses = '') => {
+			const input = document.createElement('input');
+			input.id = id;
+			input.name = name;
+			input.type = type;
+			input.value = formatValue(value);
+			input.placeholder = placeholder;
+			input.setAttribute('aria-label', label);
+			input.readOnly = true;
+			input.className = `block w-full ${roundedClasses} bg-white dark:bg-white/5 px-3 py-1.5 text-base text-gray-900 dark:text-white outline-1 -outline-offset-1 outline-gray-300 dark:outline-gray-700 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:relative focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 dark:focus:outline-indigo-500 sm:text-sm/6`.trim();
+			return input;
+		};
+
+		// Helper function to create textarea field
+		const createTextarea = (id, name, label, value, placeholder = '') => {
+			const textarea = document.createElement('textarea');
+			textarea.id = id;
+			textarea.name = name;
+			textarea.value = formatValue(value);
+			textarea.placeholder = placeholder;
+			textarea.setAttribute('aria-label', label);
+			textarea.readOnly = true;
+			textarea.rows = 8;
+			textarea.className = 'block w-full rounded-md bg-white dark:bg-white/5 px-3 py-1.5 text-base text-gray-900 dark:text-white outline-1 -outline-offset-1 outline-gray-300 dark:outline-gray-700 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:relative focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 dark:focus:outline-indigo-500 sm:text-sm/6 resize-y';
+			return textarea;
+		};
+
+		// Create form container
+		const formContainer = document.createElement('div');
+		formContainer.style.paddingLeft = '30px';
+		formContainer.style.paddingRight = '30px';
+
+		// Event Information fieldset
+		const eventFieldset = document.createElement('fieldset');
+		const eventLegend = document.createElement('legend');
+		eventLegend.className = 'block text-sm/6 font-medium text-gray-900 dark:text-white';
+		eventLegend.textContent = 'Event Information';
+		eventFieldset.appendChild(eventLegend);
+
+		const eventGrid = document.createElement('div');
+		eventGrid.className = 'mt-2 grid grid-cols-2 gap-0';
+
+		// Event type (full width, top)
+		const eventTypeContainer = document.createElement('div');
+		eventTypeContainer.className = 'col-span-2';
+		eventTypeContainer.appendChild(createInput(
+			`event-type-${event.id}`,
+			'event-type',
+			'Event Type',
+			payload.event,
+			'Event type',
+			'text',
+			'rounded-t-md'
+		));
+		eventGrid.appendChild(eventTypeContainer);
+
+		// Server ID and Version row
+		const hasServerId = payload.serverId !== undefined;
+		const hasVersion = payload.version !== undefined;
+		
+		// Timestamp (full width)
+		const timestampContainer = document.createElement('div');
+		timestampContainer.className = 'col-span-2 -mt-px';
+		// If no serverId and no version, timestamp should have bottom rounding
+		const timestampRounded = (!hasServerId && !hasVersion) ? 'rounded-b-md' : '';
+		timestampContainer.appendChild(createInput(
+			`event-timestamp-${event.id}`,
+			'timestamp',
+			'Timestamp',
+			payload.timestamp,
+			'Timestamp',
+			'text',
+			timestampRounded
+		));
+		eventGrid.appendChild(timestampContainer);
+		
+		if (hasServerId && hasVersion) {
+			// Both fields: side by side
+			const serverIdContainer = document.createElement('div');
+			serverIdContainer.className = '-mt-px -mr-px';
+			serverIdContainer.appendChild(createInput(
+				`event-serverId-${event.id}`,
+				'serverId',
+				'Server ID',
+				payload.serverId,
+				'Server ID',
+				'text',
+				'rounded-bl-md'
+			));
+			eventGrid.appendChild(serverIdContainer);
+
+			const versionContainer = document.createElement('div');
+			versionContainer.className = '-mt-px';
+			versionContainer.appendChild(createInput(
+				`event-version-${event.id}`,
+				'version',
+				'Version',
+				payload.version,
+				'Version',
+				'text',
+				'rounded-br-md'
+			));
+			eventGrid.appendChild(versionContainer);
+		} else if (hasServerId) {
+			// Only Server ID: full width
+			const serverIdContainer = document.createElement('div');
+			serverIdContainer.className = 'col-span-2 -mt-px';
+			serverIdContainer.appendChild(createInput(
+				`event-serverId-${event.id}`,
+				'serverId',
+				'Server ID',
+				payload.serverId,
+				'Server ID',
+				'text',
+				'rounded-b-md'
+			));
+			eventGrid.appendChild(serverIdContainer);
+		} else if (hasVersion) {
+			// Only Version: full width
+			const versionContainer = document.createElement('div');
+			versionContainer.className = 'col-span-2 -mt-px';
+			versionContainer.appendChild(createInput(
+				`event-version-${event.id}`,
+				'version',
+				'Version',
+				payload.version,
+				'Version',
+				'text',
+				'rounded-b-md'
+			));
+			eventGrid.appendChild(versionContainer);
+		}
+
+		eventFieldset.appendChild(eventGrid);
+		formContainer.appendChild(eventFieldset);
+
+		// Session Information fieldset
+		const hasSessionId = payload.sessionId !== undefined;
+		const hasUserId = payload.userId !== undefined;
+
+		if (hasSessionId || hasUserId) {
+			const sessionFieldset = document.createElement('fieldset');
+			sessionFieldset.className = 'mt-6';
+			const sessionLegend = document.createElement('legend');
+			sessionLegend.className = 'block text-sm/6 font-medium text-gray-900 dark:text-white';
+			sessionLegend.textContent = 'Session Information';
+			sessionFieldset.appendChild(sessionLegend);
+
+			const sessionGrid = document.createElement('div');
+			sessionGrid.className = 'mt-2 grid grid-cols-2 gap-0';
+
+			if (hasSessionId && hasUserId) {
+				// Both fields: side by side
+				const sessionIdContainer = document.createElement('div');
+				sessionIdContainer.className = '';
+				sessionIdContainer.appendChild(createInput(
+					`event-sessionId-${event.id}`,
+					'sessionId',
+					'Session ID',
+					payload.sessionId,
+					'Session ID',
+					'text',
+					'rounded-tl-md rounded-bl-md'
+				));
+				sessionGrid.appendChild(sessionIdContainer);
+
+				const userIdContainer = document.createElement('div');
+				userIdContainer.className = '-mt-px -mr-px';
+				userIdContainer.appendChild(createInput(
+					`event-userId-${event.id}`,
+					'userId',
+					'User ID',
+					payload.userId,
+					'User ID',
+					'text',
+					'rounded-tr-md rounded-br-md'
+				));
+				sessionGrid.appendChild(userIdContainer);
+			} else if (hasSessionId) {
+				// Only Session ID: full width
+				const sessionIdContainer = document.createElement('div');
+				sessionIdContainer.className = 'col-span-2';
+				sessionIdContainer.appendChild(createInput(
+					`event-sessionId-${event.id}`,
+					'sessionId',
+					'Session ID',
+					payload.sessionId,
+					'Session ID',
+					'text',
+					'rounded-md'
+				));
+				sessionGrid.appendChild(sessionIdContainer);
+			} else if (hasUserId) {
+				// Only User ID: full width
+				const userIdContainer = document.createElement('div');
+				userIdContainer.className = 'col-span-2';
+				userIdContainer.appendChild(createInput(
+					`event-userId-${event.id}`,
+					'userId',
+					'User ID',
+					payload.userId,
+					'User ID',
+					'text',
+					'rounded-md'
+				));
+				sessionGrid.appendChild(userIdContainer);
+			}
+
+			sessionFieldset.appendChild(sessionGrid);
+			formContainer.appendChild(sessionFieldset);
+		}
+
+		// Data fieldset (if data exists and is not empty)
+		if (payload.data && Object.keys(payload.data).length > 0) {
+			const dataFieldset = document.createElement('fieldset');
+			dataFieldset.className = 'mt-6';
+			const dataLegend = document.createElement('legend');
+			dataLegend.className = 'block text-sm/6 font-medium text-gray-900 dark:text-white';
+			dataLegend.textContent = 'Event Data';
+			dataFieldset.appendChild(dataLegend);
+
+			const dataContainer = document.createElement('div');
+			dataContainer.className = 'mt-2';
+			dataContainer.appendChild(createTextarea(
+				`event-data-${event.id}`,
+				'data',
+				'Event Data',
+				payload.data,
+				'Event data (JSON)'
+			));
+			dataFieldset.appendChild(dataContainer);
+			formContainer.appendChild(dataFieldset);
+		}
+
+		return formContainer;
+	}
 
 	function buildEventPayload(event) {
 		const payload = {
@@ -5052,10 +5302,7 @@ function safeShowToast(message, type = 'info') {
 				});
 				// Restore the saved option (notMerge: true to replace entirely)
 				sessionActivityChart.setOption(savedSessionActivityChartOption, true);
-				const chartEl = document.getElementById('sessionActivityChart');
-				if (chartEl) {
-					sessionActivityChart.resize();
-				}
+				sessionActivityChart.resize();
 				// Clear saved option after restoration
 				savedSessionActivityChartOption = null;
 			}

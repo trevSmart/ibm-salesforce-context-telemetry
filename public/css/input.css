@@ -353,6 +353,17 @@
     color: #3a485f;
   }
 
+  .top-nav-link:hover:not(.active)::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: #ef4444;
+    border-radius: 1px;
+  }
+
   .top-nav-link.active {
     color: #352424;
     font-weight: 500;
@@ -423,6 +434,9 @@
     flex: 1;
     min-height: 0;
     overflow-y: auto;
+    max-width: 1400px;
+    margin: 0 auto;
+    width: 100%;
   }
 
   .main-container {
@@ -682,7 +696,7 @@
     padding: 0;
     display: flex;
     flex-direction: column;
-    gap: 32px;
+    gap: 28px;
     min-height: 0;
     height: 100%;
     flex: 1 1 auto;
@@ -1610,18 +1624,15 @@
   }
 
   .top-users-avatar {
-    @apply inline-flex size-10 items-center justify-center rounded-full bg-gray-500 dark:bg-gray-800 font-medium text-white;
+    @apply inline-flex size-10 items-center justify-center rounded-full bg-gray-500 dark:bg-gray-800 outline -outline-offset-1 outline-black/5 dark:outline-white/10 font-medium text-white;
   }
 
   .top-users-avatar--team {
-    @apply inline-flex size-10 items-center justify-center rounded-full bg-gray-500 dark:bg-gray-800;
+    @apply inline-flex size-10 items-center justify-center rounded-full bg-gray-500 dark:bg-gray-800 outline -outline-offset-1 outline-black/5 dark:outline-white/10;
   }
 
   .card-avatar {
-    @apply inline-flex items-center justify-center rounded-lg text-sm font-semibold size-12;
-    color: #4f46e5;
-    background-color: #4f46e5;
-    border-radius: 9999px;
+    @apply inline-flex items-center justify-center rounded-full text-sm font-semibold size-12 bg-gray-500 dark:bg-gray-800 outline -outline-offset-1 outline-black/5 dark:outline-white/10 text-white;
   }
 
   .top-users-info {
@@ -5470,8 +5481,6 @@ html.dark .level-filters .level-filter-btn.level-error {
 }
 
 .teams-list-container {
-  max-width: 1400px;
-  margin: 0 auto;
   width: 100%;
 }
 

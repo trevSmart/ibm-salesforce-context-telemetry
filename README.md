@@ -408,6 +408,10 @@ The server will start on port 3100 by default, or the port specified in the `POR
 
 **Note**: For multi-user authentication, create users in the database using the API or scripts. Environment variables are used as a fallback for backward compatibility.
 
+**Database Templates**: Two database templates are available:
+- **Test Template** (`src/data/database-test-template.db`): For development/testing with user `copilot` (role: god) and test data. Create it with `npm run create-test-template-database`. If `telemetry.db` doesn't exist, it will be automatically copied from the test template on first run.
+- **Base Template** (`src/data/database-base-template.db`): For production deployments with user `god` (role: god) and no test data. Create it with `npm run create-initial-template-database`. Both templates can be committed to the repository.
+
 ## Architecture
 
 The server stores telemetry events and user data in a database:

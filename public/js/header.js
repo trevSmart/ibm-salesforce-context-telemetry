@@ -109,7 +109,7 @@
           <div class="top-nav-logo-icon">
             <img src="/resources/ibm.webp" alt="IBM SF CTXT TELEMETRY" class="top-nav-logo-img">
           </div>
-          <span>TELEMETRY</span>
+          <span style="position: relative; top: 1px;">TELEMETRY</span>
         </a>
         <div class="top-nav-links">
           <a href="/" class="top-nav-link${activePage === '/' ? ' active' : ''}">Dashboard</a>

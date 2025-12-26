@@ -5,6 +5,7 @@
   "main": "src/index.js",
   "scripts": {
     "prestart": "lsof -ti :3100,35729,35730 | xargs kill -9 2>/dev/null || true",
+    "predev": "lsof -ti :35730 | xargs kill -9 2>/dev/null || true",
     "start": "npm run build:css && node src/index.js",
     "dev": "LIVERELOAD_PORT=35730 concurrently \"npm run dev:css\" \"nodemon src/index.js\"",
     "dev:css": "tailwindcss -i ./public/css/input.css -o ./public/css/output.css --watch",
@@ -18,6 +19,8 @@
     "generate-test-data": "node src/scripts/generate-test-data.js",
     "generate-password-hash": "node src/scripts/generate-password-hash.js",
     "create-user": "node src/scripts/create-user.js",
+    "create-test-template-database": "node src/scripts/create-test-template-database.js",
+    "create-initial-template-database": "node src/scripts/create-initial-template-database.js",
     "update-user-role": "node src/scripts/update-user-role.js",
     "update-admin-role": "node src/scripts/update-admin-role.js",
     "export-database": "node src/scripts/export-database.js",

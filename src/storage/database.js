@@ -18,7 +18,7 @@ const __dirname = dirname(__filename);
 
 // Database configuration constants
 const DEFAULT_MAX_DB_SIZE = 1024 * 1024 * 1024; // 1 GB in bytes
-const VALID_ROLES = ['basic', 'advanced', 'administrator'];
+const VALID_ROLES = ['basic', 'advanced', 'administrator', 'god'];
 const MAX_LIMIT_FOR_TOTAL_COMPUTATION = 100; // Skip expensive COUNT queries for large limits
 
 let db = null;
@@ -42,6 +42,16 @@ async function init() {
 		const dataDir = path.dirname(dbPath);
 		if (!fs.existsSync(dataDir)) {
 			fs.mkdirSync(dataDir, {recursive: true});
+		}
+
+		// If database doesn't exist, try to copy from test template database
+		if (!fs.existsSync(dbPath)) {
+			const testTemplateDbPath = path.join(__dirname, '..', 'data', 'database-test-template.db');
+			if (fs.existsSync(testTemplateDbPath)) {
+				console.log('📋 Copying test template database to initialize new database...');
+				fs.copyFileSync(testTemplateDbPath, dbPath);
+				console.log('✅ Test template database copied successfully');
+			}
 		}
 
 		db = new Database(dbPath);
@@ -269,6 +279,7 @@ async function init() {
 		await ensureEventStatsTables();
 		await ensureTeamsAndOrgsTables();
 		await ensureRememberTokensTable();
+		await ensureCopilotUser();
 }
 
 async function ensureErrorMessageColumn() {
@@ -4740,6 +4751,31 @@ async function getEventUserNames(limit = 1000) {
 }
 
 /**
+ * Get a person by ID
+ * @param {number} personId - Person ID
+ * @returns {Promise<Object|null>} Person object or null if not found
+ */
+async function getPersonById(personId) {
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
+
+	try {
+		if (dbType === 'sqlite') {
+			const stmt = db.prepare('SELECT id, name, email, initials, created_at FROM people WHERE id = ?');
+			const result = stmt.get(personId);
+			return result || null;
+		} else if (dbType === 'postgresql') {
+			const result = await db.query('SELECT id, name, email, initials, created_at FROM people WHERE id = $1', [personId]);
+			return result.rows[0] || null;
+		}
+	} catch (error) {
+		console.error('Error getting person by ID:', error);
+		throw error;
+	}
+}
+
+/**
  * Get all people
  * @returns {Promise<Array>} Array of people
  */
@@ -5509,6 +5545,48 @@ async function ensureRememberTokensTable() {
 		}
 	} catch (error) {
 		console.error('Error ensuring remember_tokens table:', error);
+	}
+}
+
+/**
+ * Ensure Copilot user exists if COPILOT_USERNAME and COPILOT_PASSWORD are set
+ * This is useful for GitHub Copilot environments where the database needs to be initialized
+ * with a default user for testing and development.
+ */
+async function ensureCopilotUser() {
+	if (!db) {
+		return;
+	}
+
+	const copilotUsername = process.env.COPILOT_USERNAME;
+	const copilotPassword = process.env.COPILOT_PASSWORD;
+	const copilotRole = process.env.COPILOT_ROLE || 'god';
+
+	// Only create user if both username and password are provided
+	if (!copilotUsername || !copilotPassword) {
+		return;
+	}
+
+	try {
+		// Check if user already exists
+		const existingUser = await getUserByUsername(copilotUsername);
+		if (existingUser) {
+			// User exists, optionally update role if needed
+			if (copilotRole && existingUser.role !== copilotRole) {
+				await updateUserRole(copilotUsername, copilotRole);
+				console.log(`✅ Updated Copilot user "${copilotUsername}" role to "${copilotRole}"`);
+			}
+			return;
+		}
+
+		// Import hashPassword from auth module
+		const {hashPassword} = await import('../auth/auth.js');
+		const passwordHash = await hashPassword(copilotPassword);
+		await createUser(copilotUsername, passwordHash, copilotRole);
+		console.log(`✅ Created Copilot user "${copilotUsername}" with role "${copilotRole}"`);
+	} catch (error) {
+		console.error('Error ensuring Copilot user:', error);
+		// Don't throw - this is a convenience feature, not critical
 	}
 }
 
@@ -6656,6 +6734,7 @@ export {
 	getEventUserNames,
 	// People management
 	getAllPeople,
+	getPersonById,
 	createPerson,
 	updatePerson,
 	deletePerson,

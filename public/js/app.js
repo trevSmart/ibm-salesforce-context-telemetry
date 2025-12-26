@@ -21,7 +21,43 @@ document.addEventListener('DOMContentLoaded', () => {
     // Set up theme toggle listeners
     setupThemeToggleListeners();
 
+    // Set up global ESC handler for inputs
+    setupInputEscHandler();
+
 });
+
+/**
+ * Set up global ESC key handler for input fields
+ * - If input has value: clear it and stop propagation
+ * - If input has no value: allow propagation (let ESC work normally for modals, etc.)
+ */
+function setupInputEscHandler() {
+    // Use capture phase to intercept before other handlers
+    document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') {
+            return;
+        }
+
+        const activeElement = document.activeElement;
+        
+        // Only handle INPUT and TEXTAREA elements
+        if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
+            const hasValue = activeElement.value && activeElement.value.trim().length > 0;
+            
+            if (hasValue) {
+                // Clear the input value
+                activeElement.value = '';
+                
+                // Trigger input event to notify any listeners
+                activeElement.dispatchEvent(new Event('input', { bubbles: true }));
+                
+                // Stop propagation so ESC doesn't trigger other handlers (like closing modals)
+                e.stopPropagation();
+            }
+            // If no value, let the event propagate normally (don't intercept)
+        }
+    }, true); // Use capture phase
+}
 
 /**
  * Set up event listeners for the settings modal
