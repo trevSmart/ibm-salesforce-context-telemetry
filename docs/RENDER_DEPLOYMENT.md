@@ -121,7 +121,7 @@ O usa els endpoints API després de fer login a la interfície web.
 
 Després del deploy, pots verificar que la base de dades funciona:
 
-1. Accedeix a la teva aplicació: `https://your-app.onrender.com/health`
+1. Accedeix a la teva aplicació: `https://your-app.onrender.com/health` (o `/healthz`)
 2. Comprova que retorna `"ok"`
 3. Envia alguns events de telemetria
 4. Fes un nou deploy
@@ -185,10 +185,14 @@ console.log(`Migrated ${events.length} events`);
 
 ### Avís: "connect.session() MemoryStore is not designed for a production environment"
 
-Aquest avís apareix quan les sessions s'emmagatzemen a memòria (MemoryStore) en comptes d'una base de dades persistent.
+Aquest avís apareix quan les sessions s'emmagatzemen a memòria en comptes d'una base de dades persistent. El sistema utilitza una jerarquia de stores:
+
+1. **PostgreSQL** (recomanat per producció) - sessions persistents a la base de dades
+2. **Redis** (alternativa) - sessions a Redis
+3. **memorystore** (fallback millorat) - sessions a memòria sense memory leaks (millor que MemoryStore per defecte però encara no ideal per producció)
 
 **Solucions**:
-1. **Assegura't que PostgreSQL està configurat**:
+1. **Assegura't que PostgreSQL està configurat** (recomanat):
    - Verifica `DB_TYPE=postgresql`
    - Comprova que `DATABASE_URL` apunta a la base de dades PostgreSQL
    - Assegura't que `DATABASE_SSL=true`
@@ -196,6 +200,8 @@ Aquest avís apareix quan les sessions s'emmagatzemen a memòria (MemoryStore) e
 2. **Configura Redis com alternativa** (opcional):
    - Afegeix `REDIS_URL=<Redis Internal URL>` a les variables d'entorn
    - Crear un servei Redis a Render si no en tens
+
+**Nota**: Si no hi ha PostgreSQL ni Redis configurats, el sistema utilitzarà `memorystore`, que és millor que el MemoryStore per defecte però encara no és ideal per producció perquè les sessions no persisteixen després de reiniciar el servidor.
 
 3. **Reinicia el servei**:
    - Força un nou deploy per assegurar que la configuració s'apliqui

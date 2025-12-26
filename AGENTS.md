@@ -78,9 +78,10 @@ This distinction allows grouping telemetry data by actual people rather than by 
 
 ### Health Monitoring
 
-**GET `/health`**
+**GET `/health`** or **GET `/healthz`**
 - Simple health check endpoint
 - Returns `"ok"` when server is operational
+- `/healthz` is provided for Kubernetes/Render compatibility
 - Used by monitoring systems and load balancers
 
 **GET `/`**

@@ -369,7 +369,7 @@ app.use((req, res, next) => {
 	if (sessionMiddleware) {
 		return sessionMiddleware(req, res, next);
 	}
-	// Before database init, use a basic session with MemoryStore
+	// Before database init, use a basic session (will use memorystore if available, otherwise default MemoryStore)
 	tempSession(req, res, next);
 });
 
@@ -593,6 +593,104 @@ app.post('/telemetry', telemetryLimiter, (req, res) => {
 const serverStartTime = Date.now();
 
 app.get('/health', healthCheckLimiter, async (req, res) => {
+	const format = req.query.format || (req.headers.accept?.includes('application/json') ? 'json' : 'html');
+
+	if (format === 'json') {
+		try {
+			// Use cached health data if available
+			const cachedHealth = healthCheckCache.get('health');
+			if (cachedHealth) {
+				// Update uptime but use cached DB stats
+				const now = Date.now();
+				cachedHealth.uptime = Math.floor((now - serverStartTime) / 1000);
+				cachedHealth.timestamp = new Date().toISOString();
+				return res.status(cachedHealth.status === 'healthy' ? 200 : 503).json(cachedHealth);
+			}
+
+			// Get uptime
+			const now = Date.now();
+			const uptime = Math.floor((now - serverStartTime) / 1000);
+
+			// Get memory usage
+			const memoryUsage = process.memoryUsage();
+			const memory = {
+				used: memoryUsage.heapUsed,
+				total: memoryUsage.heapTotal,
+				external: memoryUsage.external,
+				rss: memoryUsage.rss
+			};
+
+			// Check database status (lightweight check)
+			let dbStatus = 'unknown';
+			const dbType = process.env.DB_TYPE || 'sqlite';
+			let totalEvents = 0;
+
+			try {
+				// Use cached stats from cache instead of querying DB
+				const cachedStats = statsCache.get(STATS_CACHE_KEY_EMPTY);
+				if (cachedStats) {
+					dbStatus = 'connected';
+					totalEvents = cachedStats.total || 0;
+				} else {
+					// Only query if not in cache
+					const stats = await db.getStats();
+					dbStatus = 'connected';
+					totalEvents = stats.total || 0;
+					// Cache for next health check
+					statsCache.set(STATS_CACHE_KEY_EMPTY, stats);
+				}
+			} catch (error) {
+				dbStatus = 'error';
+				console.error('Database health check failed:', error);
+			}
+
+			// Determine overall health status
+			const isHealthy = dbStatus === 'connected';
+
+			const healthData = {
+				status: isHealthy ? 'healthy' : 'unhealthy',
+				timestamp: new Date().toISOString(),
+				uptime: uptime,
+				version: JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url))).version,
+				nodeVersion: process.version,
+				environment: process.env.NODE_ENV || 'development',
+				memory: memory,
+				database: {
+					type: dbType,
+					status: dbStatus
+				},
+				stats: {
+					totalEvents: totalEvents
+				}
+			};
+
+			// Cache the health data using Cache class
+			healthCheckCache.set('health', healthData);
+
+			res.status(isHealthy ? 200 : 503).json(healthData);
+		} catch (error) {
+			console.error('Health check error:', error);
+			res.status(503).json({
+				status: 'unhealthy',
+				timestamp: new Date().toISOString(),
+				message: 'Health check failed',
+				error: error.message
+			});
+		}
+	} else {
+		// Serve HTML page
+		const healthPath = path.join(__dirname, '..', 'public', 'health.html');
+		if (fs.existsSync(healthPath)) {
+			res.sendFile(healthPath);
+		} else {
+			// Fallback to simple text response
+			res.status(200).send('ok');
+		}
+	}
+});
+
+// Alternative health check endpoint for Kubernetes/Render compatibility
+app.get('/healthz', healthCheckLimiter, async (req, res) => {
 	const format = req.query.format || (req.headers.accept?.includes('application/json') ? 'json' : 'html');
 
 	if (format === 'json') {
@@ -2863,7 +2961,7 @@ async function startServer() {
 			console.log('='.repeat(60));
 			console.log(`🌐 Server URL: http://localhost:${port}`);
 			console.log(`📊 Dashboard:  http://localhost:${port}/`);
-			console.log(`❤️  Health:     http://localhost:${port}/health`);
+			console.log(`❤️  Health:     http://localhost:${port}/health (or /healthz)`);
 			console.log(`📡 API:        http://localhost:${port}/api/events`);
 			console.log(`📋 Schema:     http://localhost:${port}/schema`);
 			console.log(`${'='.repeat(60)  }\n`);
