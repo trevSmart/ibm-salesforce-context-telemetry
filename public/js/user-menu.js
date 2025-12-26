@@ -105,8 +105,14 @@
 			try {
 				userMenu.togglePopover(shouldOpen);
 				return;
-			} catch {
-				// Ignore and fall back to show/hide specific methods.
+			} catch (error) {
+				// Handle AbortError (user aborted request) - this is expected behavior
+				if (error.name !== 'AbortError') {
+					// For other errors, fall back to show/hide specific methods
+				} else {
+					// AbortError means the operation was cancelled, which is fine
+					return;
+				}
 			}
 		}
 
@@ -114,8 +120,13 @@
 		if (typeof userMenu[method] === 'function') {
 			try {
 				userMenu[method]();
-			} catch {
-				// Swallow InvalidStateError (already in requested state).
+			} catch (error) {
+				// Handle AbortError gracefully
+				if (error.name === 'AbortError') {
+					// Operation was cancelled, which is expected
+					return;
+				}
+				// Swallow InvalidStateError (already in requested state) and other non-critical errors
 			}
 		}
 	}
