@@ -4,11 +4,81 @@ import {showToast} from './notifications.js';
 import {toggleTheme} from './theme.js';
 
 const REFRESH_ICON_ANIMATION_DURATION_MS = 700;
+// Transition duration in milliseconds (matches navigation.js)
+const TEAMS_TRANSITION_DURATION_MS = 150;
 let currentView = 'list'; // 'list' or 'detail'
 let teams = [];
 let _currentTeamId = null;
 // Cache busting timestamp for team logos - updated when teams data changes
 let teamsCacheBuster = Date.now();
+
+// Transition functions
+async function transitionTeamsContent(newContent) {
+	const container = document.getElementById('teamsContent');
+	if (!container) {
+		return;
+	}
+
+	// Ensure container has relative positioning for absolute children
+	if (window.getComputedStyle(container).position === 'static') {
+		container.style.position = 'relative';
+	}
+
+	// Remove all existing children except the first one (in case there are multiple)
+	// This ensures we only transition from one content to another
+	while (container.children.length > 1) {
+		container.removeChild(container.lastChild);
+	}
+
+	// Get the current content
+	const currentContent = container.firstElementChild;
+	if (!currentContent) {
+		container.appendChild(newContent);
+		return;
+	}
+
+	// Position the new content absolutely over the old one
+	const containerRect = container.getBoundingClientRect();
+	const currentRect = currentContent.getBoundingClientRect();
+
+	newContent.style.position = 'absolute';
+	newContent.style.top = `${currentRect.top - containerRect.top}px`;
+	newContent.style.left = `${currentRect.left - containerRect.left}px`;
+	newContent.style.width = `${currentRect.width}px`;
+	newContent.style.height = `${currentRect.height}px`;
+	newContent.style.zIndex = '1';
+	newContent.style.opacity = '0';
+	newContent.style.pointerEvents = 'none';
+
+	// Insert new content after current content
+	container.appendChild(newContent);
+
+	// Trigger reflow to ensure opacity:0 is applied
+	void newContent.offsetHeight;
+
+	// Start crossfade: fade out old, fade in new
+	currentContent.style.transition = `opacity ${TEAMS_TRANSITION_DURATION_MS}ms ease-out`;
+	currentContent.style.pointerEvents = 'none';
+	currentContent.style.opacity = '0';
+	newContent.style.transition = `opacity ${TEAMS_TRANSITION_DURATION_MS}ms ease-in`;
+	newContent.style.opacity = '1';
+	newContent.style.pointerEvents = 'auto';
+
+	// Wait for transition to complete
+	await new Promise((resolve) => setTimeout(resolve, TEAMS_TRANSITION_DURATION_MS));
+
+	// Remove old content and reset positioning on new content
+	currentContent.remove();
+	newContent.style.position = '';
+	newContent.style.top = '';
+	newContent.style.left = '';
+	newContent.style.width = '';
+	newContent.style.height = '';
+	newContent.style.zIndex = '';
+	newContent.style.transition = '';
+	newContent.style.opacity = '';
+	newContent.style.pointerEvents = '';
+}
 
 // Utility functions
 async function buildCsrfHeaders(includeJson = true) {
@@ -461,23 +531,20 @@ async function upsertOrg(orgId, orgData) {
 
 // UI rendering functions
 function renderTeamsList() {
-	const container = document.getElementById('teamsContent');
-	if (!container) {return;}
-
+	const container = document.createElement('div');
 	container.innerHTML = `
-    <div class="px-6 sm:px-8 teams-list-container">
-
-      <div id="teamsList" class="grid grid-cols-1 gap-px overflow-hidden rounded-lg sm:grid-cols-2 lg:grid-cols-3">
+    <div class="teams-list-container">
+      <div id="teamsList" class="grid grid-cols-1 gap-px overflow-hidden rounded-lg sm:grid-cols-2 lg:grid-cols-3 dark:bg-gray-900 dark:outline dark:-outline-offset-1 dark:outline-white/20">
         <div class="bg-white p-6 text-center text-sm text-gray-500 sm:col-span-2 lg:col-span-3">Loading teams...</div>
       </div>
     </div>
   `;
 
-	const teamsList = document.getElementById('teamsList');
+	const teamsList = container.querySelector('#teamsList');
 
 	if (teams.length === 0) {
 		teamsList.innerHTML = `
-      <div class="bg-white px-8 py-10 text-center sm:col-span-2 lg:col-span-3">
+      <div class="bg-white dark:bg-gray-800/50 dark:outline dark:-outline-offset-1 dark:outline-white/10 px-8 py-10 text-center sm:col-span-2 lg:col-span-3">
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1" stroke="currentColor" aria-hidden="true" class="mx-auto size-12 text-gray-400">
           <path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z" />
         </svg>
@@ -493,7 +560,7 @@ function renderTeamsList() {
         </div>
       </div>
     `;
-		return;
+		return container.firstElementChild;
 	}
 
 	teamsList.innerHTML = teams.map(team => {
@@ -507,23 +574,23 @@ function renderTeamsList() {
 
 		// Logo or avatar with cache busting for proper caching
 		const logoOrAvatar = team.has_logo? `<img src="/api/teams/${team.id}/logo?t=${teamsCacheBuster}" alt="${escapeHtml(team.name)} logo" class="size-12 object-contain" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-         <span class="card-avatar" style="display: none; color: ${accentColor}; background-color: ${accentBg};">
-           ${escapeHtml(initials)}
-         </span>`: `<span class="card-avatar" style="color: ${accentColor}; background-color: ${accentBg};">
-           ${escapeHtml(initials)}
-         </span>`;
+        <span class="card-avatar" style="display: none;">
+          ${escapeHtml(initials)}
+        </span>`: `<span class="card-avatar">
+          ${escapeHtml(initials)}
+        </span>`;
 
 		return `
-      <div class="group relative bg-white dark:bg-gray-800/50 dark:outline dark:-outline-offset-1 dark:outline-white/10 p-6 transition hover:bg-gray-50 dark:hover:bg-gray-700/50 focus:outline-none focus-visible:outline-none" role="button" tabindex="0" onclick="viewTeamDetail(${team.id})" onkeypress="if(event.key==='Enter'||event.key===' '){event.preventDefault();viewTeamDetail(${team.id});}">
+      <div class="group relative bg-white dark:bg-gray-800/50 dark:outline dark:-outline-offset-1 dark:outline-white/10 p-6 transition hover:bg-gray-50 dark:hover:bg-gray-700/50 focus:outline-none focus-visible:outline-none dark:focus-within:outline-2 dark:focus-within:-outline-offset-2 dark:focus-within:outline-indigo-500" role="button" tabindex="0" onclick="viewTeamDetail(${team.id})" onkeypress="if(event.key==='Enter'||event.key===' '){event.preventDefault();viewTeamDetail(${team.id});}">
         <div>
           ${logoOrAvatar}
         </div>
         <div class="mt-8 space-y-2">
-          <h3 class="text-base font-semibold text-gray-900">
+          <h3 class="text-base font-semibold text-gray-900 dark:text-white">
             <span aria-hidden="true" class="absolute inset-0"></span>
             ${escapeHtml(team.name)}
           </h3>
-          <div class="flex items-center gap-4 text-sm text-gray-500">
+          <div class="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
             <span class="inline-flex items-center gap-1.5">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" class="size-4">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15a4.5 4.5 0 0 0 4.5 4.5H18a3.75 3.75 0 0 0 1.332-7.257 3 3 0 0 0-3.758-3.848 5.25 5.25 0 0 0-10.233 2.33A4.502 4.502 0 0 0 2.25 15Z" />
@@ -538,7 +605,7 @@ function renderTeamsList() {
             </span>
           </div>
         </div>
-        <span aria-hidden="true" class="pointer-events-none absolute top-6 right-6 text-gray-300 opacity-0 transition duration-150 group-hover:opacity-100 group-hover:text-gray-400">
+        <span aria-hidden="true" class="pointer-events-none absolute top-6 right-6 text-gray-300 dark:text-gray-500 opacity-0 transition duration-150 group-hover:opacity-100 group-hover:text-gray-400 dark:group-hover:text-gray-200">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
             <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
           </svg>
@@ -546,22 +613,23 @@ function renderTeamsList() {
       </div>
     `;
 	}).join('');
+
+	return container.firstElementChild;
 }
 
 async function renderTeamDetail(teamId) {
-	const container = document.getElementById('teamsContent');
-	if (!container) {return;}
-
-	container.innerHTML = `
-    <div style="padding: 24px;">
-      <div id="teamDetailHeader" style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 24px;">
-        <div style="display: flex; flex-direction: column; gap: 8px;">
-          <button id="backToTeamsBtn" class="btn btn-secondary" style="align-self: flex-start; margin-bottom: 8px;">
-            <i class="fas fa-arrow-left" style="margin-right: 6px;"></i>Back to teams
+	const contentContainer = document.createElement('div');
+	contentContainer.innerHTML = `
+    <div>
+      <div id="teamDetailHeader" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <button id="backToTeamsBtn" style="background: none; border: none; padding: 4px; cursor: pointer; color: inherit; display: flex; align-items: center; justify-content: center; transition: opacity 0.2s; opacity: 0.7; width: 28px;" aria-label="Back to teams" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
+            </svg>
           </button>
           <div>
-            <h1 id="teamDetailName" style="margin: 0 0 8px 0; font-size: 1.5rem; font-weight: 600;">Loading...</h1>
-            <div id="teamDetailMeta" style="color: var(--text-secondary); font-size: 0.9rem;"></div>
+            <h1 id="teamDetailName" style="margin: 0; font-size: 1.5rem; font-weight: 600;">Loading...</h1>
           </div>
         </div>
         <div style="display: flex; gap: 8px;">
@@ -574,7 +642,7 @@ async function renderTeamDetail(teamId) {
         </div>
       </div>
       <div id="teamDetailContent">
-        <div style="padding: 24px; text-align: center; color: var(--text-secondary);">Loading team details...</div>
+        <div class="p-6 text-center text-gray-500 dark:text-gray-400">Loading team details...</div>
       </div>
     </div>
   `;
@@ -583,18 +651,28 @@ async function renderTeamDetail(teamId) {
 	if (!team) {
 		showToast('Team not found', 'error');
 		currentView = 'list';
-		renderTeamsList();
-		return;
+		const listContent = renderTeamsList();
+		await transitionTeamsContent(listContent);
+		return contentContainer.firstElementChild;
 	}
 
 	// Sanitize team color to prevent XSS
 	const sanitizedTeamColor = sanitizeCssColor(team.color);
-	const colorDot = sanitizedTeamColor ? `<span style="display: inline-block; width: 16px; height: 16px; border-radius: 999px; background: ${sanitizedTeamColor}; margin-right: 8px; border: 1px solid var(--border-color);"></span>` : '';
+	
+	// Get team initials for fallback avatar
+	const initials = team.name.split(' ').map(word => word[0]).join('').substring(0, 2).toUpperCase();
+	
+	// Logo or avatar with cache busting
+	const logoOrAvatar = team.has_logo ? `<img src="/api/teams/${team.id}/logo?t=${teamsCacheBuster}" alt="${escapeHtml(team.name)} logo" style="width: 32px; height: 32px; object-contain; margin-right: 8px; border-radius: 4px;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+		<span class="card-avatar" style="display: none; width: 32px; height: 32px; margin-right: 8px;">
+			${escapeHtml(initials)}
+		</span>` : (sanitizedTeamColor ? `<span style="display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 4px; background: ${sanitizedTeamColor}; margin-right: 8px; color: white; font-weight: 600; font-size: 14px;">
+			${escapeHtml(initials)}
+		</span>` : '');
 
-	document.getElementById('teamDetailName').innerHTML = `${colorDot}${escapeHtml(team.name)}`;
-	document.getElementById('teamDetailMeta').textContent = `${team.orgs.length} org${team.orgs.length !== 1 ? 's' : ''} · ${team.users.length} user${team.users.length !== 1 ? 's' : ''}`;
+	contentContainer.querySelector('#teamDetailName').innerHTML = `<span class="text-gray-900 dark:text-white" style="display: flex; align-items: center;">${logoOrAvatar}${escapeHtml(team.name)}</span>`;
 
-	const detailContent = document.getElementById('teamDetailContent');
+	const detailContent = contentContainer.querySelector('#teamDetailContent');
 	detailContent.innerHTML = `
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
       <div class="divide-y divide-gray-200 dark:divide-gray-700 overflow-hidden rounded-lg bg-white dark:bg-gray-800/50 dark:outline dark:-outline-offset-1 dark:outline-white/10 shadow-sm">
@@ -605,8 +683,8 @@ async function renderTeamDetail(teamId) {
           </button>
         </div>
         <div class="px-4 py-5 sm:p-6">
-          <div id="orgsList" style="display: flex; flex-direction: column; gap: 8px;">
-            ${team.orgs.length === 0 ? '<p style="color: var(--text-secondary); text-align: center; padding: 16px;">No organizations assigned</p>' : ''}
+          <div id="orgsList" class="flex flex-col gap-2">
+            ${team.orgs.length === 0 ? '<p class="text-gray-500 dark:text-gray-400 text-center p-4">No organizations assigned</p>' : ''}
           </div>
         </div>
       </div>
@@ -618,8 +696,8 @@ async function renderTeamDetail(teamId) {
           </button>
         </div>
         <div class="px-4 py-5 sm:p-6">
-          <div id="usersList" style="display: flex; flex-direction: column; gap: 8px;">
-            ${team.users.length === 0 ? '<p style="color: var(--text-secondary); text-align: center; padding: 16px;">No users assigned</p>' : ''}
+          <div id="usersList" class="flex flex-col gap-2">
+            ${team.users.length === 0 ? '<p class="text-gray-500 dark:text-gray-400 text-center p-4">No users assigned</p>' : ''}
           </div>
         </div>
       </div>
@@ -627,17 +705,17 @@ async function renderTeamDetail(teamId) {
   `;
 
 	// Render orgs
-	const orgsList = document.getElementById('orgsList');
+	const orgsList = contentContainer.querySelector('#orgsList');
 	if (team.orgs.length > 0) {
 		orgsList.innerHTML = team.orgs.map(org => {
 			// Sanitize org color to prevent XSS
 			const sanitizedOrgColor = sanitizeCssColor(org.color);
 			const colorDot = sanitizedOrgColor ? `<span style="display: inline-block; width: 10px; height: 10px; border-radius: 999px; background: ${sanitizedOrgColor}; margin-right: 6px; border: 1px solid var(--border-color);"></span>` : '';
 			return `
-        <div class="bg-gray-50 dark:bg-gray-700/50" style="display: flex; justify-content: space-between; align-items: center; padding: 10px; border: 1px solid var(--border-color); border-radius: 6px;">
+        <div class="bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-md p-2.5 flex justify-between items-center">
           <div>
             <div style="font-weight: 500;">${colorDot}${escapeHtml(org.alias || org.id)}</div>
-            <div style="font-size: 0.85rem; color: var(--text-secondary);">${escapeHtml(org.id)}</div>
+            <div class="text-gray-500 dark:text-gray-400 text-xs">${escapeHtml(org.id)}</div>
           </div>
           <button class="btn btn-compact btn-destructive" onclick="removeOrgFromTeam('${escapeHtml(org.id)}', ${teamId})">
             <i class="fas fa-times"></i>
@@ -648,14 +726,14 @@ async function renderTeamDetail(teamId) {
 	}
 
 	// Render users
-	const usersList = document.getElementById('usersList');
+	const usersList = contentContainer.querySelector('#usersList');
 	if (team.users.length > 0) {
 		usersList.innerHTML = team.users.map(user => {
 			return `
-        <div class="bg-gray-50 dark:bg-gray-700/50" style="display: flex; justify-content: space-between; align-items: center; padding: 10px; border: 1px solid var(--border-color); border-radius: 6px;">
+        <div class="bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-md p-2.5 flex justify-between items-center">
           <div>
             <div style="font-weight: 500;">${escapeHtml(user.user_name)}</div>
-            <div style="font-size: 0.85rem; color: var(--text-secondary);">Event log user</div>
+            <div class="text-gray-500 dark:text-gray-400 text-xs">Event log user</div>
           </div>
           <button class="btn btn-compact btn-destructive" onclick="removeUserFromTeam('${escapeHtml(user.user_name)}', ${teamId})">
             <i class="fas fa-times"></i>
@@ -666,13 +744,16 @@ async function renderTeamDetail(teamId) {
 	}
 
 	// Event listeners
-	document.getElementById('backToTeamsBtn')?.addEventListener('click', () => {
+	contentContainer.querySelector('#backToTeamsBtn')?.addEventListener('click', async () => {
 		currentView = 'list';
 		_currentTeamId = null;
-		renderTeamsList();
+		const listContent = renderTeamsList();
+		await transitionTeamsContent(listContent);
 	});
-	document.getElementById('editTeamBtn')?.addEventListener('click', () => showEditTeamModal(team));
-	document.getElementById('deleteTeamBtn')?.addEventListener('click', () => showDeleteTeamConfirm(team));
+	contentContainer.querySelector('#editTeamBtn')?.addEventListener('click', () => showEditTeamModal(team));
+	contentContainer.querySelector('#deleteTeamBtn')?.addEventListener('click', () => showDeleteTeamConfirm(team));
+
+	return contentContainer.firstElementChild;
 }
 
 // Modal functions
@@ -869,9 +950,11 @@ function showTeamFormModal(team = null) {
 			closeModal();
 			await loadTeams();
 			if (currentView === 'detail' && isEdit) {
-				renderTeamDetail(team.id);
+				const detailContent = await renderTeamDetail(team.id);
+				await transitionTeamsContent(detailContent);
 			} else {
-				renderTeamsList();
+				const listContent = renderTeamsList();
+				await transitionTeamsContent(listContent);
 			}
 		} catch (error) {
 			showToast(error.message || 'Failed to save team', 'error');
@@ -892,11 +975,13 @@ async function showDeleteTeamConfirm(team) {
 		return;
 	}
 
-	deleteTeam(team.id).then(() => {
+	deleteTeam(team.id).then(async () => {
 		showToast('Team deleted successfully', 'success');
 		currentView = 'list';
 		_currentTeamId = null;
-		loadTeams().then(() => renderTeamsList());
+		await loadTeams();
+		const listContent = renderTeamsList();
+		await transitionTeamsContent(listContent);
 	}).catch(error => {
 		showToast(error.message || 'Failed to delete team', 'error');
 	});
@@ -1190,10 +1275,11 @@ async function removeUserFromTeam(userName, teamId) {
 }
 
 // Global functions for onclick handlers
-window.viewTeamDetail = (teamId) => {
+window.viewTeamDetail = async (teamId) => {
 	currentView = 'detail';
 	_currentTeamId = teamId;
-	renderTeamDetail(teamId);
+	const detailContent = await renderTeamDetail(teamId);
+	await transitionTeamsContent(detailContent);
 };
 
 window.showCreateTeamModal = showCreateTeamModal;
@@ -1212,7 +1298,8 @@ window.refreshTeams = async function refreshTeams(event) {
 	}
 	try {
 		await loadTeams();
-		renderTeamsList();
+		const listContent = renderTeamsList();
+		await transitionTeamsContent(listContent);
 		// Update cache buster when manually refreshing to ensure any logo changes are visible
 		teamsCacheBuster = Date.now();
 	} catch (error) {
@@ -1263,7 +1350,13 @@ async function init() {
 			return;
 		}
 		await loadTeams();
-		renderTeamsList();
+		const listContent = renderTeamsList();
+		const teamsContent = document.getElementById('teamsContent');
+		if (teamsContent && listContent) {
+			// Clear any existing content (like loading message)
+			teamsContent.innerHTML = '';
+			teamsContent.appendChild(listContent);
+		}
 	} catch (error) {
 		console.error('Error initializing teams page:', error);
 		const container = document.getElementById('teamsContent');
@@ -1302,19 +1395,38 @@ window.resumeTeamsPage = resumeTeamsPage;
 window.addEventListener('softNav:pagePausing', (event) => {
 	if (event?.detail?.path === '/teams') {
 		pauseTeamsPage();
+		// Reset state when leaving teams page
+		currentView = 'list';
+		_currentTeamId = null;
 	}
 });
 
 // Handle soft navigation
-window.addEventListener('softNav:pageMounted', (event) => {
+window.addEventListener('softNav:pageMounted', async (event) => {
 	if (event.detail.path === '/teams') {
 		const fromCache = event?.detail?.fromCache === true;
+		// Always reset to list view when entering teams page
+		currentView = 'list';
+		_currentTeamId = null;
+		
 		if (fromCache) {
-			// Page was restored from cache - no re-initialization needed
-			resumeTeamsPage();
+			// Page was restored from cache - always show list view
+			await loadTeams();
+			const listContent = renderTeamsList();
+			const teamsContent = document.getElementById('teamsContent');
+			if (teamsContent && listContent) {
+				await transitionTeamsContent(listContent);
+			}
 		} else {
 			// New page load - full initialization
-			init();
+			await loadTeams();
+			const listContent = renderTeamsList();
+			const teamsContent = document.getElementById('teamsContent');
+			if (teamsContent && listContent) {
+				// Clear any existing content (like loading message)
+				teamsContent.innerHTML = '';
+				teamsContent.appendChild(listContent);
+			}
 		}
 	}
 });
