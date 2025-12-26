@@ -52,7 +52,14 @@
 			title: 'Refresh',
 			description: 'Refresh current page data',
 			icon: 'arrow-path',
-			action: () => window.handleRefreshClick(),
+			action: () => {
+				if (typeof window.handleRefreshClick === 'function') {
+					window.handleRefreshClick();
+				} else if (typeof window !== 'undefined' && typeof window.location !== 'undefined' && typeof window.location.reload === 'function') {
+					// Fallback: perform a full page reload if no custom handler is available
+					window.location.reload();
+				}
+			},
 			shortcut: 'R'
 		},
 		{
