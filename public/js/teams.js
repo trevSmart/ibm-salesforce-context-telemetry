@@ -555,9 +555,14 @@ async function renderTeamDetail(teamId) {
 	container.innerHTML = `
     <div style="padding: 24px;">
       <div id="teamDetailHeader" style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 24px;">
-        <div>
-          <h1 id="teamDetailName" style="margin: 0 0 8px 0; font-size: 1.5rem; font-weight: 600;">Loading...</h1>
-          <div id="teamDetailMeta" style="color: var(--text-secondary); font-size: 0.9rem;"></div>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <button id="backToTeamsBtn" class="btn btn-secondary" style="align-self: flex-start; margin-bottom: 8px;">
+            <i class="fas fa-arrow-left" style="margin-right: 6px;"></i>Back to teams
+          </button>
+          <div>
+            <h1 id="teamDetailName" style="margin: 0 0 8px 0; font-size: 1.5rem; font-weight: 600;">Loading...</h1>
+            <div id="teamDetailMeta" style="color: var(--text-secondary); font-size: 0.9rem;"></div>
+          </div>
         </div>
         <div style="display: flex; gap: 8px;">
           <button id="editTeamBtn" class="btn">
@@ -661,6 +666,11 @@ async function renderTeamDetail(teamId) {
 	}
 
 	// Event listeners
+	document.getElementById('backToTeamsBtn')?.addEventListener('click', () => {
+		currentView = 'list';
+		_currentTeamId = null;
+		renderTeamsList();
+	});
 	document.getElementById('editTeamBtn')?.addEventListener('click', () => showEditTeamModal(team));
 	document.getElementById('deleteTeamBtn')?.addEventListener('click', () => showDeleteTeamConfirm(team));
 }

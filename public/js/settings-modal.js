@@ -520,17 +520,17 @@ async function openSettingsModal() {
 									<table id="loginHistoryTable" class="border-separate border-spacing-0">
 												<thead>
 													<tr>
-														<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 py-3.5 pr-3 pl-4 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:bg-gray-800/75 dark:text-gray-100">Username</th>
-														<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 px-3 py-3.5 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:bg-gray-800/75 dark:text-gray-100">IP Address</th>
-														<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 px-3 py-3.5 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:bg-gray-800/75 dark:text-gray-100">User Agent</th>
-														<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 px-3 py-3.5 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:bg-gray-800/75 dark:text-gray-100">Status</th>
-														<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 px-3 py-3.5 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:bg-gray-800/75 dark:text-gray-100">Time</th>
-														<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 py-3.5 pr-4 pl-3 text-left text-sm font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:bg-gray-800/75 dark:text-gray-100">Error</th>
+														<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 py-3.5 pr-3 pl-4 text-left font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:bg-gray-800/75 dark:text-gray-100">Username</th>
+														<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 px-3 py-3.5 text-left font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:bg-gray-800/75 dark:text-gray-100">IP Address</th>
+														<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 px-3 py-3.5 text-left font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:bg-gray-800/75 dark:text-gray-100">User Agent</th>
+														<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 px-3 py-3.5 text-left font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:bg-gray-800/75 dark:text-gray-100">Status</th>
+														<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 px-3 py-3.5 text-left font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:bg-gray-800/75 dark:text-gray-100">Time</th>
+														<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 py-3.5 pr-4 pl-3 text-left font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:bg-gray-800/75 dark:text-gray-100">Error</th>
 													</tr>
 												</thead>
-												<tbody id="loginHistoryTableBody">
+												<tbody id="loginHistoryTableBody" class="text-sm">
 												<tr>
-													<td colspan="6" class="border-b border-gray-200 py-4 px-4 text-center text-sm text-gray-500">
+													<td colspan="6" class="border-b border-gray-200 py-4 px-4 text-center text-gray-500">
 														<div class="settings-users-loading" role="status" aria-live="polite">
 															<span class="settings-users-spinner" aria-hidden="true"></span>
 															<span class="settings-users-loading-text">Loading login history...</span>
@@ -1176,12 +1176,12 @@ async function openSettingsModal() {
 
 						return `
 							<tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-								<td class="border-b border-gray-200 py-4 pr-3 pl-4 text-sm font-medium whitespace-nowrap text-gray-900 dark:text-gray-100">${escapeHtml(log.username)}</td>
-								<td class="border-b border-gray-200 px-3 py-4 text-sm whitespace-nowrap text-gray-500 dark:text-gray-400 font-mono">${escapeHtml(log.ip_address || 'N/A')}</td>
-								<td class="border-b border-gray-200 px-3 py-4 text-sm text-gray-500 dark:text-gray-400 max-w-xs truncate" title="${escapeHtml(log.user_agent || '')}">${escapeHtml(log.user_agent || 'N/A')}</td>
-								<td class="border-b border-gray-200 px-3 py-4 text-sm whitespace-nowrap ${statusClass} font-medium">${statusText}</td>
-								<td class="border-b border-gray-200 px-3 py-4 text-sm whitespace-nowrap text-gray-500 dark:text-gray-400">${timestamp}</td>
-								<td class="border-b border-gray-200 py-4 pr-4 pl-3 text-sm text-gray-500 dark:text-gray-400 max-w-xs truncate" title="${escapeHtml(log.error_message || '')}">${errorText}</td>
+								<td class="border-b border-gray-200 py-4 pr-3 pl-4 font-medium whitespace-nowrap text-gray-900 dark:text-gray-100">${escapeHtml(log.username)}</td>
+								<td class="border-b border-gray-200 px-3 py-4 whitespace-nowrap text-gray-500 dark:text-gray-400 font-mono">${escapeHtml(log.ip_address || 'N/A')}</td>
+								<td class="border-b border-gray-200 px-3 py-4 text-gray-500 dark:text-gray-400 max-w-xs truncate" title="${escapeHtml(log.user_agent || '')}">${escapeHtml(log.user_agent || 'N/A')}</td>
+								<td class="border-b border-gray-200 px-3 py-4 whitespace-nowrap ${statusClass} font-medium">${statusText}</td>
+								<td class="border-b border-gray-200 px-3 py-4 whitespace-nowrap text-gray-500 dark:text-gray-400">${timestamp}</td>
+								<td class="border-b border-gray-200 py-4 pr-4 pl-3 whitespace-nowrap text-gray-500 dark:text-gray-400">${errorText}</td>
 							</tr>
 						`;
 					}).join('');
@@ -1190,7 +1190,7 @@ async function openSettingsModal() {
 				} else {
 					tableBody.innerHTML = `
 						<tr>
-							<td colspan="6" class="border-b border-gray-200 py-8 px-4 text-center text-sm text-gray-500">
+							<td colspan="6" class="border-b border-gray-200 py-8 px-4 text-center text-gray-500">
 								<div class="settings-users-empty-content">
 									<i class="fa-solid fa-clock-rotate-left settings-users-empty-icon"></i>
 									<div class="settings-users-empty-title">No login history</div>
@@ -1208,7 +1208,7 @@ async function openSettingsModal() {
 				}
 				tableBody.innerHTML = `
 					<tr>
-						<td colspan="6" class="border-b border-gray-200 py-8 px-4 text-center text-sm text-gray-500">
+						<td colspan="6" class="border-b border-gray-200 py-8 px-4 text-center text-gray-500">
 							<div class="settings-users-empty-content">
 								<i class="fa-solid fa-clock-rotate-left settings-users-empty-icon"></i>
 								<div class="settings-users-empty-title">No login history</div>
