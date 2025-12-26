@@ -1178,7 +1178,7 @@ async function openSettingsModal() {
 								<td class="border-b border-gray-200 px-3 py-4 text-sm text-gray-500 dark:text-gray-400 max-w-xs truncate" title="${escapeHtml(log.user_agent || '')}">${escapeHtml(log.user_agent || 'N/A')}</td>
 								<td class="border-b border-gray-200 px-3 py-4 text-sm whitespace-nowrap ${statusClass} font-medium">${statusText}</td>
 								<td class="border-b border-gray-200 px-3 py-4 text-sm whitespace-nowrap text-gray-500 dark:text-gray-400">${timestamp}</td>
-								<td class="border-b border-gray-200 py-4 pr-4 pl-3 text-sm text-gray-500 dark:text-gray-400 max-w-xs">${errorText}</td>
+								<td class="border-b border-gray-200 py-4 pr-4 pl-3 text-sm text-gray-500 dark:text-gray-400 max-w-xs truncate" title="${escapeHtml(log.error_message || '')}">${errorText}</td>
 							</tr>
 						`;
 					}).join('');
