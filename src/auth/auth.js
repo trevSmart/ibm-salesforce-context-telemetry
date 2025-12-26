@@ -103,8 +103,7 @@ function initSessionMiddleware() {
 			const redisClient = redis.createClient({
 				url: process.env.REDIS_URL,
 				socket: {
-					connectTimeout: 60000,
-					lazyConnect: true
+					connectTimeout: 60000
 				}
 			});
 
