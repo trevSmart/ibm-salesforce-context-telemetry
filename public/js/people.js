@@ -367,19 +367,16 @@ window.showDeletePersonConfirm = async function(person) {
 			return;
 		}
 
-		deletePerson(person.id, person.name).then(async () => {
-			showToast('Person deleted successfully', 'success');
-			currentView = 'list';
-			_currentPersonId = null;
-			await loadPeople();
-			const listContent = renderPeopleList();
-			await transitionPeopleContent(listContent);
-		}).catch(error => {
-			showToast(error.message || 'Failed to delete person', 'error');
-		});
+		await deletePerson(person.id, person.name);
+		showToast('Person deleted successfully', 'success');
+		currentView = 'list';
+		_currentPersonId = null;
+		await loadPeople();
+		const listContent = renderPeopleList();
+		await transitionPeopleContent(listContent);
 	} catch (error) {
 		console.error('Error in showDeletePersonConfirm:', error);
-		showToast('Failed to delete person', 'error');
+		showToast((error && error.message) ? error.message : 'Failed to delete person', 'error');
 	}
 };
 
