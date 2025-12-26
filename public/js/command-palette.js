@@ -61,7 +61,7 @@
 			title: 'Settings',
 			description: 'Open settings modal',
 			icon: 'cog-6-tooth',
-			action: () => window.openSettingsModal(),
+			action: () => openSettingsModal(),
 			shortcut: 'S'
 		}
 	];
