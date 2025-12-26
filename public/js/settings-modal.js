@@ -522,7 +522,7 @@ async function openSettingsModal() {
 														<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 py-3.5 pr-3 pl-4 text-left font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:bg-gray-800/75 dark:text-gray-100">Username</th>
 														<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 px-3 py-3.5 text-left font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:bg-gray-800/75 dark:text-gray-100">IP Address</th>
 														<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 px-3 py-3.5 text-left font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:bg-gray-800/75 dark:text-gray-100">User Agent</th>
-														<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 px-3 py-3.5 text-left font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:bg-gray-800/75 dark:text-gray-100">Status</th>
+														<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 px-3 py-3.5 text-center font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:bg-gray-800/75 dark:text-gray-100">Status</th>
 														<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 px-3 py-3.5 text-left font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:bg-gray-800/75 dark:text-gray-100">Time</th>
 														<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 bg-white/75 py-3.5 pr-4 pl-3 text-left font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:bg-gray-800/75 dark:text-gray-100">Error</th>
 													</tr>
@@ -1140,6 +1140,13 @@ async function openSettingsModal() {
 
 	// Login history functionality (God only)
 	if (isGod) {
+		function buildStatusIcon(isError) {
+			const statusClass = isError ? 'ko' : 'ok';
+			const statusLabel = isError ? 'KO' : 'OK';
+			const src = isError ? '/resources/ko.png' : '/resources/ok.png';
+			return `<img src="${src}" alt="${statusLabel}" class="status-indicator ${statusClass}" loading="lazy">`;
+		}
+
 		async function loadLoginHistory() {
 			const tableBody = modal.querySelector('#loginHistoryTableBody');
 			const refreshBtn = modal.querySelector('#refreshLoginHistoryBtn');
@@ -1171,8 +1178,8 @@ async function openSettingsModal() {
 				if (data.logs && data.logs.length > 0) {
 					const rows = data.logs.map(log => {
 						const timestamp = new Date(log.created_at).toLocaleString();
-						const statusClass = log.successful ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400';
-						const statusText = log.successful ? 'Success' : 'Failed';
+						const isError = !log.successful;
+						const statusIcon = buildStatusIcon(isError);
 						const errorText = log.error_message ? escapeHtml(log.error_message) : '';
 
 						return `
@@ -1180,7 +1187,7 @@ async function openSettingsModal() {
 								<td class="border-b border-gray-200 py-4 pr-3 pl-4 font-medium whitespace-nowrap text-gray-900 dark:text-gray-100">${escapeHtml(log.username)}</td>
 								<td class="border-b border-gray-200 px-3 py-4 whitespace-nowrap text-gray-500 dark:text-gray-400 font-mono">${escapeHtml(log.ip_address || 'N/A')}</td>
 								<td class="border-b border-gray-200 px-3 py-4 text-gray-500 dark:text-gray-400 max-w-xs truncate" title="${escapeHtml(log.user_agent || '')}">${escapeHtml(log.user_agent || 'N/A')}</td>
-								<td class="border-b border-gray-200 px-3 py-4 whitespace-nowrap ${statusClass} font-medium">${statusText}</td>
+								<td class="border-b border-gray-200 px-3 py-4 text-center whitespace-nowrap">${statusIcon}</td>
 								<td class="border-b border-gray-200 px-3 py-4 whitespace-nowrap text-gray-500 dark:text-gray-400">${timestamp}</td>
 								<td class="border-b border-gray-200 py-4 pr-4 pl-3 whitespace-nowrap text-gray-500 dark:text-gray-400">${errorText}</td>
 							</tr>

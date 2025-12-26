@@ -1093,6 +1093,37 @@ app.post('/api/people', auth.requireAuth, auth.requireRole('administrator'), use
 	}
 });
 
+app.get('/api/people/:id', auth.requireAuth, auth.requireRole('administrator'), apiReadLimiter, async (req, res) => {
+	try {
+		const personId = Number.parseInt(req.params.id, 10);
+		if (Number.isNaN(personId)) {
+			return res.status(400).json({
+				status: 'error',
+				message: 'Invalid person ID'
+			});
+		}
+
+		const person = await db.getPersonById(personId);
+		if (!person) {
+			return res.status(404).json({
+				status: 'error',
+				message: 'Person not found'
+			});
+		}
+
+		res.json({
+			status: 'ok',
+			person
+		});
+	} catch (error) {
+		console.error('Error fetching person:', error);
+		res.status(500).json({
+			status: 'error',
+			message: 'Failed to fetch person'
+		});
+	}
+});
+
 app.put('/api/people/:id', auth.requireAuth, auth.requireRole('administrator'), userManagementLimiter, async (req, res) => {
 	try {
 		const personId = Number.parseInt(req.params.id, 10);

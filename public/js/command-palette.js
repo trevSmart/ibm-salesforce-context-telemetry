@@ -71,9 +71,9 @@
    */
   function buildCommandPaletteHTML() {
     return `
-      <div id="commandPaletteBackdrop" class="fixed inset-0 bg-gray-900/50 z-50 command-palette-backdrop-hidden">
-        <div class="fixed inset-0 w-screen overflow-y-auto p-4 focus:outline-none sm:p-6 md:p-20 pt-12 sm:pt-16 md:pt-24">
-          <div class="mx-auto block max-w-2xl overflow-hidden rounded-xl bg-white/70 dark:bg-gray-800/70 shadow-2xl outline-1 outline-black/5 dark:outline-white/10 backdrop-blur-sm backdrop-filter command-palette-panel-hidden">
+      <div id="commandPaletteBackdrop" class="fixed inset-0 bg-gray-900/60 backdrop-blur-xs z-50 command-palette-backdrop-hidden">
+        <div class="fixed inset-0 w-screen overflow-y-auto p-4 focus:outline-none sm:p-6 md:p-20 flex items-center justify-center">
+          <div class="w-full mx-auto block max-w-2xl overflow-hidden rounded-xl bg-white/70 dark:bg-gray-800/70 shadow-2xl outline-1 outline-black/5 dark:outline-white/10 backdrop-blur-lg backdrop-filter command-palette-panel-hidden -mt-32 sm:-mt-36">
             <div class="grid grid-cols-1 border-b border-gray-500/10 dark:border-gray-700/50">
               <input type="text" placeholder="Search commands..." class="col-start-1 row-start-1 h-12 w-full bg-transparent pr-4 pl-11 text-base text-gray-900 dark:text-white outline-hidden placeholder:text-gray-500 dark:placeholder:text-gray-400 sm:text-sm" id="commandPaletteInput" />
               <svg viewBox="0 0 20 20" fill="currentColor" data-slot="icon" aria-hidden="true" class="pointer-events-none col-start-1 row-start-1 ml-4 size-5 self-center text-gray-900/40 dark:text-white/40">
@@ -363,7 +363,7 @@
   }
 
   /**
-   * Add transparent scrollbar styles
+   * Add transparent scrollbar styles and custom blur styles
    */
   function addTransparentScrollbarStyles() {
     // Create style element if it doesn't exist
@@ -386,6 +386,9 @@
         }
         .scrollbar-transparent::-webkit-scrollbar-track {
           background: transparent;
+        }
+        .backdrop-blur-xs {
+          backdrop-filter: blur(4px);
         }
       `;
       document.head.appendChild(styleElement);

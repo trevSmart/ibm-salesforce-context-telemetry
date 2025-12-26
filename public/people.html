@@ -32,7 +32,7 @@
 	</script>
 </head>
 
-<body class="users-page">
+<body class="users-page cursor-default">
 	<div class="container main-container">
 		<div id="global-header-placeholder"></div>
 		<script src="/js/command-palette.js"></script>
@@ -42,8 +42,8 @@
 			initGlobalHeader();
 		</script>
 		<div class="container-content">
-			<div class="users-header" style="display: flex; align-items: flex-end; justify-content: space-between; gap: 16px;">
-				<div class="users-breadcrumbs" style="display: flex; flex-direction: column; gap: 6px;">
+			<div class="teams-header" style="display: flex; align-items: flex-end; justify-content: space-between; gap: 16px;">
+				<div class="teams-breadcrumbs" style="display: flex; flex-direction: column; gap: 6px;">
 					<div style="display: flex; align-items: center; gap: 12px;">
 						<a href="/" class="back-link subtitle" data-soft-nav="true">← Back to Dashboard</a>
 					</div>
@@ -58,133 +58,15 @@
 					</button>
 				</div>
 			</div>
-			<div id="peopleContent">
-				<div class="px-6 sm:px-8 people-list-container">
-					<div id="peopleList" class="grid grid-cols-1 gap-px overflow-hidden rounded-lg sm:grid-cols-2 lg:grid-cols-3">
-						<div class="bg-white p-6 text-center text-sm text-gray-500 sm:col-span-2 lg:col-span-3">Loading people...</div>
-					</div>
+			<div id="peopleContent" class="px-6 sm:px-8 py-6">
+				<!-- Content will be loaded by people.js -->
+				<div class="teams-loading">
+					<p>Loading people...</p>
 				</div>
 			</div>
 		</div>
 	</div>
 
-	<!-- Create Person Modal -->
-	<div id="createPersonModal" class="confirm-modal-backdrop">
-		<div class="confirm-modal">
-			<div class="modal-header">
-				<h3 class="modal-title">Add New Person</h3>
-				<button type="button" onclick="closeCreatePersonModal()" class="modal-close-btn">
-					<svg viewBox="0 0 20 20" fill="currentColor" class="size-5">
-						<path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
-					</svg>
-				</button>
-			</div>
-			<form onsubmit="handleCreatePerson(event)" class="modal-body">
-				<div class="form-group">
-					<label for="personName" class="form-label">Name *</label>
-					<input type="text" id="personName" name="name" class="form-input" required autocomplete="off">
-				</div>
-				<div class="form-group">
-					<label for="personEmail" class="form-label">Email (optional)</label>
-					<input type="email" id="personEmail" name="email" class="form-input" autocomplete="off">
-				</div>
-				<div class="form-group">
-					<label for="personInitials" class="form-label">Initials (optional)</label>
-					<input type="text" id="personInitials" name="initials" class="form-input" maxlength="3" placeholder="e.g. JD, ABC" autocomplete="off">
-					<p class="text-xs text-gray-500 mt-1">Leave empty to auto-generate from name</p>
-				</div>
-				<div class="modal-footer">
-					<button type="button" onclick="closeCreatePersonModal()" class="btn-secondary">Cancel</button>
-					<button type="submit" class="btn">Create Person</button>
-				</div>
-			</form>
-		</div>
-	</div>
-
-	<!-- Person Modal (All-in-one: View, Edit & Add Usernames) -->
-	<div id="personModal" class="confirm-modal-backdrop">
-		<div class="confirm-modal" style="max-width: 600px;">
-			<div class="modal-header">
-				<h3 class="modal-title">Person Details</h3>
-				<button type="button" onclick="closePersonModal()" class="modal-close-btn">
-					<svg viewBox="0 0 20 20" fill="currentColor" class="size-5">
-						<path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
-					</svg>
-				</button>
-			</div>
-
-			<div class="modal-body">
-				<!-- Person Info & Edit Form -->
-				<div class="space-y-4 mb-6">
-					<div class="flex items-center gap-4">
-						<span id="personAvatar" class="inline-flex size-16 items-center justify-center rounded-full bg-gray-500 dark:bg-gray-800 outline -outline-offset-1 outline-black/5 dark:outline-white/10">
-							<span class="font-medium text-white text-xl"></span>
-						</span>
-						<div class="flex-1">
-							<div class="flex items-center gap-2 mb-2">
-								<span class="text-sm text-gray-500">Name:</span>
-								<input type="text" id="editPersonName" class="flex-1 text-sm border-0 p-0 bg-transparent focus:ring-0" placeholder="Enter name">
-							</div>
-							<div class="flex items-center gap-2 mb-2">
-								<span class="text-sm text-gray-500">Email:</span>
-								<input type="email" id="editPersonEmail" class="flex-1 text-sm border-0 p-0 bg-transparent focus:ring-0" placeholder="Enter email">
-							</div>
-							<div class="flex items-center gap-2 mb-2">
-								<span class="text-sm text-gray-500">Initials:</span>
-								<input type="text" id="editPersonInitials" class="w-16 text-sm border-0 p-0 bg-transparent focus:ring-0" maxlength="3" placeholder="ABC">
-								<span id="personCreated" class="text-xs text-gray-400 ml-auto"></span>
-							</div>
-						</div>
-					</div>
-
-
-					<div class="flex justify-end gap-2">
-						<button type="button" onclick="handleEditPerson()" class="text-sm text-blue-600 hover:text-blue-800 font-medium">
-							Save Changes
-						</button>
-					</div>
-				</div>
-
-				<!-- Usernames Section -->
-				<div class="border-t border-gray-200 pt-4">
-					<div class="flex items-center justify-between mb-3">
-						<h5 class="text-sm font-medium text-gray-900">Associated Usernames</h5>
-						<button type="button" onclick="toggleAddUsernameForm()" class="text-sm text-blue-600 hover:text-blue-800 font-medium">
-							+ Add Username
-						</button>
-					</div>
-
-					<!-- Add Username Form (Hidden by default) -->
-					<div id="addUsernameForm" class="mb-4 p-3 bg-gray-50 rounded-md hidden">
-						<form onsubmit="handleAddUsernames(event)">
-							<div class="space-y-3">
-								<div>
-									<label for="usernamesInput" class="block text-xs font-medium text-gray-700 mb-1">Usernames</label>
-									<textarea id="usernamesInput" name="usernames" rows="2" class="w-full text-sm border border-gray-300 rounded px-2 py-1" placeholder="Enter usernames, one per line" required></textarea>
-								</div>
-								<div>
-									<label for="orgIdInput" class="block text-xs font-medium text-gray-700 mb-1">Organization (optional)</label>
-									<input type="text" id="orgIdInput" name="org_id" class="w-full text-sm border border-gray-300 rounded px-2 py-1" placeholder="e.g. salesforce, github">
-								</div>
-								<div class="flex justify-end gap-2">
-									<button type="button" onclick="toggleAddUsernameForm()" class="px-3 py-1 text-xs text-gray-600 hover:text-gray-800">Cancel</button>
-									<button type="submit" class="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700">Add</button>
-								</div>
-							</div>
-						</form>
-					</div>
-
-					<!-- Usernames List -->
-					<div id="usernamesList" class="space-y-2">
-						<!-- Usernames will be populated here -->
-					</div>
-
-
-				</div>
-			</div>
-
-		</div>
-	</div>
 
 
 	<script src="/js/global-cache.js" defer></script>
@@ -192,7 +74,7 @@
 	<script src="/js/user-menu.js" defer></script>
 	<script src="/js/csrf-helper.js" defer></script>
 	<script src="/js/notifications.js" type="module" defer></script>
-	<script src="/js/people.js" defer></script>
+	<script type="module" src="/js/people.js" defer></script>
 
 </body>
 

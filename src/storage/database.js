@@ -4740,6 +4740,31 @@ async function getEventUserNames(limit = 1000) {
 }
 
 /**
+ * Get a person by ID
+ * @param {number} personId - Person ID
+ * @returns {Promise<Object|null>} Person object or null if not found
+ */
+async function getPersonById(personId) {
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
+
+	try {
+		if (dbType === 'sqlite') {
+			const stmt = db.prepare('SELECT id, name, email, initials, created_at FROM people WHERE id = ?');
+			const result = stmt.get(personId);
+			return result || null;
+		} else if (dbType === 'postgresql') {
+			const result = await db.query('SELECT id, name, email, initials, created_at FROM people WHERE id = $1', [personId]);
+			return result.rows[0] || null;
+		}
+	} catch (error) {
+		console.error('Error getting person by ID:', error);
+		throw error;
+	}
+}
+
+/**
  * Get all people
  * @returns {Promise<Array>} Array of people
  */
@@ -6656,6 +6681,7 @@ export {
 	getEventUserNames,
 	// People management
 	getAllPeople,
+	getPersonById,
 	createPerson,
 	updatePerson,
 	deletePerson,
