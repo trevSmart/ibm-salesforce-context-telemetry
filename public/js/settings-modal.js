@@ -130,6 +130,9 @@ function openConfirmModal({title, message, confirmLabel = 'Confirm', cancelLabel
 	});
 }
 
+// Expose openConfirmModal to window so it can be called from other contexts
+window.openConfirmModal = openConfirmModal;
+
 // Danger zone functionality - Delete all events
 let deleteAllConfirmed = false;
 
