@@ -7,6 +7,8 @@ import bcrypt from 'bcrypt';
 import session from 'express-session';
 import crypto from 'node:crypto';
 import pgSession from 'connect-pg-simple';
+import redis from 'redis';
+import { RedisStore } from 'connect-redis';
 
 // Get credentials from environment variables (for backward compatibility)
 const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin';
@@ -55,43 +57,102 @@ function normalizeRole(role) {
 
 /**
  * Initialize session middleware
- * Uses PostgreSQL store if available, otherwise falls back to MemoryStore
+ * Uses PostgreSQL store if available, otherwise Redis, otherwise MemoryStore
  *
  * NOTE: This function should be called AFTER the database is initialized
  * to properly support PostgreSQL session store. If called before database
- * initialization, it will fall back to MemoryStore.
+ * initialization, it will fall back to Redis or MemoryStore.
+ *
+ * @returns {Object} Object containing:
+ *   - middleware: The session middleware
+ *   - redisClient: The Redis client instance (if Redis is used), otherwise null
  */
 function initSessionMiddleware() {
 	const isProduction = process.env.NODE_ENV === 'production';
 
 	// Try to get PostgreSQL pool from database module
 	let store = null;
+	let redisClient = null;
 	if (db) {
 		const postgresPool = db.getPostgresPool ? db.getPostgresPool() : null;
 		if (postgresPool) {
-			// Use PostgreSQL store for sessions
-			// connect-pg-simple is a factory function that needs to be called with the session module
-			const PgSession = pgSession(session);
-			store = new PgSession({
-				pool: postgresPool,
-				tableName: 'session', // Table name for sessions
-				createTableIfMissing: true // Automatically create session table if it doesn't exist
-			});
-			console.log('✅ Session store: PostgreSQL');
+			try {
+				// Use PostgreSQL store for sessions
+				// connect-pg-simple is a factory function that needs to be called with the session module
+				const PgSession = pgSession(session);
+				store = new PgSession({
+					pool: postgresPool,
+					tableName: 'session', // Table name for sessions
+					createTableIfMissing: true // Automatically create session table if it doesn't exist
+				});
+				console.log('✅ Session store: PostgreSQL');
+			} catch (error) {
+				console.error('❌ Failed to initialize PostgreSQL session store:', error.message);
+				console.warn('⚠️  Falling back to alternative session store');
+			}
 		}
 	}
 
-	// If no PostgreSQL store, MemoryStore will be used
+	// If PostgreSQL failed or not available, try Redis
+	if (!store && process.env.REDIS_URL) {
+		try {
+			redisClient = redis.createClient({
+				url: process.env.REDIS_URL,
+				socket: {
+					connectTimeout: 15000,
+					// Use lazy connection to defer connection until first use
+					// This prevents connection errors from blocking server startup
+					lazyConnect: true
+				}
+			});
+
+			// Handle Redis connection errors gracefully
+			redisClient.on('error', (err) => {
+				console.error('❌ Redis session store error:', err.message);
+			});
+
+			// Explicitly initiate Redis connection without blocking startup
+			redisClient.connect().catch((err) => {
+				console.error('❌ Failed to connect to Redis for session store:', err.message);
+			});
+			store = new RedisStore({
+				client: redisClient,
+				prefix: 'session:',
+				ttl: 24 * 60 * 60 // 24 hours in seconds
+			});
+
+			console.log('✅ Session store: Redis');
+		} catch (error) {
+			console.error('❌ Failed to initialize Redis session store:', error.message);
+			console.warn('⚠️  Falling back to MemoryStore for sessions');
+			// If Redis initialization failed, try to cleanly disconnect the Redis client
+			if (redisClient) {
+				try {
+					// Prefer a graceful disconnect if available
+					if (typeof redisClient.disconnect === 'function') {
+						redisClient.disconnect();
+					}
+				} catch (disconnectError) {
+					console.error('⚠️  Error while disconnecting Redis client after initialization failure:', disconnectError.message);
+				}
+			}
+			// Clear the client reference to avoid leaking the instance
+			redisClient = null;
+		}
+	}
+
+	// If no persistent store available, use MemoryStore
 	if (!store) {
 		if (isProduction) {
 			console.warn('⚠️  WARNING: Using MemoryStore for sessions in production. Sessions will not persist across server restarts.');
-			console.warn('⚠️  For production deployments with PostgreSQL, ensure initSessionMiddleware() is called after database initialization.');
+			console.warn('⚠️  To fix this, configure one of:');
+			console.warn('⚠️    - PostgreSQL: Set DB_TYPE=postgresql and DATABASE_URL');
+			console.warn('⚠️    - Redis: Set REDIS_URL environment variable');
 		} else {
 			console.log('📦 Session store: MemoryStore (development)');
 		}
 	}
 
-	// If no PostgreSQL store, MemoryStore will be used (with warning in production)
 	const sessionConfig = {
 		secret: SESSION_SECRET,
 		resave: false,
@@ -104,12 +165,15 @@ function initSessionMiddleware() {
 		}
 	};
 
-	// Only set store if we have PostgreSQL, otherwise use default MemoryStore
+	// Only set store if we have a working store, otherwise use default MemoryStore
 	if (store) {
 		sessionConfig.store = store;
 	}
 
-	return session(sessionConfig);
+	return {
+		middleware: session(sessionConfig),
+		redisClient
+	};
 }
 
 /**
