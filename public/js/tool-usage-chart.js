@@ -38,7 +38,7 @@ function getToolUsageChartTheme() {
 		axis: isDark ? '#52525b' : '#d1d5db',
 		success: '#14becb',
 		error: '#dc2626',
-		bg: isDark ? '#111827' : '#ffffff'
+		bg: 'transparent'
 	};
 }
 

@@ -40,6 +40,11 @@
     font-size: 0.875rem; /* 14px - same as text-sm */
   }
 
+  select {
+    cursor: pointer;
+    border: solid 1px #e1e6f0;
+  }
+
   button,
   input,
   optgroup,
@@ -801,12 +806,14 @@
 
   .dashboard-chart-card .chart-floating-header .chart-header #timeRangeSelect {
     padding: 6px 14px;
-    font-size: 11.5px;
-    font-weight: 500;
-    background: rgba(255, 255, 255, 0.92);
-    border-radius: 999px;
-    box-shadow: 0 10px 35px rgba(15, 23, 42, 0.1), 0 2px 6px rgba(15, 23, 42, 0.08);
+    /* font-size: 11.5px; */
+    /* font-weight: 500; */
+    background: rgba(255, 255, 255, 0.72);
+    /* border-radius: 999px; */
+    box-shadow: 0 1px 1px rgba(15, 23, 42, 0.05);
     color: #374151;
+    backdrop-filter: blur(2px);
+    pointer-events: auto;
   }
 
   .dashboard-chart-card .chart-floating-header .chart-header h1 {
@@ -814,24 +821,8 @@
     visibility: visible;
   }
 
-  .dashboard-chart-card .chart-floating-header .chart-header #timeRangeSelect {
-    backdrop-filter: blur(15px);
-    pointer-events: auto;
-    top: -5px;
-  }
-
   .dashboard-chart-card:hover .chart-floating-header .chart-header h1 {
     opacity: 0;
-  }
-
-  .dashboard-chart-card:hover .chart-floating-header .chart-header #timeRangeSelect {
-    opacity: 1;
-    visibility: visible;
-  }
-
-  html.dark .dashboard-chart-card .chart-floating-header .chart-header h1,
-  html.dark .dashboard-chart-card .chart-floating-header .chart-header #timeRangeSelect {
-    /* background: linear-gradient(180deg, rgba(39, 39, 42, 0.95) 0%, rgba(39, 39, 42, 0.65) 60%, rgba(39, 39, 42, 0)); */
   }
 
   .dashboard-chart-card .chart-floating-header [data-floating-interactive],
@@ -873,8 +864,8 @@
   .chart-legend-overlay {
     position: absolute;
     /* left: 50%; */
-    margin: 0 0 4px 0;
-    transform: translateY(10px);
+    margin-top: 9px;
+    transform: translateY(-10px);
     display: inline-flex;
     gap: 16px;
     align-items: center;
@@ -1619,11 +1610,11 @@
   }
 
   .top-users-avatar {
-    @apply inline-flex size-10 items-center justify-center rounded-full bg-gray-500 dark:bg-gray-800 outline -outline-offset-1 outline-black/5 dark:outline-white/10 font-medium text-white;
+    @apply inline-flex size-10 items-center justify-center rounded-full bg-gray-500 dark:bg-gray-800 font-medium text-white;
   }
 
   .top-users-avatar--team {
-    @apply inline-flex size-10 items-center justify-center rounded-full bg-gray-500 dark:bg-gray-800 outline -outline-offset-1 outline-black/5 dark:outline-white/10;
+    @apply inline-flex size-10 items-center justify-center rounded-full bg-gray-500 dark:bg-gray-800;
   }
 
   .card-avatar {
@@ -5437,4 +5428,27 @@ html.dark .level-filters .level-filter-btn.level-error {
   transform: scale(1) !important;
   opacity: 1 !important;
   transition: transform 100ms ease-out, opacity 100ms ease-out;
+}
+
+/* Hide date range selector by default */
+.dashboard-chart-card .chart-header .relative {
+  top: 5px;
+  visibility: hidden;
+  opacity: 0;
+  transform: translateY(-8px);
+  transition:
+      opacity 170ms ease,
+      visibility 170ms ease,
+      transform 170ms ease;
+}
+
+/* Show date range selector on chart hover */
+.dashboard-chart-card:hover .chart-header .relative {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.shadow-s {
+	box-shadow: 0 1px 2px 0px #e1e1e1;
 }
