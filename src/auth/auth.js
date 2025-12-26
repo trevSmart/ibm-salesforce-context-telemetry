@@ -7,17 +7,8 @@ import bcrypt from 'bcrypt';
 import session from 'express-session';
 import crypto from 'node:crypto';
 import pgSession from 'connect-pg-simple';
-
-// Optional Redis imports (only loaded if Redis is configured)
-let redis = null;
-let RedisStore = null;
-
-try {
-	redis = (await import('redis')).default;
-	RedisStore = (await import('connect-redis')).default;
-} catch {
-	// Redis not available, continue without it
-}
+import redis from 'redis';
+import { RedisStore } from 'connect-redis';
 
 // Get credentials from environment variables (for backward compatibility)
 const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin';
@@ -98,7 +89,7 @@ function initSessionMiddleware() {
 	}
 
 	// If PostgreSQL failed or not available, try Redis
-	if (!store && RedisStore && redis && process.env.REDIS_URL) {
+	if (!store && process.env.REDIS_URL) {
 		try {
 			const redisClient = redis.createClient({
 				url: process.env.REDIS_URL,
