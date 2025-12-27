@@ -2231,6 +2231,7 @@
   .all-sessions-container .session-list {
     flex: 1;
     min-width: 0;
+    font-size: 13.5px;
   }
 
   .all-sessions-container .session-item:has(.toggle-selection-mode-btn) {
@@ -2936,7 +2937,7 @@ f    background: #deefff !important;
     min-height: 220px;
     display: flex;
     align-items: stretch;
-    padding: 0 1.5rem 1.5rem;
+    padding: 0 1.5rem 0.5rem;
     height: 100%;
   }
 
@@ -3167,7 +3168,7 @@ f    background: #deefff !important;
     flex-direction: column;
     text-align: start;
     border-radius: 12px;
-    padding: 12px;
+    padding-bottom: 12px;
   }
 
   .logs-table-container > div:last-child {
