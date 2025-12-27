@@ -2744,11 +2744,6 @@
     flex-shrink: 0;
   }
 
-  /* Hide count for "All Sessions" button */
-  .session-item[data-session="all"] .session-item-right {
-    display: none;
-  }
-
   .session-item:hover .session-item-actions {
     z-index: 1001;
   }
@@ -5796,8 +5791,16 @@ html.dark .level-filters .level-filter-btn.level-error {
 	box-shadow: 0 1px 2px 0px #e1e1e1;
 }
 
-.el-autocomplete > input {
+el-autocomplete > input {
   font-size: 12.8px;
+  font-weight: 400;
+  background: #f3f5f7;
+  color: #3d4152;
+}
+
+html.dark .el-autocomplete > input {
+  background: #1e1e1e;
+  color: #f4f4f5;
 }
 
 section > div > h3 + p {

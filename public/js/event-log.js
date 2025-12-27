@@ -2231,20 +2231,26 @@ function safeShowToast(message, type = 'info') {
 					}
 				}
 
-				// Update total size
-				const total = sessions.reduce((sum, session) => sum + (session.count || 0), 0);
-				const totalSizeEl = document.getElementById('totalSize');
-				if (totalSizeEl) {
-					totalSizeEl.textContent = total;
+				// Update total size only if not viewing "All Sessions"
+				// When viewing "All Sessions", loadEventTypeStats() provides the accurate total
+				if (selectedSession !== 'all') {
+					const total = sessions.reduce((sum, session) => sum + (session.count || 0), 0);
+					const totalSizeEl = document.getElementById('totalSize');
+					if (totalSizeEl) {
+						totalSizeEl.textContent = total;
+					}
 				}
 
 				// Update delete selected button
 				updateDeleteSelectedButton();
 			} else {
-				// Update total size to 0 if no sessions
-				const totalSizeEl = document.getElementById('totalSize');
-				if (totalSizeEl) {
-					totalSizeEl.textContent = '0';
+				// Update total size to 0 if no sessions and not viewing "All Sessions"
+				// When viewing "All Sessions", loadEventTypeStats() provides the accurate total
+				if (selectedSession !== 'all') {
+					const totalSizeEl = document.getElementById('totalSize');
+					if (totalSizeEl) {
+						totalSizeEl.textContent = '0';
+					}
 				}
 				// Update delete selected button
 				updateDeleteSelectedButton();

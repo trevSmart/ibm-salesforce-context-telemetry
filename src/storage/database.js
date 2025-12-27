@@ -160,7 +160,7 @@ async function init() {
 		// Prefer internal database URL if available (for Render.com internal networking)
 		// Internal URL uses private network and is faster/more secure within same region
 		const databaseUrl = process.env.DATABASE_INTERNAL_URL || process.env.DATABASE_URL;
-		
+
 		if (!databaseUrl) {
 			throw new Error('DATABASE_URL or DATABASE_INTERNAL_URL must be set for PostgreSQL');
 		}
