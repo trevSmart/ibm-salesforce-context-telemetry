@@ -879,8 +879,8 @@ app.post('/login', auth.requireGuest, async (req, res) => {
 			status: 'error',
 			message: 'Invalid username or password'
 		});
-		
-		
+
+
 
 	} catch (error) {
 		console.error('Login error:', error);

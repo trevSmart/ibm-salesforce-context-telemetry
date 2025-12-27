@@ -5734,7 +5734,7 @@ function safeShowToast(message, type = 'info') {
 	document.addEventListener('DOMContentLoaded', () => {
 		const logsTable = document.getElementById('logsTable');
 		if (logsTable && window.ResizableColumns) {
-			 
+
 			const resizableColumns = new window.ResizableColumns(logsTable, {
 				store: window.resizableColumnsStore,
 				minWidth: 48

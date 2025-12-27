@@ -1169,7 +1169,7 @@ async function storeEvent(telemetryEvent, receivedAt) {
 		// Handle payload differently for SQLite vs PostgreSQL
 		let payloadForSQLite;
 		let payloadForPostgreSQL;
-		
+
 		if (dbType === 'sqlite') {
 			// For SQLite, ensure payload is always a string (TEXT column)
 			if (typeof payloadToStore !== 'string') {
@@ -1318,7 +1318,7 @@ async function storeDiscardedEvent(rawPayload, reason = 'discarded', receivedAt 
 		// Handle payload differently for SQLite vs PostgreSQL
 		let payloadForSQLite;
 		let payloadForPostgreSQL;
-		
+
 		if (dbType === 'sqlite') {
 			// For SQLite, ensure payload is always a string (TEXT column)
 			payloadForSQLite = typeof rawPayload === 'string' ? rawPayload : JSON.stringify(rawPayload);
