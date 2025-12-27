@@ -1624,11 +1624,11 @@
   }
 
   .top-users-avatar {
-    @apply inline-flex size-10 items-center justify-center rounded-full bg-gray-500 dark:bg-gray-800 font-medium text-white;
+    @apply inline-flex size-9 items-center justify-center rounded-full bg-gray-500 dark:bg-gray-800 font-medium text-white;
   }
 
   .top-users-avatar--team {
-    @apply inline-flex size-10 items-center justify-center rounded-full bg-gray-500 dark:bg-gray-800;
+    @apply inline-flex size-9 items-center justify-center rounded-full bg-gray-500 dark:bg-gray-800;
   }
 
   .card-avatar {
@@ -3166,6 +3166,8 @@ f    background: #deefff !important;
     display: flex;
     flex-direction: column;
     text-align: start;
+    border-radius: 12px;
+    padding: 12px;
   }
 
   .logs-table-container > div:last-child {
@@ -3176,6 +3178,7 @@ f    background: #deefff !important;
   }
 
   .logs-table {
+    display: block;
     width: 100%;
     table-layout: fixed;
     border-collapse: separate;
@@ -3255,12 +3258,24 @@ f    background: #deefff !important;
   }
 
   .logs-table td:nth-child(4) {
-    width: 220px;
-    min-width: 220px;
+    width: 250px;
+    min-width: 250px;
     text-align: left;
   }
 
   .logs-table td:nth-child(5) {
+    width: 100px;
+    min-width: 100px;
+    text-align: left;
+  }
+
+  .logs-table td:nth-child(7) {
+    width: 100px;
+    min-width: 100px;
+    text-align: left;
+  }
+
+  .logs-table td:nth-child(8) {
     width: 150px;
     min-width: 150px;
     text-align: left;
@@ -3312,6 +3327,7 @@ f    background: #deefff !important;
     background: white;
     display: table-row;
     padding: 0 9px;
+    height: 46px;
   }
 
   .logs-table td {
@@ -3769,7 +3785,7 @@ f    background: #deefff !important;
 
   /* Table scrollbar - always visible, same style as sessions */
   .logs-table-container > div:last-child::-webkit-scrollbar {
-    width: 6px;
+    width: 8px;
   }
 
   .logs-table-container > div:last-child::-webkit-scrollbar-track {

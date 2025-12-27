@@ -132,49 +132,77 @@
 							</ul>
 						</div>
 					</section>
-					<section class="overflow-hidden rounded-lg server-stats-gradient dark:outline dark:-outline-offset-1 dark:outline-white/10 shadow-xs" id="serverStatsCard" style="text-align: left;">
-						<div class="px-4 py-5 sm:px-6">
-							<h3 class="text-base font-semibold text-gray-900">Server stats</h3>
-							<p class="mt-1 text-sm text-gray-500">Live telemetry server metrics.</p>
-						</div>
-						<div class="card-body sm:px-6">
-							<dl class="grid grid-cols-1 divide-gray-200 divide-y overflow-hidden">
-								<div class="py-2">
-									<dt class="stats-title">Server Version</dt>
-									<dd class="mt-1 flex items-baseline justify-between md:block lg:flex">
-										<div class="flex items-baseline font-semibold text-indigo-600" id="serverStatsVersion">
-											Loading...
-										</div>
-									</dd>
+					<section class="overflow-hidden rounded-lg bg-gray-50 shadow-xs outline-1 outline-gray-900/5 dark:outline dark:-outline-offset-1 dark:outline-white/10" id="serverStatsCard" style="text-align: left;">
+						<div class="px-4 pt-5 pb-0 sm:px-6">
+							<div class="flex items-center justify-between">
+								<h3 class="text-base font-semibold text-gray-900 dark:text-white">Server stats</h3>
+								<div class="flex items-center gap-2">
+									<span class="text-xs font-medium text-green-700 dark:text-green-400">Connected</span>
+									<div class="h-2 w-2 rounded-full bg-green-500 dark:bg-green-400"></div>
 								</div>
-								<div class="py-2">
-									<dt class="stats-title">Uptime</dt>
-									<dd class="mt-1 flex items-baseline justify-between md:block lg:flex">
-										<div class="flex items-baseline font-semibold text-indigo-600" id="serverStatsUptime">
-											Loading...
-										</div>
-									</dd>
-								</div>
-								<div class="py-2">
-									<dt class="stats-title">Database Status</dt>
-									<dd class="mt-1 flex items-baseline justify-between md:block lg:flex">
-										<div class="flex items-baseline font-semibold text-indigo-600" id="serverStatsDbStatus">
-											Loading...
-										</div>
-										<div class="inline-flex items-baseline rounded-full px-2.5 py-0.5 text-sm font-medium md:mt-2 lg:mt-0" id="serverStatsDbStatusBadge">
-											<span class="sr-only">Status: </span>
-											-
-										</div>
-									</dd>
-								</div>
-							</dl>
-						</div>
-						<div class="card-footer px-4 py-3 sm:px-6 border-t border-gray-200 dark:border-gray-700/50">
-							<div class="flex items-center justify-between text-xs text-gray-500">
-								<span>Last updated: <span id="serverStatsLastUpdated">never</span></span>
-								<span>Load time: <span id="serverStatsLoadTime">-</span></span>
 							</div>
+							<p class="mt-1 text-sm text-gray-500 dark:text-gray-400"><a href="/health">View health check <span aria-hidden="true">&rarr;</span></a></p>
 						</div>
+						<dl class="flex flex-wrap">
+							<div class="flex w-full flex-none gap-x-4 px-6 pt-6">
+								<dt class="flex-none">
+									<span class="sr-only">Uptime</span>
+									<svg viewBox="0 0 20 20" fill="currentColor" data-slot="icon" aria-hidden="true" class="h-6 w-5 text-gray-400 dark:text-gray-500">
+										<path d="M4.632 3.533A2 2 0 0 1 6.577 2h6.846a2 2 0 0 1 1.945 1.533l1.976 8.234A3.489 3.489 0 0 0 16 11.5H4c.476 0 .93.095 1.344.267l-1.976-8.234Z" />
+										<path d="M4 13a2 2 0 1 0 0 4h12a2 2 0 1 0 0-4H4Z" />
+									</svg>
+								</dt>
+								<dd class="text-sm/6 text-gray-900 dark:text-white">
+									<span>Uptime:</span> <span class="font-semibold" id="serverStatsUptime">Loading...</span>
+								</dd>
+							</div>
+							<div class="mt-3 flex w-full flex-none gap-x-4 px-6">
+								<dt class="flex-none">
+									<span class="sr-only">Server Version</span>
+									<svg viewBox="0 0 20 20" fill="currentColor" data-slot="icon" aria-hidden="true" class="h-6 w-5 text-gray-400 dark:text-gray-500">
+										<path d="M12 2.25H8A2.75 2.75 0 0 0 5.25 5v.25H4A2.75 2.75 0 0 0 1.25 8v8A2.75 2.75 0 0 0 4 18.75h12A2.75 2.75 0 0 0 18.75 16V8A2.75 2.75 0 0 0 16 5.25h-1.25V5A2.75 2.75 0 0 0 12 2.25ZM7.5 5v.25h5V5A1.25 1.25 0 0 1 13.75 3.75h-7.5A1.25 1.25 0 0 1 5.25 5v.25h2.25ZM4 7.5A1.25 1.25 0 0 1 5.25 6.25h9.5A1.25 1.25 0 0 1 16 7.5v8.75a1.25 1.25 0 0 1-1.25 1.25H5.25A1.25 1.25 0 0 1 4 16.25V7.5Z" clip-rule="evenodd" fill-rule="evenodd" />
+										<path d="M10 8.5a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-1.5 0v-1.5A.75.75 0 0 1 10 8.5Zm0 4.25a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-1.5 0v-1.5a.75.75 0 0 1 .75-.75Z" />
+									</svg>
+								</dt>
+								<dd class="text-sm/6 text-gray-500 dark:text-gray-400">
+									<span>Server Version:</span> <span class="font-semibold" id="serverStatsVersion">Loading...</span>
+								</dd>
+							</div>
+							<div class="mt-3 flex w-full flex-none gap-x-4 px-6">
+								<dt class="flex-none">
+									<span class="sr-only">Database Status</span>
+									<svg viewBox="0 0 20 20" fill="currentColor" data-slot="icon" aria-hidden="true" class="h-6 w-5 text-gray-400 dark:text-gray-500">
+										<path d="M12 2.25H8A2.75 2.75 0 0 0 5.25 5v.25H4A2.75 2.75 0 0 0 1.25 8v8A2.75 2.75 0 0 0 4 18.75h12A2.75 2.75 0 0 0 18.75 16V8A2.75 2.75 0 0 0 16 5.25h-1.25V5A2.75 2.75 0 0 0 12 2.25ZM7.5 5v.25h5V5A1.25 1.25 0 0 1 13.75 3.75h-7.5A1.25 1.25 0 0 1 5.25 5v.25h2.25ZM4 7.5A1.25 1.25 0 0 1 5.25 6.25h9.5A1.25 1.25 0 0 1 16 7.5v8.75a1.25 1.25 0 0 1-1.25 1.25H5.25A1.25 1.25 0 0 1 4 16.25V7.5Z" clip-rule="evenodd" fill-rule="evenodd" />
+									</svg>
+								</dt>
+								<dd class="text-sm/6 text-gray-500 dark:text-gray-400">
+									<span>Database Size:</span> <span class="font-semibold" id="serverStatsDbSize">Loading...</span>
+								</dd>
+							</div>
+							<div class="mt-3 flex w-full flex-none gap-x-4 px-6">
+								<dt class="flex-none">
+									<span class="sr-only">Last Updated</span>
+									<svg viewBox="0 0 20 20" fill="currentColor" data-slot="icon" aria-hidden="true" class="h-6 w-5 text-gray-400 dark:text-gray-500">
+										<path d="M5.25 12a.75.75 0 0 1 .75-.75h.01a.75.75 0 0 1 .75.75v.01a.75.75 0 0 1-.75.75H6a.75.75 0 0 1-.75-.75V12ZM6 13.25a.75.75 0 0 0-.75.75v.01c0 .414.336.75.75.75h.01a.75.75 0 0 0 .75-.75V14a.75.75 0 0 0-.75-.75H6ZM7.25 12a.75.75 0 0 1 .75-.75h.01a.75.75 0 0 1 .75.75v.01a.75.75 0 0 1-.75.75H8a.75.75 0 0 1-.75-.75V12ZM8 13.25a.75.75 0 0 0-.75.75v.01c0 .414.336.75.75.75h.01a.75.75 0 0 0 .75-.75V14a.75.75 0 0 0-.75-.75H8ZM9.25 10a.75.75 0 0 1 .75-.75h.01a.75.75 0 0 1 .75.75v.01a.75.75 0 0 1-.75.75H10a.75.75 0 0 1-.75-.75V10ZM10 11.25a.75.75 0 0 0-.75.75v.01c0 .414.336.75.75.75h.01a.75.75 0 0 0 .75-.75V12a.75.75 0 0 0-.75-.75H10ZM9.25 14a.75.75 0 0 1 .75-.75h.01a.75.75 0 0 1 .75.75v.01a.75.75 0 0 1-.75.75H10a.75.75 0 0 1-.75-.75V14ZM12 9.25a.75.75 0 0 0-.75.75v.01c0 .414.336.75.75.75h.01a.75.75 0 0 0 .75-.75V10a.75.75 0 0 0-.75-.75H12ZM11.25 12a.75.75 0 0 1 .75-.75h.01a.75.75 0 0 1 .75.75v.01a.75.75 0 0 1-.75.75H12a.75.75 0 0 1-.75-.75V12ZM12 13.25a.75.75 0 0 0-.75.75v.01c0 .414.336.75.75.75h.01a.75.75 0 0 0 .75-.75V14a.75.75 0 0 0-.75-.75H12ZM13.25 10a.75.75 0 0 1 .75-.75h.01a.75.75 0 0 1 .75.75v.01a.75.75 0 0 1-.75.75H14a.75.75 0 0 1-.75-.75V10ZM14 11.25a.75.75 0 0 0-.75.75v.01c0 .414.336.75.75.75h.01a.75.75 0 0 0 .75-.75V12a.75.75 0 0 0-.75-.75H14Z" />
+										<path d="M5.75 2a.75.75 0 0 1 .75.75V4h7V2.75a.75.75 0 0 1 1.5 0V4h.25A2.75 2.75 0 0 1 18 6.75v8.5A2.75 2.75 0 0 1 15.25 18H4.75A2.75 2.75 0 0 1 2 15.25v-8.5A2.75 2.75 0 0 1 4.75 4H5V2.75A.75.75 0 0 1 5.75 2Zm-1 5.5c-.69 0-1.25.56-1.25 1.25v6.5c0 .69.56 1.25 1.25 1.25h10.5c.69 0 1.25-.56 1.25-1.25v-6.5c0-.69-.56-1.25-1.25-1.25H4.75Z" clip-rule="evenodd" fill-rule="evenodd" />
+									</svg>
+								</dt>
+								<dd class="text-sm/6 text-gray-500 dark:text-gray-400">
+									<span>Last Updated:</span> <time class="font-semibold" id="serverStatsLastUpdated">never</time>
+								</dd>
+							</div>
+							<div class="mt-3 flex w-full flex-none gap-x-4 px-6">
+								<dt class="flex-none">
+									<span class="sr-only">Load Time</span>
+									<svg viewBox="0 0 20 20" fill="currentColor" data-slot="icon" aria-hidden="true" class="h-6 w-5 text-gray-400 dark:text-gray-500">
+										<path d="M2.5 4A1.5 1.5 0 0 0 1 5.5V6h18v-.5A1.5 1.5 0 0 0 17.5 4h-15ZM19 8.5H1v6A1.5 1.5 0 0 0 2.5 16h15a1.5 1.5 0 0 0 1.5-1.5v-6ZM3 13.25a.75.75 0 0 1 .75-.75h1.5a.75.75 0 0 1 0 1.5h-1.5a.75.75 0 0 1-.75-.75Zm4.75-.75a.75.75 0 0 0 0 1.5h3.5a.75.75 0 0 0 0-1.5h-3.5Z" clip-rule="evenodd" fill-rule="evenodd" />
+									</svg>
+								</dt>
+								<dd class="text-sm/6 text-gray-500 dark:text-gray-400">
+									<span>Load Time:</span> <span class="font-semibold" id="serverStatsLoadTime">-</span>
+								</dd>
+							</div>
+						</dl>
 
 					</section>
 					<section class="overflow-hidden rounded-lg dark:bg-gray-800/50 dark:outline dark:-outline-offset-1 dark:outline-white/10 shadow-xs" style="background: #f8f9f9;">

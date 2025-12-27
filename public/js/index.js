@@ -202,28 +202,13 @@ async function loadHealthCheckData() {
 			uptimeElement.textContent = formatUptime(healthData.uptime);
 		}
 
-		// Update database status
-		const dbStatusElement = document.getElementById('serverStatsDbStatus');
-		const dbStatusBadge = document.getElementById('serverStatsDbStatusBadge');
-
-		if (dbStatusElement && dbStatusBadge && healthData.database) {
-			const status = healthData.database.status;
-			const type = healthData.database.type;
-
-			// Set status text
-			dbStatusElement.textContent = `${type} (${status})`;
-
-			// Set badge color and text based on status
-			dbStatusBadge.className = 'inline-flex items-baseline rounded-full px-2.5 py-0.5 text-sm font-medium md:mt-2 lg:mt-0';
-			dbStatusBadge.innerHTML = `<span class="sr-only">Status: </span>${status}`;
-
-			if (status === 'connected') {
-				dbStatusBadge.classList.add('bg-green-100', 'text-green-800');
-			} else if (status === 'error') {
-				dbStatusBadge.classList.add('bg-red-100', 'text-red-800');
-			} else {
-				dbStatusBadge.classList.add('bg-yellow-100', 'text-yellow-800');
-			}
+		// Load database size information
+		try {
+			await loadDashboardDatabaseSize();
+		} catch (error) {
+			console.warn('Failed to load database size for server stats:', error);
+			const dbSizeElement = document.getElementById('serverStatsDbSize');
+			if (dbSizeElement) dbSizeElement.textContent = 'N/A';
 		}
 
 		const endTime = performance.now();
@@ -240,14 +225,8 @@ async function loadHealthCheckData() {
 		const uptimeElement = document.getElementById('serverStatsUptime');
 		if (uptimeElement) uptimeElement.textContent = 'Error';
 
-		const dbStatusElement = document.getElementById('serverStatsDbStatus');
-		if (dbStatusElement) dbStatusElement.textContent = 'Error';
-
-		const dbStatusBadge = document.getElementById('serverStatsDbStatusBadge');
-		if (dbStatusBadge) {
-			dbStatusBadge.className = 'inline-flex items-baseline rounded-full bg-red-100 px-2.5 py-0.5 text-sm font-medium text-red-800 md:mt-2 lg:mt-0';
-			dbStatusBadge.innerHTML = '<span class="sr-only">Status: </span>Error';
-		}
+		const dbSizeElement = document.getElementById('serverStatsDbSize');
+		if (dbSizeElement) dbSizeElement.textContent = 'Error';
 
 		const endTime = performance.now();
 		const durationMs = endTime - startTime;
