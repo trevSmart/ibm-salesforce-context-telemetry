@@ -65,7 +65,7 @@ function validateV2Structure(rawEvent) {
 
 /**
  * Parse a schema v2 event to TelemetryEvent
- * @param {object} rawEvent - Raw v2 event data
+ * @param {object} rawEvent - Raw v2 event data (original payload)
  * @returns {TelemetryEvent} Parsed TelemetryEvent instance
  * @throws {Error} If parsing fails
  */
@@ -74,6 +74,7 @@ export function parseV2Event(rawEvent) {
   validateV2Structure(rawEvent);
 
   // Create TelemetryEvent - v2 format maps almost directly
+  // Pass rawEvent as originalPayload to preserve the exact original JSON
   const telemetryEvent = new TelemetryEvent({
     area: rawEvent.area,
     event: rawEvent.event,
@@ -92,7 +93,7 @@ export function parseV2Event(rawEvent) {
 
     // Server info (will be set later)
     receivedAt: null
-  });
+  }, rawEvent); // Pass original payload as second parameter
 
   return telemetryEvent;
 }

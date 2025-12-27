@@ -3164,7 +3164,8 @@ function safeShowToast(message, type = 'info') {
 
 
 	function createEventDetailsForm(event) {
-		const payload = buildEventPayload(event);
+		// event.data now contains the original payload exactly as received
+		const payload = event.data || {};
 
 		// Helper function to format value for display
 		const formatValue = (value) => {
@@ -3431,34 +3432,14 @@ function safeShowToast(message, type = 'info') {
 		return formContainer;
 	}
 
-	function buildEventPayload(event) {
-		const payload = {
-			event: event.event,
-			timestamp: event.timestamp,
-			serverId: event.server_id || null,
-			version: event.version || null,
-			sessionId: event.session_id || null,
-			userId: event.user_id || null,
-			data: event.data || {}
-		};
-
-		// Remove null values to keep the JSON clean
-		Object.keys(payload).forEach(key => {
-			if (payload[key] === null) {
-				delete payload[key];
-			}
-		});
-
-		return payload;
-	}
-
 	function formatDescription(event) {
 		// If event doesn't have data field (payload not loaded), return special marker
 		if (!Object.hasOwn(event, 'data')) {
 			return '__VIEW_PAYLOAD_BUTTON__';
 		}
 
-		return JSON.stringify(buildEventPayload(event));
+		// event.data now contains the original payload exactly as received
+		return JSON.stringify(event.data);
 	}
 
 
@@ -4385,7 +4366,8 @@ function safeShowToast(message, type = 'info') {
 				throw new Error('Event payload not available');
 			}
 
-			const payload = buildEventPayload(data.event);
+			// data.event.data now contains the original payload exactly as received
+			const payload = data.event.data || {};
 
 			// Format as beautified JSON with proper indentation (2 spaces)
 			const beautifiedPayload = JSON.stringify(payload, null, 2);
@@ -5605,7 +5587,8 @@ function safeShowToast(message, type = 'info') {
 			if (!data?.event) {
 				throw new Error('Event payload not available');
 			}
-			const payload = buildEventPayload(data.event);
+			// data.event.data now contains the original payload exactly as received
+			const payload = data.event.data || {};
 
 			// Show payload in modal
 			showPayloadModal(payload, eventId);

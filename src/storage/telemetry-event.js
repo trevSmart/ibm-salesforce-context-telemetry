@@ -24,6 +24,9 @@ export class TelemetryEvent {
   // Server-added info
   receivedAt;        // ISO string
 
+  // Original payload from request (preserved exactly as received)
+  payload;           // object - Original JSON payload from request
+
   // Denormalized fields (calculated)
   eventType;         // 'tool_call' | 'tool_error' | etc. (for DB compatibility)
   orgId;             // string | null
@@ -34,9 +37,13 @@ export class TelemetryEvent {
 
   /**
    * Constructor - creates TelemetryEvent from raw v2-like structure
-   * @param {object} raw - Raw event data in v2 format
+   * @param {object} raw - Raw event data in v2 format (normalized)
+   * @param {object} originalPayload - Original JSON payload from request (preserved exactly)
    */
-  constructor(raw = {}) {
+  constructor(raw = {}, originalPayload = null) {
+    // Guardar payload original
+    this.payload = originalPayload || raw;
+    
     this.validateStructure(raw);
 
     // Core fields

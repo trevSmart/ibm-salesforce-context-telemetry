@@ -1150,15 +1150,8 @@ async function storeEvent(telemetryEvent, receivedAt) {
 			}
 		}
 
-		// Enrich data with structured objects for v2 compatibility
-		const enrichedData = {
-			...telemetryEvent.data,
-			// Preserve structured objects from v2
-			server: telemetryEvent.server || telemetryEvent.data.server,
-			client: telemetryEvent.client || telemetryEvent.data.client,
-			session: telemetryEvent.session || telemetryEvent.data.session,
-			user: telemetryEvent.user || telemetryEvent.data.user
-		};
+		// Store original payload exactly as received (preserved in telemetryEvent.payload)
+		const payloadToStore = telemetryEvent.payload || JSON.stringify(telemetryEvent.toJSON());
 
 		if (dbType === 'sqlite') {
 			const stmt = getPreparedStatement('insertEvent', `
@@ -1175,7 +1168,7 @@ async function storeEvent(telemetryEvent, receivedAt) {
 				sessionId || null,
 				parentSessionId || null,
 				userId || null,
-				JSON.stringify(enrichedData),
+				typeof payloadToStore === 'string' ? payloadToStore : JSON.stringify(payloadToStore),
 				receivedAt,
 				orgId,
 				userName,
@@ -1201,7 +1194,7 @@ async function storeEvent(telemetryEvent, receivedAt) {
 					sessionId || null,
 					parentSessionId || null,
 					userId || null,
-					enrichedData, // PostgreSQL handles JSONB directly
+					payloadToStore, // PostgreSQL handles JSONB directly
 					receivedAt,
 					orgId,
 					userName,

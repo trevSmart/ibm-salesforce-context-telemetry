@@ -152,7 +152,7 @@ function validateV1Structure(rawEvent) {
 
 /**
  * Parse a schema v1 event to TelemetryEvent
- * @param {object} rawEvent - Raw v1 event data
+ * @param {object} rawEvent - Raw v1 event data (original payload)
  * @returns {TelemetryEvent} Parsed TelemetryEvent instance
  * @throws {Error} If parsing fails
  */
@@ -170,6 +170,7 @@ export function parseV1Event(rawEvent) {
   const {server, client, session, user} = extractStructuredObjects(rawEvent);
 
   // Create TelemetryEvent
+  // Pass rawEvent as originalPayload to preserve the exact original JSON
   const telemetryEvent = new TelemetryEvent({
     area,
     event,
@@ -188,7 +189,7 @@ export function parseV1Event(rawEvent) {
 
     // Server info (will be set later)
     receivedAt: null
-  });
+  }, rawEvent); // Pass original payload as second parameter
 
   return telemetryEvent;
 }
