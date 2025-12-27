@@ -56,3 +56,5 @@ test-*.js
 test-*.html
 src/data/telemetry.db-shm
 src/data/telemetry.db-wal
+.claude/settings.local.json
+.claude/settings.local.json

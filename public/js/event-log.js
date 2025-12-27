@@ -3863,11 +3863,11 @@ function safeShowToast(message, type = 'info') {
 			if (sortOrder === 'DESC') {
 				sortIconEl.src = '/resources/sort-desc';
 				sortIconEl.alt = 'Sort descending';
-				sortBtnEl.title = 'Sort: Newest first (click to change)';
+				sortBtnEl.setAttribute('data-tooltip', 'Show newest first');
 			} else {
 				sortIconEl.src = '/resources/sort-asc';
 				sortIconEl.alt = 'Sort ascending';
-				sortBtnEl.title = 'Sort: Oldest first (click to change)';
+				sortBtnEl.setAttribute('data-tooltip', 'Show oldest first');
 			}
 		}
 
@@ -4247,7 +4247,7 @@ function safeShowToast(message, type = 'info') {
 		}
 	});
 
-	// eslint-disable-next-line no-unused-vars
+
 	function toggleActionsDropdown(e, eventId) {
 		e.stopPropagation();
 		const dropdown = document.getElementById(`dropdown-${eventId}`);
@@ -4366,7 +4366,7 @@ function safeShowToast(message, type = 'info') {
 		}
 	}
 
-	// eslint-disable-next-line no-unused-vars
+
 	async function copyEventPayload(eventId) {
 		try {
 			// Fetch the complete event (including payload) from the API
@@ -4405,7 +4405,7 @@ function safeShowToast(message, type = 'info') {
 		}
 	}
 
-	// eslint-disable-next-line no-unused-vars
+
 	function confirmDeleteEvent(eventId) {
 		openConfirmModal({
 			title: 'Move event to trash',
@@ -5720,5 +5720,8 @@ function safeShowToast(message, type = 'info') {
 	window.scrollToEvent = scrollToEvent;
 	window.loadEventPayload = loadEventPayload;
 	window.closePayloadModal = closePayloadModal;
+	window.toggleActionsDropdown = toggleActionsDropdown;
+	window.copyEventPayload = copyEventPayload;
+	window.confirmDeleteEvent = confirmDeleteEvent;
 
 } // end guard to avoid duplicate execution
