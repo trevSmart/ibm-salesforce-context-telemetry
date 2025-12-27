@@ -1494,6 +1494,7 @@ async function getEvents(options = {}) {
 		limit = 50,
 		offset = 0,
 		eventTypes,
+		areas,
 		serverId,
 		sessionId,
 		startDate,
@@ -1512,7 +1513,20 @@ async function getEvents(options = {}) {
 		whereClause += ' AND deleted_at IS NULL';
 	}
 
-	if (eventTypes && Array.isArray(eventTypes) && eventTypes.length > 0) {
+	if (areas && Array.isArray(areas) && areas.length > 0) {
+		// Filter by area (preferred over eventTypes for area-based filtering)
+		if (areas.length === 1) {
+			whereClause += dbType === 'sqlite' ? ' AND COALESCE(e.area, \'general\') = ?' : ` AND COALESCE(e.area, 'general') = $${paramIndex++}`;
+			params.push(areas[0]);
+		} else {
+			const placeholders = areas.map(() => {
+				return dbType === 'sqlite' ? '?' : `$${paramIndex++}`;
+			}).join(', ');
+			whereClause += ` AND COALESCE(e.area, 'general') IN (${placeholders})`;
+			params.push(...areas);
+		}
+	} else if (eventTypes && Array.isArray(eventTypes) && eventTypes.length > 0) {
+		// Fallback to eventTypes for backward compatibility
 		if (eventTypes.length === 1) {
 			whereClause += dbType === 'sqlite' ? ' AND et.name = ?' : ` AND et.name = $${paramIndex++}`;
 			params.push(eventTypes[0]);
@@ -1598,8 +1612,8 @@ async function getEvents(options = {}) {
 	const eventsQuery = `
 		SELECT
 			e.id, et.name as event, e.timestamp, e.server_id, e.version, e.session_id, e.parent_session_id,
-			e.user_id, e.received_at, e.created_at, e.user_name, e.tool_name, e.company_name
-			${dbType === 'sqlite' ? ', e.error_message' : ', e.error_message'}
+			e.user_id, e.received_at, e.created_at, e.user_name, e.tool_name, e.company_name,
+			e.error_message, e.area
 		FROM telemetry_events e
 		JOIN event_types et ON e.event_id = et.id
 		${whereClause}
@@ -1638,7 +1652,7 @@ async function getEventById(id) {
 	}
 
 	if (dbType === 'sqlite') {
-		const event = db.prepare('SELECT e.id, et.name as event, e.timestamp, e.server_id, e.version, e.session_id, e.user_id, e.data, e.received_at, e.created_at, e.org_id, e.user_name, e.tool_name, e.company_name, e.error_message FROM telemetry_events e JOIN event_types et ON e.event_id = et.id WHERE e.id = ? AND e.deleted_at IS NULL').get(id);
+		const event = db.prepare('SELECT e.id, et.name as event, e.timestamp, e.server_id, e.version, e.session_id, e.user_id, e.data, e.received_at, e.created_at, e.org_id, e.user_name, e.tool_name, e.company_name, e.error_message, e.area FROM telemetry_events e JOIN event_types et ON e.event_id = et.id WHERE e.id = ? AND e.deleted_at IS NULL').get(id);
 		if (!event) {
 			return null;
 		}
@@ -1647,7 +1661,7 @@ async function getEventById(id) {
 			data: JSON.parse(event.data)
 		};
 	}
-	const result = await db.query('SELECT e.id, et.name as event, e.timestamp, e.server_id, e.version, e.session_id, e.user_id, e.data, e.received_at, e.created_at, e.org_id, e.user_name, e.tool_name, e.company_name, e.error_message FROM telemetry_events e JOIN event_types et ON e.event_id = et.id WHERE e.id = $1 AND e.deleted_at IS NULL', [id]);
+	const result = await db.query('SELECT e.id, et.name as event, e.timestamp, e.server_id, e.version, e.session_id, e.user_id, e.data, e.received_at, e.created_at, e.org_id, e.user_name, e.tool_name, e.company_name, e.error_message, e.area FROM telemetry_events e JOIN event_types et ON e.event_id = et.id WHERE e.id = $1 AND e.deleted_at IS NULL', [id]);
 	if (result.rows.length === 0) {
 		return null;
 	}
@@ -1667,7 +1681,7 @@ async function getEventTypeStats(options = {}) {
 
 	if (dbType === 'sqlite') {
 		let query = `
-			SELECT event, COUNT(*) as count
+			SELECT COALESCE(area, 'general') as event, COUNT(*) as count
 			FROM telemetry_events
 		`;
 		const params = [];
@@ -1690,7 +1704,7 @@ async function getEventTypeStats(options = {}) {
 			query += ` WHERE ${conditions.join(' AND ')}`;
 		}
 		query += `
-			GROUP BY event
+			GROUP BY COALESCE(area, 'general')
 			ORDER BY count DESC
 		`;
 		const stmt = db.prepare(query);
@@ -1698,7 +1712,7 @@ async function getEventTypeStats(options = {}) {
 		return result;
 	}
 	let query = `
-			SELECT event, COUNT(*) as count
+			SELECT COALESCE(area, 'general') as event, COUNT(*) as count
 			FROM telemetry_events
 		`;
 	const params = [];
@@ -1722,7 +1736,7 @@ async function getEventTypeStats(options = {}) {
 		query += ` WHERE ${conditions.join(' AND ')}`;
 	}
 	query += `
-			GROUP BY event
+			GROUP BY COALESCE(area, 'general')
 			ORDER BY count DESC
 		`;
 	const result = await db.query(query, params);

@@ -215,7 +215,7 @@ function safeShowToast(message, type = 'info') {
 	let teamEventCounts = new Map(); // team key -> event count in current view
 	let teamEventCountsSource = 'server'; // 'server' uses aggregated counters, 'local' uses paged events
 	let selectedActivityDate = null; // null means use current day by default
-	let activeFilters = new Set(['tool_call', 'session_start', 'custom', 'tool_error']);
+	let activeFilters = new Set(['tool', 'session', 'general']);
 	let selectedUserIds = new Set(); // Will be populated with all users when loaded - all selected by default
 	let allUserIds = new Set(); // Track all available user IDs
 	let selectedSessionsForDeletion = new Set(); // Track sessions selected for deletion
@@ -298,7 +298,7 @@ function safeShowToast(message, type = 'info') {
 		allLoadedEvents = [];
 		selectedSession = 'all';
 		selectedActivityDate = null;
-		activeFilters = new Set(['tool_call', 'session_start', 'custom', 'tool_error']);
+		activeFilters = new Set(['tool', 'session', 'general']);
 		selectedUserIds = new Set();
 		allUserIds = new Set();
 		selectedSessionsForDeletion = new Set();
@@ -2726,10 +2726,10 @@ function safeShowToast(message, type = 'info') {
 				order: sortOrder
 			});
 
-			// Apply level filters
-			if (activeFilters.size > 0 && activeFilters.size < 4) {
-				Array.from(activeFilters).forEach(level => {
-					params.append('eventType', level);
+			// Apply area filters
+			if (activeFilters.size > 0 && activeFilters.size < 3) {
+				Array.from(activeFilters).forEach(area => {
+					params.append('area', area);
 				});
 			}
 
@@ -2983,8 +2983,8 @@ function safeShowToast(message, type = 'info') {
 		}
 
 		renderableEvents.forEach(event => {
-			const levelClass = getLevelClass(event.event);
-			const levelBadgeClass = getLevelBadgeClass(event.event);
+			const levelClass = getLevelClass(event.area);
+			const levelBadgeClass = getLevelBadgeClass(event.area);
 			const description = formatDescription(event);
 			const eventData = normalizeEventData(event.data);
 			const clientName = event.company_name || '';
@@ -3028,7 +3028,7 @@ function safeShowToast(message, type = 'info') {
 				<td class="hidden text-gray-500 md:table-cell log-client whitespace-nowrap">${escapeHtml(clientName)}</td>
 				<td class="text-gray-500 whitespace-nowrap">
 					<span class="${levelBadgeClass}">
-						${event.event.replace('_', ' ')}
+						${event.area || 'N/A'}
 					</span>
 				</td>
 				<td class="hidden text-gray-500 lg:table-cell log-tool-name whitespace-nowrap">${toolName}</td>
@@ -3145,20 +3145,17 @@ function safeShowToast(message, type = 'info') {
 		}
 	}
 
-	function getLevelClass(eventType) {
+	function getLevelClass(area) {
 		const levelMap = {
-			'tool_call': 'debug',
-			'session_start': 'info',
-			'session_end': 'info',
-			'tool_error': 'error',
-			'error': 'error',
-			'custom': 'warning'
+			'tool': 'debug',
+			'session': 'info',
+			'general': 'warning'
 		};
-		return levelMap[eventType] || 'info';
+		return levelMap[area] || 'info';
 	}
 
-	function getLevelBadgeClass(eventType) {
-		const levelClass = getLevelClass(eventType);
+	function getLevelBadgeClass(area) {
+		const levelClass = getLevelClass(area);
 		return `level-badge ${levelClass}`;
 	}
 
@@ -3916,8 +3913,8 @@ function safeShowToast(message, type = 'info') {
 			searchInputEl.value = '';
 		}
 
-		// Reset all event type filters to active
-		activeFilters = new Set(['tool_call', 'session_start', 'custom', 'tool_error']);
+		// Reset all area filters to active
+		activeFilters = new Set(['tool', 'session', 'general']);
 		document.querySelectorAll('.level-filter-btn').forEach(btn => {
 			const level = btn.dataset.level;
 			if (activeFilters.has(level)) {

@@ -1339,6 +1339,7 @@ app.get('/api/events', auth.requireAuth, auth.requireRole('advanced'), async (re
 			limit = 50,
 			offset = 0,
 			eventType,
+			area,
 			serverId,
 			sessionId,
 			startDate,
@@ -1351,7 +1352,9 @@ app.get('/api/events', auth.requireAuth, auth.requireRole('advanced'), async (re
 		// Enforce maximum limit to prevent performance issues
 		const effectiveLimit = Math.min(Number.parseInt(limit, 10), MAX_API_LIMIT);
 
-		// Handle multiple eventType values (Express converts them to an array)
+		// Handle multiple area values (preferred over eventType for area-based filtering)
+		const areas = Array.isArray(area) ? area : (area ? [area] : []);
+		// Handle multiple eventType values (Express converts them to an array) - fallback for backward compatibility
 		const eventTypes = Array.isArray(eventType) ? eventType : (eventType ? [eventType] : []);
 		// Handle multiple userId values (Express converts them to an array)
 		const userIds = Array.isArray(userId) ? userId : (userId ? [userId] : []);
@@ -1369,6 +1372,7 @@ app.get('/api/events', auth.requireAuth, auth.requireRole('advanced'), async (re
 		const result = await db.getEvents({
 			limit: effectiveLimit,
 			offset: Number.parseInt(offset, 10),
+			areas: areas.length > 0 ? areas : undefined,
 			eventTypes: eventTypes.length > 0 ? eventTypes : undefined,
 			serverId,
 			sessionId,
