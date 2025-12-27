@@ -1116,7 +1116,7 @@ async function storeEvent(telemetryEvent, receivedAt) {
 			console.warn('Dropping telemetry event without username/userId');
 			// Store discarded event as general error
 			const timestamp = receivedAt || new Date().toISOString();
-			storeDiscardedEvent(telemetryEvent.payload || telemetryEvent, 'missing_username', timestamp).catch(err => {
+			storeDiscardedEvent(telemetryEvent.payload || telemetryEvent, 'Event discarded: missing username/userId', timestamp).catch(err => {
 				console.error('Error storing discarded event:', err);
 			});
 			return false;
@@ -1128,7 +1128,7 @@ async function storeEvent(telemetryEvent, receivedAt) {
 			console.warn(`Unknown event type: ${telemetryEvent.eventType}, dropping event`);
 			// Store discarded event as general error
 			const timestamp = receivedAt || new Date().toISOString();
-			storeDiscardedEvent(telemetryEvent.payload || telemetryEvent, `unknown_event_type:${telemetryEvent.eventType}`, timestamp).catch(err => {
+			storeDiscardedEvent(telemetryEvent.payload || telemetryEvent, `Event discarded: unknown event type '${telemetryEvent.eventType}'`, timestamp).catch(err => {
 				console.error('Error storing discarded event:', err);
 			});
 			return false;

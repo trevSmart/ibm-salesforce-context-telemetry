@@ -418,10 +418,13 @@ app.post('/telemetry', (req, res) => {
 			});
 		}
 
-		if (!userId && !allowMissingUser && !isSessionEventWithoutStart) {
+		if (!userId
+			&& !['server_boot', 'client_connect'].includes(telemetryEvent.event)
+			&& !allowMissingUser
+			&& !isSessionEventWithoutStart) {
 			console.warn('Dropping telemetry event without username/userId');
 			// Store discarded event as general error
-			db.storeDiscardedEvent(rawTelemetryData, 'missing_username', receivedAt).catch(err => {
+			db.storeDiscardedEvent(rawTelemetryData, 'Event discarded: missing username/userId', receivedAt).catch(err => {
 				console.error('Error storing discarded event:', err);
 			});
 			return res.status(202).json({
