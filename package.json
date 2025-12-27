@@ -6,7 +6,8 @@
   "scripts": {
     "prestart": "lsof -ti :3100,35729,35730 | xargs kill -9 2>/dev/null || true",
     "predev": "lsof -ti :35730 | xargs kill -9 2>/dev/null || true",
-    "start": "npm run build:css && node src/index.js",
+    "start": "npm run build:css && NODE_ENV=development node src/index.js",
+    "start:prod": "npm run build:css && node src/index.js",
     "dev": "LIVERELOAD_PORT=35730 concurrently \"npm run dev:css\" \"nodemon src/index.js\"",
     "dev:css": "tailwindcss -i ./public/css/input.css -o ./public/css/output.css --watch",
     "build": "npm run build:css:prod",

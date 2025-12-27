@@ -171,7 +171,7 @@ function initSessionMiddleware() {
 	const sessionConfig = {
 		secret: SESSION_SECRET,
 		resave: false,
-		saveUninitialized: false,
+		saveUninitialized: true,
 		cookie: {
 			secure: isProduction, // Use secure cookies in production (HTTPS)
 			httpOnly: true,
