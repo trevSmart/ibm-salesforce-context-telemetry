@@ -1245,6 +1245,8 @@ app.post('/api/people/:id/usernames', auth.requireAuth, auth.requireRole('admini
 });
 
 // Settings API endpoints
+// OBSOLETE: Not used by frontend - commented out
+/*
 app.get('/api/settings/org-team-mappings', auth.requireAuth, async (req, res) => {
 	try {
 		const mappingsJson = await db.getSetting('org_team_mappings');
@@ -1310,6 +1312,7 @@ app.post('/api/settings/org-team-mappings', auth.requireAuth, auth.requireRole('
 		});
 	}
 });
+*/
 
 // API endpoints for viewing telemetry data
 app.get('/api/events', auth.requireAuth, auth.requireRole('advanced'), async (req, res) => {
@@ -1409,6 +1412,8 @@ app.get('/api/events/:id', auth.requireAuth, auth.requireRole('advanced'), async
 	}
 });
 
+// OBSOLETE: Not used by frontend (uses /api/daily-stats instead) - commented out
+/*
 app.get('/api/stats', auth.requireAuth, async (req, res) => {
 	try {
 		const {startDate, endDate, eventType} = req.query;
@@ -1434,6 +1439,7 @@ app.get('/api/stats', auth.requireAuth, async (req, res) => {
 		});
 	}
 });
+*/
 
 app.get('/api/event-types', auth.requireAuth, auth.requireRole('advanced'), async (req, res) => {
 	try {
@@ -1516,6 +1522,8 @@ app.get('/api/sessions', auth.requireAuth, auth.requireRole('advanced'), async (
 });
 
 // Check if user_logins table exists (temporary endpoint)
+// OBSOLETE: No longer used - commented out
+/*
 app.get('/api/check-user-logins-table', async (req, res) => {
 	try {
 		let tableExists = false;
@@ -1557,6 +1565,7 @@ app.get('/api/check-user-logins-table', async (req, res) => {
 		});
 	}
 });
+*/
 
 // User login logs endpoint (god only)
 app.get('/api/user-login-logs', auth.requireAuth, auth.requireRole('god'), async (req, res) => {
@@ -1594,6 +1603,8 @@ app.get('/api/user-login-logs', auth.requireAuth, auth.requireRole('god'), async
 });
 
 // Temporary user info endpoint (admin only) - REMOVE AFTER USE
+// OBSOLETE: No longer used - commented out
+/*
 app.get('/api/user-info/:username', auth.requireAuth, auth.requireRole('administrator'), async (req, res) => {
 	try {
 		const {username} = req.params;
@@ -1620,8 +1631,11 @@ app.get('/api/user-info/:username', auth.requireAuth, auth.requireRole('administ
 		res.status(500).json({error: 'Failed to get user info'});
 	}
 });
+*/
 
 // Temporary user management endpoint (admin only) - REMOVE AFTER USE
+// OBSOLETE: No longer used - commented out
+/*
 app.post('/api/manage-user', auth.requireAuth, auth.requireRole('administrator'), async (req, res) => {
 	try {
 		const {action, username, role} = req.body;
@@ -1652,8 +1666,11 @@ app.post('/api/manage-user', auth.requireAuth, auth.requireRole('administrator')
 		res.status(500).json({error: 'Failed to manage user'});
 	}
 });
+*/
 
 // Temporary user creation endpoint (admin only) - REMOVE AFTER USE
+// OBSOLETE: No longer used - commented out
+/*
 app.post('/api/create-user', auth.requireAuth, auth.requireRole('administrator'), async (req, res) => {
 	try {
 		const {username, password, role} = req.body;
@@ -1702,6 +1719,7 @@ app.post('/api/create-user', auth.requireAuth, auth.requireRole('administrator')
 		res.status(500).json({error: 'Failed to create user'});
 	}
 });
+*/
 
 app.get('/api/daily-stats', auth.requireAuth, async (req, res) => {
 	try {
@@ -2150,6 +2168,8 @@ app.post('/api/orgs', auth.requireAuth, auth.requireRole('administrator'), async
 	}
 });
 
+// OBSOLETE: Not used by frontend - commented out
+/*
 app.put('/api/orgs/:id', auth.requireAuth, auth.requireRole('administrator'), async (req, res) => {
 	try {
 		const orgId = req.params.id;
@@ -2174,6 +2194,7 @@ app.put('/api/orgs/:id', auth.requireAuth, auth.requireRole('administrator'), as
 		});
 	}
 });
+*/
 
 app.post('/api/orgs/:id/move', auth.requireAuth, auth.requireRole('administrator'), async (req, res) => {
 	try {
@@ -2209,6 +2230,8 @@ app.post('/api/orgs/:id/move', auth.requireAuth, auth.requireRole('administrator
 });
 
 // User-team assignment endpoint
+// OBSOLETE: Not used by frontend - commented out
+/*
 app.post('/api/users/:id/assign-team', auth.requireAuth, auth.requireRole('administrator'), async (req, res) => {
 	try {
 		const userId = Number.parseInt(req.params.id, 10);
@@ -2248,6 +2271,7 @@ app.post('/api/users/:id/assign-team', auth.requireAuth, auth.requireRole('admin
 		});
 	}
 });
+*/
 
 // Event user management endpoints
 // Get all unique event user names from telemetry data
@@ -2447,6 +2471,8 @@ app.get('/people', auth.requireAuth, auth.requireRole('administrator'), (_req, r
 });
 
 // Temporary debug route without authentication
+// OBSOLETE: Temporary debug endpoint - commented out
+/*
 app.get('/people-debug', (_req, res) => {
 	const peoplePath = path.join(__dirname, '..', 'public', 'people.html');
 	if (fs.existsSync(peoplePath)) {
@@ -2455,6 +2481,7 @@ app.get('/people-debug', (_req, res) => {
 		res.status(404).send('People page not found');
 	}
 });
+*/
 
 // Serve OpenAPI specification
 app.get('/api-spec', auth.requireAuth, (_req, res) => {
@@ -2591,6 +2618,8 @@ app.delete('/api/events', auth.requireAuth, auth.requireRole('advanced'), async 
 });
 
 // Recover a soft deleted event
+// OBSOLETE: Not used by frontend - commented out
+/*
 app.patch('/api/events/:id/recover', auth.requireAuth, auth.requireRole('advanced'), async (req, res) => {
 	try {
 		const eventId = Number.parseInt(req.params.id, 10);
@@ -2625,8 +2654,11 @@ app.patch('/api/events/:id/recover', auth.requireAuth, auth.requireRole('advance
 		});
 	}
 });
+*/
 
 // Permanently delete a soft deleted event
+// OBSOLETE: Not used by frontend - commented out
+/*
 app.delete('/api/events/:id/permanent', auth.requireAuth, auth.requireRole('administrator'), async (req, res) => {
 	try {
 		const eventId = Number.parseInt(req.params.id, 10);
@@ -2661,6 +2693,7 @@ app.delete('/api/events/:id/permanent', auth.requireAuth, auth.requireRole('admi
 		});
 	}
 });
+*/
 
 // Get deleted events (trash bin)
 app.get('/api/events/deleted', auth.requireAuth, auth.requireRole('advanced'), async (req, res) => {
@@ -2712,6 +2745,8 @@ app.delete('/api/events/deleted', auth.requireAuth, auth.requireRole('advanced')
 });
 
 // Cleanup old deleted events (permanent deletion of events deleted more than X days ago)
+// OBSOLETE: Not used by frontend - commented out
+/*
 app.delete('/api/events/deleted/cleanup', auth.requireAuth, auth.requireRole('administrator'), async (req, res) => {
 	try {
 		const daysOld = Number.parseInt(req.query.days, 10) || 30;
@@ -2740,6 +2775,7 @@ app.delete('/api/events/deleted/cleanup', auth.requireAuth, auth.requireRole('ad
 		});
 	}
 });
+*/
 
 // Export entire database
 app.get('/api/database/export', auth.requireAuth, auth.requireRole('administrator'), async (req, res) => {

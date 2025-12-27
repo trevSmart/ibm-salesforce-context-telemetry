@@ -157,9 +157,23 @@ async function init() {
 	} else if (dbType === 'postgresql') {
 		const {Pool} = await import('pg');
 
+		// Prefer internal database URL if available (for Render.com internal networking)
+		// Internal URL uses private network and is faster/more secure within same region
+		const databaseUrl = process.env.DATABASE_INTERNAL_URL || process.env.DATABASE_URL;
+		
+		if (!databaseUrl) {
+			throw new Error('DATABASE_URL or DATABASE_INTERNAL_URL must be set for PostgreSQL');
+		}
+
+		// Determine if we're using internal URL (no SSL needed for internal connections)
+		const isInternalUrl = Boolean(process.env.DATABASE_INTERNAL_URL);
+		const useSSL = isInternalUrl ? false : (process.env.DATABASE_SSL === 'true' ? {rejectUnauthorized: false} : false);
+
+		console.log(`📊 Connecting to PostgreSQL using ${isInternalUrl ? 'internal' : 'external'} URL`);
+
 		const pool = new Pool({
-			connectionString: process.env.DATABASE_URL,
-			ssl: process.env.DATABASE_SSL === 'true' ? {rejectUnauthorized: false} : false,
+			connectionString: databaseUrl,
+			ssl: useSSL,
 			// Connection pool optimization
 			max: 20, // Maximum pool size
 			min: 2, // Minimum pool size
