@@ -1111,8 +1111,10 @@ async function storeEvent(telemetryEvent, receivedAt) {
 		const sessionId = telemetryEvent.getSessionId();
 		const userId = telemetryEvent.getUserId();
 		const allowMissingUser = telemetryEvent.data?.allowMissingUser === true;
+		const isSessionEventWithoutStart = telemetryEvent.area === 'session' && telemetryEvent.event !== 'session_start';
+		const isExemptEvent = ['server_boot', 'client_connect'].includes(telemetryEvent.event);
 
-		if (!userId && !allowMissingUser) {
+		if (!userId && !allowMissingUser && !isSessionEventWithoutStart && !isExemptEvent) {
 			console.warn('Dropping telemetry event without username/userId');
 			// Store discarded event as general error
 			const timestamp = receivedAt || new Date().toISOString();
