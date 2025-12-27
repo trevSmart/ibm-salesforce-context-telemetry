@@ -117,8 +117,9 @@ Per reduir significativament el temps de build a Render:
 1. **Configura el Build Command a Render**:
    - Al dashboard del teu servei web, ves a "Settings"
    - Busca la secció "Build & Deploy"
-   - Canvia el "Build Command" de `npm install` a `npm ci`
+   - Canvia el "Build Command" de `npm install` a `npm ci --production`
    - `npm ci` és més ràpid i determinístic que `npm install`
+   - El flag `--production` assegura que només s'instal·lin les dependències de producció (no les `devDependencies`), reduint el temps de build i la mida del deploy
 
 2. **El fitxer `.npmrc`** (ja inclòs al repositori):
    - Desactiva l'audit durant l'instal·lació (tarda molt)
