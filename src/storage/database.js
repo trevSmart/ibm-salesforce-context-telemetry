@@ -1114,6 +1114,11 @@ async function storeEvent(telemetryEvent, receivedAt) {
 
 		if (!userId && !allowMissingUser) {
 			console.warn('Dropping telemetry event without username/userId');
+			// Store discarded event as general error
+			const timestamp = receivedAt || new Date().toISOString();
+			storeDiscardedEvent(telemetryEvent.payload || telemetryEvent, 'missing_username', timestamp).catch(err => {
+				console.error('Error storing discarded event:', err);
+			});
 			return false;
 		}
 
@@ -1121,6 +1126,11 @@ async function storeEvent(telemetryEvent, receivedAt) {
 		const eventTypeId = await getEventTypeId(telemetryEvent.eventType);
 		if (!eventTypeId) {
 			console.warn(`Unknown event type: ${telemetryEvent.eventType}, dropping event`);
+			// Store discarded event as general error
+			const timestamp = receivedAt || new Date().toISOString();
+			storeDiscardedEvent(telemetryEvent.payload || telemetryEvent, `unknown_event_type:${telemetryEvent.eventType}`, timestamp).catch(err => {
+				console.error('Error storing discarded event:', err);
+			});
 			return false;
 		}
 
@@ -1229,6 +1239,182 @@ async function storeEvent(telemetryEvent, receivedAt) {
 	} catch (error) {
 		// Re-throw to allow caller to handle
 		throw new Error(`Failed to store telemetry event: ${error.message}`);
+	}
+}
+
+/**
+ * Store a discarded telemetry event as a general error
+ * This function stores events that were discarded for any reason (missing userId, unknown event type, etc.)
+ * without any validation requirements - it stores everything that was discarded
+ * @param {object} rawPayload - Original raw payload that was discarded
+ * @param {string} reason - Reason why the event was discarded (optional)
+ * @param {string} receivedAt - ISO timestamp when event was received
+ * @returns {Promise<boolean>} Success status
+ */
+async function storeDiscardedEvent(rawPayload, reason = 'discarded', receivedAt = null) {
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
+
+	try {
+		// Use current timestamp if not provided
+		const timestamp = receivedAt || new Date().toISOString();
+
+		// Get or create "error" event type (used for discarded events)
+		let eventTypeId = await getEventTypeId('error');
+		if (!eventTypeId) {
+			// If "error" type doesn't exist, create it
+			if (dbType === 'sqlite') {
+				const stmt = db.prepare('INSERT INTO event_types (name, description) VALUES (?, ?)');
+				const result = stmt.run('error', 'General error event');
+				eventTypeId = result.lastInsertRowid;
+			} else if (dbType === 'postgresql') {
+				const result = await db.query(
+					'INSERT INTO event_types (name, description) VALUES ($1, $2) ON CONFLICT (name) DO NOTHING RETURNING id',
+					['error', 'General error event']
+				);
+				if (result.rows.length > 0) {
+					eventTypeId = result.rows[0].id;
+				} else {
+					// Type already exists, fetch it
+					eventTypeId = await getEventTypeId('error');
+				}
+			}
+		}
+
+		// Store the discarded payload as-is in the data field
+		const payloadToStore = typeof rawPayload === 'string' ? rawPayload : JSON.stringify(rawPayload);
+
+		// Extract any available metadata from the payload if it exists
+		let serverId = null;
+		let version = null;
+		let sessionId = null;
+		let userId = null;
+		let orgId = null;
+		let userName = null;
+		let toolName = null;
+		let companyName = null;
+		let errorMessage = reason;
+
+		// Try to extract metadata from payload if it's an object
+		if (typeof rawPayload === 'object' && rawPayload !== null) {
+			// Try to get server info
+			if (rawPayload.server?.id) {
+				serverId = rawPayload.server.id;
+			}
+			if (rawPayload.server?.version) {
+				version = rawPayload.server.version;
+			}
+
+			// Try to get session info
+			if (rawPayload.session?.id) {
+				sessionId = rawPayload.session.id;
+			}
+
+			// Try to get user info
+			if (rawPayload.user?.id) {
+				userId = rawPayload.user.id;
+			}
+			if (rawPayload.data?.userName || rawPayload.data?.user_name) {
+				userName = rawPayload.data.userName || rawPayload.data.user_name;
+			}
+
+			// Try to get org info
+			if (rawPayload.server?.id) {
+				orgId = rawPayload.server.id;
+			}
+
+			// Try to get tool name
+			if (rawPayload.data?.toolName || rawPayload.data?.tool_name) {
+				toolName = rawPayload.data.toolName || rawPayload.data.tool_name;
+			}
+
+			// Try to get company name
+			if (rawPayload.data?.companyName || rawPayload.data?.company_name) {
+				companyName = rawPayload.data.companyName || rawPayload.data.company_name;
+			}
+		}
+
+		// Resolve team_id if orgId is available
+		let teamId = null;
+		if (orgId) {
+			try {
+				if (dbType === 'sqlite') {
+					const result = db.prepare('SELECT team_id FROM orgs WHERE server_id = ?').get(orgId);
+					teamId = result?.team_id || null;
+				} else if (dbType === 'postgresql') {
+					const result = await db.query('SELECT team_id FROM orgs WHERE server_id = $1', [orgId]);
+					teamId = result.rows.length > 0 ? result.rows[0].team_id : null;
+				}
+			} catch (error) {
+				// Log error but don't fail event insertion
+				console.warn('Could not resolve team_id for org_id %s:', orgId, error.message);
+			}
+		}
+
+		// Insert the discarded event with area='general' and success=false
+		if (dbType === 'sqlite') {
+			const stmt = getPreparedStatement('insertDiscardedEvent', `
+				INSERT INTO telemetry_events
+				(event_id, timestamp, server_id, version, session_id, parent_session_id, user_id, data, received_at, org_id, user_name, tool_name, company_name, error_message, team_id, event, area, success, telemetry_schema_version)
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			`);
+
+			stmt.run(
+				eventTypeId,
+				timestamp,
+				serverId,
+				version,
+				sessionId,
+				null, // parent_session_id
+				userId,
+				payloadToStore,
+				receivedAt || timestamp,
+				orgId,
+				userName,
+				toolName,
+				companyName,
+				errorMessage,
+				teamId,
+				'error', // event type name for compatibility
+				'general', // area
+				false, // success
+				null // telemetry_schema_version
+			);
+		} else if (dbType === 'postgresql') {
+			await db.query(
+				`INSERT INTO telemetry_events
+				(event_id, timestamp, server_id, version, session_id, parent_session_id, user_id, data, received_at, org_id, user_name, tool_name, company_name, error_message, team_id, event, area, success, telemetry_schema_version)
+				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)`,
+				[
+					eventTypeId,
+					timestamp,
+					serverId,
+					version,
+					sessionId,
+					null, // parent_session_id
+					userId,
+					payloadToStore,
+					receivedAt || timestamp,
+					orgId,
+					userName,
+					toolName,
+					companyName,
+					errorMessage,
+					teamId,
+					'error', // event type name for compatibility
+					'general', // area
+					false, // success
+					null // telemetry_schema_version
+				]
+			);
+		}
+
+		return true;
+	} catch (error) {
+		// Log error but don't throw - we don't want discarded event storage to fail the main flow
+		console.error('Error storing discarded event:', error);
+		return false;
 	}
 }
 
@@ -6832,6 +7018,7 @@ async function getUserLoginLogs(options = {}) {
 export {
 	init,
 	storeEvent,
+	storeDiscardedEvent,
 	getStats,
 	getEvents,
 	getEventById,
