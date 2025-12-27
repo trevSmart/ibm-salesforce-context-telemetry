@@ -434,6 +434,20 @@ async function openSettingsModal() {
 									</div>
 								</div>
 							</div>
+							<div class="settings-toggle-row" style="align-items: flex-start; margin-top: 16px;">
+								<div class="settings-toggle-text">
+									<div class="settings-toggle-title">Clear local data</div>
+									<div class="settings-toggle-description">
+										Remove all local preferences and cached data stored in this browser for the telemetry dashboard (theme, filters, mappings, etc.).
+									</div>
+								</div>
+								<div class="settings-toggle-actions">
+									<button type="button" class="btn" id="clearLocalDataBtn">
+										<i class="fa-solid fa-broom"></i>
+										Clear local data
+									</button>
+								</div>
+							</div>
 						</section>
 						${isAdministrator ? `
 						<section id="settings-users" class="settings-section settings-users-section" style="display: none;">
@@ -471,7 +485,7 @@ async function openSettingsModal() {
 						` : ''}
 						${isAdministrator ? `
 						<section id="settings-import-export" class="settings-section" style="display: none;">
-							<div class="settings-modal-placeholder-title">Import/Export</div>
+							<div class="settings-modal-placeholder-title">Database</div>
 							<div class="settings-modal-placeholder-text">
 								<div class="settings-toggle-row" style="flex-direction: column; align-items: flex-start; justify-content: flex-start;">
 									<div class="settings-toggle-text">
@@ -550,38 +564,6 @@ async function openSettingsModal() {
 							<div class="settings-modal-placeholder-text">
 								<div class="settings-toggle-row" style="align-items: flex-start;">
 									<div class="settings-toggle-text">
-										<div class="settings-toggle-title">Clear local data</div>
-										<div class="settings-toggle-description">
-											Remove all local preferences and cached data stored in this browser for the telemetry dashboard (theme, filters, mappings, etc.).
-										</div>
-									</div>
-								<div class="settings-toggle-actions">
-									<button type="button" class="btn" id="clearLocalDataBtn">
-										<i class="fa-solid fa-broom"></i>
-										Clear local data
-									</button>
-								</div>
-								</div>
-								<div class="settings-toggle-row" style="align-items: flex-start; margin-top: 8px;">
-									<div class="settings-toggle-text">
-										<div class="settings-toggle-title">Delete all events</div>
-										<div class="settings-toggle-description">
-											Move all telemetry events to trash. Events can be restored or permanently deleted later.
-										</div>
-									</div>
-                <div class="settings-toggle-actions">
-                  ${canDeleteAllEvents ? `
-                    <button type="button" class="btn" id="deleteAllEventsBtn">
-                      <i class="fa-solid fa-trash-can"></i>
-                      Delete all events
-                    </button>
-                  ` : `
-                    <div class="settings-toggle-description">Only advanced or administrator users can delete all events.</div>
-                  `}
-                </div>
-								</div>
-								<div class="settings-toggle-row" style="align-items: flex-start; margin-top: 8px;">
-									<div class="settings-toggle-text">
 										<div class="settings-toggle-title">Empty trash</div>
 										<div class="settings-toggle-description" id="trashInfo">
 											Permanently delete all events currently in the trash. This action cannot be undone.
@@ -595,6 +577,24 @@ async function openSettingsModal() {
                     </button>
                   ` : `
                     <div class="settings-toggle-description">Only advanced or administrator users can empty trash.</div>
+                  `}
+                </div>
+								</div>
+								<div class="settings-toggle-row" style="align-items: flex-start; margin-top: 8px;">
+									<div class="settings-toggle-text">
+										<div class="settings-toggle-title">Delete all events</div>
+										<div class="settings-toggle-description">
+											Move all telemetry events to trash. Events can be restored or permanently deleted later.
+										</div>
+									</div>
+                <div class="settings-toggle-actions">
+                  ${canDeleteAllEvents ? `
+                    <button type="button" class="btn btn-destructive" id="deleteAllEventsBtn">
+                      <i class="fa-solid fa-trash-can"></i>
+                      Delete all events
+                    </button>
+                  ` : `
+                    <div class="settings-toggle-description">Only advanced or administrator users can delete all events.</div>
                   `}
                 </div>
 								</div>

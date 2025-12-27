@@ -308,6 +308,141 @@
     border-radius: 0 9999px 9999px 0;
   }
 
+  /* Custom tooltip styles */
+  .custom-tooltip {
+    position: absolute;
+    z-index: 10000;
+    padding: 6px 10px;
+    font-size: 0.75rem;
+    line-height: 1.4;
+    color: white;
+    background-color: rgba(0, 0, 0, 0.85);
+    border-radius: 4px;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease-out, visibility 0.2s ease-out, transform 0.2s ease-out;
+    white-space: nowrap;
+    max-width: 200px;
+    word-wrap: break-word;
+    white-space: normal;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    backdrop-filter: blur(8px);
+  }
+
+  html.dark .custom-tooltip {
+    background-color: rgba(30, 30, 30, 0.95);
+    color: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
+
+  /* Different transform directions based on position - initial state */
+  .custom-tooltip-top {
+    transform: translateY(4px);
+  }
+
+  .custom-tooltip-top.visible {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+  }
+
+  .custom-tooltip-bottom {
+    transform: translateY(-4px);
+  }
+
+  .custom-tooltip-bottom.visible {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+  }
+
+  .custom-tooltip-left {
+    transform: translateX(4px);
+  }
+
+  .custom-tooltip-left.visible {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(0);
+  }
+
+  .custom-tooltip-right {
+    transform: translateX(-4px);
+  }
+
+  .custom-tooltip-right.visible {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(0);
+  }
+
+  /* Nubbin (arrow) styles - positioned at center of tooltip edge */
+  .custom-tooltip::before {
+    content: '';
+    position: absolute;
+    width: 0;
+    height: 0;
+    border-style: solid;
+  }
+
+  /* Top position - nubbin at bottom center */
+  .custom-tooltip-top::before {
+    bottom: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 6px 6px 0 6px;
+    border-color: rgba(0, 0, 0, 0.85) transparent transparent transparent;
+  }
+
+  html.dark .custom-tooltip-top::before {
+    border-color: rgba(30, 30, 30, 0.95) transparent transparent transparent;
+  }
+
+  /* Bottom position - nubbin at top center */
+  .custom-tooltip-bottom::before {
+    top: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 0 6px 6px 6px;
+    border-color: transparent transparent rgba(0, 0, 0, 0.85) transparent;
+  }
+
+  html.dark .custom-tooltip-bottom::before {
+    border-color: transparent transparent rgba(30, 30, 30, 0.95) transparent;
+  }
+
+  /* Left position - nubbin at right center */
+  .custom-tooltip-left::before {
+    right: -6px;
+    top: 50%;
+    transform: translateY(-50%);
+    border-width: 6px 0 6px 6px;
+    border-color: transparent transparent transparent rgba(0, 0, 0, 0.85);
+  }
+
+  html.dark .custom-tooltip-left::before {
+    border-color: transparent transparent transparent rgba(30, 30, 30, 0.95);
+  }
+
+  /* Right position - nubbin at left center */
+  .custom-tooltip-right::before {
+    left: -6px;
+    top: 50%;
+    transform: translateY(-50%);
+    border-width: 6px 6px 6px 0;
+    border-color: transparent rgba(0, 0, 0, 0.85) transparent transparent;
+  }
+
+  html.dark .custom-tooltip-right::before {
+    border-color: transparent rgba(30, 30, 30, 0.95) transparent transparent;
+  }
+
+  /* Prevent default browser tooltips on elements with custom tooltips */
+  [data-tooltip] {
+    /* No special cursor styling */
+  }
+
   .navbar-btn-icon {
     color: #6b7280;
     border: 1px solid #e5e7eb;
@@ -3165,20 +3300,15 @@ f    background: #deefff !important;
 
   .logs-table-container {
     flex: 1;
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
     position: relative;
     min-height: 0;
-    display: flex;
-    flex-direction: column;
+    max-height: calc(100vh - 300px);
+    display: block;
     text-align: start;
     border-radius: 12px;
     padding-bottom: 12px;
-  }
-
-  .logs-table-container > div:last-child {
-    flex: 1;
-    overflow-y: auto;
-    min-height: 0;
     padding-right: 4px;
   }
 
@@ -3196,9 +3326,6 @@ f    background: #deefff !important;
 
   .logs-table thead {
     display: table-header-group;
-    position: sticky;
-    top: 0;
-    z-index: 10;
   }
 
   html.dark .logs-table thead {
@@ -3789,7 +3916,7 @@ f    background: #deefff !important;
 
   /* Table scrollbar - always visible, same style as sessions */
   .logs-table-container > div:last-child::-webkit-scrollbar {
-    width: 8px;
+    width: 7px;
   }
 
   .logs-table-container > div:last-child::-webkit-scrollbar-track {
