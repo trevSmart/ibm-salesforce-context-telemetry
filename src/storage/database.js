@@ -3864,16 +3864,6 @@ async function migrateExistingEventsToSchemaV2() {
 	}
 
 	try {
-		// Mapping from event types to v2 structure
-		const eventMapping = {
-			'tool_call': {area: 'tool', event: 'execution', success: true},
-			'tool_error': {area: 'tool', event: 'execution', success: false},
-			'session_start': {area: 'session', event: 'session_start', success: true},
-			'session_end': {area: 'session', event: 'session_end', success: true},
-			'error': {area: 'general', event: 'error_occurred', success: false},
-			'custom': {area: 'general', event: 'custom', success: true}
-		};
-
 		if (dbType === 'sqlite') {
 			// SQLite: use UPDATE with CASE statements for efficiency (similar to PostgreSQL)
 			// This avoids the LIMIT/OFFSET pagination issue where records are skipped
