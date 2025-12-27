@@ -11,6 +11,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import {fileURLToPath} from 'node:url';
 import {dirname} from 'node:path';
+import {TelemetryEvent} from './telemetry-event.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -1102,7 +1103,7 @@ async function storeEvent(telemetryEvent, receivedAt) {
 	}
 
 	// Validate that it's a TelemetryEvent instance
-	if (!(telemetryEvent instanceof (await import('./telemetry-event.js')).TelemetryEvent)) {
+	if (!(telemetryEvent instanceof TelemetryEvent)) {
 		throw new Error('storeEvent() requires a TelemetryEvent instance');
 	}
 

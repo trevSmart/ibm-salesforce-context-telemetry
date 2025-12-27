@@ -4,7 +4,8 @@ info:
   description: |
     API specification for the IBM Salesforce Context Telemetry Server.
     This API receives telemetry events from MCP server instances.
-  version: 1.1.0
+    Supports both schema v1 (legacy) and v2 (current) formats for maximum compatibility.
+  version: 1.2.0
   contact:
     name: IBM Salesforce Context Team
     url: https://github.com/trevSmart/ibm-salesforce-context-telemetry
@@ -21,6 +22,7 @@ paths:
       summary: Send telemetry event
       description: |
         Receives telemetry events from MCP server instances.
+        Supports both schema v1 (legacy) and v2 (current) formats.
         Events are logged and can be stored for analytics purposes.
       operationId: sendTelemetry
       tags:
@@ -57,7 +59,7 @@ paths:
                     errorMessage: Invalid object name
                     success: false
               sessionStart:
-                summary: Session start event
+                summary: Session start event (v1 schema)
                 value:
                   event: session_start
                   timestamp: "2024-01-15T10:30:00.000Z"
@@ -66,6 +68,92 @@ paths:
                   data:
                     transport: stdio
                     clientVersion: "1.0.0"
+              v2ToolCall:
+                summary: Tool call event (v2 schema)
+                value:
+                  schemaVersion: 2
+                  area: tool
+                  event: execution
+                  success: true
+                  timestamp: "2024-01-15T10:30:00.000Z"
+                  server:
+                    id: "server-instance-123"
+                    version: "1.0.0"
+                    capabilities: {}
+                  client:
+                    name: "Cursor"
+                    version: "1.0.0"
+                    capabilities: {}
+                  session:
+                    id: "session-456"
+                    transport: "stdio"
+                    protocolVersion: "2025-11-25"
+                  user:
+                    id: "user-789"
+                  data:
+                    toolName: execute_queries_and_dml
+                    operation: query
+                    duration: 150
+              v2ToolError:
+                summary: Tool error event (v2 schema)
+                value:
+                  schemaVersion: 2
+                  area: tool
+                  event: execution
+                  success: false
+                  timestamp: "2024-01-15T10:30:00.000Z"
+                  server:
+                    id: "server-instance-123"
+                    version: "1.0.0"
+                    capabilities: {}
+                  session:
+                    id: "session-456"
+                    transport: "stdio"
+                    protocolVersion: "2025-11-25"
+                  user:
+                    id: "user-789"
+                  data:
+                    toolName: describe_object
+                    errorType: ValidationError
+                    errorMessage: Invalid object name
+                    duration: 50
+              v2SessionStart:
+                summary: Session start event (v2 schema)
+                value:
+                  schemaVersion: 2
+                  area: session
+                  event: session_start
+                  success: true
+                  timestamp: "2024-01-15T10:30:00.000Z"
+                  server:
+                    id: "server-instance-123"
+                    version: "1.0.0"
+                    capabilities: {}
+                  session:
+                    id: "session-456"
+                    transport: "stdio"
+                    protocolVersion: "2025-11-25"
+                  data:
+                    transport: stdio
+              v2ServerBoot:
+                summary: Server boot event (v2 schema)
+                value:
+                  schemaVersion: 2
+                  area: session
+                  event: server_boot
+                  success: true
+                  timestamp: "2024-01-15T10:29:00.000Z"
+                  server:
+                    id: "server-instance-123"
+                    version: "1.0.0"
+                    capabilities: {}
+                  session:
+                    id: null
+                    transport: "stdio"
+                    protocolVersion: "2025-11-25"
+                  data:
+                    transport: stdio
+                    port: null
       responses:
         '200':
           description: Telemetry event received successfully
@@ -84,7 +172,7 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
               example:
                 status: error
-                message: Invalid telemetry data: expected JSON object
+                message: Invalid telemetry data
         '500':
           description: Internal server error
           content:
@@ -220,6 +308,6 @@ components:
         message:
           type: string
           description: Error message describing what went wrong
-          example: Invalid telemetry data: expected JSON object
+          example: Invalid telemetry data
 
   securitySchemes: {}
