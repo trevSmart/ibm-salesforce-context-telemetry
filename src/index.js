@@ -98,6 +98,7 @@ import * as logFormatter from './storage/log-formatter.js';
 import * as auth from './auth/auth.js';
 import * as csrf from './auth/csrf.js';
 import {Cache} from './utils/performance.js';
+import {parseTelemetryEvent} from './storage/parsers/index.js';
 const app = express();
 const port = process.env.PORT || 3100;
 
@@ -357,43 +358,23 @@ app.use((req, res, next) => {
 
 app.post('/telemetry', (req, res) => {
 	try {
-		const telemetryData = req.body;
+		const rawTelemetryData = req.body;
 
 		// Basic validation
-		if (!telemetryData || typeof telemetryData !== 'object') {
+		if (!rawTelemetryData || typeof rawTelemetryData !== 'object') {
 			return res.status(400).json({
 				status: 'error',
 				message: 'Invalid telemetry data: expected JSON object'
 			});
 		}
 
-		// Validate against JSON schema with different strictness based on event type
-		let validationErrors = [];
-		let valid = false;
-
-		if (telemetryData.event === 'tool_error' || telemetryData.event === 'error') {
-			// For error events, be more permissive - only validate basic structure
-			const basicValid = telemetryData.event && telemetryData.timestamp;
-			valid = basicValid;
-
-			if (!basicValid) {
-				validationErrors = [{
-					field: 'event|timestamp',
-					message: 'Error events must include event type and timestamp'
-				}];
-			}
-		} else {
-			// For normal events, use full schema validation
-			valid = validate(telemetryData);
-			if (!valid) {
-				validationErrors = validate.errors.map(err => ({
-					field: err.instancePath || err.params?.missingProperty || 'root',
-					message: err.message
-				}));
-			}
-		}
-
+		// Validate against unified JSON schema (v1 or v2)
+		const valid = validate(rawTelemetryData);
 		if (!valid) {
+			const validationErrors = validate.errors.map(err => ({
+				field: err.instancePath || err.params?.missingProperty || 'root',
+				message: err.message
+			}));
 			return res.status(400).json({
 				status: 'error',
 				message: 'Validation failed',
@@ -401,23 +382,37 @@ app.post('/telemetry', (req, res) => {
 			});
 		}
 
-		// Log the telemetry event with timestamp
-		const timestamp = new Date().toISOString();
+		// Parse raw event to TelemetryEvent (handles both v1 and v2 automatically)
+		let telemetryEvent;
+		try {
+			telemetryEvent = parseTelemetryEvent(rawTelemetryData);
+		} catch (parseError) {
+			console.error('Error parsing telemetry event:', parseError);
+			return res.status(400).json({
+				status: 'error',
+				message: 'Failed to parse telemetry event',
+				details: parseError.message
+			});
+		}
+
+		// Set received timestamp
+		const receivedAt = new Date().toISOString();
+		telemetryEvent.receivedAt = receivedAt;
 
 		// Skip storing events that do not include a username/userId
-		const normalizedUserId = db.getNormalizedUserId(telemetryData);
-		if (!normalizedUserId) {
+		const userId = telemetryEvent.getUserId();
+		const allowMissingUser = telemetryEvent.data?.allowMissingUser === true;
+		if (!userId && !allowMissingUser) {
 			console.warn('Dropping telemetry event without username/userId');
 			return res.status(202).json({
 				status: 'ignored',
 				reason: 'missing_username',
-				receivedAt: timestamp
+				receivedAt: receivedAt
 			});
 		}
 
-
 		// Store in database (non-blocking - don't await to avoid blocking response)
-		db.storeEvent(telemetryData, timestamp).then((stored) => {
+		db.storeEvent(telemetryEvent, receivedAt).then((stored) => {
 			if (stored) {
 				// Clear relevant caches when new data arrives
 				statsCache.clear();
@@ -432,7 +427,7 @@ app.post('/telemetry', (req, res) => {
 		// Return success response
 		res.status(200).json({
 			status: 'ok',
-			receivedAt: timestamp
+			receivedAt: receivedAt
 		});
 	} catch (error) {
 		console.error('Error processing telemetry:', error);

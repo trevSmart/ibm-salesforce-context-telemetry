@@ -286,6 +286,13 @@ async function init() {
 		// because populateDenormalizedColumns references the error_message column
 		await ensureErrorMessageColumn();
 		await ensureDenormalizedColumns();
+		await ensureSchemaV2Columns();
+
+		// Migrate existing events asynchronously (doesn't block startup)
+		migrateExistingEventsToSchemaV2().catch(err => {
+			console.warn('Background migration of existing events failed:', err);
+		});
+
 		await ensurePeopleInitialsColumn();
 		await ensureEventTypesInitialized();
 		await ensureEventMigration(); // Execute migration before creating indexes that reference event_id
@@ -610,6 +617,12 @@ async function ensurePeopleInitialsColumn() {
  * @returns {string|null}
  */
 function getNormalizedSessionId(eventData = {}) {
+	// If it's a TelemetryEvent, use its getter method
+	if (eventData.constructor?.name === 'TelemetryEvent') {
+		return eventData.getSessionId();
+	}
+
+	// Legacy support for raw event data
 	const directId = eventData.sessionId || eventData.session_id;
 	if (directId) {
 		return directId;
@@ -668,6 +681,12 @@ function extractUserDisplayName(data = {}) {
 }
 
 function getNormalizedUserId(eventData = {}) {
+	// If it's a TelemetryEvent, use its getter method
+	if (eventData.constructor?.name === 'TelemetryEvent') {
+		return eventData.getUserId();
+	}
+
+	// Legacy support for raw event data
 	// Try direct fields first
 	const directId = sanitizeUserIdentifier(eventData.userId || eventData.user_id);
 	if (directId) {
@@ -770,10 +789,22 @@ function extractCompanyName(eventData = {}) {
 
 /**
  * Extract all normalized fields from telemetry event data in a single pass
- * @param {object} eventData - The telemetry event data
+ * @param {object} eventData - The telemetry event data (raw or TelemetryEvent)
  * @returns {object} Object containing all extracted fields: {orgId, userName, toolName, companyName, errorMessage}
  */
 function extractNormalizedFields(eventData = {}) {
+	// If it's a TelemetryEvent, return its already calculated denormalized fields
+	if (eventData.constructor?.name === 'TelemetryEvent') {
+		return {
+			orgId: eventData.orgId,
+			userName: eventData.userName,
+			toolName: eventData.toolName,
+			companyName: eventData.companyName,
+			errorMessage: eventData.errorMessage
+		};
+	}
+
+	// Legacy support for raw event data
 	const result = {
 		orgId: null,
 		userName: null,
@@ -1061,41 +1092,45 @@ async function computeParentSessionId(eventData, normalizedSessionId, normalized
 
 /**
  * Store a telemetry event
- * @param {object} eventData - The telemetry event data
+ * @param {import('./telemetry-event.js').TelemetryEvent} telemetryEvent - The parsed telemetry event
  * @param {string} receivedAt - ISO timestamp when event was received
- * @returns {Promise<void>}
+ * @returns {Promise<boolean>} Success status
  */
-async function storeEvent(eventData, receivedAt) {
+async function storeEvent(telemetryEvent, receivedAt) {
 	if (!db) {
 		throw new Error('Database not initialized. Call init() first.');
 	}
 
-	try {
-		const normalizedSessionId = getNormalizedSessionId(eventData);
-		const normalizedUserId = getNormalizedUserId(eventData);
-		const allowMissingUser = eventData?.allowMissingUser === true;
+	// Validate that it's a TelemetryEvent instance
+	if (!(telemetryEvent instanceof (await import('./telemetry-event.js')).TelemetryEvent)) {
+		throw new Error('storeEvent() requires a TelemetryEvent instance');
+	}
 
-		if (!normalizedUserId && !allowMissingUser) {
+	try {
+		const sessionId = telemetryEvent.getSessionId();
+		const userId = telemetryEvent.getUserId();
+		const allowMissingUser = telemetryEvent.data?.allowMissingUser === true;
+
+		if (!userId && !allowMissingUser) {
 			console.warn('Dropping telemetry event without username/userId');
 			return false;
 		}
 
-		// Get event type ID
-		const eventTypeId = await getEventTypeId(eventData.event);
+		// Get event type ID from TelemetryEvent's calculated eventType
+		const eventTypeId = await getEventTypeId(telemetryEvent.eventType);
 		if (!eventTypeId) {
-			console.warn(`Unknown event type: ${eventData.event}, dropping event`);
+			console.warn(`Unknown event type: ${telemetryEvent.eventType}, dropping event`);
 			return false;
 		}
 
 		const parentSessionId = await computeParentSessionId(
-			eventData,
-			normalizedSessionId,
-			normalizedUserId
+			telemetryEvent,
+			sessionId,
+			userId
 		);
 
-		// Extract denormalized fields for faster queries (single pass optimization)
-		const normalizedFields = extractNormalizedFields(eventData);
-		const {orgId, userName, toolName, companyName, errorMessage} = normalizedFields;
+		// Use denormalized fields from TelemetryEvent
+		const {orgId, userName, toolName, companyName, errorMessage} = telemetryEvent;
 
 		// Resolve team_id for pre-calculated team association
 		let teamId = null;
@@ -1114,22 +1149,32 @@ async function storeEvent(eventData, receivedAt) {
 			}
 		}
 
+		// Enrich data with structured objects for v2 compatibility
+		const enrichedData = {
+			...telemetryEvent.data,
+			// Preserve structured objects from v2
+			server: telemetryEvent.server || telemetryEvent.data.server,
+			client: telemetryEvent.client || telemetryEvent.data.client,
+			session: telemetryEvent.session || telemetryEvent.data.session,
+			user: telemetryEvent.user || telemetryEvent.data.user
+		};
+
 		if (dbType === 'sqlite') {
 			const stmt = getPreparedStatement('insertEvent', `
 				INSERT INTO telemetry_events
-				(event_id, timestamp, server_id, version, session_id, parent_session_id, user_id, data, received_at, org_id, user_name, tool_name, company_name, error_message, team_id, event)
-				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+				(event_id, timestamp, server_id, version, session_id, parent_session_id, user_id, data, received_at, org_id, user_name, tool_name, company_name, error_message, team_id, event, area, success, telemetry_schema_version)
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 			`);
 
 			stmt.run(
 				eventTypeId,
-				eventData.timestamp,
-				eventData.serverId || null,
-				eventData.version || null,
-				normalizedSessionId || null,
+				telemetryEvent.timestamp,
+				telemetryEvent.getServerId() || null,
+				telemetryEvent.getVersion() || null,
+				sessionId || null,
 				parentSessionId || null,
-				normalizedUserId || null,
-				JSON.stringify(eventData.data || {}),
+				userId || null,
+				JSON.stringify(enrichedData),
 				receivedAt,
 				orgId,
 				userName,
@@ -1137,22 +1182,25 @@ async function storeEvent(eventData, receivedAt) {
 				companyName,
 				errorMessage,
 				teamId,
-				eventData.event || null
+				telemetryEvent.eventType || null, // For compatibility
+				telemetryEvent.area || null,
+				telemetryEvent.success ?? null,
+				telemetryEvent.telemetrySchemaVersion || null
 			);
 		} else if (dbType === 'postgresql') {
 			await db.query(
 				`INSERT INTO telemetry_events
-				(event_id, timestamp, server_id, version, session_id, parent_session_id, user_id, data, received_at, org_id, user_name, tool_name, company_name, error_message, team_id, event)
-				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
+				(event_id, timestamp, server_id, version, session_id, parent_session_id, user_id, data, received_at, org_id, user_name, tool_name, company_name, error_message, team_id, event, area, success, telemetry_schema_version)
+				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)`,
 				[
 					eventTypeId,
-					eventData.timestamp,
-					eventData.serverId || null,
-					eventData.version || null,
-					normalizedSessionId || null,
+					telemetryEvent.timestamp,
+					telemetryEvent.getServerId() || null,
+					telemetryEvent.getVersion() || null,
+					sessionId || null,
 					parentSessionId || null,
-					normalizedUserId || null,
-					eventData.data || {},
+					userId || null,
+					enrichedData, // PostgreSQL handles JSONB directly
 					receivedAt,
 					orgId,
 					userName,
@@ -1160,24 +1208,28 @@ async function storeEvent(eventData, receivedAt) {
 					companyName,
 					errorMessage,
 					teamId,
-					eventData.event || null
+					telemetryEvent.eventType || null,
+					telemetryEvent.area || null,
+					telemetryEvent.success ?? null,
+					telemetryEvent.telemetrySchemaVersion || null
 				]
 			);
 		}
 
 		// Extract and store company name if available
-		if (eventData.serverId) {
-			const companyName = extractCompanyName(eventData);
+		const serverId = telemetryEvent.getServerId();
+		if (serverId) {
+			const companyName = extractCompanyName(telemetryEvent);
 			if (companyName) {
 				// Don't await to avoid blocking event storage
-				upsertOrgCompanyName(eventData.serverId, companyName).catch(err => {
+				upsertOrgCompanyName(serverId, companyName).catch(err => {
 					console.error('Error storing company name:', err);
 				});
 			}
 		}
 
 		// Update aggregated counters so UI lists stay accurate without pagination
-		await updateAggregatedStatsForEvent(normalizedUserId, orgId, eventData.timestamp, userName);
+		await updateAggregatedStatsForEvent(userId, orgId, telemetryEvent.timestamp, userName);
 
 		return true;
 	} catch (error) {
@@ -3555,6 +3607,147 @@ async function populateDenormalizedColumns() {
 
 	} catch (error) {
 		console.error('Error emplenant columnes denormalitzades:', error);
+	}
+}
+
+/**
+ * Adds schema v2 columns to telemetry_events table for better query performance
+ * - area: event area ('tool', 'session', 'general')
+ * - success: operation success status
+ * - telemetry_schema_version: original schema version (1 or 2)
+ */
+async function ensureSchemaV2Columns() {
+	if (!db) {
+		return;
+	}
+
+	try {
+		if (dbType === 'sqlite') {
+			const columns = db.prepare('PRAGMA table_info(telemetry_events)').all();
+			const columnNames = columns.map(col => col.name);
+
+			if (!columnNames.includes('area')) {
+				db.exec('ALTER TABLE telemetry_events ADD COLUMN area TEXT');
+				db.exec('CREATE INDEX IF NOT EXISTS idx_area ON telemetry_events(area)');
+			}
+			if (!columnNames.includes('success')) {
+				db.exec('ALTER TABLE telemetry_events ADD COLUMN success BOOLEAN');
+				db.exec('CREATE INDEX IF NOT EXISTS idx_success ON telemetry_events(success)');
+			}
+			if (!columnNames.includes('telemetry_schema_version')) {
+				db.exec('ALTER TABLE telemetry_events ADD COLUMN telemetry_schema_version INTEGER');
+				db.exec('CREATE INDEX IF NOT EXISTS idx_telemetry_schema_version ON telemetry_events(telemetry_schema_version)');
+			}
+		} else if (dbType === 'postgresql') {
+			await db.query('ALTER TABLE IF EXISTS telemetry_events ADD COLUMN IF NOT EXISTS area TEXT');
+			await db.query('CREATE INDEX IF NOT EXISTS idx_area ON telemetry_events(area)');
+			await db.query('ALTER TABLE IF EXISTS telemetry_events ADD COLUMN IF NOT EXISTS success BOOLEAN');
+			await db.query('CREATE INDEX IF NOT EXISTS idx_success ON telemetry_events(success)');
+			await db.query('ALTER TABLE IF EXISTS telemetry_events ADD COLUMN IF NOT EXISTS telemetry_schema_version INTEGER');
+			await db.query('CREATE INDEX IF NOT EXISTS idx_telemetry_schema_version ON telemetry_events(telemetry_schema_version)');
+		}
+	} catch (error) {
+		console.error('Error ensuring schema v2 columns:', error);
+	}
+}
+
+/**
+ * Migrate existing events to schema v2 by populating area, success, and telemetry_schema_version columns
+ * This is optional but recommended for better query performance and consistent data
+ */
+async function migrateExistingEventsToSchemaV2() {
+	if (!db) {
+		return;
+	}
+
+	try {
+		// Mapping from event types to v2 structure
+		const eventMapping = {
+			'tool_call': {area: 'tool', event: 'execution', success: true},
+			'tool_error': {area: 'tool', event: 'execution', success: false},
+			'session_start': {area: 'session', event: 'session_start', success: true},
+			'session_end': {area: 'session', event: 'session_end', success: true},
+			'error': {area: 'general', event: 'error_occurred', success: false},
+			'custom': {area: 'general', event: 'custom', success: true}
+		};
+
+		if (dbType === 'sqlite') {
+			// Migrate in batches to avoid blocking the database
+			const batchSize = 1000;
+			let offset = 0;
+			let updated = 0;
+
+			while (true) {
+				const events = db.prepare(`
+					SELECT id, event_id, event
+					FROM telemetry_events
+					WHERE area IS NULL OR telemetry_schema_version IS NULL
+					LIMIT ? OFFSET ?
+				`).all(batchSize, offset);
+
+				if (events.length === 0) {
+					break;
+				}
+
+				const updateStmt = db.prepare(`
+					UPDATE telemetry_events
+					SET area = ?, success = ?, telemetry_schema_version = ?
+					WHERE id = ?
+				`);
+
+				for (const event of events) {
+					// Get event name from event_types table
+					const eventType = db.prepare('SELECT name FROM event_types WHERE id = ?').get(event.event_id);
+					if (!eventType) {
+						continue;
+					}
+
+					const mapping = eventMapping[eventType.name] || eventMapping.custom;
+					updateStmt.run(mapping.area, mapping.success, 1, event.id);
+					updated++;
+				}
+
+				offset += batchSize;
+				console.log(`Migrated ${updated} events to schema v2...`);
+			}
+
+			if (updated > 0) {
+				console.log(`✅ Migration complete: ${updated} events migrated to schema v2`);
+			}
+		} else if (dbType === 'postgresql') {
+			// PostgreSQL: use UPDATE with JOIN for efficiency
+			const result = await db.query(`
+				UPDATE telemetry_events e
+				SET
+					area = CASE et.name
+						WHEN 'tool_call' THEN 'tool'
+						WHEN 'tool_error' THEN 'tool'
+						WHEN 'session_start' THEN 'session'
+						WHEN 'session_end' THEN 'session'
+						WHEN 'error' THEN 'general'
+						ELSE 'general'
+					END,
+					success = CASE et.name
+						WHEN 'tool_call' THEN true
+						WHEN 'session_start' THEN true
+						WHEN 'session_end' THEN true
+						WHEN 'custom' THEN true
+						ELSE false
+					END,
+					telemetry_schema_version = 1
+				FROM event_types et
+				WHERE e.event_id = et.id
+					AND (e.area IS NULL OR e.telemetry_schema_version IS NULL)
+			`);
+
+			if (result.rowCount > 0) {
+				console.log(`✅ Migration complete: ${result.rowCount} events migrated to schema v2`);
+			}
+		}
+	} catch (error) {
+		console.error('Error migrating existing events to schema v2:', error);
+		// Don't throw error - migration is optional
+		console.warn('Continuing without migration - new events will have schema v2 fields, old events will have NULL');
 	}
 }
 

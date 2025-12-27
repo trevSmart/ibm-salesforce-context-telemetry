@@ -1,96 +1,201 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Telemetry Event Schema v1.1",
-  "description": "JSON schema for telemetry events sent to the telemetry server (v1.1 - error events are more permissive)",
-  "type": "object",
-  "required": ["event", "timestamp"],
-  "properties": {
-    "event": {
-      "type": "string",
-      "enum": [
-        "tool_call",
-        "tool_error",
-        "session_start",
-        "session_end",
-        "error",
-        "custom"
-      ],
-      "description": "Type of telemetry event"
-    },
-    "timestamp": {
-      "type": "string",
-      "format": "date-time",
-      "description": "ISO 8601 timestamp of when the event occurred"
-    },
-    "serverId": {
-      "type": "string",
-      "description": "Unique identifier for the MCP server instance"
-    },
-    "version": {
-      "type": "string",
-      "description": "Version of the MCP server"
-    },
-    "sessionId": {
-      "type": "string",
-      "description": "Unique identifier for the MCP session"
-    },
-    "userId": {
-      "type": "string",
-      "description": "Anonymous user identifier (no PII should be included)"
-    },
-    "data": {
+  "title": "Telemetry Event Schema v1/v2",
+  "description": "JSON schema for telemetry events sent to the telemetry server (supports both v1 and v2 schemas)",
+  "oneOf": [
+    {
+      "title": "Schema v1 (Legacy)",
       "type": "object",
-      "description": "Event-specific data payload",
-      "additionalProperties": true,
+      "required": ["event", "timestamp"],
       "properties": {
-        "toolName": {
+        "event": {
           "type": "string",
-          "description": "Name of the tool that was called (may be null/undefined for error events)"
+          "enum": [
+            "tool_call",
+            "tool_error",
+            "session_start",
+            "session_end",
+            "error",
+            "custom"
+          ],
+          "description": "Type of telemetry event"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp of when the event occurred"
+        },
+        "serverId": {
+          "type": "string",
+          "description": "Unique identifier for the MCP server instance"
+        },
+        "version": {
+          "type": "string",
+          "description": "Version of the MCP server"
+        },
+        "sessionId": {
+          "type": "string",
+          "description": "Unique identifier for the MCP session"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Anonymous user identifier (no PII should be included)"
+        },
+        "data": {
+          "type": "object",
+          "description": "Event-specific data payload",
+          "additionalProperties": true,
+          "properties": {
+            "toolName": {
+              "type": "string",
+              "description": "Name of the tool that was called (may be null/undefined for error events)"
+            },
+            "success": {
+              "type": "boolean",
+              "description": "Whether the operation was successful"
+            },
+            "duration": {
+              "type": "integer",
+              "description": "Duration of the operation in milliseconds",
+              "minimum": 0
+            },
+            "operation": {
+              "type": "string",
+              "description": "Type of operation (e.g., 'query', 'create', 'update') - optional for error events"
+            },
+            "errorType": {
+              "type": "string",
+              "description": "Type of error (if applicable)"
+            },
+            "errorMessage": {
+              "type": "string",
+              "description": "Error message (if applicable, should not contain sensitive data)"
+            },
+            "paramsCount": {
+              "type": "integer",
+              "description": "Number of parameters passed",
+              "minimum": 0
+            },
+            "transport": {
+              "type": "string",
+              "enum": ["stdio", "http"],
+              "description": "Transport type used by the MCP server"
+            },
+            "clientVersion": {
+              "type": "string",
+              "description": "Version of the MCP client"
+            },
+            "toolCallsCount": {
+              "type": "integer",
+              "description": "Total number of tool calls in session",
+              "minimum": 0
+            }
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    {
+      "title": "Schema v2 (Current)",
+      "type": "object",
+      "required": ["schemaVersion", "area", "event", "success", "timestamp"],
+      "properties": {
+        "schemaVersion": {
+          "const": 2,
+          "description": "Schema version identifier"
+        },
+        "area": {
+          "type": "string",
+          "enum": ["tool", "session", "general"],
+          "description": "Functional area of the event"
+        },
+        "event": {
+          "type": "string",
+          "description": "Specific event within the area"
         },
         "success": {
           "type": "boolean",
           "description": "Whether the operation was successful"
         },
-        "duration": {
-          "type": "integer",
-          "description": "Duration of the operation in milliseconds",
-          "minimum": 0
-        },
-        "operation": {
+        "timestamp": {
           "type": "string",
-          "description": "Type of operation (e.g., 'query', 'create', 'update') - optional for error events"
+          "format": "date-time",
+          "description": "ISO 8601 timestamp of when the event occurred"
         },
-        "errorType": {
-          "type": "string",
-          "description": "Type of error (if applicable)"
+        "server": {
+          "type": "object",
+          "description": "Server information",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "Unique identifier for the MCP server instance"
+            },
+            "version": {
+              "type": "string",
+              "description": "Version of the MCP server"
+            },
+            "capabilities": {
+              "type": "object",
+              "description": "Server capabilities"
+            }
+          }
         },
-        "errorMessage": {
-          "type": "string",
-          "description": "Error message (if applicable, should not contain sensitive data)"
+        "client": {
+          "type": ["object", "null"],
+          "description": "Client information (null if not connected)",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Name of the MCP client"
+            },
+            "version": {
+              "type": "string",
+              "description": "Version of the MCP client"
+            },
+            "capabilities": {
+              "type": "object",
+              "description": "Client capabilities"
+            }
+          }
         },
-        "paramsCount": {
-          "type": "integer",
-          "description": "Number of parameters passed",
-          "minimum": 0
+        "session": {
+          "type": "object",
+          "description": "Session information",
+          "properties": {
+            "id": {
+              "type": ["string", "null"],
+              "description": "Unique identifier for the MCP session"
+            },
+            "transport": {
+              "type": "string",
+              "enum": ["stdio", "http"],
+              "description": "Transport type used"
+            },
+            "protocolVersion": {
+              "type": "string",
+              "description": "MCP protocol version"
+            }
+          }
         },
-        "transport": {
-          "type": "string",
-          "enum": ["stdio", "http"],
-          "description": "Transport type used by the MCP server"
+        "user": {
+          "type": ["object", "null"],
+          "description": "User information (null if anonymous)",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "Anonymous user identifier"
+            }
+          }
         },
-        "clientVersion": {
-          "type": "string",
-          "description": "Version of the MCP client"
-        },
-        "toolCallsCount": {
-          "type": "integer",
-          "description": "Total number of tool calls in session",
-          "minimum": 0
+        "data": {
+          "type": "object",
+          "description": "Event-specific data payload",
+          "additionalProperties": true
         }
-      }
+      },
+      "additionalProperties": true
     }
-  },
-  "additionalProperties": true,
+  ],
   "examples": [
     {
       "event": "tool_call",
@@ -102,41 +207,39 @@
         "operation": "query",
         "duration": 150,
         "success": true
-      }
-    },
-    {
-      "event": "tool_error",
-      "timestamp": "2024-01-15T10:30:00.000Z",
-      "serverId": "server-instance-123",
-      "version": "1.0.0",
-      "data": {
-        "toolName": "describe_object",
-        "errorType": "ValidationError",
-        "errorMessage": "Invalid object name",
-        "success": false
-      }
-    },
-    {
-      "event": "tool_error",
-      "timestamp": "2024-01-15T10:30:00.000Z",
-      "serverId": "server-instance-123",
-      "version": "1.0.0",
-      "data": {
-        "errorType": "UnknownError",
-        "errorMessage": "Unexpected error occurred",
-        "success": false
       },
-      "_comment": "Error event with minimal required fields (v1.1+)"
+      "_comment": "V1 schema example"
     },
     {
-      "event": "session_start",
+      "schemaVersion": 2,
+      "area": "tool",
+      "event": "execution",
+      "success": true,
       "timestamp": "2024-01-15T10:30:00.000Z",
-      "serverId": "server-instance-123",
-      "version": "1.0.0",
-      "data": {
+      "server": {
+        "id": "server-instance-123",
+        "version": "1.0.0",
+        "capabilities": {}
+      },
+      "client": {
+        "name": "Cursor",
+        "version": "1.0.0",
+        "capabilities": {}
+      },
+      "session": {
+        "id": "session-456",
         "transport": "stdio",
-        "clientVersion": "1.0.0"
-      }
+        "protocolVersion": "2025-11-25"
+      },
+      "user": {
+        "id": "user-789"
+      },
+      "data": {
+        "toolName": "execute_queries_and_dml",
+        "duration": 150,
+        "operation": "query"
+      },
+      "_comment": "V2 schema example"
     }
   ]
 }
