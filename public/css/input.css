@@ -3370,62 +3370,72 @@
     text-align: center;
   }
 
-  .logs-table th:nth-child(2),
-  .logs-table td:nth-child(2) {
+  .logs-table th.col-date,
+  .logs-table td.col-date {
     width: 100px;
     min-width: 100px;
     text-align: left;
   }
 
-  .logs-table td:nth-child(3) {
+  .logs-table th.col-user,
+  .logs-table td.col-user {
     width: 260px;
     min-width: 260px;
     text-align: left;
   }
 
-  .logs-table td:nth-child(4) {
+  .logs-table th.col-company,
+  .logs-table td.col-company {
     width: 250px;
     min-width: 250px;
     text-align: left;
   }
 
-  .logs-table th:nth-child(5),
-  .logs-table td:nth-child(5) {
+  .logs-table th.col-area,
+  .logs-table td.col-area {
     width: 65px;
     min-width: 65px;
     text-align: left;
   }
 
-  .logs-table th:nth-child(6),
-  .logs-table td:nth-child(6) {
+  .logs-table th.col-event,
+  .logs-table td.col-event {
     width: 100px;
     min-width: 100px;
     text-align: left;
   }
 
-  .logs-table th:nth-child(8),
-  .logs-table td:nth-child(8) {
-    width: 55px;
-    min-width: 55px;
+  .logs-table th.col-tool,
+  .logs-table td.col-tool {
+    width: 100px;
+    min-width: 100px;
     text-align: left;
   }
 
-  .logs-table td:nth-child(9) {
+  .logs-table th.col-status,
+  .logs-table td.col-status {
+    width: 66px !important;
+    min-width: 66px !important;
+    text-align: left;
+  }
+
+  .logs-table th.col-error,
+  .logs-table td.col-error {
     width: 150px;
     min-width: 150px;
     text-align: left;
   }
 
-  .logs-table th:nth-child(10),
-  .logs-table td:nth-child(10) {
-    width: 67px;
-    min-width: 67px;
+  .logs-table th.col-payload,
+  .logs-table td.col-payload {
+    width: 61px !important;
+    min-width: 61px !important;
   }
 
-  .logs-table th:nth-child(11),
-  .logs-table td:nth-child(11) {
-    width: 40px;
-    min-width: 40px;
+  .logs-table th.col-actions,
+  .logs-table td.col-actions {
+    width: 43px;
+    min-width: 43px;
     text-align: right;
   }
 
@@ -4309,10 +4319,10 @@
     }
 
     /* Hide less important columns on mobile */
-    .logs-table th:nth-child(1),
-    .logs-table td:nth-child(1),
-    .logs-table th:nth-child(2),
-    .logs-table td:nth-child(2) {
+    .logs-table th.col-expand,
+    .logs-table td.col-expand,
+    .logs-table th.col-date,
+    .logs-table td.col-date {
       display: none;
     }
 
@@ -4422,8 +4432,8 @@
     }
 
     /* Hide company column on very small screens */
-    .logs-table th:nth-child(6),
-    .logs-table td:nth-child(6) {
+    .logs-table th.col-event,
+    .logs-table td.col-event {
       display: none;
     }
 
@@ -5884,4 +5894,48 @@ section > div > h3 + p {
 
 .settings-sidebar-nav > nav {
   width: max-content;
+}
+
+/* Resizable columns styles */
+.logs-table[data-resizable-columns-id] {
+  table-layout: fixed;
+}
+
+.logs-table[data-resizable-columns-id] td,
+.logs-table[data-resizable-columns-id] th {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Column resizer visual indicator */
+.column-resizer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 8px;
+  height: 100%;
+  cursor: col-resize;
+  user-select: none;
+  z-index: 1;
+  transition: background-color 0.15s ease;
+}
+
+/* Show border on the right side of resizable headers */
+.logs-table[data-resizable-columns-id] thead th[data-resizable-column-id] {
+  border-right: 1px solid rgba(209, 213, 219, 0.5);
+}
+
+html.dark .logs-table[data-resizable-columns-id] thead th[data-resizable-column-id] {
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Hover effect on resizer */
+.column-resizer:hover {
+  background: rgba(59, 130, 246, 0.3);
+}
+
+/* Active state when dragging */
+.column-resizer.active {
+  background: rgba(59, 130, 246, 0.5);
 }

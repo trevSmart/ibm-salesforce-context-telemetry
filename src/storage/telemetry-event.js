@@ -51,7 +51,8 @@ export class TelemetryEvent {
     this.event = raw.event;
     this.success = raw.success;
     this.timestamp = raw.timestamp;
-    this.telemetrySchemaVersion = raw.telemetrySchemaVersion || null;
+    // Support both telemetrySchemaVersion (internal) and schemaVersion (from payload)
+    this.telemetrySchemaVersion = raw.telemetrySchemaVersion || raw.schemaVersion || null;
 
     // Structured objects
     this.server = raw.server || null;

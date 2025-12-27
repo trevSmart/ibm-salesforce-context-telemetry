@@ -3015,35 +3015,35 @@ function safeShowToast(message, type = 'info') {
 			row.setAttribute('data-event-id', event.id);
 			// Store event data in the row element to avoid API call when copying payload
 			row.setAttribute('data-event', JSON.stringify(event));
-			const userCellHtml = showUserColumn? `<td class="hidden text-gray-700 sm:table-cell log-user whitespace-nowrap">${escapeHtml(userLabel)}</td>`: '';
+			const userCellHtml = showUserColumn? `<td class="col-user hidden text-gray-700 sm:table-cell log-user whitespace-nowrap">${escapeHtml(userLabel)}</td>`: '';
 
 			row.innerHTML = `
-				<td class="expand-column px-2 font-medium text-gray-900 whitespace-nowrap" style="text-align: center;">
+				<td class="expand-column col-expand px-2 font-medium text-gray-900 whitespace-nowrap" style="text-align: center;">
 					<button class="expand-btn" type="button" id="expand-btn-${event.id}" style="background: none; border: none; cursor: pointer; padding: 4px;">
 						<i class="fa-solid fa-chevron-right"></i>
 					</button>
 				</td>
-				<td class="whitespace-nowrap">${formatDate(event.timestamp)}
+				<td class="col-date whitespace-nowrap">${formatDate(event.timestamp)}
 				</td>
 				${userCellHtml}
-				<td class="hidden text-gray-500 md:table-cell log-client whitespace-nowrap">${escapeHtml(clientName)}</td>
-				<td class="text-gray-500 whitespace-nowrap">
+				<td class="col-company hidden text-gray-500 md:table-cell log-client whitespace-nowrap">${escapeHtml(clientName)}</td>
+				<td class="col-area text-gray-500 whitespace-nowrap">
 					<span class="${levelBadgeClass}${!event.area ? ' na' : ''}">
 						${event.area || 'N/A'}
 					</span>
 				</td>
-				<td class="text-gray-500 whitespace-nowrap">
+				<td class="col-event text-gray-500 whitespace-nowrap">
 					<span class="${eventBadgeClass}">
 						${escapeHtml(event.event || 'N/A')}
 					</span>
 				</td>
-				<td class="hidden text-gray-500 lg:table-cell log-tool-name whitespace-nowrap">${toolName}</td>
-				<td class="font-medium text-gray-900 whitespace-nowrap" style="text-align: center;">
+				<td class="col-tool hidden text-gray-500 lg:table-cell log-tool-name whitespace-nowrap">${toolName}</td>
+				<td class="col-status font-medium text-gray-900 whitespace-nowrap" style="text-align: center;">
 					${statusIcon}
 				</td>
-				<td class="hidden text-gray-500 xl:table-cell log-error-message whitespace-nowrap overflow-hidden text-ellipsis max-w-48" title="${escapedErrorMessage}">${escapedErrorMessage}</td>
-				<td class="text-gray-500 text-center log-description">${description}</td>
-				<td class="pr-4 pl-3 text-right font-medium actions-cell whitespace-nowrap sm:pr-8 lg:pr-8">
+				<td class="col-error hidden text-gray-500 xl:table-cell log-error-message whitespace-nowrap overflow-hidden text-ellipsis max-w-48" title="${escapedErrorMessage}">${escapedErrorMessage}</td>
+				<td class="col-payload text-gray-500 text-center log-description">${description}</td>
+				<td class="col-actions pr-4 pl-3 text-right font-medium actions-cell whitespace-nowrap sm:pr-8 lg:pr-8">
 					<button class="actions-btn hover:text-indigo-900" onclick="toggleActionsDropdown(event, ${event.id})" style="background: none; border: none; cursor: pointer; padding: 4px;">
 						<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
 							<circle cx="8" cy="3" r="1.5"/>
@@ -5729,5 +5729,16 @@ function safeShowToast(message, type = 'info') {
 	window.toggleActionsDropdown = toggleActionsDropdown;
 	window.copyEventPayload = copyEventPayload;
 	window.confirmDeleteEvent = confirmDeleteEvent;
+
+	// Initialize resizable columns when DOM is ready
+	document.addEventListener('DOMContentLoaded', () => {
+		const logsTable = document.getElementById('logsTable');
+		if (logsTable && window.ResizableColumns) {
+			new ResizableColumns(logsTable, {
+				store: window.resizableColumnsStore,
+				minWidth: 48
+			});
+		}
+	});
 
 } // end guard to avoid duplicate execution

@@ -3873,7 +3873,7 @@ async function migrateExistingEventsToSchemaV2() {
 			const result = db.prepare(`
 				UPDATE telemetry_events
 				SET
-					area = CASE 
+					area = CASE
 						WHEN (SELECT name FROM event_types WHERE id = telemetry_events.event_id) = 'tool_call' THEN 'tool'
 						WHEN (SELECT name FROM event_types WHERE id = telemetry_events.event_id) = 'tool_error' THEN 'tool'
 						WHEN (SELECT name FROM event_types WHERE id = telemetry_events.event_id) = 'session_start' THEN 'session'
@@ -3881,7 +3881,7 @@ async function migrateExistingEventsToSchemaV2() {
 						WHEN (SELECT name FROM event_types WHERE id = telemetry_events.event_id) = 'error' THEN 'general'
 						ELSE 'general'
 					END,
-					success = CASE 
+					success = CASE
 						WHEN (SELECT name FROM event_types WHERE id = telemetry_events.event_id) = 'tool_call' THEN 1
 						WHEN (SELECT name FROM event_types WHERE id = telemetry_events.event_id) = 'session_start' THEN 1
 						WHEN (SELECT name FROM event_types WHERE id = telemetry_events.event_id) = 'session_end' THEN 1

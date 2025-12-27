@@ -362,11 +362,6 @@ app.post('/telemetry', (req, res) => {
 
 		// Basic validation
 		if (!rawTelemetryData || typeof rawTelemetryData !== 'object') {
-			const receivedAt = new Date().toISOString();
-			// Store discarded event as general error
-			db.storeDiscardedEvent(rawTelemetryData || {}, 'Event discarded: invalid telemetry data (not an object)', receivedAt).catch(err => {
-				console.error('Error storing discarded event:', err);
-			});
 			return res.status(400).json({
 				status: 'error',
 				message: 'Invalid telemetry data: expected JSON object'
@@ -376,16 +371,10 @@ app.post('/telemetry', (req, res) => {
 		// Validate against unified JSON schema (v1 or v2)
 		const valid = validate(rawTelemetryData);
 		if (!valid) {
-			const receivedAt = new Date().toISOString();
 			const validationErrors = validate.errors.map(err => ({
 				field: err.instancePath || err.params?.missingProperty || 'root',
 				message: err.message
 			}));
-			const errorMessages = validationErrors.map(err => `${err.field}: ${err.message}`).join('; ');
-			// Store discarded event as general error
-			db.storeDiscardedEvent(rawTelemetryData, `Event discarded: schema validation failed (${errorMessages})`, receivedAt).catch(err => {
-				console.error('Error storing discarded event:', err);
-			});
 			return res.status(400).json({
 				status: 'error',
 				message: 'Validation failed',
@@ -399,11 +388,6 @@ app.post('/telemetry', (req, res) => {
 			telemetryEvent = parseTelemetryEvent(rawTelemetryData);
 		} catch (parseError) {
 			console.error('Error parsing telemetry event:', parseError);
-			const receivedAt = new Date().toISOString();
-			// Store discarded event as general error
-			db.storeDiscardedEvent(rawTelemetryData, `Event discarded: parsing failed (${parseError.message})`, receivedAt).catch(err => {
-				console.error('Error storing discarded event:', err);
-			});
 			return res.status(400).json({
 				status: 'error',
 				message: 'Failed to parse telemetry event',
