@@ -673,7 +673,7 @@ async function renderTeamDetail(teamId) {
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
       <div class="divide-y divide-gray-200 dark:divide-gray-700 overflow-hidden rounded-lg bg-white dark:bg-gray-800/50 dark:outline dark:-outline-offset-1 dark:outline-white/10 shadow-sm">
         <div class="px-4 py-5 sm:px-6">
-          <h2 style="margin: 0; font-size: 1.1rem; font-weight: 600;">Team Information</h2>
+          <h2 style="margin: 0; font-size: 1.1rem; font-weight: 600;">Details</h2>
         </div>
         <div class="px-4 py-5 sm:p-6">
           <form id="teamEditForm" class="space-y-4">

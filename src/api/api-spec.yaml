@@ -24,7 +24,7 @@ paths:
         Receives telemetry events from MCP server instances.
         Supports both schema v1 (legacy) and v2 (current) formats.
         Events are logged and can be stored for analytics purposes.
-        
+
         Accepts either a single event object or an array of events (batch mode).
         Maximum 1000 events per batch request.
       operationId: sendTelemetry
@@ -448,7 +448,7 @@ components:
           format: date-time
           description: ISO 8601 timestamp of when the event was received by the server
           example: "2024-01-15T10:30:00.123Z"
-    
+
     BatchTelemetryResponse:
       type: object
       properties:

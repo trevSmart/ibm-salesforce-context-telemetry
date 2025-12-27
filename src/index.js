@@ -859,7 +859,7 @@ app.post('/login', auth.requireGuest, async (req, res) => {
 				status: 'ok',
 				message: 'Login successful'
 			});
-		} else {
+		} 
 			// Log failed login attempt
 			try {
 				const ipAddress = req.ip || req.connection.remoteAddress || req.socket.remoteAddress || null;
@@ -879,7 +879,7 @@ app.post('/login', auth.requireGuest, async (req, res) => {
 				status: 'error',
 				message: 'Invalid username or password'
 			});
-		}
+		
 
 	} catch (error) {
 		console.error('Login error:', error);
