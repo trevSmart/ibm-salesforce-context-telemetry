@@ -400,9 +400,11 @@ app.post('/telemetry', (req, res) => {
 		telemetryEvent.receivedAt = receivedAt;
 
 		// Skip storing events that do not include a username/userId
+		// Exception: server_boot events don't have username yet (client hasn't authenticated)
 		const userId = telemetryEvent.getUserId();
 		const allowMissingUser = telemetryEvent.data?.allowMissingUser === true;
-		if (!userId && !allowMissingUser) {
+		const isServerBoot = telemetryEvent.area === 'session' && telemetryEvent.event === 'server_boot';
+		if (!userId && !allowMissingUser && !isServerBoot) {
 			console.warn('Dropping telemetry event without username/userId');
 			return res.status(202).json({
 				status: 'ignored',
