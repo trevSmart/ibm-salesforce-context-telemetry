@@ -110,7 +110,24 @@ curl -X POST https://your-app.onrender.com/api/users \
 
 O usa els endpoints API després de fer login a la interfície web.
 
-## Pas 5: Fer Deploy
+## Pas 5: Optimitzar el Build (Recomanat)
+
+Per reduir significativament el temps de build a Render:
+
+1. **Configura el Build Command a Render**:
+   - Al dashboard del teu servei web, ves a "Settings"
+   - Busca la secció "Build & Deploy"
+   - Canvia el "Build Command" de `npm install` a `npm ci`
+   - `npm ci` és més ràpid i determinístic que `npm install`
+
+2. **El fitxer `.npmrc`** (ja inclòs al repositori):
+   - Desactiva l'audit durant l'instal·lació (tarda molt)
+   - Optimitza la configuració de npm per producció
+   - S'aplica automàticament quan Render fa `npm ci` o `npm install`
+
+**Nota**: Aquestes optimitzacions poden reduir el temps de build fins a un 50% en alguns casos.
+
+## Pas 6: Fer Deploy
 
 1. Commit els canvis (si has modificat `package.json`)
 2. Push al teu repositori
