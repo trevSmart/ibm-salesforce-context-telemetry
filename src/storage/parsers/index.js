@@ -56,10 +56,10 @@ export function parseTelemetryEvent(rawEvent) {
   } else if (schemaVersion === 2) {
     // Parse as v2 event
     return parseV2Event(rawEvent);
-  } 
+  }
     // Unknown or invalid schema
     throw new Error(`Unsupported or invalid telemetry schema. Detected version: ${schemaVersion}. Event: ${JSON.stringify(rawEvent).substring(0, 200)}...`);
-  
+
 }
 
 // Export individual parsers for testing or direct use
