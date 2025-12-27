@@ -2986,13 +2986,17 @@ f    background: #deefff !important;
     cursor: not-allowed;
   }
 
+  .sessionActivityCard {
+    overflow: visible;
+  }
+
   .date-nav-btn:disabled:hover {
     background: transparent;
     color: var(--text-secondary);
   }
 
   .session-activity-legend-wrapper {
-    position: relative;
+    /* position: relative; */
     display: flex;
     align-items: center;
     justify-content: flex-end;
