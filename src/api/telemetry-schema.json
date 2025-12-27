@@ -170,8 +170,8 @@
               "description": "Unique identifier for the MCP session"
             },
             "transport": {
-              "type": "string",
-              "enum": ["stdio", "http"],
+              "type": ["string", "null"],
+              "enum": ["stdio", "http", null],
               "description": "Transport type used"
             },
             "protocolVersion": {

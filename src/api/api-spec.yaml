@@ -137,6 +137,7 @@ paths:
                     transport: stdio
               v2ServerBoot:
                 summary: Server boot event (v2 schema)
+                description: Note that client field is omitted since no client has connected yet at server boot time
                 value:
                   schemaVersion: 2
                   area: session
