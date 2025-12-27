@@ -615,6 +615,7 @@
 				const response = await fetch('/login', {
 					method: 'POST',
 					headers: headers,
+					credentials: 'include',
 					body: JSON.stringify({ username, password, rememberMe })
 				});
 
@@ -640,7 +641,9 @@
 		(async () => {
 			try {
 				console.log('[TRACE] login: Checking auth status...');
-				const response = await fetch('/api/auth/status');
+				const response = await fetch('/api/auth/status', {
+					credentials: 'include'
+				});
 				console.log('[TRACE] login: Auth status response:', response.status);
 
 				// 401 is expected when not authenticated - don't treat as error

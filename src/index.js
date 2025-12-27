@@ -221,6 +221,7 @@ const tempSession = session({
 let sessionMiddleware = null;
 let redisSessionClient = null; // Track Redis client for graceful shutdown
 app.use((req, res, next) => {
+	console.log('[DEBUG] Session middleware wrapper. Path:', req.path, 'sessionMiddleware set:', Boolean(sessionMiddleware));
 	if (sessionMiddleware) {
 		return sessionMiddleware(req, res, next);
 	}
@@ -761,11 +762,27 @@ app.post('/login', auth.requireGuest, async (req, res) => {
 				return;
 			}
 
-			return res.json({
-				status: 'ok',
-				message: 'Login successful'
+			// For JSON requests, save session before responding
+			console.log('[DEBUG] About to save session for JSON request. Session data:', {
+				authenticated: req.session.authenticated,
+				username: req.session.username,
+				role: req.session.role
 			});
-		}
+			req.session.save((err) => {
+				if (err) {
+					console.error('Error saving session:', err);
+					return res.status(500).json({
+						status: 'error',
+						message: 'Failed to save session'
+					});
+				}
+				console.log('[DEBUG] Session saved successfully');
+				return res.json({
+					status: 'ok',
+					message: 'Login successful'
+				});
+			});
+		} else {
 			// Log failed login attempt
 			try {
 				const ipAddress = req.ip || req.connection.remoteAddress || req.socket.remoteAddress || null;
@@ -785,6 +802,7 @@ app.post('/login', auth.requireGuest, async (req, res) => {
 				status: 'error',
 				message: 'Invalid username or password'
 			});
+		}
 
 	} catch (error) {
 		console.error('Login error:', error);
@@ -836,6 +854,11 @@ app.post('/logout', async (req, res) => {
 
 app.get('/api/auth/status', (req, res) => {
 	const isAuthenticated = Boolean(req.session && req.session.authenticated);
+	console.log('[DEBUG] Auth status check. Session ID:', req.session?.id, 'Session data:', {
+		authenticated: req.session?.authenticated,
+		username: req.session?.username,
+		role: req.session?.role
+	});
 	res.json({
 		authenticated: isAuthenticated,
 		username: req.session && req.session.username || null,
