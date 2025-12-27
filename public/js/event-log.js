@@ -2985,6 +2985,7 @@ function safeShowToast(message, type = 'info') {
 		renderableEvents.forEach(event => {
 			const levelClass = getLevelClass(event.area);
 			const levelBadgeClass = getLevelBadgeClass(event.area);
+			const eventBadgeClass = getEventBadgeClass(event.event);
 			const description = formatDescription(event);
 			const eventData = normalizeEventData(event.data);
 			const clientName = event.company_name || '';
@@ -3027,8 +3028,13 @@ function safeShowToast(message, type = 'info') {
 				${userCellHtml}
 				<td class="hidden text-gray-500 md:table-cell log-client whitespace-nowrap">${escapeHtml(clientName)}</td>
 				<td class="text-gray-500 whitespace-nowrap">
-					<span class="${levelBadgeClass}">
+					<span class="${levelBadgeClass}${!event.area ? ' na' : ''}">
 						${event.area || 'N/A'}
+					</span>
+				</td>
+				<td class="text-gray-500 whitespace-nowrap">
+					<span class="${eventBadgeClass}">
+						${escapeHtml(event.event || 'N/A')}
 					</span>
 				</td>
 				<td class="hidden text-gray-500 lg:table-cell log-tool-name whitespace-nowrap">${toolName}</td>
@@ -3147,16 +3153,30 @@ function safeShowToast(message, type = 'info') {
 
 	function getLevelClass(area) {
 		const levelMap = {
-			'tool': 'debug',
-			'session': 'info',
-			'general': 'warning'
+			'tool': 'tool',
+			'session': 'session',
+			'general': 'general'
 		};
-		return levelMap[area] || 'info';
+		return levelMap[area] || 'session';
 	}
 
 	function getLevelBadgeClass(area) {
 		const levelClass = getLevelClass(area);
 		return `level-badge ${levelClass}`;
+	}
+
+	function getEventBadgeClass(eventType) {
+		// Assigna colors aleatòriament però consistentment basat en el tipus d'event
+		const eventColorMap = {
+			'tool_call': 'green',
+			'tool_error': 'indigo',
+			'session_start': 'pink',
+			'session_end': 'yellow',
+			'error': 'green',
+			'custom': 'indigo'
+		};
+		const colorClass = eventColorMap[eventType] || 'green';
+		return `event-badge ${colorClass}`;
 	}
 
 
