@@ -23,6 +23,7 @@ export default [
 				...globals.browser,
 				echarts: 'readonly',
 				showToast: 'readonly',
+				ResizableColumns: 'readonly',
 			},
 		},
 		rules: {

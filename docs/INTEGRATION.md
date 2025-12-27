@@ -10,7 +10,11 @@ El servidor de telemetria ofereix un endpoint REST per rebre dades:
 
 ## 📋 Format de les Dades
 
-El servidor espera rebre un objecte JSON amb la següent estructura:
+El servidor accepta tant un objecte JSON individual com un array d'objectes JSON (batch mode). Per a peticions batch, el màxim és de 1000 esdeveniments per petició.
+
+### Format Individual
+
+Un objecte JSON amb la següent estructura:
 
 ```json
 {
@@ -39,6 +43,70 @@ El servidor espera rebre un objecte JSON amb la següent estructura:
 - `data` (object): Dades específiques de l'esdeveniment
 - `userId` (string): Identificador anònim de l'usuari (si s'aplica)
 - `sessionId` (string): Identificador de la sessió MCP
+
+### Format Batch (Múltiples Esdeveniments)
+
+Per enviar múltiples esdeveniments en una sola petició, envia un array d'objectes JSON:
+
+```json
+[
+  {
+    "event": "tool_call",
+    "timestamp": "2024-01-15T10:30:00.000Z",
+    "serverId": "unique-server-instance-id",
+    "version": "1.0.0",
+    "data": {
+      "toolName": "execute_queries_and_dml",
+      "operation": "query",
+      "duration": 150,
+      "success": true
+    }
+  },
+  {
+    "event": "tool_call",
+    "timestamp": "2024-01-15T10:30:01.000Z",
+    "serverId": "unique-server-instance-id",
+    "version": "1.0.0",
+    "data": {
+      "toolName": "describe_object",
+      "operation": "describe",
+      "duration": 80,
+      "success": true
+    }
+  }
+]
+```
+
+**Límits:**
+- Màxim 1000 esdeveniments per petició batch
+- L'array no pot estar buit (mínim 1 esdeveniment)
+
+**Resposta Batch:**
+
+Quan s'envia un array, la resposta inclou un resum del processament:
+
+```json
+{
+  "status": "ok",
+  "receivedAt": "2024-01-15T10:30:00.123Z",
+  "total": 2,
+  "successful": 2,
+  "ignored": 0,
+  "errors": 0,
+  "results": [
+    {
+      "index": 0,
+      "status": "ok",
+      "receivedAt": "2024-01-15T10:30:00.123Z"
+    },
+    {
+      "index": 1,
+      "status": "ok",
+      "receivedAt": "2024-01-15T10:30:00.123Z"
+    }
+  ]
+}
+```
 
 ## 🔧 Implementació al Servidor MCP
 

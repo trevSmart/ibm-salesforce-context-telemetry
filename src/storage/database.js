@@ -11,6 +11,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import {fileURLToPath} from 'node:url';
 import {dirname} from 'node:path';
+import {TelemetryEvent} from './telemetry-event.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -286,6 +287,13 @@ async function init() {
 		// because populateDenormalizedColumns references the error_message column
 		await ensureErrorMessageColumn();
 		await ensureDenormalizedColumns();
+		await ensureSchemaV2Columns();
+
+		// Migrate existing events asynchronously (doesn't block startup)
+		migrateExistingEventsToSchemaV2().catch(err => {
+			console.warn('Background migration of existing events failed:', err);
+		});
+
 		await ensurePeopleInitialsColumn();
 		await ensureEventTypesInitialized();
 		await ensureEventMigration(); // Execute migration before creating indexes that reference event_id
@@ -609,7 +617,14 @@ async function ensurePeopleInitialsColumn() {
  * @param {object} eventData
  * @returns {string|null}
  */
+// eslint-disable-next-line no-unused-vars
 function getNormalizedSessionId(eventData = {}) {
+	// If it's a TelemetryEvent, use its getter method
+	if (eventData.constructor?.name === 'TelemetryEvent') {
+		return eventData.getSessionId();
+	}
+
+	// Legacy support for raw event data
 	const directId = eventData.sessionId || eventData.session_id;
 	if (directId) {
 		return directId;
@@ -668,6 +683,12 @@ function extractUserDisplayName(data = {}) {
 }
 
 function getNormalizedUserId(eventData = {}) {
+	// If it's a TelemetryEvent, use its getter method
+	if (eventData.constructor?.name === 'TelemetryEvent') {
+		return eventData.getUserId();
+	}
+
+	// Legacy support for raw event data
 	// Try direct fields first
 	const directId = sanitizeUserIdentifier(eventData.userId || eventData.user_id);
 	if (directId) {
@@ -770,10 +791,22 @@ function extractCompanyName(eventData = {}) {
 
 /**
  * Extract all normalized fields from telemetry event data in a single pass
- * @param {object} eventData - The telemetry event data
+ * @param {object} eventData - The telemetry event data (raw or TelemetryEvent)
  * @returns {object} Object containing all extracted fields: {orgId, userName, toolName, companyName, errorMessage}
  */
 function extractNormalizedFields(eventData = {}) {
+	// If it's a TelemetryEvent, return its already calculated denormalized fields
+	if (eventData.constructor?.name === 'TelemetryEvent') {
+		return {
+			orgId: eventData.orgId,
+			userName: eventData.userName,
+			toolName: eventData.toolName,
+			companyName: eventData.companyName,
+			errorMessage: eventData.errorMessage
+		};
+	}
+
+	// Legacy support for raw event data
 	const result = {
 		orgId: null,
 		userName: null,
@@ -785,7 +818,6 @@ function extractNormalizedFields(eventData = {}) {
 	if (!eventData || !eventData.data) {
 		return result;
 	}
-
 	const data = eventData.data;
 
 	// Extract orgId (new format: data.state.org.id, legacy: data.orgId)
@@ -859,7 +891,6 @@ function extractNormalizedFields(eventData = {}) {
 
 	return result;
 }
-
 /**
  * Extract error message from tool_error events (legacy function, kept for backward compatibility)
  * @param {object} eventData - The event data object
@@ -1061,41 +1092,57 @@ async function computeParentSessionId(eventData, normalizedSessionId, normalized
 
 /**
  * Store a telemetry event
- * @param {object} eventData - The telemetry event data
+ * @param {import('./telemetry-event.js').TelemetryEvent} telemetryEvent - The parsed telemetry event
  * @param {string} receivedAt - ISO timestamp when event was received
- * @returns {Promise<void>}
+ * @returns {Promise<boolean>} Success status
  */
-async function storeEvent(eventData, receivedAt) {
+async function storeEvent(telemetryEvent, receivedAt) {
 	if (!db) {
 		throw new Error('Database not initialized. Call init() first.');
 	}
 
-	try {
-		const normalizedSessionId = getNormalizedSessionId(eventData);
-		const normalizedUserId = getNormalizedUserId(eventData);
-		const allowMissingUser = eventData?.allowMissingUser === true;
+	// Validate that it's a TelemetryEvent instance
+	if (!(telemetryEvent instanceof TelemetryEvent)) {
+		throw new Error('storeEvent() requires a TelemetryEvent instance');
+	}
 
-		if (!normalizedUserId && !allowMissingUser) {
+	try {
+		const sessionId = telemetryEvent.getSessionId();
+		const userId = telemetryEvent.getUserId();
+		const allowMissingUser = telemetryEvent.data?.allowMissingUser === true;
+		const isSessionEventWithoutStart = telemetryEvent.area === 'session' && telemetryEvent.event !== 'session_start';
+		const isExemptEvent = ['server_boot', 'client_connect'].includes(telemetryEvent.event);
+
+		if (!userId && !allowMissingUser && !isSessionEventWithoutStart && !isExemptEvent) {
 			console.warn('Dropping telemetry event without username/userId');
+			// Store discarded event as general error
+			const timestamp = receivedAt || new Date().toISOString();
+			storeDiscardedEvent(telemetryEvent.payload || telemetryEvent, 'Event discarded: missing username/userId', timestamp).catch(err => {
+				console.error('Error storing discarded event:', err);
+			});
 			return false;
 		}
 
-		// Get event type ID
-		const eventTypeId = await getEventTypeId(eventData.event);
+		// Get event type ID from TelemetryEvent's calculated eventType
+		const eventTypeId = await getEventTypeId(telemetryEvent.eventType);
 		if (!eventTypeId) {
-			console.warn(`Unknown event type: ${eventData.event}, dropping event`);
+			console.warn(`Unknown event type: ${telemetryEvent.eventType}, dropping event`);
+			// Store discarded event as general error
+			const timestamp = receivedAt || new Date().toISOString();
+			storeDiscardedEvent(telemetryEvent.payload || telemetryEvent, `Event discarded: unknown event type '${telemetryEvent.eventType}'`, timestamp).catch(err => {
+				console.error('Error storing discarded event:', err);
+			});
 			return false;
 		}
 
 		const parentSessionId = await computeParentSessionId(
-			eventData,
-			normalizedSessionId,
-			normalizedUserId
+			telemetryEvent,
+			sessionId,
+			userId
 		);
 
-		// Extract denormalized fields for faster queries (single pass optimization)
-		const normalizedFields = extractNormalizedFields(eventData);
-		const {orgId, userName, toolName, companyName, errorMessage} = normalizedFields;
+		// Use denormalized fields from TelemetryEvent
+		const {orgId, userName, toolName, companyName, errorMessage} = telemetryEvent;
 
 		// Resolve team_id for pre-calculated team association
 		let teamId = null;
@@ -1114,22 +1161,54 @@ async function storeEvent(eventData, receivedAt) {
 			}
 		}
 
+		// Store original payload exactly as received (preserved in telemetryEvent.payload)
+		const payloadToStore = telemetryEvent.payload || JSON.stringify(telemetryEvent.toJSON());
+
+		// Handle payload differently for SQLite vs PostgreSQL
+		let payloadForSQLite;
+		let payloadForPostgreSQL;
+
+		if (dbType === 'sqlite') {
+			// For SQLite, ensure payload is always a string (TEXT column)
+			if (typeof payloadToStore !== 'string') {
+				payloadForSQLite = JSON.stringify(payloadToStore);
+			} else {
+				payloadForSQLite = payloadToStore;
+			}
+		} else if (dbType === 'postgresql') {
+			// For PostgreSQL, convert to object for JSONB column
+			// If it's already an object, use it directly; if it's a string, parse it
+			if (typeof payloadToStore === 'string') {
+				try {
+					payloadForPostgreSQL = JSON.parse(payloadToStore);
+				} catch {
+					// If parsing fails, wrap it as an object with the raw string
+					payloadForPostgreSQL = {_raw: payloadToStore};
+				}
+			} else {
+				payloadForPostgreSQL = payloadToStore;
+			}
+		}
+
 		if (dbType === 'sqlite') {
 			const stmt = getPreparedStatement('insertEvent', `
 				INSERT INTO telemetry_events
-				(event_id, timestamp, server_id, version, session_id, parent_session_id, user_id, data, received_at, org_id, user_name, tool_name, company_name, error_message, team_id, event)
-				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+				(event_id, timestamp, server_id, version, session_id, parent_session_id, user_id, data, received_at, org_id, user_name, tool_name, company_name, error_message, team_id, event, area, success, telemetry_schema_version)
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 			`);
+
+			// Convert boolean to integer for SQLite (0 or 1)
+			const successValue = telemetryEvent.success === true ? 1 : (telemetryEvent.success === false ? 0 : null);
 
 			stmt.run(
 				eventTypeId,
-				eventData.timestamp,
-				eventData.serverId || null,
-				eventData.version || null,
-				normalizedSessionId || null,
+				telemetryEvent.timestamp,
+				telemetryEvent.getServerId() || null,
+				telemetryEvent.getVersion() || null,
+				sessionId || null,
 				parentSessionId || null,
-				normalizedUserId || null,
-				JSON.stringify(eventData.data || {}),
+				userId || null,
+				payloadForSQLite,
 				receivedAt,
 				orgId,
 				userName,
@@ -1137,22 +1216,25 @@ async function storeEvent(eventData, receivedAt) {
 				companyName,
 				errorMessage,
 				teamId,
-				eventData.event || null
+				telemetryEvent.eventType || null, // For compatibility
+				telemetryEvent.area || null,
+				successValue,
+				telemetryEvent.telemetrySchemaVersion || null
 			);
 		} else if (dbType === 'postgresql') {
 			await db.query(
 				`INSERT INTO telemetry_events
-				(event_id, timestamp, server_id, version, session_id, parent_session_id, user_id, data, received_at, org_id, user_name, tool_name, company_name, error_message, team_id, event)
-				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
+				(event_id, timestamp, server_id, version, session_id, parent_session_id, user_id, data, received_at, org_id, user_name, tool_name, company_name, error_message, team_id, event, area, success, telemetry_schema_version)
+				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)`,
 				[
 					eventTypeId,
-					eventData.timestamp,
-					eventData.serverId || null,
-					eventData.version || null,
-					normalizedSessionId || null,
+					telemetryEvent.timestamp,
+					telemetryEvent.getServerId() || null,
+					telemetryEvent.getVersion() || null,
+					sessionId || null,
 					parentSessionId || null,
-					normalizedUserId || null,
-					eventData.data || {},
+					userId || null,
+					payloadForPostgreSQL, // PostgreSQL JSONB column receives parsed object
 					receivedAt,
 					orgId,
 					userName,
@@ -1160,29 +1242,229 @@ async function storeEvent(eventData, receivedAt) {
 					companyName,
 					errorMessage,
 					teamId,
-					eventData.event || null
+					telemetryEvent.eventType || null,
+					telemetryEvent.area || null,
+					telemetryEvent.success ?? null,
+					telemetryEvent.telemetrySchemaVersion || null
 				]
 			);
 		}
 
 		// Extract and store company name if available
-		if (eventData.serverId) {
-			const companyName = extractCompanyName(eventData);
+		const serverId = telemetryEvent.getServerId();
+		if (serverId) {
+			const companyName = extractCompanyName(telemetryEvent);
 			if (companyName) {
 				// Don't await to avoid blocking event storage
-				upsertOrgCompanyName(eventData.serverId, companyName).catch(err => {
+				upsertOrgCompanyName(serverId, companyName).catch(err => {
 					console.error('Error storing company name:', err);
 				});
 			}
 		}
 
 		// Update aggregated counters so UI lists stay accurate without pagination
-		await updateAggregatedStatsForEvent(normalizedUserId, orgId, eventData.timestamp, userName);
+		await updateAggregatedStatsForEvent(userId, orgId, telemetryEvent.timestamp, userName);
 
 		return true;
 	} catch (error) {
 		// Re-throw to allow caller to handle
 		throw new Error(`Failed to store telemetry event: ${error.message}`);
+	}
+}
+
+/**
+ * Store a discarded telemetry event as a general error
+ * This function stores events that were discarded for any reason (missing userId, unknown event type, etc.)
+ * without any validation requirements - it stores everything that was discarded
+ * @param {object} rawPayload - Original raw payload that was discarded
+ * @param {string} reason - Reason why the event was discarded (optional)
+ * @param {string} receivedAt - ISO timestamp when event was received
+ * @returns {Promise<boolean>} Success status
+ */
+async function storeDiscardedEvent(rawPayload, reason = 'discarded', receivedAt = null) {
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
+
+	try {
+		// Use current timestamp if not provided
+		const timestamp = receivedAt || new Date().toISOString();
+
+		// Get or create "error" event type (used for discarded events)
+		let eventTypeId = await getEventTypeId('error');
+		if (!eventTypeId) {
+			// If "error" type doesn't exist, create it
+			if (dbType === 'sqlite') {
+				const stmt = db.prepare('INSERT INTO event_types (name, description) VALUES (?, ?)');
+				const result = stmt.run('error', 'General error event');
+				eventTypeId = result.lastInsertRowid;
+			} else if (dbType === 'postgresql') {
+				const result = await db.query(
+					'INSERT INTO event_types (name, description) VALUES ($1, $2) ON CONFLICT (name) DO NOTHING RETURNING id',
+					['error', 'General error event']
+				);
+				if (result.rows.length > 0) {
+					eventTypeId = result.rows[0].id;
+				} else {
+					// Type already exists, fetch it
+					eventTypeId = await getEventTypeId('error');
+				}
+			}
+		}
+
+		// Store the discarded payload as-is in the data field
+		// Handle payload differently for SQLite vs PostgreSQL
+		let payloadForSQLite;
+		let payloadForPostgreSQL;
+
+		if (dbType === 'sqlite') {
+			// For SQLite, ensure payload is always a string (TEXT column)
+			payloadForSQLite = typeof rawPayload === 'string' ? rawPayload : JSON.stringify(rawPayload);
+		} else if (dbType === 'postgresql') {
+			// For PostgreSQL, convert to object for JSONB column
+			// If it's already an object, use it directly; if it's a string, parse it
+			if (typeof rawPayload === 'string') {
+				try {
+					payloadForPostgreSQL = JSON.parse(rawPayload);
+				} catch {
+					// If parsing fails, wrap it as an object with the raw string
+					payloadForPostgreSQL = {_raw: rawPayload};
+				}
+			} else {
+				payloadForPostgreSQL = rawPayload;
+			}
+		}
+
+		// Extract any available metadata from the payload if it exists
+		let serverId = null;
+		let version = null;
+		let sessionId = null;
+		let userId = null;
+		let orgId = null;
+		let userName = null;
+		let toolName = null;
+		let companyName = null;
+		const errorMessage = reason;
+
+		// Try to extract metadata from payload if it's an object
+		if (typeof rawPayload === 'object' && rawPayload !== null) {
+			// Try to get server info
+			if (rawPayload.server?.id) {
+				serverId = rawPayload.server.id;
+			}
+			if (rawPayload.server?.version) {
+				version = rawPayload.server.version;
+			}
+
+			// Try to get session info
+			if (rawPayload.session?.id) {
+				sessionId = rawPayload.session.id;
+			}
+
+			// Try to get user info
+			if (rawPayload.user?.id) {
+				userId = rawPayload.user.id;
+			}
+			if (rawPayload.data?.userName || rawPayload.data?.user_name) {
+				userName = rawPayload.data.userName || rawPayload.data.user_name;
+			}
+
+			// Try to get org info
+			if (rawPayload.server?.id) {
+				orgId = rawPayload.server.id;
+			}
+
+			// Try to get tool name
+			if (rawPayload.data?.toolName || rawPayload.data?.tool_name) {
+				toolName = rawPayload.data.toolName || rawPayload.data.tool_name;
+			}
+
+			// Try to get company name
+			if (rawPayload.data?.companyName || rawPayload.data?.company_name) {
+				companyName = rawPayload.data.companyName || rawPayload.data.company_name;
+			}
+		}
+
+		// Resolve team_id if orgId is available
+		let teamId = null;
+		if (orgId) {
+			try {
+				if (dbType === 'sqlite') {
+					const result = db.prepare('SELECT team_id FROM orgs WHERE server_id = ?').get(orgId);
+					teamId = result?.team_id || null;
+				} else if (dbType === 'postgresql') {
+					const result = await db.query('SELECT team_id FROM orgs WHERE server_id = $1', [orgId]);
+					teamId = result.rows.length > 0 ? result.rows[0].team_id : null;
+				}
+			} catch (error) {
+				// Log error but don't fail event insertion
+				console.warn('Could not resolve team_id for org_id %s:', orgId, error.message);
+			}
+		}
+
+		// Insert the discarded event with area='general' and success=false
+		if (dbType === 'sqlite') {
+			const stmt = getPreparedStatement('insertDiscardedEvent', `
+				INSERT INTO telemetry_events
+				(event_id, timestamp, server_id, version, session_id, parent_session_id, user_id, data, received_at, org_id, user_name, tool_name, company_name, error_message, team_id, event, area, success, telemetry_schema_version)
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			`);
+
+			stmt.run(
+				eventTypeId,
+				timestamp,
+				serverId,
+				version,
+				sessionId,
+				null, // parent_session_id
+				userId,
+				payloadForSQLite,
+				receivedAt || timestamp,
+				orgId,
+				userName,
+				toolName,
+				companyName,
+				errorMessage,
+				teamId,
+				'error', // event type name for compatibility
+				'general', // area
+				false, // success
+				null // telemetry_schema_version
+			);
+		} else if (dbType === 'postgresql') {
+			await db.query(
+				`INSERT INTO telemetry_events
+				(event_id, timestamp, server_id, version, session_id, parent_session_id, user_id, data, received_at, org_id, user_name, tool_name, company_name, error_message, team_id, event, area, success, telemetry_schema_version)
+				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)`,
+				[
+					eventTypeId,
+					timestamp,
+					serverId,
+					version,
+					sessionId,
+					null, // parent_session_id
+					userId,
+					payloadForPostgreSQL, // PostgreSQL JSONB column receives parsed object
+					receivedAt || timestamp,
+					orgId,
+					userName,
+					toolName,
+					companyName,
+					errorMessage,
+					teamId,
+					'error', // event type name for compatibility
+					'general', // area
+					false, // success
+					null // telemetry_schema_version
+				]
+			);
+		}
+
+		return true;
+	} catch (error) {
+		// Log error but don't throw - we don't want discarded event storage to fail the main flow
+		console.error('Error storing discarded event:', error);
+		return false;
 	}
 }
 
@@ -1260,6 +1542,7 @@ async function getEvents(options = {}) {
 		limit = 50,
 		offset = 0,
 		eventTypes,
+		areas,
 		serverId,
 		sessionId,
 		startDate,
@@ -1278,7 +1561,20 @@ async function getEvents(options = {}) {
 		whereClause += ' AND deleted_at IS NULL';
 	}
 
-	if (eventTypes && Array.isArray(eventTypes) && eventTypes.length > 0) {
+	if (areas && Array.isArray(areas) && areas.length > 0) {
+		// Filter by area (preferred over eventTypes for area-based filtering)
+		if (areas.length === 1) {
+			whereClause += dbType === 'sqlite' ? ' AND COALESCE(e.area, \'general\') = ?' : ` AND COALESCE(e.area, 'general') = $${paramIndex++}`;
+			params.push(areas[0]);
+		} else {
+			const placeholders = areas.map(() => {
+				return dbType === 'sqlite' ? '?' : `$${paramIndex++}`;
+			}).join(', ');
+			whereClause += ` AND COALESCE(e.area, 'general') IN (${placeholders})`;
+			params.push(...areas);
+		}
+	} else if (eventTypes && Array.isArray(eventTypes) && eventTypes.length > 0) {
+		// Fallback to eventTypes for backward compatibility
 		if (eventTypes.length === 1) {
 			whereClause += dbType === 'sqlite' ? ' AND et.name = ?' : ` AND et.name = $${paramIndex++}`;
 			params.push(eventTypes[0]);
@@ -1364,8 +1660,8 @@ async function getEvents(options = {}) {
 	const eventsQuery = `
 		SELECT
 			e.id, et.name as event, e.timestamp, e.server_id, e.version, e.session_id, e.parent_session_id,
-			e.user_id, e.received_at, e.created_at, e.user_name, e.tool_name, e.company_name
-			${dbType === 'sqlite' ? ', e.error_message' : ', e.error_message'}
+			e.user_id, e.received_at, e.created_at, e.user_name, e.tool_name, e.company_name,
+			e.error_message, e.area
 		FROM telemetry_events e
 		JOIN event_types et ON e.event_id = et.id
 		${whereClause}
@@ -1404,7 +1700,7 @@ async function getEventById(id) {
 	}
 
 	if (dbType === 'sqlite') {
-		const event = db.prepare('SELECT e.id, et.name as event, e.timestamp, e.server_id, e.version, e.session_id, e.user_id, e.data, e.received_at, e.created_at, e.org_id, e.user_name, e.tool_name, e.company_name, e.error_message FROM telemetry_events e JOIN event_types et ON e.event_id = et.id WHERE e.id = ? AND e.deleted_at IS NULL').get(id);
+		const event = db.prepare('SELECT e.id, et.name as event, e.timestamp, e.server_id, e.version, e.session_id, e.user_id, e.data, e.received_at, e.created_at, e.org_id, e.user_name, e.tool_name, e.company_name, e.error_message, e.area FROM telemetry_events e JOIN event_types et ON e.event_id = et.id WHERE e.id = ? AND e.deleted_at IS NULL').get(id);
 		if (!event) {
 			return null;
 		}
@@ -1413,7 +1709,7 @@ async function getEventById(id) {
 			data: JSON.parse(event.data)
 		};
 	}
-	const result = await db.query('SELECT e.id, et.name as event, e.timestamp, e.server_id, e.version, e.session_id, e.user_id, e.data, e.received_at, e.created_at, e.org_id, e.user_name, e.tool_name, e.company_name, e.error_message FROM telemetry_events e JOIN event_types et ON e.event_id = et.id WHERE e.id = $1 AND e.deleted_at IS NULL', [id]);
+	const result = await db.query('SELECT e.id, et.name as event, e.timestamp, e.server_id, e.version, e.session_id, e.user_id, e.data, e.received_at, e.created_at, e.org_id, e.user_name, e.tool_name, e.company_name, e.error_message, e.area FROM telemetry_events e JOIN event_types et ON e.event_id = et.id WHERE e.id = $1 AND e.deleted_at IS NULL', [id]);
 	if (result.rows.length === 0) {
 		return null;
 	}
@@ -1433,7 +1729,7 @@ async function getEventTypeStats(options = {}) {
 
 	if (dbType === 'sqlite') {
 		let query = `
-			SELECT event, COUNT(*) as count
+			SELECT COALESCE(area, 'general') as event, COUNT(*) as count
 			FROM telemetry_events
 		`;
 		const params = [];
@@ -1456,7 +1752,7 @@ async function getEventTypeStats(options = {}) {
 			query += ` WHERE ${conditions.join(' AND ')}`;
 		}
 		query += `
-			GROUP BY event
+			GROUP BY COALESCE(area, 'general')
 			ORDER BY count DESC
 		`;
 		const stmt = db.prepare(query);
@@ -1464,7 +1760,7 @@ async function getEventTypeStats(options = {}) {
 		return result;
 	}
 	let query = `
-			SELECT event, COUNT(*) as count
+			SELECT COALESCE(area, 'general') as event, COUNT(*) as count
 			FROM telemetry_events
 		`;
 	const params = [];
@@ -1488,7 +1784,7 @@ async function getEventTypeStats(options = {}) {
 		query += ` WHERE ${conditions.join(' AND ')}`;
 	}
 	query += `
-			GROUP BY event
+			GROUP BY COALESCE(area, 'general')
 			ORDER BY count DESC
 		`;
 	const result = await db.query(query, params);
@@ -3555,6 +3851,122 @@ async function populateDenormalizedColumns() {
 
 	} catch (error) {
 		console.error('Error emplenant columnes denormalitzades:', error);
+	}
+}
+
+/**
+ * Adds schema v2 columns to telemetry_events table for better query performance
+ * - area: event area ('tool', 'session', 'general')
+ * - success: operation success status
+ * - telemetry_schema_version: original schema version (1 or 2)
+ */
+async function ensureSchemaV2Columns() {
+	if (!db) {
+		return;
+	}
+
+	try {
+		if (dbType === 'sqlite') {
+			const columns = db.prepare('PRAGMA table_info(telemetry_events)').all();
+			const columnNames = columns.map(col => col.name);
+
+			if (!columnNames.includes('area')) {
+				db.exec('ALTER TABLE telemetry_events ADD COLUMN area TEXT');
+				db.exec('CREATE INDEX IF NOT EXISTS idx_area ON telemetry_events(area)');
+			}
+			if (!columnNames.includes('success')) {
+				db.exec('ALTER TABLE telemetry_events ADD COLUMN success BOOLEAN');
+				db.exec('CREATE INDEX IF NOT EXISTS idx_success ON telemetry_events(success)');
+			}
+			if (!columnNames.includes('telemetry_schema_version')) {
+				db.exec('ALTER TABLE telemetry_events ADD COLUMN telemetry_schema_version INTEGER');
+				db.exec('CREATE INDEX IF NOT EXISTS idx_telemetry_schema_version ON telemetry_events(telemetry_schema_version)');
+			}
+		} else if (dbType === 'postgresql') {
+			await db.query('ALTER TABLE IF EXISTS telemetry_events ADD COLUMN IF NOT EXISTS area TEXT');
+			await db.query('CREATE INDEX IF NOT EXISTS idx_area ON telemetry_events(area)');
+			await db.query('ALTER TABLE IF EXISTS telemetry_events ADD COLUMN IF NOT EXISTS success BOOLEAN');
+			await db.query('CREATE INDEX IF NOT EXISTS idx_success ON telemetry_events(success)');
+			await db.query('ALTER TABLE IF EXISTS telemetry_events ADD COLUMN IF NOT EXISTS telemetry_schema_version INTEGER');
+			await db.query('CREATE INDEX IF NOT EXISTS idx_telemetry_schema_version ON telemetry_events(telemetry_schema_version)');
+		}
+	} catch (error) {
+		console.error('Error ensuring schema v2 columns:', error);
+	}
+}
+
+/**
+ * Migrate existing events to schema v2 by populating area, success, and telemetry_schema_version columns
+ * This is optional but recommended for better query performance and consistent data
+ */
+async function migrateExistingEventsToSchemaV2() {
+	if (!db) {
+		return;
+	}
+
+	try {
+		if (dbType === 'sqlite') {
+			// SQLite: use UPDATE with CASE statements for efficiency (similar to PostgreSQL)
+			// This avoids the LIMIT/OFFSET pagination issue where records are skipped
+			const result = db.prepare(`
+				UPDATE telemetry_events
+				SET
+					area = CASE
+						WHEN (SELECT name FROM event_types WHERE id = telemetry_events.event_id) = 'tool_call' THEN 'tool'
+						WHEN (SELECT name FROM event_types WHERE id = telemetry_events.event_id) = 'tool_error' THEN 'tool'
+						WHEN (SELECT name FROM event_types WHERE id = telemetry_events.event_id) = 'session_start' THEN 'session'
+						WHEN (SELECT name FROM event_types WHERE id = telemetry_events.event_id) = 'session_end' THEN 'session'
+						WHEN (SELECT name FROM event_types WHERE id = telemetry_events.event_id) = 'error' THEN 'general'
+						ELSE 'general'
+					END,
+					success = CASE
+						WHEN (SELECT name FROM event_types WHERE id = telemetry_events.event_id) = 'tool_call' THEN 1
+						WHEN (SELECT name FROM event_types WHERE id = telemetry_events.event_id) = 'session_start' THEN 1
+						WHEN (SELECT name FROM event_types WHERE id = telemetry_events.event_id) = 'session_end' THEN 1
+						WHEN (SELECT name FROM event_types WHERE id = telemetry_events.event_id) = 'custom' THEN 1
+						ELSE 0
+					END,
+					telemetry_schema_version = 1
+				WHERE area IS NULL OR telemetry_schema_version IS NULL
+			`).run();
+
+			if (result.changes > 0) {
+				console.log(`✅ Migration complete: ${result.changes} events migrated to schema v2`);
+			}
+		} else if (dbType === 'postgresql') {
+			// PostgreSQL: use UPDATE with JOIN for efficiency
+			const result = await db.query(`
+				UPDATE telemetry_events e
+				SET
+					area = CASE et.name
+						WHEN 'tool_call' THEN 'tool'
+						WHEN 'tool_error' THEN 'tool'
+						WHEN 'session_start' THEN 'session'
+						WHEN 'session_end' THEN 'session'
+						WHEN 'error' THEN 'general'
+						ELSE 'general'
+					END,
+					success = CASE et.name
+						WHEN 'tool_call' THEN true
+						WHEN 'session_start' THEN true
+						WHEN 'session_end' THEN true
+						WHEN 'custom' THEN true
+						ELSE false
+					END,
+					telemetry_schema_version = 1
+				FROM event_types et
+				WHERE e.event_id = et.id
+					AND (e.area IS NULL OR e.telemetry_schema_version IS NULL)
+			`);
+
+			if (result.rowCount > 0) {
+				console.log(`✅ Migration complete: ${result.rowCount} events migrated to schema v2`);
+			}
+		}
+	} catch (error) {
+		console.error('Error migrating existing events to schema v2:', error);
+		// Don't throw error - migration is optional
+		console.warn('Continuing without migration - new events will have schema v2 fields, old events will have NULL');
 	}
 }
 
@@ -6660,6 +7072,7 @@ async function getUserLoginLogs(options = {}) {
 export {
 	init,
 	storeEvent,
+	storeDiscardedEvent,
 	getStats,
 	getEvents,
 	getEventById,

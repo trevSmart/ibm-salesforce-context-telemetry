@@ -317,7 +317,7 @@
 				scrollTimeout = setTimeout(() => {
 					tooltipInstance.updatePosition();
 				}, 10);
-			}, { passive: true });
+			}, {passive: true});
 
 			window.addEventListener('resize', () => {
 				clearTimeout(resizeTimeout);

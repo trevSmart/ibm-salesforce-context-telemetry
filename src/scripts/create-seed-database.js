@@ -145,7 +145,7 @@ async function createSeedDatabase() {
  * This calls the generate-test-data.js script with appropriate options
  * We generate less data (1 week instead of 6) to keep the seed database small
  */
-async function generateTestDataForSeed(dbModule) {
+async function generateTestDataForSeed(_dbModule) {
 	return new Promise((resolve) => {
 		const scriptPath = path.join(__dirname, 'generate-test-data.js');
 

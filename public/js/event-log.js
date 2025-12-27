@@ -215,7 +215,7 @@ function safeShowToast(message, type = 'info') {
 	let teamEventCounts = new Map(); // team key -> event count in current view
 	let teamEventCountsSource = 'server'; // 'server' uses aggregated counters, 'local' uses paged events
 	let selectedActivityDate = null; // null means use current day by default
-	let activeFilters = new Set(['tool_call', 'session_start', 'custom', 'tool_error']);
+	let activeFilters = new Set(['tool', 'session', 'general']);
 	let selectedUserIds = new Set(); // Will be populated with all users when loaded - all selected by default
 	let allUserIds = new Set(); // Track all available user IDs
 	let selectedSessionsForDeletion = new Set(); // Track sessions selected for deletion
@@ -298,7 +298,7 @@ function safeShowToast(message, type = 'info') {
 		allLoadedEvents = [];
 		selectedSession = 'all';
 		selectedActivityDate = null;
-		activeFilters = new Set(['tool_call', 'session_start', 'custom', 'tool_error']);
+		activeFilters = new Set(['tool', 'session', 'general']);
 		selectedUserIds = new Set();
 		allUserIds = new Set();
 		selectedSessionsForDeletion = new Set();
@@ -2726,10 +2726,10 @@ function safeShowToast(message, type = 'info') {
 				order: sortOrder
 			});
 
-			// Apply level filters
-			if (activeFilters.size > 0 && activeFilters.size < 4) {
-				Array.from(activeFilters).forEach(level => {
-					params.append('eventType', level);
+			// Apply area filters
+			if (activeFilters.size > 0 && activeFilters.size < 3) {
+				Array.from(activeFilters).forEach(area => {
+					params.append('area', area);
 				});
 			}
 
@@ -2983,8 +2983,9 @@ function safeShowToast(message, type = 'info') {
 		}
 
 		renderableEvents.forEach(event => {
-			const levelClass = getLevelClass(event.event);
-			const levelBadgeClass = getLevelBadgeClass(event.event);
+			const levelClass = getLevelClass(event.area);
+			const levelBadgeClass = getLevelBadgeClass(event.area);
+			const eventBadgeClass = getEventBadgeClass(event.event);
 			const description = formatDescription(event);
 			const eventData = normalizeEventData(event.data);
 			const clientName = event.company_name || '';
@@ -3014,30 +3015,35 @@ function safeShowToast(message, type = 'info') {
 			row.setAttribute('data-event-id', event.id);
 			// Store event data in the row element to avoid API call when copying payload
 			row.setAttribute('data-event', JSON.stringify(event));
-			const userCellHtml = showUserColumn? `<td class="hidden text-gray-700 sm:table-cell log-user whitespace-nowrap">${escapeHtml(userLabel)}</td>`: '';
+			const userCellHtml = showUserColumn? `<td class="col-user hidden text-gray-700 sm:table-cell log-user whitespace-nowrap">${escapeHtml(userLabel)}</td>`: '';
 
 			row.innerHTML = `
-				<td class="expand-column px-2 font-medium text-gray-900 whitespace-nowrap" style="text-align: center;">
+				<td class="expand-column col-expand px-2 font-medium text-gray-900 whitespace-nowrap" style="text-align: center;">
 					<button class="expand-btn" type="button" id="expand-btn-${event.id}" style="background: none; border: none; cursor: pointer; padding: 4px;">
 						<i class="fa-solid fa-chevron-right"></i>
 					</button>
 				</td>
-				<td class="whitespace-nowrap">${formatDate(event.timestamp)}
+				<td class="col-date whitespace-nowrap">${formatDate(event.timestamp)}
 				</td>
 				${userCellHtml}
-				<td class="hidden text-gray-500 md:table-cell log-client whitespace-nowrap">${escapeHtml(clientName)}</td>
-				<td class="text-gray-500 whitespace-nowrap">
-					<span class="${levelBadgeClass}">
-						${event.event.replace('_', ' ')}
+				<td class="col-company hidden text-gray-500 md:table-cell log-client whitespace-nowrap">${escapeHtml(clientName)}</td>
+				<td class="col-area text-gray-500 whitespace-nowrap">
+					<span class="${levelBadgeClass}${!event.area ? ' na' : ''}">
+						${event.area || 'N/A'}
 					</span>
 				</td>
-				<td class="hidden text-gray-500 lg:table-cell log-tool-name whitespace-nowrap">${toolName}</td>
-				<td class="font-medium text-gray-900 whitespace-nowrap" style="text-align: center;">
+				<td class="col-event text-gray-500 whitespace-nowrap">
+					<span class="${eventBadgeClass}">
+						${escapeHtml(event.event || 'N/A')}
+					</span>
+				</td>
+				<td class="col-tool hidden text-gray-500 lg:table-cell log-tool-name whitespace-nowrap">${toolName}</td>
+				<td class="col-status font-medium text-gray-900 whitespace-nowrap" style="text-align: center;">
 					${statusIcon}
 				</td>
-				<td class="hidden text-gray-500 xl:table-cell log-error-message whitespace-nowrap overflow-hidden text-ellipsis max-w-48" title="${escapedErrorMessage}">${escapedErrorMessage}</td>
-				<td class="text-gray-500 text-center log-description">${description}</td>
-				<td class="pr-4 pl-3 text-right font-medium actions-cell whitespace-nowrap sm:pr-8 lg:pr-8">
+				<td class="col-error hidden text-gray-500 xl:table-cell log-error-message whitespace-nowrap overflow-hidden text-ellipsis max-w-48" title="${escapedErrorMessage}">${escapedErrorMessage}</td>
+				<td class="col-payload text-gray-500 text-center log-description">${description}</td>
+				<td class="col-actions pr-4 pl-3 text-right font-medium actions-cell whitespace-nowrap sm:pr-8 lg:pr-8">
 					<button class="actions-btn hover:text-indigo-900" onclick="toggleActionsDropdown(event, ${event.id})" style="background: none; border: none; cursor: pointer; padding: 4px;">
 						<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
 							<circle cx="8" cy="3" r="1.5"/>
@@ -3145,26 +3151,38 @@ function safeShowToast(message, type = 'info') {
 		}
 	}
 
-	function getLevelClass(eventType) {
+	function getLevelClass(area) {
 		const levelMap = {
-			'tool_call': 'debug',
-			'session_start': 'info',
-			'session_end': 'info',
-			'tool_error': 'error',
-			'error': 'error',
-			'custom': 'warning'
+			'tool': 'tool',
+			'session': 'session',
+			'general': 'general'
 		};
-		return levelMap[eventType] || 'info';
+		return levelMap[area] || 'session';
 	}
 
-	function getLevelBadgeClass(eventType) {
-		const levelClass = getLevelClass(eventType);
+	function getLevelBadgeClass(area) {
+		const levelClass = getLevelClass(area);
 		return `level-badge ${levelClass}`;
+	}
+
+	function getEventBadgeClass(eventType) {
+		// Assigna colors aleatòriament però consistentment basat en el tipus d'event
+		const eventColorMap = {
+			'tool_call': 'green',
+			'tool_error': 'indigo',
+			'session_start': 'pink',
+			'session_end': 'yellow',
+			'error': 'green',
+			'custom': 'indigo'
+		};
+		const colorClass = eventColorMap[eventType] || 'green';
+		return `event-badge ${colorClass}`;
 	}
 
 
 	function createEventDetailsForm(event) {
-		const payload = buildEventPayload(event);
+		// event.data now contains the original payload exactly as received
+		const payload = event.data || {};
 
 		// Helper function to format value for display
 		const formatValue = (value) => {
@@ -3431,34 +3449,14 @@ function safeShowToast(message, type = 'info') {
 		return formContainer;
 	}
 
-	function buildEventPayload(event) {
-		const payload = {
-			event: event.event,
-			timestamp: event.timestamp,
-			serverId: event.server_id || null,
-			version: event.version || null,
-			sessionId: event.session_id || null,
-			userId: event.user_id || null,
-			data: event.data || {}
-		};
-
-		// Remove null values to keep the JSON clean
-		Object.keys(payload).forEach(key => {
-			if (payload[key] === null) {
-				delete payload[key];
-			}
-		});
-
-		return payload;
-	}
-
 	function formatDescription(event) {
 		// If event doesn't have data field (payload not loaded), return special marker
 		if (!Object.hasOwn(event, 'data')) {
 			return '__VIEW_PAYLOAD_BUTTON__';
 		}
 
-		return JSON.stringify(buildEventPayload(event));
+		// event.data now contains the original payload exactly as received
+		return JSON.stringify(event.data);
 	}
 
 
@@ -3935,8 +3933,8 @@ function safeShowToast(message, type = 'info') {
 			searchInputEl.value = '';
 		}
 
-		// Reset all event type filters to active
-		activeFilters = new Set(['tool_call', 'session_start', 'custom', 'tool_error']);
+		// Reset all area filters to active
+		activeFilters = new Set(['tool', 'session', 'general']);
 		document.querySelectorAll('.level-filter-btn').forEach(btn => {
 			const level = btn.dataset.level;
 			if (activeFilters.has(level)) {
@@ -4385,7 +4383,8 @@ function safeShowToast(message, type = 'info') {
 				throw new Error('Event payload not available');
 			}
 
-			const payload = buildEventPayload(data.event);
+			// data.event.data now contains the original payload exactly as received
+			const payload = data.event.data || {};
 
 			// Format as beautified JSON with proper indentation (2 spaces)
 			const beautifiedPayload = JSON.stringify(payload, null, 2);
@@ -5605,7 +5604,8 @@ function safeShowToast(message, type = 'info') {
 			if (!data?.event) {
 				throw new Error('Event payload not available');
 			}
-			const payload = buildEventPayload(data.event);
+			// data.event.data now contains the original payload exactly as received
+			const payload = data.event.data || {};
 
 			// Show payload in modal
 			showPayloadModal(payload, eventId);
@@ -5729,5 +5729,19 @@ function safeShowToast(message, type = 'info') {
 	window.toggleActionsDropdown = toggleActionsDropdown;
 	window.copyEventPayload = copyEventPayload;
 	window.confirmDeleteEvent = confirmDeleteEvent;
+
+	// Initialize resizable columns when DOM is ready
+	document.addEventListener('DOMContentLoaded', () => {
+		const logsTable = document.getElementById('logsTable');
+		if (logsTable && window.ResizableColumns) {
+
+			const resizableColumns = new window.ResizableColumns(logsTable, {
+				store: window.resizableColumnsStore,
+				minWidth: 48
+			});
+			// Store reference to prevent garbage collection
+			window.__logsTableResizableColumns = resizableColumns;
+		}
+	});
 
 } // end guard to avoid duplicate execution

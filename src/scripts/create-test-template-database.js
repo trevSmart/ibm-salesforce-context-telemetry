@@ -114,7 +114,7 @@ async function createTestTemplateDatabase() {
  * This calls the generate-test-data.js script with appropriate options
  * We generate less data (1 week instead of 6) to keep the template database small
  */
-async function generateTestDataForTemplate(dbModule) {
+async function generateTestDataForTemplate(_dbModule) {
 	return new Promise((resolve) => {
 		const scriptPath = path.join(__dirname, 'generate-test-data.js');
 

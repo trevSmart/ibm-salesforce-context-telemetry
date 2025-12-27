@@ -98,6 +98,7 @@ import * as logFormatter from './storage/log-formatter.js';
 import * as auth from './auth/auth.js';
 import * as csrf from './auth/csrf.js';
 import {Cache} from './utils/performance.js';
+import {parseTelemetryEvent} from './storage/parsers/index.js';
 const app = express();
 const port = process.env.PORT || 3100;
 
@@ -357,83 +358,194 @@ app.use((req, res, next) => {
 
 app.post('/telemetry', (req, res) => {
 	try {
-		const telemetryData = req.body;
+		const rawTelemetryData = req.body;
 
 		// Basic validation
-		if (!telemetryData || typeof telemetryData !== 'object') {
+		if (!rawTelemetryData || typeof rawTelemetryData !== 'object') {
 			return res.status(400).json({
 				status: 'error',
-				message: 'Invalid telemetry data: expected JSON object'
+				message: 'Invalid telemetry data: expected JSON object or array'
 			});
 		}
 
-		// Validate against JSON schema with different strictness based on event type
-		let validationErrors = [];
-		let valid = false;
+		// Normalize to array: if single object, wrap it in an array
+		const isArray = Array.isArray(rawTelemetryData);
+		const events = isArray ? rawTelemetryData : [rawTelemetryData];
 
-		if (telemetryData.event === 'tool_error' || telemetryData.event === 'error') {
-			// For error events, be more permissive - only validate basic structure
-			const basicValid = telemetryData.event && telemetryData.timestamp;
-			valid = basicValid;
-
-			if (!basicValid) {
-				validationErrors = [{
-					field: 'event|timestamp',
-					message: 'Error events must include event type and timestamp'
-				}];
-			}
-		} else {
-			// For normal events, use full schema validation
-			valid = validate(telemetryData);
-			if (!valid) {
-				validationErrors = validate.errors.map(err => ({
-					field: err.instancePath || err.params?.missingProperty || 'root',
-					message: err.message
-				}));
-			}
-		}
-
-		if (!valid) {
+		// Enforce maximum limit to prevent abuse
+		if (events.length > MAX_API_LIMIT) {
 			return res.status(400).json({
 				status: 'error',
-				message: 'Validation failed',
-				errors: validationErrors
+				message: `Too many events. Maximum ${MAX_API_LIMIT} events per request`,
+				received: events.length,
+				limit: MAX_API_LIMIT
 			});
 		}
 
-		// Log the telemetry event with timestamp
-		const timestamp = new Date().toISOString();
-
-		// Skip storing events that do not include a username/userId
-		const normalizedUserId = db.getNormalizedUserId(telemetryData);
-		if (!normalizedUserId) {
-			console.warn('Dropping telemetry event without username/userId');
-			return res.status(202).json({
-				status: 'ignored',
-				reason: 'missing_username',
-				receivedAt: timestamp
+		// Validate empty array
+		if (events.length === 0) {
+			return res.status(400).json({
+				status: 'error',
+				message: 'Empty array. At least one event is required'
 			});
 		}
 
+		const receivedAt = new Date().toISOString();
+		const results = [];
+		let successCount = 0;
+		let ignoredCount = 0;
+		let errorCount = 0;
+		const cacheState = {cleared: false}; // Use object to avoid closure issues
 
-		// Store in database (non-blocking - don't await to avoid blocking response)
-		db.storeEvent(telemetryData, timestamp).then((stored) => {
-			if (stored) {
-				// Clear relevant caches when new data arrives
-				statsCache.clear();
-				sessionsCache.clear();
-				userIdsCache.clear();
+		// Process each event
+		for (let i = 0; i < events.length; i++) {
+			const eventData = events[i];
+			const eventIndex = i;
+
+			try {
+				// Validate individual event
+				if (!eventData || typeof eventData !== 'object' || Array.isArray(eventData)) {
+					results.push({
+						index: eventIndex,
+						status: 'error',
+						message: 'Invalid event: expected JSON object'
+					});
+					errorCount++;
+					continue;
+				}
+
+				// Validate against unified JSON schema (v1 or v2)
+				const valid = validate(eventData);
+				if (!valid) {
+					const validationErrors = validate.errors.map(err => ({
+						field: err.instancePath || err.params?.missingProperty || 'root',
+						message: err.message
+					}));
+					results.push({
+						index: eventIndex,
+						status: 'error',
+						message: 'Validation failed',
+						errors: validationErrors
+					});
+					errorCount++;
+					continue;
+				}
+
+				// Parse raw event to TelemetryEvent (handles both v1 and v2 automatically)
+				let telemetryEvent;
+				try {
+					telemetryEvent = parseTelemetryEvent(eventData);
+				} catch (parseError) {
+					results.push({
+						index: eventIndex,
+						status: 'error',
+						message: 'Failed to parse telemetry event',
+						details: parseError.message
+					});
+					errorCount++;
+					continue;
+				}
+
+				// Set received timestamp
+				telemetryEvent.receivedAt = receivedAt;
+
+				// Skip storing events that do not include a username/userId
+				// Exception: For area 'session', only 'session_start' requires username
+				// (server_boot and client_connect happen before authentication)
+				const userId = telemetryEvent.getUserId();
+				const allowMissingUser = telemetryEvent.data?.allowMissingUser === true;
+				const isSessionEventWithoutStart = telemetryEvent.area === 'session' && telemetryEvent.event !== 'session_start';
+
+				// Debug logging
+				if (process.env.REST_DEBUG) {
+					console.log('[DEBUG] Username validation:', {
+						index: eventIndex,
+						area: telemetryEvent.area,
+						event: telemetryEvent.event,
+						userId: userId,
+						allowMissingUser: allowMissingUser,
+						isSessionEventWithoutStart: isSessionEventWithoutStart,
+						willReject: !userId && !allowMissingUser && !isSessionEventWithoutStart
+					});
+				}
+
+				if (!userId
+					&& !['server_boot', 'client_connect'].includes(telemetryEvent.event)
+					&& !allowMissingUser
+					&& !isSessionEventWithoutStart) {
+					console.warn(`Dropping telemetry event ${eventIndex} without username/userId`);
+					// Store discarded event as general error
+					db.storeDiscardedEvent(eventData, 'Event discarded: missing username/userId', receivedAt).catch(err => {
+						console.error('Error storing discarded event:', err);
+					});
+					results.push({
+						index: eventIndex,
+						status: 'ignored',
+						reason: 'missing_username',
+						receivedAt: receivedAt
+					});
+					ignoredCount++;
+					continue;
+				}
+
+				// Store in database (non-blocking - don't await to avoid blocking response)
+				db.storeEvent(telemetryEvent, receivedAt).then((stored) => {
+					if (stored && !cacheState.cleared) {
+						// Clear relevant caches when new data arrives (only once per batch)
+						statsCache.clear();
+						sessionsCache.clear();
+						userIdsCache.clear();
+						cacheState.cleared = true;
+					}
+				}).catch(err => {
+					console.error(`Error storing telemetry event ${eventIndex}:`, err);
+					// Don't fail the request if storage fails - telemetry is non-critical
+				});
+
+				results.push({
+					index: eventIndex,
+					status: 'ok',
+					receivedAt: receivedAt
+				});
+				successCount++;
+
+			} catch (error) {
+				console.error(`Error processing telemetry event ${eventIndex}:`, error);
+				results.push({
+					index: eventIndex,
+					status: 'error',
+					message: 'Internal server error',
+					details: error.message
+				});
+				errorCount++;
 			}
-		}).catch(err => {
-			console.error('Error storing telemetry event:', err);
-			// Don't fail the request if storage fails - telemetry is non-critical
-		});
+		}
 
-		// Return success response
-		res.status(200).json({
+		// Return response based on batch size
+		// For single event (backward compatibility), return simple response
+		if (!isArray) {
+			const singleResult = results[0];
+			if (singleResult.status === 'ignored') {
+				return res.status(202).json(singleResult);
+			}
+			if (singleResult.status === 'error') {
+				return res.status(400).json(singleResult);
+			}
+			return res.status(200).json(singleResult);
+		}
+
+		// For batch requests, return summary
+		const statusCode = errorCount === events.length ? 400 : (successCount > 0 ? 200 : 202);
+		res.status(statusCode).json({
 			status: 'ok',
-			receivedAt: timestamp
+			receivedAt: receivedAt,
+			total: events.length,
+			successful: successCount,
+			ignored: ignoredCount,
+			errors: errorCount,
+			results: results
 		});
+
 	} catch (error) {
 		console.error('Error processing telemetry:', error);
 		res.status(500).json({
@@ -748,25 +860,27 @@ app.post('/login', auth.requireGuest, async (req, res) => {
 				message: 'Login successful'
 			});
 		}
-			// Log failed login attempt
-			try {
-				const ipAddress = req.ip || req.connection.remoteAddress || req.socket.remoteAddress || null;
-				const userAgent = req.headers['user-agent'] || null;
-				await db.logUserLoginAttempt(username, ipAddress, userAgent, 'Invalid username or password');
-			} catch (logError) {
-				console.error('Error logging failed login attempt:', logError);
-				// Don't fail the error response if logging fails
-			}
+		// Log failed login attempt
+		try {
+			const ipAddress = req.ip || req.connection.remoteAddress || req.socket.remoteAddress || null;
+			const userAgent = req.headers['user-agent'] || null;
+			await db.logUserLoginAttempt(username, ipAddress, userAgent, 'Invalid username or password');
+		} catch (logError) {
+			console.error('Error logging failed login attempt:', logError);
+			// Don't fail the error response if logging fails
+		}
 
-			// If it's a form submission, redirect back with error
-			if (req.headers['content-type']?.includes('application/x-www-form-urlencoded')) {
-				return res.redirect('/login?error=invalid_credentials');
-			}
+		// If it's a form submission, redirect back with error
+		if (req.headers['content-type']?.includes('application/x-www-form-urlencoded')) {
+			return res.redirect('/login?error=invalid_credentials');
+		}
 
-			return res.status(401).json({
-				status: 'error',
-				message: 'Invalid username or password'
-			});
+		return res.status(401).json({
+			status: 'error',
+			message: 'Invalid username or password'
+		});
+
+
 
 	} catch (error) {
 		console.error('Login error:', error);
@@ -1321,6 +1435,7 @@ app.get('/api/events', auth.requireAuth, auth.requireRole('advanced'), async (re
 			limit = 50,
 			offset = 0,
 			eventType,
+			area,
 			serverId,
 			sessionId,
 			startDate,
@@ -1333,7 +1448,9 @@ app.get('/api/events', auth.requireAuth, auth.requireRole('advanced'), async (re
 		// Enforce maximum limit to prevent performance issues
 		const effectiveLimit = Math.min(Number.parseInt(limit, 10), MAX_API_LIMIT);
 
-		// Handle multiple eventType values (Express converts them to an array)
+		// Handle multiple area values (preferred over eventType for area-based filtering)
+		const areas = Array.isArray(area) ? area : (area ? [area] : []);
+		// Handle multiple eventType values (Express converts them to an array) - fallback for backward compatibility
 		const eventTypes = Array.isArray(eventType) ? eventType : (eventType ? [eventType] : []);
 		// Handle multiple userId values (Express converts them to an array)
 		const userIds = Array.isArray(userId) ? userId : (userId ? [userId] : []);
@@ -1351,6 +1468,7 @@ app.get('/api/events', auth.requireAuth, auth.requireRole('advanced'), async (re
 		const result = await db.getEvents({
 			limit: effectiveLimit,
 			offset: Number.parseInt(offset, 10),
+			areas: areas.length > 0 ? areas : undefined,
 			eventTypes: eventTypes.length > 0 ? eventTypes : undefined,
 			serverId,
 			sessionId,
@@ -2494,8 +2612,8 @@ app.get('/api-spec', auth.requireAuth, (_req, res) => {
 	}
 });
 
-// Serve JSON schema
-app.get('/schema', auth.requireAuth, (_req, res) => {
+// Serve JSON schema (public endpoint)
+app.get('/schema', (_req, res) => {
 	res.json(schema);
 });
 
