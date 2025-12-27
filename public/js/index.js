@@ -174,9 +174,9 @@ function formatUptime(seconds) {
 		return `${days}d ${hours}h ${minutes}m`;
 	} else if (hours > 0) {
 		return `${hours}h ${minutes}m`;
-	} else {
+	} 
 		return `${minutes}m`;
-	}
+	
 }
 
 async function loadHealthCheckData() {
@@ -208,7 +208,7 @@ async function loadHealthCheckData() {
 		} catch (error) {
 			console.warn('Failed to load database size for server stats:', error);
 			const dbSizeElement = document.getElementById('serverStatsDbSize');
-			if (dbSizeElement) dbSizeElement.textContent = 'N/A';
+			if (dbSizeElement) {dbSizeElement.textContent = 'N/A';}
 		}
 
 		const endTime = performance.now();
@@ -220,13 +220,13 @@ async function loadHealthCheckData() {
 
 		// Set error states
 		const versionElement = document.getElementById('serverStatsVersion');
-		if (versionElement) versionElement.textContent = 'Error';
+		if (versionElement) {versionElement.textContent = 'Error';}
 
 		const uptimeElement = document.getElementById('serverStatsUptime');
-		if (uptimeElement) uptimeElement.textContent = 'Error';
+		if (uptimeElement) {uptimeElement.textContent = 'Error';}
 
 		const dbSizeElement = document.getElementById('serverStatsDbSize');
-		if (dbSizeElement) dbSizeElement.textContent = 'Error';
+		if (dbSizeElement) {dbSizeElement.textContent = 'Error';}
 
 		const endTime = performance.now();
 		const durationMs = endTime - startTime;

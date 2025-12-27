@@ -2690,7 +2690,7 @@
   }
 
   html.dark .toggle-selection-mode-btn:hover {
-    background-colorq: rgba(59, 130, 246, 0.15);
+    background-color: rgba(59, 130, 246, 0.15);
     opacity: 1;
   }
 
@@ -2773,7 +2773,7 @@
   }
 
   .session-item.selected {
-f    background: #deefff !important;
+    background: #deefff !important;
   }
 
   html.dark .session-item.active {
