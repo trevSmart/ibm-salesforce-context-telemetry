@@ -111,7 +111,7 @@ function setToolUsageLoading(isLoading) {
 	card.setAttribute('data-loading', isLoading ? 'true' : 'false');
 }
 
-function renderToolUsageChart(tools, days) {
+function renderToolUsageChart(tools, _days) {
 	// Clean up any existing chart first
 	cleanupToolUsageChart();
 

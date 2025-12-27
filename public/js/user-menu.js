@@ -339,7 +339,7 @@
 			if (response.ok) {
 				window.location.href = '/login';
 			}
-		} catch (error) {
+		} catch {
 			window.location.href = '/login';
 		}
 	}

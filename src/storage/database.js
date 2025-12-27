@@ -617,6 +617,7 @@ async function ensurePeopleInitialsColumn() {
  * @param {object} eventData
  * @returns {string|null}
  */
+// eslint-disable-next-line no-unused-vars
 function getNormalizedSessionId(eventData = {}) {
 	// If it's a TelemetryEvent, use its getter method
 	if (eventData.constructor?.name === 'TelemetryEvent') {
@@ -1163,10 +1164,32 @@ async function storeEvent(telemetryEvent, receivedAt) {
 		}
 
 		// Store original payload exactly as received (preserved in telemetryEvent.payload)
-		let payloadToStore = telemetryEvent.payload || JSON.stringify(telemetryEvent.toJSON());
-		// Ensure payload is always a string
-		if (typeof payloadToStore !== 'string') {
-			payloadToStore = JSON.stringify(payloadToStore);
+		const payloadToStore = telemetryEvent.payload || JSON.stringify(telemetryEvent.toJSON());
+
+		// Handle payload differently for SQLite vs PostgreSQL
+		let payloadForSQLite;
+		let payloadForPostgreSQL;
+		
+		if (dbType === 'sqlite') {
+			// For SQLite, ensure payload is always a string (TEXT column)
+			if (typeof payloadToStore !== 'string') {
+				payloadForSQLite = JSON.stringify(payloadToStore);
+			} else {
+				payloadForSQLite = payloadToStore;
+			}
+		} else if (dbType === 'postgresql') {
+			// For PostgreSQL, convert to object for JSONB column
+			// If it's already an object, use it directly; if it's a string, parse it
+			if (typeof payloadToStore === 'string') {
+				try {
+					payloadForPostgreSQL = JSON.parse(payloadToStore);
+				} catch {
+					// If parsing fails, wrap it as an object with the raw string
+					payloadForPostgreSQL = {_raw: payloadToStore};
+				}
+			} else {
+				payloadForPostgreSQL = payloadToStore;
+			}
 		}
 
 		if (dbType === 'sqlite') {
@@ -1187,7 +1210,7 @@ async function storeEvent(telemetryEvent, receivedAt) {
 				sessionId || null,
 				parentSessionId || null,
 				userId || null,
-				payloadToStore,
+				payloadForSQLite,
 				receivedAt,
 				orgId,
 				userName,
@@ -1213,7 +1236,7 @@ async function storeEvent(telemetryEvent, receivedAt) {
 					sessionId || null,
 					parentSessionId || null,
 					userId || null,
-					payloadToStore, // PostgreSQL handles JSONB directly
+					payloadForPostgreSQL, // PostgreSQL JSONB column receives parsed object
 					receivedAt,
 					orgId,
 					userName,
@@ -1292,7 +1315,27 @@ async function storeDiscardedEvent(rawPayload, reason = 'discarded', receivedAt 
 		}
 
 		// Store the discarded payload as-is in the data field
-		const payloadToStore = typeof rawPayload === 'string' ? rawPayload : JSON.stringify(rawPayload);
+		// Handle payload differently for SQLite vs PostgreSQL
+		let payloadForSQLite;
+		let payloadForPostgreSQL;
+		
+		if (dbType === 'sqlite') {
+			// For SQLite, ensure payload is always a string (TEXT column)
+			payloadForSQLite = typeof rawPayload === 'string' ? rawPayload : JSON.stringify(rawPayload);
+		} else if (dbType === 'postgresql') {
+			// For PostgreSQL, convert to object for JSONB column
+			// If it's already an object, use it directly; if it's a string, parse it
+			if (typeof rawPayload === 'string') {
+				try {
+					payloadForPostgreSQL = JSON.parse(rawPayload);
+				} catch {
+					// If parsing fails, wrap it as an object with the raw string
+					payloadForPostgreSQL = {_raw: rawPayload};
+				}
+			} else {
+				payloadForPostgreSQL = rawPayload;
+			}
+		}
 
 		// Extract any available metadata from the payload if it exists
 		let serverId = null;
@@ -1303,7 +1346,7 @@ async function storeDiscardedEvent(rawPayload, reason = 'discarded', receivedAt 
 		let userName = null;
 		let toolName = null;
 		let companyName = null;
-		let errorMessage = reason;
+		const errorMessage = reason;
 
 		// Try to extract metadata from payload if it's an object
 		if (typeof rawPayload === 'object' && rawPayload !== null) {
@@ -1377,7 +1420,7 @@ async function storeDiscardedEvent(rawPayload, reason = 'discarded', receivedAt 
 				sessionId,
 				null, // parent_session_id
 				userId,
-				payloadToStore,
+				payloadForSQLite,
 				receivedAt || timestamp,
 				orgId,
 				userName,
@@ -1403,7 +1446,7 @@ async function storeDiscardedEvent(rawPayload, reason = 'discarded', receivedAt 
 					sessionId,
 					null, // parent_session_id
 					userId,
-					payloadToStore,
+					payloadForPostgreSQL, // PostgreSQL JSONB column receives parsed object
 					receivedAt || timestamp,
 					orgId,
 					userName,
@@ -3865,6 +3908,7 @@ async function migrateExistingEventsToSchemaV2() {
 
 	try {
 		// Mapping from event types to v2 structure
+		// eslint-disable-next-line no-unused-vars
 		const eventMapping = {
 			'tool_call': {area: 'tool', event: 'execution', success: true},
 			'tool_error': {area: 'tool', event: 'execution', success: false},

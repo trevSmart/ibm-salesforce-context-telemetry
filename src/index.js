@@ -859,26 +859,27 @@ app.post('/login', auth.requireGuest, async (req, res) => {
 				status: 'ok',
 				message: 'Login successful'
 			});
-		} 
-			// Log failed login attempt
-			try {
-				const ipAddress = req.ip || req.connection.remoteAddress || req.socket.remoteAddress || null;
-				const userAgent = req.headers['user-agent'] || null;
-				await db.logUserLoginAttempt(username, ipAddress, userAgent, 'Invalid username or password');
-			} catch (logError) {
-				console.error('Error logging failed login attempt:', logError);
-				// Don't fail the error response if logging fails
-			}
+		}
+		// Log failed login attempt
+		try {
+			const ipAddress = req.ip || req.connection.remoteAddress || req.socket.remoteAddress || null;
+			const userAgent = req.headers['user-agent'] || null;
+			await db.logUserLoginAttempt(username, ipAddress, userAgent, 'Invalid username or password');
+		} catch (logError) {
+			console.error('Error logging failed login attempt:', logError);
+			// Don't fail the error response if logging fails
+		}
 
-			// If it's a form submission, redirect back with error
-			if (req.headers['content-type']?.includes('application/x-www-form-urlencoded')) {
-				return res.redirect('/login?error=invalid_credentials');
-			}
+		// If it's a form submission, redirect back with error
+		if (req.headers['content-type']?.includes('application/x-www-form-urlencoded')) {
+			return res.redirect('/login?error=invalid_credentials');
+		}
 
-			return res.status(401).json({
-				status: 'error',
-				message: 'Invalid username or password'
-			});
+		return res.status(401).json({
+			status: 'error',
+			message: 'Invalid username or password'
+		});
+		
 		
 
 	} catch (error) {

@@ -232,9 +232,6 @@ async function renderPersonDetail(personId) {
 		return contentContainer.firstElementChild;
 	}
 
-	// Sanitize person color to prevent XSS - use a default color for people
-	const personColor = '#4f46e5'; // Default indigo color
-
 	// Get person initials for avatar
 	const initials = getPersonInitials(person);
 

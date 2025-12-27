@@ -5734,10 +5734,13 @@ function safeShowToast(message, type = 'info') {
 	document.addEventListener('DOMContentLoaded', () => {
 		const logsTable = document.getElementById('logsTable');
 		if (logsTable && window.ResizableColumns) {
-			new ResizableColumns(logsTable, {
+			 
+			const resizableColumns = new window.ResizableColumns(logsTable, {
 				store: window.resizableColumnsStore,
 				minWidth: 48
 			});
+			// Store reference to prevent garbage collection
+			window.__logsTableResizableColumns = resizableColumns;
 		}
 	});
 

@@ -13,7 +13,7 @@
 
 	try {
 		Object.defineProperty(patched, 'name', {value: 'includes'});
-	} catch (_err) {
+	} catch {
 		// Intentionally ignore: function name redefinition may fail in older environments,
 		// but this is non-critical and should not affect runtime behavior.
 	}

@@ -132,19 +132,6 @@ function sanitizeCssColor(color) {
 	return null;
 }
 
-function hexToRgba(hex, alpha = 0.12) {
-	if (!hex || typeof hex !== 'string') {return null;}
-	const normalized = hex.replace('#', '');
-	if (normalized.length !== 3 && normalized.length !== 6) {return null;}
-	const full = normalized.length === 3 ? normalized.split('').map(c => c + c).join('') : normalized;
-	const intVal = Number.parseInt(full, 16);
-	if (Number.isNaN(intVal)) {return null;}
-	const r = Math.floor(intVal / (256 * 256));
-	const g = Math.floor((intVal % (256 * 256)) / 256);
-	const b = intVal % 256;
-	return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
-
 // User menu functions (showUserMenu, handleLogout) are now in user-menu.js
 
 /**
@@ -563,11 +550,6 @@ function renderTeamsList() {
 	}
 
 	teamsList.innerHTML = teams.map(team => {
-		// Sanitize color values to prevent XSS
-		const sanitizedColor = sanitizeCssColor(team.color);
-		const _accentColor = sanitizedColor || '#4f46e5';
-		const _accentBg = sanitizedColor ? (hexToRgba(sanitizedColor, 0.14) || 'rgba(79, 70, 229, 0.12)') : 'rgba(79, 70, 229, 0.12)';
-
 		// Get team initials for fallback avatar
 		const initials = team.name.split(' ').map(word => word[0]).join('').substring(0, 2).toUpperCase();
 
@@ -854,6 +836,8 @@ function showCreateTeamModal() {
 	showTeamFormModal(null);
 }
 
+// Note: showEditTeamModal is kept for potential future use or API compatibility
+// eslint-disable-next-line no-unused-vars
 function showEditTeamModal(team) {
 	showTeamFormModal(team);
 }
@@ -1457,7 +1441,7 @@ function handleLogoFileChange(fileInput) {
 	}
 }
 
-async function handleRemoveLogo(teamId) {
+async function handleRemoveLogo(_teamId) {
 	const confirmed = await showConfirmDialog({
 		title: 'Remove logo',
 		message: 'Remove the current logo?',

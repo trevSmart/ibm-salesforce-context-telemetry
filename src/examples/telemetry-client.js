@@ -90,7 +90,9 @@ function withTelemetry(toolName, handler) {
 				success: true,
 				duration,
 				paramsCount: args.length
-			}).catch(() => {}); // Ignore errors
+			}).catch(() => {
+				// Ignore telemetry errors - they should never block the main operation
+			});
 
 			return result;
 		} catch (error) {
@@ -103,7 +105,9 @@ function withTelemetry(toolName, handler) {
 				duration,
 				errorType: error.constructor.name,
 				errorMessage: error.message
-			}).catch(() => {}); // Ignore errors
+			}).catch(() => {
+				// Ignore telemetry errors - they should never block the main operation
+			});
 
 			throw error;
 		}
