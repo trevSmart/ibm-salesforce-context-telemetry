@@ -2489,8 +2489,8 @@ app.get('/api-spec', auth.requireAuth, (_req, res) => {
 	}
 });
 
-// Serve JSON schema
-app.get('/schema', auth.requireAuth, (_req, res) => {
+// Serve JSON schema (public endpoint)
+app.get('/schema', (_req, res) => {
 	res.json(schema);
 });
 
