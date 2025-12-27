@@ -405,6 +405,19 @@ app.post('/telemetry', (req, res) => {
 		const userId = telemetryEvent.getUserId();
 		const allowMissingUser = telemetryEvent.data?.allowMissingUser === true;
 		const isSessionEventWithoutStart = telemetryEvent.area === 'session' && telemetryEvent.event !== 'session_start';
+
+		// Debug logging
+		if (process.env.REST_DEBUG) {
+			console.log('[DEBUG] Username validation:', {
+				area: telemetryEvent.area,
+				event: telemetryEvent.event,
+				userId: userId,
+				allowMissingUser: allowMissingUser,
+				isSessionEventWithoutStart: isSessionEventWithoutStart,
+				willReject: !userId && !allowMissingUser && !isSessionEventWithoutStart
+			});
+		}
+
 		if (!userId && !allowMissingUser && !isSessionEventWithoutStart) {
 			console.warn('Dropping telemetry event without username/userId');
 			return res.status(202).json({
