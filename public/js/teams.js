@@ -1600,9 +1600,10 @@ function pauseTeamsPage() {
 	// Currently no cleanup needed
 }
 
-function resumeTeamsPage() {
+async function resumeTeamsPage() {
 	// Teams page doesn't have intervals to resume
-	// UI is preserved, no action needed
+	// But we need to ensure event listeners are re-bound when returning from other pages
+	await loadTeams();
 }
 
 // Expose pause/resume hooks

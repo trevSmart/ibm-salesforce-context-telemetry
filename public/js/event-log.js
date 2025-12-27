@@ -5341,6 +5341,9 @@ function safeShowToast(message, type = 'info') {
 		if (autoRefreshEnabledState && !autoRefreshIntervalId) {
 			updateAutoRefreshInterval();
 		}
+
+		// Re-bind event listeners for session list items that may have been lost during soft navigation
+		await loadSessions();
 		// Restart last updated interval if it was running
 		const lastUpdatedEl = document.querySelector('.last-updated-text');
 		if (lastUpdatedEl && !lastUpdatedIntervalId) {

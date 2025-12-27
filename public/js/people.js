@@ -1124,9 +1124,10 @@ function pausePeoplePage() {
 	// Currently no cleanup needed
 }
 
-function resumePeoplePage() {
+async function resumePeoplePage() {
 	// People page doesn't have intervals to resume
-	// UI is preserved, no action needed
+	// But we need to ensure event listeners are re-bound when returning from other pages
+	await loadPeople();
 }
 
 // Export functions to window for global access
