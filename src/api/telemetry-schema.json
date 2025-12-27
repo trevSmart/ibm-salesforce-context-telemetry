@@ -130,15 +130,15 @@
           "description": "Server information",
           "properties": {
             "id": {
-              "type": "string",
+              "type": ["string", "null"],
               "description": "Unique identifier for the MCP server instance"
             },
             "version": {
-              "type": "string",
+              "type": ["string", "null"],
               "description": "Version of the MCP server"
             },
             "capabilities": {
-              "type": "object",
+              "type": ["object", "null"],
               "description": "Server capabilities"
             }
           }
@@ -148,15 +148,15 @@
           "description": "Client information (null if not connected)",
           "properties": {
             "name": {
-              "type": "string",
+              "type": ["string", "null"],
               "description": "Name of the MCP client"
             },
             "version": {
-              "type": "string",
+              "type": ["string", "null"],
               "description": "Version of the MCP client"
             },
             "capabilities": {
-              "type": "object",
+              "type": ["object", "null"],
               "description": "Client capabilities"
             }
           }
@@ -175,7 +175,7 @@
               "description": "Transport type used"
             },
             "protocolVersion": {
-              "type": "string",
+              "type": ["string", "null"],
               "description": "MCP protocol version"
             }
           }
@@ -185,7 +185,7 @@
           "description": "User information (null if anonymous)",
           "properties": {
             "id": {
-              "type": "string",
+              "type": ["string", "null"],
               "description": "Anonymous user identifier"
             }
           }
