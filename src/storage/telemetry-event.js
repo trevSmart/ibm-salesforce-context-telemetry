@@ -43,7 +43,7 @@ export class TelemetryEvent {
   constructor(raw = {}, originalPayload = null) {
     // Guardar payload original
     this.payload = originalPayload || raw;
-    
+
     this.validateStructure(raw);
 
     // Core fields

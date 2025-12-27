@@ -3666,47 +3666,32 @@ async function migrateExistingEventsToSchemaV2() {
 		};
 
 		if (dbType === 'sqlite') {
-			// Migrate in batches to avoid blocking the database
-			const batchSize = 1000;
-			let offset = 0;
-			let updated = 0;
+			// SQLite: use UPDATE with CASE statements for efficiency (similar to PostgreSQL)
+			// This avoids the LIMIT/OFFSET pagination issue where records are skipped
+			const result = db.prepare(`
+				UPDATE telemetry_events
+				SET
+					area = CASE 
+						WHEN (SELECT name FROM event_types WHERE id = telemetry_events.event_id) = 'tool_call' THEN 'tool'
+						WHEN (SELECT name FROM event_types WHERE id = telemetry_events.event_id) = 'tool_error' THEN 'tool'
+						WHEN (SELECT name FROM event_types WHERE id = telemetry_events.event_id) = 'session_start' THEN 'session'
+						WHEN (SELECT name FROM event_types WHERE id = telemetry_events.event_id) = 'session_end' THEN 'session'
+						WHEN (SELECT name FROM event_types WHERE id = telemetry_events.event_id) = 'error' THEN 'general'
+						ELSE 'general'
+					END,
+					success = CASE 
+						WHEN (SELECT name FROM event_types WHERE id = telemetry_events.event_id) = 'tool_call' THEN 1
+						WHEN (SELECT name FROM event_types WHERE id = telemetry_events.event_id) = 'session_start' THEN 1
+						WHEN (SELECT name FROM event_types WHERE id = telemetry_events.event_id) = 'session_end' THEN 1
+						WHEN (SELECT name FROM event_types WHERE id = telemetry_events.event_id) = 'custom' THEN 1
+						ELSE 0
+					END,
+					telemetry_schema_version = 1
+				WHERE area IS NULL OR telemetry_schema_version IS NULL
+			`).run();
 
-			while (true) {
-				const events = db.prepare(`
-					SELECT id, event_id, event
-					FROM telemetry_events
-					WHERE area IS NULL OR telemetry_schema_version IS NULL
-					LIMIT ? OFFSET ?
-				`).all(batchSize, offset);
-
-				if (events.length === 0) {
-					break;
-				}
-
-				const updateStmt = db.prepare(`
-					UPDATE telemetry_events
-					SET area = ?, success = ?, telemetry_schema_version = ?
-					WHERE id = ?
-				`);
-
-				for (const event of events) {
-					// Get event name from event_types table
-					const eventType = db.prepare('SELECT name FROM event_types WHERE id = ?').get(event.event_id);
-					if (!eventType) {
-						continue;
-					}
-
-					const mapping = eventMapping[eventType.name] || eventMapping.custom;
-					updateStmt.run(mapping.area, mapping.success, 1, event.id);
-					updated++;
-				}
-
-				offset += batchSize;
-				console.log(`Migrated ${updated} events to schema v2...`);
-			}
-
-			if (updated > 0) {
-				console.log(`✅ Migration complete: ${updated} events migrated to schema v2`);
+			if (result.changes > 0) {
+				console.log(`✅ Migration complete: ${result.changes} events migrated to schema v2`);
 			}
 		} else if (dbType === 'postgresql') {
 			// PostgreSQL: use UPDATE with JOIN for efficiency
