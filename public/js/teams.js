@@ -632,9 +632,6 @@ async function renderTeamDetail(teamId) {
           </div>
         </div>
         <div style="display: flex; gap: 8px;">
-          <button id="editTeamBtn" class="btn">
-            <i class="fas fa-pen" style="margin-right: 6px;"></i>Edit
-          </button>
           <button id="deleteTeamBtn" class="btn btn-destructive">
             <i class="fas fa-trash" style="margin-right: 6px;"></i>Delete
           </button>
@@ -675,28 +672,95 @@ async function renderTeamDetail(teamId) {
 	detailContent.innerHTML = `
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
       <div class="divide-y divide-gray-200 dark:divide-gray-700 overflow-hidden rounded-lg bg-white dark:bg-gray-800/50 dark:outline dark:-outline-offset-1 dark:outline-white/10 shadow-sm">
-        <div class="px-4 py-5 sm:px-6" style="display: flex; justify-content: space-between; align-items: center;">
-          <h2 style="margin: 0; font-size: 1.1rem; font-weight: 600;">Organizations</h2>
-          <button id="addOrgBtn" class="btn" onclick="showAddOrgModalForTeam(${teamId})">
-            <i class="fas fa-plus" style="margin-right: 4px;"></i>Add Org
-          </button>
+        <div class="px-4 py-5 sm:px-6">
+          <h2 style="margin: 0; font-size: 1.1rem; font-weight: 600;">Team Information</h2>
         </div>
         <div class="px-4 py-5 sm:p-6">
-          <div id="orgsList" class="flex flex-col gap-2">
-            ${team.orgs.length === 0 ? '<p class="text-gray-500 dark:text-gray-400 text-center p-4">No organizations assigned</p>' : ''}
-          </div>
+          <form id="teamEditForm" class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Team Name *</label>
+              <input type="text" id="teamNameInput" value="${escapeHtml(team.name)}"
+                     class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-gray-100">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Color</label>
+              <input type="text" id="teamColorInput" value="${escapeHtml(team.color || '')}" placeholder="#2195cf"
+                     class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-gray-100">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Logo</label>
+              <div class="space-y-2">
+                ${team.has_logo ? `
+                  <div id="currentLogoContainer" class="bg-gray-50 dark:bg-gray-700/50 flex items-center gap-3 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600/50 transition-colors">
+                    <img src="/api/teams/${team.id}/logo?t=${teamsCacheBuster}" alt="Current logo" style="width: 48px; height: 48px; object-fit: contain; border-radius: 4px; background: transparent;">
+                    <div style="flex: 1;">
+                      <div style="font-size: 0.875rem; color: var(--text-secondary);">Click to change logo</div>
+                    </div>
+                    <button type="button" id="removeLogoBtn" class="top-users-action" onclick="event.stopPropagation();" title="Remove logo">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                      </svg>
+                    </button>
+                  </div>
+                ` : `
+                  <div id="currentLogoContainer" class="bg-gray-50 dark:bg-gray-700/50 flex items-center justify-center p-6 border border-dashed border-gray-300 dark:border-gray-600 rounded-md cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600/50 transition-colors">
+                    <div class="text-center">
+                      <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
+                        <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                      </svg>
+                      <div class="mt-2 text-sm text-gray-500 dark:text-gray-400">Click to upload logo</div>
+                      <div class="text-xs text-gray-400 dark:text-gray-500">PNG, JPEG, or WebP (max 500KB)</div>
+                    </div>
+                  </div>
+                `}
+                <input type="file" id="teamLogoInput" accept="image/png,image/jpeg,image/jpg,image/webp" style="display: none;">
+                <div id="logoPreviewNew" style="display: none; margin-top: 8px;">
+                  <div class="bg-gray-50 dark:bg-gray-700/50 flex items-center gap-3 p-3 border border-gray-300 dark:border-gray-600 rounded-md">
+                    <img id="logoPreviewImg" src="" alt="Logo preview" style="width: 48px; height: 48px; object-fit: contain; border-radius: 4px; background: transparent; border: 1px solid var(--border-color);">
+                    <div style="flex: 1;">
+                      <div style="font-size: 0.875rem; color: var(--text-secondary);">New logo selected</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Created</label>
+              <div class="text-sm text-gray-500 dark:text-gray-400">${new Date(team.created_at).toLocaleDateString()}</div>
+            </div>
+            <div class="flex justify-end gap-2 pt-4">
+              <button type="submit" class="btn">
+                Save Changes
+              </button>
+            </div>
+          </form>
         </div>
       </div>
-      <div class="divide-y divide-gray-200 dark:divide-gray-700 overflow-hidden rounded-lg bg-white dark:bg-gray-800/50 dark:outline dark:-outline-offset-1 dark:outline-white/10 shadow-sm">
-        <div class="px-4 py-5 sm:px-6" style="display: flex; justify-content: space-between; align-items: center;">
-          <h2 style="margin: 0; font-size: 1.1rem; font-weight: 600;">Users</h2>
-          <button id="addUserBtn" class="btn" onclick="showAddUserModalForTeam(${teamId})">
-            <i class="fas fa-plus" style="margin-right: 4px;"></i>Add User
-          </button>
+      <div class="space-y-6">
+        <div class="divide-y divide-gray-200 dark:divide-gray-700 overflow-hidden rounded-lg bg-white dark:bg-gray-800/50 dark:outline dark:-outline-offset-1 dark:outline-white/10 shadow-sm">
+          <div class="px-4 py-5 sm:px-6" style="display: flex; justify-content: space-between; align-items: center;">
+            <h2 style="margin: 0; font-size: 1.1rem; font-weight: 600;">Organizations</h2>
+            <button id="addOrgBtn" class="btn" onclick="showAddOrgModalForTeam(${teamId})">
+              <i class="fas fa-plus" style="margin-right: 4px;"></i>Add Org
+            </button>
+          </div>
+          <div class="px-4 py-5 sm:p-6">
+            <div id="orgsList" class="flex flex-col gap-2">
+              ${team.orgs.length === 0 ? '<p class="text-gray-500 dark:text-gray-400 text-center p-4">No organizations assigned</p>' : ''}
+            </div>
+          </div>
         </div>
-        <div class="px-4 py-5 sm:p-6">
-          <div id="usersList" class="flex flex-col gap-2">
-            ${team.users.length === 0 ? '<p class="text-gray-500 dark:text-gray-400 text-center p-4">No users assigned</p>' : ''}
+        <div class="divide-y divide-gray-200 dark:divide-gray-700 overflow-hidden rounded-lg bg-white dark:bg-gray-800/50 dark:outline dark:-outline-offset-1 dark:outline-white/10 shadow-sm">
+          <div class="px-4 py-5 sm:px-6" style="display: flex; justify-content: space-between; align-items: center;">
+            <h2 style="margin: 0; font-size: 1.1rem; font-weight: 600;">Users</h2>
+            <button id="addUserBtn" class="btn" onclick="showAddUserModalForTeam(${teamId})">
+              <i class="fas fa-plus" style="margin-right: 4px;"></i>Add User
+            </button>
+          </div>
+          <div class="px-4 py-5 sm:p-6">
+            <div id="usersList" class="flex flex-col gap-2">
+              ${team.users.length === 0 ? '<p class="text-gray-500 dark:text-gray-400 text-center p-4">No users assigned</p>' : ''}
+            </div>
           </div>
         </div>
       </div>
@@ -748,8 +812,39 @@ async function renderTeamDetail(teamId) {
 		const listContent = renderTeamsList();
 		await transitionTeamsContent(listContent);
 	});
-	contentContainer.querySelector('#editTeamBtn')?.addEventListener('click', () => showEditTeamModal(team));
 	contentContainer.querySelector('#deleteTeamBtn')?.addEventListener('click', () => showDeleteTeamConfirm(team));
+
+	// Team edit form listeners
+	contentContainer.querySelector('#teamEditForm')?.addEventListener('submit', async (e) => {
+		e.preventDefault();
+		await handleTeamEditFormSubmit(teamId);
+	});
+
+	// Logo container click to select file
+	const logoContainer = contentContainer.querySelector('#currentLogoContainer');
+	const logoInput = contentContainer.querySelector('#teamLogoInput');
+	if (logoContainer && logoInput) {
+		logoContainer.addEventListener('click', () => {
+			logoInput.click();
+		});
+	}
+
+	// Logo preview for new uploads
+	if (logoInput) {
+		logoInput.addEventListener('change', (e) => {
+			handleLogoFileChange(e.target);
+		});
+	}
+
+	// Initialize remove logo button state
+	const removeLogoBtn = contentContainer.querySelector('#removeLogoBtn');
+	if (removeLogoBtn) {
+		removeLogoBtn.dataset.removeLogo = 'false';
+		removeLogoBtn.addEventListener('click', async (e) => {
+			e.stopPropagation(); // Prevent triggering logo container click
+			await handleRemoveLogo(teamId);
+		});
+	}
 
 	return contentContainer.firstElementChild;
 }
@@ -789,19 +884,36 @@ function showTeamFormModal(team = null) {
           <div style="margin-bottom: 4px; font-weight: 500;">Logo</div>
           <div style="display: flex; flex-direction: column; gap: 8px;">
             ${logoPreviewUrl ? `
-              <div class="bg-gray-50 dark:bg-gray-700/50 flex items-center gap-3 p-2 border border-gray-300 dark:border-gray-600 rounded-md">
-                <img id="logoPreview" src="${logoPreviewUrl}" alt="Current logo" style="width: 48px; height: 48px; object-fit: contain; border-radius: 4px; background: white;">
+              <div id="currentLogoContainer" class="bg-gray-50 dark:bg-gray-700/50 flex items-center gap-3 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600/50 transition-colors">
+                <img id="logoPreview" src="${logoPreviewUrl}" alt="Current logo" style="width: 48px; height: 48px; object-fit: contain; border-radius: 4px; background: transparent;">
                 <div style="flex: 1;">
-                  <div style="font-size: 0.875rem; color: var(--text-secondary);">Current logo</div>
-                  <button type="button" id="removeLogoBtn" class="btn btn-compact btn-destructive" style="margin-top: 4px;">Remove logo</button>
+                  <div style="font-size: 0.875rem; color: var(--text-secondary);">Click to change logo</div>
+                </div>
+                <button type="button" id="removeLogoBtn" class="top-users-action" onclick="event.stopPropagation();" title="Remove logo">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                  </svg>
+                </button>
+              </div>
+            ` : `
+              <div id="currentLogoContainer" class="bg-gray-50 dark:bg-gray-700/50 flex items-center justify-center p-6 border border-dashed border-gray-300 dark:border-gray-600 rounded-md cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600/50 transition-colors">
+                <div class="text-center">
+                  <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
+                    <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                  <div class="mt-2 text-sm text-gray-500 dark:text-gray-400">Click to upload logo</div>
+                  <div class="text-xs text-gray-400 dark:text-gray-500">PNG, JPEG, or WebP (max 500KB)</div>
                 </div>
               </div>
-            ` : ''}
-            <input type="file" id="teamLogoInput" accept="image/png,image/jpeg,image/jpg,image/webp"
-                   class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-gray-100">
-            <div style="font-size: 0.75rem; color: var(--text-secondary);">PNG, JPEG, or WebP (max 500KB)</div>
+            `}
+            <input type="file" id="teamLogoInput" accept="image/png,image/jpeg,image/jpg,image/webp" style="display: none;">
             <div id="logoPreviewNew" style="display: none; margin-top: 8px;">
-              <img id="logoPreviewImg" src="" alt="Logo preview" style="width: 48px; height: 48px; object-fit: contain; border-radius: 4px; background: white; border: 1px solid var(--border-color);">
+              <div class="bg-gray-50 dark:bg-gray-700/50 flex items-center gap-3 p-3 border border-gray-300 dark:border-gray-600 rounded-md">
+                <img id="logoPreviewImg" src="" alt="Logo preview" style="width: 48px; height: 48px; object-fit: contain; border-radius: 4px; background: transparent; border: 1px solid var(--border-color);">
+                <div style="flex: 1;">
+                  <div style="font-size: 0.875rem; color: var(--text-secondary);">New logo selected</div>
+                </div>
+              </div>
             </div>
           </div>
         </label>
@@ -861,11 +973,18 @@ function showTeamFormModal(team = null) {
 		if (e.target === backdrop) {closeModal();}
 	});
 
-	// Handle logo file input preview
+	// Handle logo container click
+	const logoContainer = document.getElementById('currentLogoContainer');
 	const logoInput = document.getElementById('teamLogoInput');
 	const logoPreviewNew = document.getElementById('logoPreviewNew');
 	const logoPreviewImg = document.getElementById('logoPreviewImg');
 	let removeLogo = false;
+
+	if (logoContainer && logoInput) {
+		logoContainer.addEventListener('click', () => {
+			logoInput.click();
+		});
+	}
 
 	if (logoInput) {
 		logoInput.addEventListener('change', (e) => {
@@ -1268,6 +1387,109 @@ async function removeUserFromTeam(userName, teamId) {
 		renderTeamDetail(teamId);
 	} catch (error) {
 		showToast(error.message || 'Failed to remove user', 'error');
+	}
+}
+
+// Inline team edit form handlers
+async function handleTeamEditFormSubmit(teamId) {
+	const name = document.getElementById('teamNameInput').value.trim();
+	const color = document.getElementById('teamColorInput').value.trim() || null;
+	const logoInput = document.getElementById('teamLogoInput');
+	const removeLogoBtn = document.getElementById('removeLogoBtn');
+
+	if (!name) {
+		showToast('Team name is required', 'error');
+		return;
+	}
+
+	try {
+		// Check if remove logo was clicked
+		const shouldRemoveLogo = removeLogoBtn && removeLogoBtn.dataset.removeLogo === 'true';
+
+		await updateTeamWithLogo(teamId, {name, color}, logoInput?.files[0] || null, shouldRemoveLogo);
+		showToast('Team updated successfully', 'success');
+
+		// Reload team data and refresh the detail view
+		await loadTeams();
+		const detailContent = await renderTeamDetail(teamId);
+		await transitionTeamsContent(detailContent);
+	} catch (error) {
+		showToast(error.message || 'Failed to update team', 'error');
+	}
+}
+
+function handleLogoFileChange(fileInput) {
+	const file = fileInput.files[0];
+	const logoPreviewNew = document.getElementById('logoPreviewNew');
+	const logoPreviewImg = document.getElementById('logoPreviewImg');
+
+	if (file) {
+		// Validate file size (500KB max)
+		if (file.size > 500 * 1024) {
+			showToast('Logo file is too large. Maximum size is 500KB.', 'error');
+			fileInput.value = '';
+			return;
+		}
+
+		// Validate file type
+		const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+		if (!allowedTypes.includes(file.type)) {
+			showToast('Invalid file type. Only PNG, JPEG, and WebP images are allowed.', 'error');
+			fileInput.value = '';
+			return;
+		}
+
+		// Show preview
+		const reader = new FileReader();
+		reader.addEventListener('load', (event) => {
+			logoPreviewImg.src = event.target.result;
+			logoPreviewNew.style.display = 'block';
+		});
+		reader.readAsDataURL(file);
+
+		// Reset remove logo flag
+		const removeLogoBtn = document.getElementById('removeLogoBtn');
+		if (removeLogoBtn) {
+			removeLogoBtn.dataset.removeLogo = 'false';
+		}
+	} else {
+		logoPreviewNew.style.display = 'none';
+	}
+}
+
+async function handleRemoveLogo(teamId) {
+	const confirmed = await showConfirmDialog({
+		title: 'Remove logo',
+		message: 'Remove the current logo?',
+		confirmText: 'Remove',
+		cancelText: 'Cancel',
+		destructive: false
+	});
+
+	if (confirmed) {
+		// Mark for removal
+		const removeLogoBtn = document.getElementById('removeLogoBtn');
+		if (removeLogoBtn) {
+			removeLogoBtn.dataset.removeLogo = 'true';
+		}
+
+		// Hide current logo preview
+		const logoContainer = removeLogoBtn.closest('.bg-gray-50');
+		if (logoContainer) {
+			logoContainer.style.display = 'none';
+		}
+
+		// Clear file input
+		const logoInput = document.getElementById('teamLogoInput');
+		if (logoInput) {
+			logoInput.value = '';
+		}
+
+		// Hide new logo preview
+		const logoPreviewNew = document.getElementById('logoPreviewNew');
+		if (logoPreviewNew) {
+			logoPreviewNew.style.display = 'none';
+		}
 	}
 }
 

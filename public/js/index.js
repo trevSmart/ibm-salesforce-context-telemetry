@@ -161,6 +161,100 @@ async function loadDashboardDatabaseSize() {
 	}
 }
 
+function formatUptime(seconds) {
+	if (!Number.isFinite(seconds) || seconds < 0) {
+		return 'Unknown';
+	}
+
+	const days = Math.floor(seconds / 86400);
+	const hours = Math.floor((seconds % 86400) / 3600);
+	const minutes = Math.floor((seconds % 3600) / 60);
+
+	if (days > 0) {
+		return `${days}d ${hours}h ${minutes}m`;
+	} else if (hours > 0) {
+		return `${hours}h ${minutes}m`;
+	} else {
+		return `${minutes}m`;
+	}
+}
+
+async function loadHealthCheckData() {
+	const startTime = performance.now();
+
+	try {
+		const response = await fetch('/health?format=json');
+		if (!response.ok) {
+			throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+		}
+
+		const healthData = await response.json();
+
+		// Update version
+		const versionElement = document.getElementById('serverStatsVersion');
+		if (versionElement && healthData.version) {
+			versionElement.textContent = healthData.version;
+		}
+
+		// Update uptime
+		const uptimeElement = document.getElementById('serverStatsUptime');
+		if (uptimeElement && healthData.uptime !== undefined) {
+			uptimeElement.textContent = formatUptime(healthData.uptime);
+		}
+
+		// Update database status
+		const dbStatusElement = document.getElementById('serverStatsDbStatus');
+		const dbStatusBadge = document.getElementById('serverStatsDbStatusBadge');
+
+		if (dbStatusElement && dbStatusBadge && healthData.database) {
+			const status = healthData.database.status;
+			const type = healthData.database.type;
+
+			// Set status text
+			dbStatusElement.textContent = `${type} (${status})`;
+
+			// Set badge color and text based on status
+			dbStatusBadge.className = 'inline-flex items-baseline rounded-full px-2.5 py-0.5 text-sm font-medium md:mt-2 lg:mt-0';
+			dbStatusBadge.innerHTML = `<span class="sr-only">Status: </span>${status}`;
+
+			if (status === 'connected') {
+				dbStatusBadge.classList.add('bg-green-100', 'text-green-800');
+			} else if (status === 'error') {
+				dbStatusBadge.classList.add('bg-red-100', 'text-red-800');
+			} else {
+				dbStatusBadge.classList.add('bg-yellow-100', 'text-yellow-800');
+			}
+		}
+
+		const endTime = performance.now();
+		const durationMs = endTime - startTime;
+		recordServerStatsFetch(durationMs);
+
+	} catch (error) {
+		console.warn('Failed to load health check data:', error);
+
+		// Set error states
+		const versionElement = document.getElementById('serverStatsVersion');
+		if (versionElement) versionElement.textContent = 'Error';
+
+		const uptimeElement = document.getElementById('serverStatsUptime');
+		if (uptimeElement) uptimeElement.textContent = 'Error';
+
+		const dbStatusElement = document.getElementById('serverStatsDbStatus');
+		if (dbStatusElement) dbStatusElement.textContent = 'Error';
+
+		const dbStatusBadge = document.getElementById('serverStatsDbStatusBadge');
+		if (dbStatusBadge) {
+			dbStatusBadge.className = 'inline-flex items-baseline rounded-full bg-red-100 px-2.5 py-0.5 text-sm font-medium text-red-800 md:mt-2 lg:mt-0';
+			dbStatusBadge.innerHTML = '<span class="sr-only">Status: </span>Error';
+		}
+
+		const endTime = performance.now();
+		const durationMs = endTime - startTime;
+		recordServerStatsFetch(durationMs);
+	}
+}
+
 // Initial bootstrap
 initializeDashboardPage();
 
@@ -241,6 +335,12 @@ async function initializeDashboardPage({resetState = false} = {}) {
 			await loadTopTeamsToday();
 		} catch (error) {
 			console.warn('Failed to load top teams data:', error);
+		}
+		try {
+			// Load health check data
+			await loadHealthCheckData();
+		} catch (error) {
+			console.warn('Failed to load health check data:', error);
 		}
 		try {
 			// Delay database size load slightly to prioritize critical data
@@ -501,6 +601,7 @@ async function refreshDashboard(event) {
 			loadChartData(currentDays),
 			loadTopUsersToday(),
 			loadTopTeamsToday(),
+			loadHealthCheckData(),
 			loadDashboardDatabaseSize()
 		]);
 	} catch (error) {

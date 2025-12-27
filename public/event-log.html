@@ -86,18 +86,20 @@
 									</div>
 								</li>
 							</ul>
-							<div class="session-item">
-								<button id="toggleSelectionModeBtn" class="toggle-selection-mode-btn" onclick="toggleSelectionMode()">
-									<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-5">
-										<path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-									</svg>
+							<div class="action-buttons-container">
+								<div class="selection-buttons-group">
+									<button id="deleteSelectedSessionsBtn" class="btn toggle-selection-mode-btn btn-destructive" onclick="confirmDeleteSelectedSessions()">
+										<i class="fa-solid fa-trash"></i> Delete
+									</button>
+									<button id="clearSelectedSessionsBtn" class="btn toggle-selection-mode-btn" onclick="clearSelectedSessions()">
+										<i class="fa-solid fa-xmark"></i> Clear
+									</button>
+								</div>
+								<button id="toggleSelectionModeBtn" class="btn toggle-selection-mode-btn" onclick="toggleSelectionMode()">
+									<i class="fa-solid fa-list-check"></i>
+									Select
 								</button>
 							</div>
-						</div>
-						<div class="selection-buttons-container">
-							<button id="deleteSelectedSessionsBtn" class="delete-selected-sessions-btn" onclick="confirmDeleteSelectedSessions()" style="display: none;">
-								<i class="fa-solid fa-trash"></i> Delete
-							</button>
 						</div>
 						<ul class="session-list list-none sessions-scrollable" id="sessionList">
 						</ul>
@@ -273,7 +275,7 @@
 											</th>
 										</tr>
 									</thead>
-								<tbody class="text-sm" id="logsBody">
+								<tbody id="logsBody">
 									<tr>
 										<td colspan="10" class="py-8 text-center text-gray-500 dark:text-gray-400">
 											Loading recent events...

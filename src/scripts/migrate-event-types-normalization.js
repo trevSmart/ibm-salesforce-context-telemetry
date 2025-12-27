@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 /**
  * Migration script to normalize event types
  *

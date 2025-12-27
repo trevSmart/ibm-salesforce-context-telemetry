@@ -9,6 +9,7 @@ import crypto from 'node:crypto';
 import pgSession from 'connect-pg-simple';
 import redis from 'redis';
 import {RedisStore} from 'connect-redis';
+import MemoryStoreFactory from 'memorystore';
 
 // Get credentials from environment variables (for backward compatibility)
 const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin';
@@ -57,11 +58,11 @@ function normalizeRole(role) {
 
 /**
  * Initialize session middleware
- * Uses PostgreSQL store if available, otherwise Redis, otherwise MemoryStore
+ * Uses PostgreSQL store if available, otherwise Redis, otherwise memorystore (improved MemoryStore)
  *
  * NOTE: This function should be called AFTER the database is initialized
  * to properly support PostgreSQL session store. If called before database
- * initialization, it will fall back to Redis or MemoryStore.
+ * initialization, it will fall back to Redis or memorystore.
  *
  * @returns {Object} Object containing:
  *   - middleware: The session middleware
@@ -124,7 +125,7 @@ function initSessionMiddleware() {
 			console.log('✅ Session store: Redis');
 		} catch (error) {
 			console.error('❌ Failed to initialize Redis session store:', error.message);
-			console.warn('⚠️  Falling back to MemoryStore for sessions');
+			console.warn('⚠️  Falling back to memorystore for sessions');
 			// If Redis initialization failed, try to cleanly disconnect the Redis client
 			if (redisClient) {
 				try {
@@ -141,15 +142,29 @@ function initSessionMiddleware() {
 		}
 	}
 
-	// If no persistent store available, use MemoryStore
+	// If no persistent store available, use memorystore (improved MemoryStore that doesn't leak)
 	if (!store) {
-		if (isProduction) {
-			console.warn('⚠️  WARNING: Using MemoryStore for sessions in production. Sessions will not persist across server restarts.');
-			console.warn('⚠️  To fix this, configure one of:');
-			console.warn('⚠️    - PostgreSQL: Set DB_TYPE=postgresql and DATABASE_URL');
-			console.warn('⚠️    - Redis: Set REDIS_URL environment variable');
-		} else {
-			console.log('📦 Session store: MemoryStore (development)');
+		try {
+			// memorystore is a MemoryStore implementation that doesn't leak memory
+			// It's better than the default MemoryStore but still not ideal for production
+			// memorystore is a factory function that takes express-session as argument
+			const MemoryStoreClass = MemoryStoreFactory(session);
+			store = new MemoryStoreClass({
+				checkPeriod: 86400000 // Prune expired entries every 24 hours
+			});
+			if (isProduction) {
+				console.warn('⚠️  WARNING: Using memorystore for sessions in production. Sessions will not persist across server restarts.');
+				console.warn('⚠️  To fix this, configure one of:');
+				console.warn('⚠️    - PostgreSQL: Set DB_TYPE=postgresql and DATABASE_URL');
+				console.warn('⚠️    - Redis: Set REDIS_URL environment variable');
+			} else {
+				console.log('📦 Session store: memorystore (development - improved MemoryStore)');
+			}
+		} catch (error) {
+			console.error('❌ Failed to initialize memorystore:', error.message);
+			console.warn('⚠️  Falling back to default MemoryStore (not recommended for production)');
+			// If memorystore fails, we'll use the default MemoryStore (not ideal)
+			// This should rarely happen, but we handle it gracefully
 		}
 	}
 
@@ -165,7 +180,7 @@ function initSessionMiddleware() {
 		}
 	};
 
-	// Only set store if we have a working store, otherwise use default MemoryStore
+	// Set the store (should always be set now, either PostgreSQL, Redis, or memorystore)
 	if (store) {
 		sessionConfig.store = store;
 	}

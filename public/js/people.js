@@ -239,7 +239,7 @@ async function renderPersonDetail(personId) {
 	const initials = getPersonInitials(person);
 
 	// Logo or avatar
-	const logoOrAvatar = `<span style="display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 4px; background: ${personColor}; margin-right: 8px; color: white; font-weight: 600; font-size: 14px;">
+	const logoOrAvatar = `<span class="card-avatar" style="width: 32px; height: 32px; margin-right: 8px;">
 		${initials}
 	</span>`;
 
@@ -698,7 +698,7 @@ function renderPeopleList() {
       </span>`;
 
 		return `
-      <div class="group relative bg-white dark:bg-gray-800/50 dark:outline dark:-outline-offset-1 dark:outline-white/10 p-6 transition hover:bg-gray-50 dark:hover:bg-gray-700/50 focus:outline-none focus-visible:outline-none dark:focus-within:outline-2 dark:focus-within:-outline-offset-2 dark:focus-within:outline-indigo-500" role="button" tabindex="0" onclick="viewPersonDetail(${person.id})" onkeypress="if(event.key==='Enter'||event.key===' '){event.preventDefault();viewPersonDetail(${person.id});}">
+      <div class="cursor-pointer group relative bg-white dark:bg-gray-800/50 dark:outline dark:-outline-offset-1 dark:outline-white/10 p-6 transition hover:bg-gray-50 dark:hover:bg-gray-700/50 focus:outline-none focus-visible:outline-none dark:focus-within:outline-2 dark:focus-within:-outline-offset-2 dark:focus-within:outline-indigo-500" role="button" tabindex="0" onclick="viewPersonDetail(${person.id})" onkeypress="if(event.key==='Enter'||event.key===' '){event.preventDefault();viewPersonDetail(${person.id});}">
         <div>
           ${logoOrAvatar}
         </div>

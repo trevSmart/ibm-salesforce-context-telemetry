@@ -629,6 +629,8 @@ async function openSettingsModal() {
 
 	// Define closeSettingsModal function
 	function closeSettingsModal() {
+		// Remove ESC key listener
+		document.removeEventListener('keydown', handleEscKey);
 
 		backdrop.classList.remove('visible');
 		backdrop.classList.add('hiding');
@@ -645,12 +647,33 @@ async function openSettingsModal() {
 		}, 220);
 	}
 
+	// ESC key handling: close modal when not editing inputs or dropdowns
+	function handleEscKey(e) {
+		if (e.key === 'Escape') {
+			const activeElement = document.activeElement;
+			const isEditing = activeElement && (
+				activeElement.tagName === 'INPUT' ||
+				activeElement.tagName === 'TEXTAREA' ||
+				activeElement.tagName === 'SELECT' ||
+				activeElement.contentEditable === 'true' ||
+				activeElement.closest('[contenteditable="true"]')
+			);
+
+			if (!isEditing) {
+				e.preventDefault();
+				e.stopImmediatePropagation();
+				closeSettingsModal();
+			}
+		}
+	}
+
+	document.addEventListener('keydown', handleEscKey);
+
 	const closeBtn = modal.querySelector('#settingsCloseBtn');
 	if (closeBtn) {
 		closeBtn.addEventListener('click', closeSettingsModal);
 	}
 
-	// ESC key handling is configured via `escHandler` earlier; no additional listener needed here.
 	const darkThemeToggle = modal.querySelector('#darkThemeToggle');
 	if (darkThemeToggle) {
 		darkThemeToggle.addEventListener('change', (e) => {

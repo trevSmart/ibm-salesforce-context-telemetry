@@ -456,7 +456,7 @@
     height: calc(100vh - 50px);
     min-height: calc(100vh - 50px);
     padding: 6px 30px;
-    gap: 5px;
+    gap: 8px;
   }
 
   .main-container .top-nav {
@@ -651,13 +651,13 @@
 
   .sidebar::-webkit-scrollbar-thumb,
   .logs-table-container::-webkit-scrollbar-thumb {
-    background: var(--border-color);
+    background: var(--text-secondary);
     border-radius: 4px;
   }
 
   .sidebar::-webkit-scrollbar-thumb:hover,
   .logs-table-container::-webkit-scrollbar-thumb:hover {
-    background: var(--text-secondary);
+    background: var(--text-primary);
   }
 
   /* Index page specific styles */
@@ -696,7 +696,7 @@
     padding: 0;
     display: flex;
     flex-direction: column;
-    gap: 28px;
+    gap: 18px;
     min-height: 0;
     height: 100%;
     flex: 1 1 auto;
@@ -1624,15 +1624,15 @@
   }
 
   .top-users-avatar {
-    @apply inline-flex size-10 items-center justify-center rounded-full bg-gray-500 dark:bg-gray-800 outline -outline-offset-1 outline-black/5 dark:outline-white/10 font-medium text-white;
+    @apply inline-flex size-10 items-center justify-center rounded-full bg-gray-500 dark:bg-gray-800 font-medium text-white;
   }
 
   .top-users-avatar--team {
-    @apply inline-flex size-10 items-center justify-center rounded-full bg-gray-500 dark:bg-gray-800 outline -outline-offset-1 outline-black/5 dark:outline-white/10;
+    @apply inline-flex size-10 items-center justify-center rounded-full bg-gray-500 dark:bg-gray-800;
   }
 
   .card-avatar {
-    @apply inline-flex items-center justify-center rounded-full text-sm font-semibold size-12 bg-gray-500 dark:bg-gray-800 outline -outline-offset-1 outline-black/5 dark:outline-white/10 text-white;
+    @apply inline-flex items-center justify-center rounded-full text-sm font-semibold size-12 bg-gray-500 dark:bg-gray-800 text-white;
   }
 
   .top-users-info {
@@ -2222,6 +2222,7 @@
 
   .all-sessions-container {
     display: flex;
+    flex-direction: column;
     gap: 6px;
     flex-shrink: 0;
     margin-bottom: 0;
@@ -2255,7 +2256,7 @@
     overflow-y: auto;
     overflow-x: visible;
     margin-right: -14px;
-    padding-right: 6px;
+    padding-right: 4px;
   }
 
   .sessions-scrollable .session-list {
@@ -2287,12 +2288,13 @@
     flex: 1;
     background: transparent;
     border: none;
-    padding: 8px 12px;
+    padding: 4px 12px;
     cursor: pointer;
     transition: color 0.2s ease;
     border-bottom: 2px solid transparent;
     margin-bottom: -1px;
-    color: var(--text-muted);
+    color: var(--text-secondary);
+    font-weight: 300;
     position: relative;
     z-index: 1;
   }
@@ -2472,48 +2474,79 @@
     border-color: #2b91cb;
   }
 
-  .selection-buttons-container {
+  .action-buttons-container {
     display: flex;
-    gap: 8px;
-    padding: 0 12px;
-    margin-bottom: 7px;
     flex-shrink: 0;
+    margin: 4px 0 8px 0;
+  }
+
+  .selection-buttons-group {
+    display: flex;
+    /* flex: 0;  */
+    width: 0;
+    opacity: 0;
+    pointer-events: none;
+    transition: flex 170ms cubic-bezier(0.68, -0.55, 0.265, 1.55), width 170ms cubic-bezier(0.68, -0.55, 0.265, 1.55), opacity 170ms ease-out;
+    overflow: hidden;
+    will-change: flex, width;
+  }
+
+  .selection-buttons-group.visible {
+    flex: 1;
+    width: auto;
+    opacity: 1;
+    pointer-events: auto;
+    margin-right: 8px;
+  }
+
+  .selection-buttons-group #deleteSelectedSessionsBtn {
+    flex: 1;
+    margin-right: 8px;
+  }
+
+  .selection-buttons-group #clearSelectedSessionsBtn {
+    flex: none;
+  }
+
+  .action-buttons-container #toggleSelectionModeBtn {
+    margin-left: auto;
+    color: var(--text-regular);
   }
 
   .toggle-selection-mode-btn {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 2px;
-    background: transparent;
+    padding: 2px 6px;
     color: #2b91cb;
     border: none;
     border-radius: 4px;
     cursor: pointer;
-    transition: opacity 0.2s ease, color 0.2s ease;
+    transition: opacity 0.2s ease, color 0.2s ease, background-color 0.2s ease;
+    font-size: 11px;
+    height: 26px;
     width: auto;
     height: auto;
     flex-shrink: 0;
   }
 
   .toggle-selection-mode-btn i {
-    font-size: 16px;
+    font-size: 12px;
   }
 
   .toggle-selection-mode-btn:hover {
-    opacity: 0.7;
+    background-color: #eef7ff !important;
+    opacity: 1;
   }
 
-  .toggle-selection-mode-btn:active {
-    opacity: 0.5;
-  }
 
   .toggle-selection-mode-btn.active {
-    color: #6b7280;
+    background-color: #cae5ff;
+    color: #0c4a6e;
   }
 
   .toggle-selection-mode-btn.active:hover {
-    opacity: 0.7;
+    background-color: #add1ff;
   }
 
   html.dark .toggle-selection-mode-btn {
@@ -2521,11 +2554,15 @@
   }
 
   html.dark .toggle-selection-mode-btn:hover {
-    opacity: 0.7;
+    background-colorq: rgba(59, 130, 246, 0.15);
+    opacity: 1;
   }
 
   html.dark .toggle-selection-mode-btn.active {
-    color: #6b7280;
+    background-color: rgba(14, 165, 233, 0.35);
+    color: #e0f2fe;
+    border: 1px solid #0ea5e9;
+    box-shadow: 0 2px 6px rgba(14, 165, 233, 0.3);
   }
 
   html.dark .toggle-selection-mode-btn.active:hover {
@@ -2536,33 +2573,32 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
-    padding: 6px 12px;
-    background: #ef4444;
-    color: white;
+    gap: 4px;
+    padding: 4px 8px;
+    background: transparent;
+    font-size: 12px;
+    height: 28px;
+    color: #2b91cb;
     border: none;
     border-radius: 4px;
     cursor: pointer;
-    font-size: 12px;
-    font-weight: 500;
-    transition: background-color 0.2s ease, opacity 0.2s ease, transform 0.2s ease;
-    flex: 1;
+    transition: opacity 0.2s ease, color 0.2s ease;
   }
 
   .delete-selected-sessions-btn:hover {
-    background: #dc2626;
+    opacity: 0.7;
   }
 
   .delete-selected-sessions-btn:active {
-    background: #b91c1c;
+    opacity: 0.5;
   }
 
   html.dark .delete-selected-sessions-btn {
-    background: #ef4444;
+    color: #2b91cb;
   }
 
   html.dark .delete-selected-sessions-btn:hover {
-    background: #dc2626;
+    opacity: 0.7;
   }
 
   .session-item-right {
@@ -2586,18 +2622,27 @@
   }
 
   .session-item:hover {
-    background: #e0f2fe;
+    background: #fff7e9;
   }
 
   html.dark .session-item:hover {
     background: rgba(9, 109, 155, 0.35);
   }
 
+  body.selection-mode .session-item:hover {
+    background: #f0f7ff;
+  }
+
+  html.dark body.selection-mode .session-item:hover {
+    background: rgba(59, 130, 246, 0.15);
+  }
+
   .session-item.active {
-    background: #7dd3fc;
-    border-color: #0284c7;
-    border-width: 1px;
-    box-shadow: 0 2px 4px rgba(2, 132, 199, 0.2);
+    background: #fff1d4;
+  }
+
+  .session-item.selected {
+f    background: #deefff !important;
   }
 
   html.dark .session-item.active {
@@ -2605,6 +2650,10 @@
     border-color: #0ea5e9;
     border-width: 1px;
     box-shadow: 0 2px 6px rgba(14, 165, 233, 0.3);
+  }
+
+  html.dark .session-item.selected {
+    background: rgba(59, 130, 246, 0.25) !important;
   }
 
   .session-item.active .session-name {
@@ -2709,12 +2758,26 @@
     color: #0c4a6e;
   }
 
+  .session-item[data-session="all"].disabled {
+    opacity: 0.5;
+    pointer-events: none;
+    cursor: not-allowed;
+  }
+
+  .session-item[data-session="all"].disabled .session-name {
+    color: #9ca3af;
+  }
+
   html.dark .session-item[data-session="all"] .session-name {
     color: rgba(228, 228, 231, 0.7);
   }
 
   html.dark .session-item[data-session="all"].active .session-name {
     color: #e0f2fe;
+  }
+
+  html.dark .session-item[data-session="all"].disabled .session-name {
+    color: #6b7280;
   }
 
   .session-size {
@@ -3109,6 +3172,7 @@
     flex: 1;
     overflow-y: auto;
     min-height: 0;
+    padding-right: 4px;
   }
 
   .logs-table {
@@ -3116,7 +3180,7 @@
     table-layout: fixed;
     border-collapse: separate;
     border-spacing: 0 2px;
-    font-size: 13px;
+    font-size: 13.5px;
     line-height: 1.25rem;
     border: none;
     border-radius: 12px;
@@ -3233,12 +3297,13 @@
     max-width: 180px;
   }
 
-  .logs-table tbody tr.log-item-expanded {
+  .logs-table tbody tr.log-item-expanded:not(.expanded) {
     display: none;
   }
 
   .logs-table tbody tr.log-item-expanded.expanded {
     display: table-row;
+    transform: translateY(-2px);
   }
 
   .logs-table tbody tr {
@@ -3249,12 +3314,16 @@
     padding: 0 9px;
   }
 
+  .logs-table td {
+
+  }
+
   html.dark .logs-table tbody tr {
     background: transparent;
   }
 
   .logs-table tbody tr:hover {
-    background-color: rgba(14, 165, 233, 0.05);
+    background-color: #fff7e9;
   }
 
   html.dark .logs-table tbody tr:hover {
@@ -3283,29 +3352,11 @@
   }
 
   .logs-table tbody tr.log-item-info:hover {
-    background-color: rgba(14, 165, 233, 0.05);
+    background-color: #fff7e9;
   }
 
   html.dark .logs-table tbody tr.log-item-info:hover {
     background-color: rgba(14, 165, 233, 0.2);
-    box-shadow: none;
-  }
-
-  .logs-table tbody tr.log-item-warning:hover {
-    background-color: rgba(245, 158, 11, 0.05);
-  }
-
-  html.dark .logs-table tbody tr.log-item-warning:hover {
-    background-color: rgba(245, 158, 11, 0.2);
-    box-shadow: none;
-  }
-
-  .logs-table tbody tr.log-item-error:hover {
-    background-color: rgba(239, 68, 68, 0.05);
-  }
-
-  html.dark .logs-table tbody tr.log-item-error:hover {
-    background-color: rgba(239, 68, 68, 0.2);
     box-shadow: none;
   }
 
@@ -3318,7 +3369,7 @@
     border-radius: 5px;
     border: none;
     transition: opacity 0.2s ease, transform 0.15s ease;
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     line-height: 1rem;
     font-weight: 500;
     text-transform: none;
@@ -3417,7 +3468,6 @@
   }
 
   .log-client {
-    font-size: 0.75rem;
     line-height: 1.4;
     min-width: 0;
     max-width: 100%;
@@ -3432,7 +3482,6 @@
   }
 
   .log-tool-name {
-    font-size: 0.75rem;
     line-height: 1.4;
     min-width: 0;
     max-width: 100%;
@@ -3448,7 +3497,6 @@
 
   .log-description {
     font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
-    font-size: 0.6875rem;
     line-height: 1.4;
     min-width: 0;
     max-width: 200px;
@@ -3507,17 +3555,27 @@
     color: #e4e4e7;
   }
 
-  .log-item-expanded {
+  .log-item-expanded:not(.expanded) {
     display: none;
   }
 
   .log-item-expanded.expanded {
     display: table-row;
+    transform: translateY(-2px);
   }
 
   .log-description-expanded {
+    max-height: 0;
+    padding: 0 16px !important;
+    opacity: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out, opacity 0.25s ease-out, padding 0.3s ease-out;
+  }
+
+  .log-item-expanded.expanded .log-description-expanded {
+    max-height: 2000px;
     padding: 12px 16px !important;
-    border-top: 1px solid var(--border-color);
+    opacity: 1;
   }
 
   .log-item-expanded .json-pretty {
@@ -3691,27 +3749,27 @@
     opacity: 0.5;
   }
 
-  /* Scrollbar styling */
+  /* Scrollbar styling - Sessions list (thinner thumb, same as logs table) */
   .sessions-scrollable::-webkit-scrollbar {
-    width: 8px;
+    width: 6px;
   }
 
   .sessions-scrollable::-webkit-scrollbar-track {
-    background: var(--bg-secondary);
+    background: transparent;
   }
 
   .sessions-scrollable::-webkit-scrollbar-thumb {
-    background: var(--border-color);
-    border-radius: 4px;
+    background: var(--text-secondary);
+    border-radius: 6px;
   }
 
   .sessions-scrollable::-webkit-scrollbar-thumb:hover {
-    background: var(--text-secondary);
+    background: var(--text-primary);
   }
 
-  /* Table scrollbar - hidden by default, shown on hover (Mac-like behavior) */
+  /* Table scrollbar - always visible, same style as sessions */
   .logs-table-container > div:last-child::-webkit-scrollbar {
-    width: 8px;
+    width: 6px;
   }
 
   .logs-table-container > div:last-child::-webkit-scrollbar-track {
@@ -3719,16 +3777,12 @@
   }
 
   .logs-table-container > div:last-child::-webkit-scrollbar-thumb {
-    background: transparent;
-    border-radius: 4px;
-  }
-
-  .logs-table-container:hover > div:last-child::-webkit-scrollbar-thumb {
-    background: var(--border-color);
-  }
-
-  .logs-table-container:hover > div:last-child::-webkit-scrollbar-thumb:hover {
     background: var(--text-secondary);
+    border-radius: 6px;
+  }
+
+  .logs-table-container > div:last-child::-webkit-scrollbar-thumb:hover {
+    background: var(--text-primary);
   }
 
   /* Hide event type buttons completely when space is very limited, before Users button gets hidden */
@@ -4591,9 +4645,7 @@
 
   .btn-destructive {
     @apply text-white;
-    background-color: #dc2626;
-    border-color: #dc2626;
-    --tw-ring-color: #dc2626;
+    background-color: #ef6262;
   }
 
   .btn-destructive:hover {
@@ -5366,7 +5418,7 @@
   align-items: center;
   gap: 8px;
   padding: 4px 8px;
-  border-radius: 7px;
+  border-radius: 6px;
   font-size: 0.75rem;
   line-height: 1rem;
   font-weight: 500;

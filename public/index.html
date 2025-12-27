@@ -140,57 +140,40 @@
 						<div class="card-body sm:px-6">
 							<dl class="grid grid-cols-1 divide-gray-200 divide-y overflow-hidden">
 								<div class="py-2">
-									<dt class="stats-title">Total Subscribers</dt>
+									<dt class="stats-title">Server Version</dt>
 									<dd class="mt-1 flex items-baseline justify-between md:block lg:flex">
-										<div class="flex items-baseline font-semibold text-indigo-600">
-											71,897
-											<span class="ml-2 text-sm font-medium text-gray-500">from 70,946</span>
-										</div>
-
-										<div class="inline-flex items-baseline rounded-full bg-green-100 px-2.5 py-0.5 text-sm font-medium text-green-800 md:mt-2 lg:mt-0">
-											<svg viewBox="0 0 20 20" fill="currentColor" data-slot="icon" aria-hidden="true" class="mr-0.5 -ml-1 size-5 shrink-0 self-center text-green-500">
-												<path d="M10 17a.75.75 0 0 1-.75-.75V5.612L5.29 9.77a.75.75 0 0 1-1.08-1.04l5.25-5.5a.75.75 0 0 1 1.08 0l5.25 5.5a.75.75 0 1 1-1.08 1.04l-3.96-4.158V16.25A.75.75 0 0 1 10 17Z" clip-rule="evenodd" fill-rule="evenodd" />
-											</svg>
-											<span class="sr-only"> Increased by </span>
-											12%
+										<div class="flex items-baseline font-semibold text-indigo-600" id="serverStatsVersion">
+											Loading...
 										</div>
 									</dd>
 								</div>
 								<div class="py-2">
-									<dt class="stats-title">Avg. Open Rate</dt>
+									<dt class="stats-title">Uptime</dt>
 									<dd class="mt-1 flex items-baseline justify-between md:block lg:flex">
-										<div class="flex items-baseline font-semibold text-indigo-600">
-											58.16%
-											<span class="ml-2 text-sm font-medium text-gray-500">from 56.14%</span>
-										</div>
-
-										<div class="inline-flex items-baseline rounded-full bg-green-100 px-2.5 py-0.5 text-sm font-medium text-green-800 md:mt-2 lg:mt-0">
-											<svg viewBox="0 0 20 20" fill="currentColor" data-slot="icon" aria-hidden="true" class="mr-0.5 -ml-1 size-5 shrink-0 self-center text-green-500">
-												<path d="M10 17a.75.75 0 0 1-.75-.75V5.612L5.29 9.77a.75.75 0 0 1-1.08-1.04l5.25-5.5a.75.75 0 0 1 1.08 0l5.25 5.5a.75.75 0 1 1-1.08 1.04l-3.96-4.158V16.25A.75.75 0 0 1 10 17Z" clip-rule="evenodd" fill-rule="evenodd" />
-											</svg>
-											<span class="sr-only"> Increased by </span>
-											2.02%
+										<div class="flex items-baseline font-semibold text-indigo-600" id="serverStatsUptime">
+											Loading...
 										</div>
 									</dd>
 								</div>
 								<div class="py-2">
-									<dt class="stats-title">Avg. Click Rate</dt>
+									<dt class="stats-title">Database Status</dt>
 									<dd class="mt-1 flex items-baseline justify-between md:block lg:flex">
-										<div class="flex items-baseline font-semibold text-indigo-600">
-											24.57%
-											<span class="ml-2 text-sm font-medium text-gray-500">from 28.62%</span>
+										<div class="flex items-baseline font-semibold text-indigo-600" id="serverStatsDbStatus">
+											Loading...
 										</div>
-
-										<div class="inline-flex items-baseline rounded-full bg-red-100 px-2.5 py-0.5 text-sm font-medium text-red-800 md:mt-2 lg:mt-0">
-											<svg viewBox="0 0 20 20" fill="currentColor" data-slot="icon" aria-hidden="true" class="mr-0.5 -ml-1 size-5 shrink-0 self-center text-red-500">
-												<path d="M10 3a.75.75 0 0 1 .75.75v10.638l3.96-4.158a.75.75 0 1 1 1.08 1.04l-5.25 5.5a.75.75 0 0 1-1.08 0l-5.25-5.5a.75.75 0 1 1 1.08-1.04l3.96 4.158V3.75A.75.75 0 0 1 10 3Z" clip-rule="evenodd" fill-rule="evenodd" />
-											</svg>
-											<span class="sr-only"> Decreased by </span>
-											4.05%
+										<div class="inline-flex items-baseline rounded-full px-2.5 py-0.5 text-sm font-medium md:mt-2 lg:mt-0" id="serverStatsDbStatusBadge">
+											<span class="sr-only">Status: </span>
+											-
 										</div>
 									</dd>
 								</div>
 							</dl>
+						</div>
+						<div class="card-footer px-4 py-3 sm:px-6 border-t border-gray-200 dark:border-gray-700/50">
+							<div class="flex items-center justify-between text-xs text-gray-500">
+								<span>Last updated: <span id="serverStatsLastUpdated">never</span></span>
+								<span>Load time: <span id="serverStatsLoadTime">-</span></span>
+							</div>
 						</div>
 
 					</section>

@@ -2639,7 +2639,6 @@ function safeShowToast(message, type = 'info') {
 			selectionMode = false;
 			const toggleBtn = document.getElementById('toggleSelectionModeBtn');
 			if (toggleBtn) {
-				toggleBtn.innerHTML = '<i class="fa-solid fa-list-check"></i>';
 				toggleBtn.classList.remove('active');
 			}
 			updateDeleteSelectedButton();
@@ -3009,7 +3008,7 @@ function safeShowToast(message, type = 'info') {
 			row.setAttribute('data-event-id', event.id);
 			// Store event data in the row element to avoid API call when copying payload
 			row.setAttribute('data-event', JSON.stringify(event));
-			const userCellHtml = showUserColumn? `<td class="hidden text-gray-500 sm:table-cell log-user whitespace-nowrap">${escapeHtml(userLabel)}</td>`: '';
+			const userCellHtml = showUserColumn? `<td class="hidden text-gray-700 sm:table-cell log-user whitespace-nowrap">${escapeHtml(userLabel)}</td>`: '';
 
 			row.innerHTML = `
 				<td class="expand-column px-2 font-medium text-gray-900 whitespace-nowrap" style="text-align: center;">
@@ -3172,8 +3171,17 @@ function safeShowToast(message, type = 'info') {
 			return String(value);
 		};
 
-		// Helper function to create input field
+		// Helper function to create input field with label
 		const createInput = (id, name, label, value, placeholder = '', type = 'text', roundedClasses = '') => {
+			const container = document.createElement('div');
+			container.className = `bg-white dark:bg-white/5 px-3 pt-2.5 pb-1.5 outline-1 -outline-offset-1 outline-gray-300 dark:outline-gray-700 focus-within:relative focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-indigo-600 dark:focus-within:outline-indigo-500 ${roundedClasses}`.trim();
+
+			const labelEl = document.createElement('label');
+			labelEl.for = id;
+			labelEl.className = 'block text-xs font-medium text-gray-900 dark:text-white';
+			labelEl.textContent = label;
+			container.appendChild(labelEl);
+
 			const input = document.createElement('input');
 			input.id = id;
 			input.name = name;
@@ -3182,12 +3190,24 @@ function safeShowToast(message, type = 'info') {
 			input.placeholder = placeholder;
 			input.setAttribute('aria-label', label);
 			input.readOnly = true;
-			input.className = `block w-full ${roundedClasses} bg-white dark:bg-white/5 px-3 py-1.5 text-base text-gray-900 dark:text-white outline-1 -outline-offset-1 outline-gray-300 dark:outline-gray-700 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:relative focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 dark:focus:outline-indigo-500 sm:text-sm/6`.trim();
-			return input;
+			input.className = 'block w-full text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none'.trim();
+			input.style.fontSize = '13.5px';
+			container.appendChild(input);
+
+			return container;
 		};
 
-		// Helper function to create textarea field
+		// Helper function to create textarea field with label
 		const createTextarea = (id, name, label, value, placeholder = '') => {
+			const container = document.createElement('div');
+			container.className = 'rounded-md bg-white dark:bg-white/5 px-3 pt-2.5 pb-1.5 outline-1 -outline-offset-1 outline-gray-300 dark:outline-gray-700 focus-within:relative focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-indigo-600 dark:focus-within:outline-indigo-500';
+
+			const labelEl = document.createElement('label');
+			labelEl.for = id;
+			labelEl.className = 'block text-xs font-medium text-gray-900 dark:text-white';
+			labelEl.textContent = label;
+			container.appendChild(labelEl);
+
 			const textarea = document.createElement('textarea');
 			textarea.id = id;
 			textarea.name = name;
@@ -3196,8 +3216,11 @@ function safeShowToast(message, type = 'info') {
 			textarea.setAttribute('aria-label', label);
 			textarea.readOnly = true;
 			textarea.rows = 8;
-			textarea.className = 'block w-full rounded-md bg-white dark:bg-white/5 px-3 py-1.5 text-base text-gray-900 dark:text-white outline-1 -outline-offset-1 outline-gray-300 dark:outline-gray-700 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:relative focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 dark:focus:outline-indigo-500 sm:text-sm/6 resize-y';
-			return textarea;
+			textarea.className = 'block w-full text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none resize-y';
+			textarea.style.fontSize = '13.5px';
+			container.appendChild(textarea);
+
+			return container;
 		};
 
 		// Create form container
@@ -3212,13 +3235,11 @@ function safeShowToast(message, type = 'info') {
 		eventLegend.textContent = 'Event Information';
 		eventFieldset.appendChild(eventLegend);
 
-		const eventGrid = document.createElement('div');
-		eventGrid.className = 'mt-2 grid grid-cols-2 gap-0';
+		const eventContainer = document.createElement('div');
+		eventContainer.className = 'mt-2 -space-y-px';
 
 		// Event type (full width, top)
-		const eventTypeContainer = document.createElement('div');
-		eventTypeContainer.className = 'col-span-2';
-		eventTypeContainer.appendChild(createInput(
+		const eventTypeInput = createInput(
 			`event-type-${event.id}`,
 			'event-type',
 			'Event Type',
@@ -3226,19 +3247,16 @@ function safeShowToast(message, type = 'info') {
 			'Event type',
 			'text',
 			'rounded-t-md'
-		));
-		eventGrid.appendChild(eventTypeContainer);
+		);
+		eventContainer.appendChild(eventTypeInput);
 
 		// Server ID and Version row
 		const hasServerId = payload.serverId !== undefined;
 		const hasVersion = payload.version !== undefined;
 
 		// Timestamp (full width)
-		const timestampContainer = document.createElement('div');
-		timestampContainer.className = 'col-span-2 -mt-px';
-		// If no serverId and no version, timestamp should have bottom rounding
 		const timestampRounded = (!hasServerId && !hasVersion) ? 'rounded-b-md' : '';
-		timestampContainer.appendChild(createInput(
+		const timestampInput = createInput(
 			`event-timestamp-${event.id}`,
 			'timestamp',
 			'Timestamp',
@@ -3246,14 +3264,15 @@ function safeShowToast(message, type = 'info') {
 			'Timestamp',
 			'text',
 			timestampRounded
-		));
-		eventGrid.appendChild(timestampContainer);
+		);
+		eventContainer.appendChild(timestampInput);
 
 		if (hasServerId && hasVersion) {
-			// Both fields: side by side
-			const serverIdContainer = document.createElement('div');
-			serverIdContainer.className = '-mt-px -mr-px';
-			serverIdContainer.appendChild(createInput(
+			// Both fields: side by side using grid for this row only
+			const sideBySideContainer = document.createElement('div');
+			sideBySideContainer.className = 'grid grid-cols-2 gap-0';
+
+			const serverIdInput = createInput(
 				`event-serverId-${event.id}`,
 				'serverId',
 				'Server ID',
@@ -3261,12 +3280,11 @@ function safeShowToast(message, type = 'info') {
 				'Server ID',
 				'text',
 				'rounded-bl-md'
-			));
-			eventGrid.appendChild(serverIdContainer);
+			);
+			serverIdInput.style.marginRight = '-1px';
+			sideBySideContainer.appendChild(serverIdInput);
 
-			const versionContainer = document.createElement('div');
-			versionContainer.className = '-mt-px';
-			versionContainer.appendChild(createInput(
+			const versionInput = createInput(
 				`event-version-${event.id}`,
 				'version',
 				'Version',
@@ -3274,13 +3292,13 @@ function safeShowToast(message, type = 'info') {
 				'Version',
 				'text',
 				'rounded-br-md'
-			));
-			eventGrid.appendChild(versionContainer);
+			);
+			sideBySideContainer.appendChild(versionInput);
+
+			eventContainer.appendChild(sideBySideContainer);
 		} else if (hasServerId) {
 			// Only Server ID: full width
-			const serverIdContainer = document.createElement('div');
-			serverIdContainer.className = 'col-span-2 -mt-px';
-			serverIdContainer.appendChild(createInput(
+			const serverIdInput = createInput(
 				`event-serverId-${event.id}`,
 				'serverId',
 				'Server ID',
@@ -3288,13 +3306,11 @@ function safeShowToast(message, type = 'info') {
 				'Server ID',
 				'text',
 				'rounded-b-md'
-			));
-			eventGrid.appendChild(serverIdContainer);
+			);
+			eventContainer.appendChild(serverIdInput);
 		} else if (hasVersion) {
 			// Only Version: full width
-			const versionContainer = document.createElement('div');
-			versionContainer.className = 'col-span-2 -mt-px';
-			versionContainer.appendChild(createInput(
+			const versionInput = createInput(
 				`event-version-${event.id}`,
 				'version',
 				'Version',
@@ -3302,11 +3318,11 @@ function safeShowToast(message, type = 'info') {
 				'Version',
 				'text',
 				'rounded-b-md'
-			));
-			eventGrid.appendChild(versionContainer);
+			);
+			eventContainer.appendChild(versionInput);
 		}
 
-		eventFieldset.appendChild(eventGrid);
+		eventFieldset.appendChild(eventContainer);
 		formContainer.appendChild(eventFieldset);
 
 		// Session Information fieldset
@@ -3321,41 +3337,41 @@ function safeShowToast(message, type = 'info') {
 			sessionLegend.textContent = 'Session Information';
 			sessionFieldset.appendChild(sessionLegend);
 
-			const sessionGrid = document.createElement('div');
-			sessionGrid.className = 'mt-2 grid grid-cols-2 gap-0';
+			const sessionContainer = document.createElement('div');
+			sessionContainer.className = 'mt-2 -space-y-px';
 
 			if (hasSessionId && hasUserId) {
-				// Both fields: side by side
-				const sessionIdContainer = document.createElement('div');
-				sessionIdContainer.className = '';
-				sessionIdContainer.appendChild(createInput(
+				// Both fields: side by side using grid for this row only
+				const sideBySideContainer = document.createElement('div');
+				sideBySideContainer.className = 'grid grid-cols-2 gap-0';
+
+				const sessionIdInput = createInput(
 					`event-sessionId-${event.id}`,
 					'sessionId',
 					'Session ID',
 					payload.sessionId,
 					'Session ID',
 					'text',
-					'rounded-tl-md rounded-bl-md'
-				));
-				sessionGrid.appendChild(sessionIdContainer);
+					'rounded-md'
+				);
+				sessionIdInput.style.marginRight = '-1px';
+				sideBySideContainer.appendChild(sessionIdInput);
 
-				const userIdContainer = document.createElement('div');
-				userIdContainer.className = '-mt-px -mr-px';
-				userIdContainer.appendChild(createInput(
+				const userIdInput = createInput(
 					`event-userId-${event.id}`,
 					'userId',
 					'User ID',
 					payload.userId,
 					'User ID',
 					'text',
-					'rounded-tr-md rounded-br-md'
-				));
-				sessionGrid.appendChild(userIdContainer);
+					'rounded-md'
+				);
+				sideBySideContainer.appendChild(userIdInput);
+
+				sessionContainer.appendChild(sideBySideContainer);
 			} else if (hasSessionId) {
 				// Only Session ID: full width
-				const sessionIdContainer = document.createElement('div');
-				sessionIdContainer.className = 'col-span-2';
-				sessionIdContainer.appendChild(createInput(
+				const sessionIdInput = createInput(
 					`event-sessionId-${event.id}`,
 					'sessionId',
 					'Session ID',
@@ -3363,13 +3379,11 @@ function safeShowToast(message, type = 'info') {
 					'Session ID',
 					'text',
 					'rounded-md'
-				));
-				sessionGrid.appendChild(sessionIdContainer);
+				);
+				sessionContainer.appendChild(sessionIdInput);
 			} else if (hasUserId) {
 				// Only User ID: full width
-				const userIdContainer = document.createElement('div');
-				userIdContainer.className = 'col-span-2';
-				userIdContainer.appendChild(createInput(
+				const userIdInput = createInput(
 					`event-userId-${event.id}`,
 					'userId',
 					'User ID',
@@ -3377,11 +3391,11 @@ function safeShowToast(message, type = 'info') {
 					'User ID',
 					'text',
 					'rounded-md'
-				));
-				sessionGrid.appendChild(userIdContainer);
+				);
+				sessionContainer.appendChild(userIdInput);
 			}
 
-			sessionFieldset.appendChild(sessionGrid);
+			sessionFieldset.appendChild(sessionContainer);
 			formContainer.appendChild(sessionFieldset);
 		}
 
@@ -3395,14 +3409,15 @@ function safeShowToast(message, type = 'info') {
 			dataFieldset.appendChild(dataLegend);
 
 			const dataContainer = document.createElement('div');
-			dataContainer.className = 'mt-2';
-			dataContainer.appendChild(createTextarea(
+			dataContainer.className = 'mt-2 -space-y-px';
+			const dataTextarea = createTextarea(
 				`event-data-${event.id}`,
 				'data',
 				'Event Data',
 				payload.data,
 				'Event data (JSON)'
-			));
+			);
+			dataContainer.appendChild(dataTextarea);
 			dataFieldset.appendChild(dataContainer);
 			formContainer.appendChild(dataFieldset);
 		}
@@ -4165,6 +4180,12 @@ function safeShowToast(message, type = 'info') {
 				confirmModal.remove();
 				return;
 			}
+
+			// Exit selection mode if active
+			if (selectionMode) {
+				toggleSelectionMode();
+				return;
+			}
 		}
 
 		// Don't interfere with input fields or textareas
@@ -4425,16 +4446,28 @@ function safeShowToast(message, type = 'info') {
 	function toggleSelectionMode() {
 		selectionMode = !selectionMode;
 		const toggleBtn = document.getElementById('toggleSelectionModeBtn');
+		const allSessionsItem = document.querySelector('.session-item[data-session="all"]');
+
 		if (toggleBtn) {
 			if (selectionMode) {
-				toggleBtn.innerHTML = '<i class="fa-solid fa-times"></i>';
 				toggleBtn.classList.add('active');
+				// Add selection mode class to body
+				document.body.classList.add('selection-mode');
+				// Disable "All Sessions" when entering selection mode
+				if (allSessionsItem) {
+					allSessionsItem.classList.add('disabled');
+				}
 			} else {
-				toggleBtn.innerHTML = '<i class="fa-solid fa-list-check"></i>';
 				toggleBtn.classList.remove('active');
+				// Remove selection mode class from body
+				document.body.classList.remove('selection-mode');
 				// Clear selection when exiting selection mode
 				selectedSessionsForDeletion.clear();
 				lastSelectedSessionId = null;
+				// Re-enable "All Sessions" when exiting selection mode
+				if (allSessionsItem) {
+					allSessionsItem.classList.remove('disabled');
+				}
 			}
 		}
 		// Update delete button visibility
@@ -4455,15 +4488,13 @@ function safeShowToast(message, type = 'info') {
 			// Use requestAnimationFrame to ensure DOM is ready, then trigger transitions
 			requestAnimationFrame(() => {
 				requestAnimationFrame(() => {
-					const checkboxes = document.querySelectorAll('.session-checkbox');
 					if (selectionMode) {
-						// Animate checkboxes in - all at the same time
-						checkboxes.forEach((checkbox) => {
-							// Remove show class first to ensure transition works
-							checkbox.classList.remove('show');
-							// eslint-disable-next-line no-unused-expressions
-							checkbox.offsetWidth; // Force reflow
-							checkbox.classList.add('show');
+						// Show checkboxes only for selected sessions
+						selectedSessionsForDeletion.forEach(sessionId => {
+							const checkbox = document.getElementById(`session-checkbox-${escapeHtml(sessionId)}`);
+							if (checkbox && !checkbox.classList.contains('show')) {
+								checkbox.classList.add('show');
+							}
 						});
 					}
 				});
@@ -4514,6 +4545,13 @@ function safeShowToast(message, type = 'info') {
 				const checkbox = document.getElementById(`session-checkbox-${escapeHtml(sessionId)}`);
 				if (checkbox) {
 					checkbox.checked = true;
+					// Show checkbox when selected
+					checkbox.classList.add('show');
+					// Add selected class to session item
+					const sessionItem = checkbox.closest('.session-item');
+					if (sessionItem) {
+						sessionItem.classList.add('selected');
+					}
 					// Trigger animation
 					checkbox.classList.remove('just-unchecked');
 					// eslint-disable-next-line no-unused-expressions
@@ -4571,6 +4609,13 @@ function safeShowToast(message, type = 'info') {
 			selectedSessionsForDeletion.delete(sessionId);
 			if (checkbox) {
 				checkbox.checked = false;
+				// Hide checkbox when deselected
+				checkbox.classList.remove('show');
+				// Remove selected class from session item
+				const sessionItem = checkbox.closest('.session-item');
+				if (sessionItem) {
+					sessionItem.classList.remove('selected');
+				}
 				// Trigger animation by temporarily removing and re-adding checked state
 				checkbox.classList.remove('just-checked');
 				// eslint-disable-next-line no-unused-expressions
@@ -4601,6 +4646,13 @@ function safeShowToast(message, type = 'info') {
 			selectedSessionsForDeletion.add(sessionId);
 			if (checkbox) {
 				checkbox.checked = true;
+				// Show checkbox when selected
+				checkbox.classList.add('show');
+				// Add selected class to session item
+				const sessionItem = checkbox.closest('.session-item');
+				if (sessionItem) {
+					sessionItem.classList.add('selected');
+				}
 				// Trigger animation by temporarily removing and re-adding checked state
 				checkbox.classList.remove('just-unchecked');
 				// eslint-disable-next-line no-unused-expressions
@@ -4635,15 +4687,46 @@ function safeShowToast(message, type = 'info') {
 		updateDeleteSelectedButton();
 	}
 
+	function clearSelectedSessions() {
+		// Clear all selected sessions
+		selectedSessionsForDeletion.forEach(sessionId => {
+			const checkbox = document.getElementById(`session-checkbox-${escapeHtml(sessionId)}`);
+			if (checkbox) {
+				checkbox.checked = false;
+				checkbox.classList.remove('show');
+				// Remove selected class from session item
+				const sessionItem = checkbox.closest('.session-item');
+				if (sessionItem) {
+					sessionItem.classList.remove('selected');
+				}
+			}
+		});
+
+		// Clear the selection set
+		selectedSessionsForDeletion.clear();
+		lastSelectedSessionId = null;
+
+		// Update buttons
+		updateDeleteSelectedButton();
+	}
+
 	function updateDeleteSelectedButton() {
+		const selectionButtonsGroup = document.querySelector('.selection-buttons-group');
 		const deleteSelectedBtn = document.getElementById('deleteSelectedSessionsBtn');
-		if (deleteSelectedBtn) {
-			const count = selectedSessionsForDeletion.size;
-			if (count > 0 && selectionMode) {
-				deleteSelectedBtn.style.display = 'flex';
+		const count = selectedSessionsForDeletion.size;
+
+		if (count > 0 && selectionMode) {
+			// Show the buttons group when in selection mode and have items selected
+			if (selectionButtonsGroup) {
+				selectionButtonsGroup.classList.add('visible');
+			}
+			if (deleteSelectedBtn) {
 				deleteSelectedBtn.innerHTML = `<i class="fa-solid fa-trash"></i> Delete (${count})`;
-			} else {
-				deleteSelectedBtn.style.display = 'none';
+			}
+		} else {
+			// Hide the buttons group
+			if (selectionButtonsGroup) {
+				selectionButtonsGroup.classList.remove('visible');
 			}
 		}
 	}
@@ -5500,6 +5583,7 @@ function safeShowToast(message, type = 'info') {
 	window.refreshLogs = refreshLogs;
 	window.toggleNotificationMode = toggleNotificationMode;
 	window.toggleSelectionMode = toggleSelectionMode;
+	window.clearSelectedSessions = clearSelectedSessions;
 	// Load and display event payload in a modal
 	async function loadEventPayload(eventId) {
 		try {
