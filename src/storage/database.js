@@ -818,7 +818,6 @@ function extractNormalizedFields(eventData = {}) {
 	if (!eventData || !eventData.data) {
 		return result;
 	}
-
 	const data = eventData.data;
 
 	// Extract orgId (new format: data.state.org.id, legacy: data.orgId)
@@ -892,7 +891,6 @@ function extractNormalizedFields(eventData = {}) {
 
 	return result;
 }
-
 /**
  * Extract error message from tool_error events (legacy function, kept for backward compatibility)
  * @param {object} eventData - The event data object
