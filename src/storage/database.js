@@ -1163,7 +1163,11 @@ async function storeEvent(telemetryEvent, receivedAt) {
 		}
 
 		// Store original payload exactly as received (preserved in telemetryEvent.payload)
-		const payloadToStore = telemetryEvent.payload || JSON.stringify(telemetryEvent.toJSON());
+		let payloadToStore = telemetryEvent.payload || JSON.stringify(telemetryEvent.toJSON());
+		// Ensure payload is always a string
+		if (typeof payloadToStore !== 'string') {
+			payloadToStore = JSON.stringify(payloadToStore);
+		}
 
 		if (dbType === 'sqlite') {
 			const stmt = getPreparedStatement('insertEvent', `
@@ -1171,6 +1175,9 @@ async function storeEvent(telemetryEvent, receivedAt) {
 				(event_id, timestamp, server_id, version, session_id, parent_session_id, user_id, data, received_at, org_id, user_name, tool_name, company_name, error_message, team_id, event, area, success, telemetry_schema_version)
 				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 			`);
+
+			// Convert boolean to integer for SQLite (0 or 1)
+			const successValue = telemetryEvent.success === true ? 1 : (telemetryEvent.success === false ? 0 : null);
 
 			stmt.run(
 				eventTypeId,
@@ -1180,7 +1187,7 @@ async function storeEvent(telemetryEvent, receivedAt) {
 				sessionId || null,
 				parentSessionId || null,
 				userId || null,
-				typeof payloadToStore === 'string' ? payloadToStore : JSON.stringify(payloadToStore),
+				payloadToStore,
 				receivedAt,
 				orgId,
 				userName,
@@ -1190,7 +1197,7 @@ async function storeEvent(telemetryEvent, receivedAt) {
 				teamId,
 				telemetryEvent.eventType || null, // For compatibility
 				telemetryEvent.area || null,
-				telemetryEvent.success ?? null,
+				successValue,
 				telemetryEvent.telemetrySchemaVersion || null
 			);
 		} else if (dbType === 'postgresql') {

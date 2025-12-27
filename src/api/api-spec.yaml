@@ -19,11 +19,14 @@ servers:
 paths:
   /telemetry:
     post:
-      summary: Send telemetry event
+      summary: Send telemetry event(s)
       description: |
         Receives telemetry events from MCP server instances.
         Supports both schema v1 (legacy) and v2 (current) formats.
         Events are logged and can be stored for analytics purposes.
+        
+        Accepts either a single event object or an array of events (batch mode).
+        Maximum 1000 events per batch request.
       operationId: sendTelemetry
       tags:
         - Telemetry
@@ -32,7 +35,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/TelemetryEvent'
+              oneOf:
+                - $ref: '#/components/schemas/TelemetryEvent'
+                - type: array
+                  items:
+                    $ref: '#/components/schemas/TelemetryEvent'
+                  maxItems: 1000
+                  minItems: 1
             examples:
               toolCall:
                 summary: Tool call event
@@ -155,16 +164,58 @@ paths:
                   data:
                     transport: stdio
                     port: null
+              batchRequest:
+                summary: Batch request (multiple events)
+                value:
+                  - event: tool_call
+                    timestamp: "2024-01-15T10:30:00.000Z"
+                    serverId: "server-instance-123"
+                    version: "1.0.0"
+                    data:
+                      toolName: execute_queries_and_dml
+                      operation: query
+                      duration: 150
+                      success: true
+                  - event: tool_call
+                    timestamp: "2024-01-15T10:30:01.000Z"
+                    serverId: "server-instance-123"
+                    version: "1.0.0"
+                    data:
+                      toolName: describe_object
+                      operation: describe
+                      duration: 80
+                      success: true
       responses:
         '200':
-          description: Telemetry event received successfully
+          description: Telemetry event(s) received successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TelemetryResponse'
-              example:
-                status: ok
-                receivedAt: "2024-01-15T10:30:00.123Z"
+                oneOf:
+                  - $ref: '#/components/schemas/TelemetryResponse'
+                  - $ref: '#/components/schemas/BatchTelemetryResponse'
+              examples:
+                singleEvent:
+                  summary: Single event response
+                  value:
+                    status: ok
+                    receivedAt: "2024-01-15T10:30:00.123Z"
+                batchResponse:
+                  summary: Batch request response
+                  value:
+                    status: ok
+                    receivedAt: "2024-01-15T10:30:00.123Z"
+                    total: 2
+                    successful: 2
+                    ignored: 0
+                    errors: 0
+                    results:
+                      - index: 0
+                        status: ok
+                        receivedAt: "2024-01-15T10:30:00.123Z"
+                      - index: 1
+                        status: ok
+                        receivedAt: "2024-01-15T10:30:00.123Z"
         '400':
           description: Invalid request data
           content:
@@ -397,6 +448,61 @@ components:
           format: date-time
           description: ISO 8601 timestamp of when the event was received by the server
           example: "2024-01-15T10:30:00.123Z"
+    
+    BatchTelemetryResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [ok]
+          example: ok
+        receivedAt:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp of when the batch was received by the server
+          example: "2024-01-15T10:30:00.123Z"
+        total:
+          type: integer
+          description: Total number of events in the batch
+          example: 2
+        successful:
+          type: integer
+          description: Number of successfully processed events
+          example: 2
+        ignored:
+          type: integer
+          description: Number of ignored events (e.g., missing username)
+          example: 0
+        errors:
+          type: integer
+          description: Number of events that failed processing
+          example: 0
+        results:
+          type: array
+          description: Individual results for each event in the batch
+          items:
+            type: object
+            properties:
+              index:
+                type: integer
+                description: Index of the event in the original batch
+              status:
+                type: string
+                enum: [ok, ignored, error]
+              receivedAt:
+                type: string
+                format: date-time
+              reason:
+                type: string
+                description: Reason for ignored status (e.g., missing_username)
+              message:
+                type: string
+                description: Error message for failed events
+              errors:
+                type: array
+                description: Validation errors for failed events
+                items:
+                  type: object
 
     ErrorResponse:
       type: object
