@@ -4247,7 +4247,7 @@ function safeShowToast(message, type = 'info') {
 		}
 	});
 
-	 
+
 	function toggleActionsDropdown(e, eventId) {
 		e.stopPropagation();
 		const dropdown = document.getElementById(`dropdown-${eventId}`);
@@ -4366,7 +4366,7 @@ function safeShowToast(message, type = 'info') {
 		}
 	}
 
-	 
+
 	async function copyEventPayload(eventId) {
 		try {
 			// Fetch the complete event (including payload) from the API
@@ -4405,7 +4405,7 @@ function safeShowToast(message, type = 'info') {
 		}
 	}
 
-	 
+
 	function confirmDeleteEvent(eventId) {
 		openConfirmModal({
 			title: 'Move event to trash',

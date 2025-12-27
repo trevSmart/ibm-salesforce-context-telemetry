@@ -97,13 +97,13 @@
 				this.currentTarget = element;
 				this.tooltip.textContent = text;
 				this.tooltip.setAttribute('aria-hidden', 'false');
-				
+
 				// Set position class for nubbin styling and transform direction
 				const position = this.getTooltipPosition(element);
 				this.tooltip.className = `custom-tooltip custom-tooltip-${position}`;
-				
+
 				this.positionTooltip(element);
-				
+
 				// Use requestAnimationFrame to ensure smooth transition
 				requestAnimationFrame(() => {
 					this.tooltip.classList.add('visible');
