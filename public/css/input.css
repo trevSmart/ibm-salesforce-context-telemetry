@@ -197,6 +197,11 @@
     border-radius: 20px !important;
   } */
 
+  /* Dashboard sections border radius - 4px more than default rounded-lg (8px) = 12px */
+  .dashboard-bento-grid section.rounded-lg {
+    border-radius: 12px !important;
+  }
+
   /* Top navigation bar */
   .top-nav {
     position: relative;
@@ -205,7 +210,7 @@
     display: flex;
     align-items: center;
     gap: 24px;
-    padding: 0 0 0 16px;
+    padding: 0 0 0 8px;
     border-radius: 0;
     margin: 0;
   }
@@ -252,6 +257,7 @@
     letter-spacing: 0.13px;
     flex: 1;
     margin-left: 12px;
+    justify-content: center;
   }
 
   .top-nav-search {
@@ -619,7 +625,7 @@
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    min-width: 780px;
+    min-width: 800px;
     max-width: none;
     width: calc(100vw - 58px);
     height: calc(100vh - 50px);
@@ -849,6 +855,7 @@
     /* text-align: center; */
     width: 100%;
     max-width: none;
+    min-width: 800px;
     height: 85vh;
     min-height: 89vh;
     background: #e8ebec;
@@ -884,16 +891,20 @@
   }
 
   .dashboard-footer {
-    flex: 4 0 0;
-    padding: 18px 0 0px 0;
+    grid-column: 1 / -1;
+    grid-row: 3;
+    padding-bottom: 12px;
     font-size: 13px;
     font-weight: 400;
     color: var(--text-primary);
     text-align: center;
+    height: min-content;
+    min-height: min-content;
+    flex-shrink: 0;
   }
 
   .dashboard-footer a {
-    margin: 0 4px;
+    margin: 0 12px;
   }
 
   .dashboard-footer .dashboard-status-ok {
@@ -944,18 +955,100 @@
     min-height: 0;
   }
 
-  .dashboard-row-top {
-    flex: 60 0 0;
-    display: flex;
-    flex-direction: column;
+  .dashboard-bento-grid {
+    display: grid;
+    /* 30 columns allows precise percentages: 70% = 21 cols, 30% = 9 cols, and 3 equal cards = 10 cols each */
+    grid-template-columns: repeat(30, 1fr);
+    /* Three rows: top row (57%), middle row (43%), footer (min-content - fixed minimum height) */
+    grid-template-rows: 57fr 43fr min-content;
+    gap: 24px;
+    padding: 0;
+    height: 100%;
     min-height: 0;
   }
 
-  .dashboard-row-bottom {
-    flex: 38 0 0;
-    display: flex;
-    flex-direction: column;
+  .dashboard-card-large {
+    grid-column: 1 / 22;
+    grid-row: 1;
     min-height: 0;
+  }
+
+  .dashboard-card-small {
+    grid-column: 22 / 31;
+    grid-row: 1;
+    min-height: 0;
+  }
+
+  .dashboard-card-bottom:nth-of-type(3) {
+    grid-column: 1 / 11;
+    grid-row: 2;
+    min-height: 0;
+  }
+
+  .dashboard-card-bottom:nth-of-type(4) {
+    grid-column: 11 / 21;
+    grid-row: 2;
+    min-height: 0;
+  }
+
+  .dashboard-card-bottom:nth-of-type(5) {
+    grid-column: 21 / 31;
+    grid-row: 2;
+    min-height: 0;
+  }
+
+  /* Remove border/outline from top teams, top users, server stats and tool usage sections */
+  .dashboard-card-small,
+  .dashboard-card-bottom:nth-of-type(3),
+  .dashboard-card-bottom:nth-of-type(4),
+  .dashboard-card-bottom:nth-of-type(5),
+  #serverStatsCard {
+    border: none !important;
+    outline: none !important;
+  }
+
+  /* Responsive: On smaller screens */
+  @media (max-width: 1024px) {
+    .dashboard-bento-grid {
+      /* 2 columns for the 4 smaller cards */
+      grid-template-columns: repeat(2, 1fr);
+      /* Rows: large card, 2 rows for 4 cards (2x2), footer (min-content - fixed minimum height) */
+      grid-template-rows: 1fr 1fr 1fr min-content;
+    }
+
+    /* Large card: full width on first row */
+    .dashboard-card-large {
+      grid-column: 1 / -1;
+      grid-row: 1;
+    }
+
+    /* Small card (Top Teams): first card of second row */
+    .dashboard-card-small {
+      grid-column: 1;
+      grid-row: 2;
+    }
+
+    /* Bottom cards: arranged in 2 rows of 2 cards each */
+    .dashboard-card-bottom:nth-of-type(3) {
+      grid-column: 2;
+      grid-row: 2;
+    }
+
+    .dashboard-card-bottom:nth-of-type(4) {
+      grid-column: 1;
+      grid-row: 3;
+    }
+
+    .dashboard-card-bottom:nth-of-type(5) {
+      grid-column: 2;
+      grid-row: 3;
+    }
+
+    /* Footer: always at the end, full width */
+    .dashboard-footer {
+      grid-column: 1 / -1;
+      grid-row: 4;
+    }
   }
 
 
@@ -1775,10 +1868,11 @@
   .top-users-list {
     list-style: none;
     padding: 0;
+    padding-left: 18px;
     margin: 0;
     display: flex;
     flex-direction: column;
-    gap: 0;
+    gap: 4px;
   }
 
   .top-users-item {
@@ -4191,13 +4285,13 @@
     }
 
     .top-nav-links {
-      gap: 16px;
+      gap: 15px;
       order: 2;
       flex: 1 1 100%;
     }
 
     .top-nav-link {
-      font-size: 0.8125rem;
+      font-size: 13.8px;
     }
 
     .top-nav-search {

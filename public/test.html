@@ -7,15 +7,15 @@
 	<title>Test - IBM Salesforce Context Telemetry</title>
 	<link rel="icon" type="image/svg+xml" sizes="any" href="/resources/favicon.svg">
 	<link rel="icon" type="image/webp" sizes="32x32" href="/resources/favicon.webp">
-	
+
 	<!-- Preload main stylesheet -->
 	<link rel="preload" href="/css/output.css" as="style">
 	<link rel="stylesheet" href="/css/output.css">
-	
+
 	<!-- Load FontAwesome -->
 	<link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
 	<link rel="stylesheet" href="/vendor/fontawesome/css/v4-shims.min.css">
-	
+
 	<script src="/js/polyfills.js" defer></script>
 	<script src="https://cdn.jsdelivr.net/npm/@tailwindplus/elements@1" type="module" defer></script>
 	<script>
@@ -44,7 +44,7 @@
 		<div class="container-content">
 		<!-- Hidden element for test.js script compatibility -->
 		<div id="testContent" style="display: none;"></div>
-		
+
 		<div class="bento-grid-container">
 			<!-- Top row: Large card (chart) + Small card (top teams) -->
 			<div class="bento-card bento-card-large" style="background: #2195cf;">
@@ -59,7 +59,7 @@
 					<p style="margin: 0;">Smaller card for top teams</p>
 				</div>
 			</div>
-			
+
 			<!-- Bottom row: Three equal cards -->
 			<div class="bento-card bento-card-bottom" style="background: #ef4444;">
 				<div style="padding: 20px; color: white;">
@@ -79,7 +79,7 @@
 					<p style="margin: 0;">Equal width card 3</p>
 				</div>
 			</div>
-			
+
 			<!-- Footer row: spans all columns -->
 			<div class="bento-footer" style="background: #6366f1;">
 				<a href="/health" target="_blank" rel="noopener noreferrer">Health check</a> ·
@@ -89,9 +89,9 @@
 		</div>
 		</div>
 	</div>
-	
+
 	<script src="/js/test.js" defer></script>
-	
+
 	<style>
 		.bento-grid-container {
 			display: grid;
@@ -104,7 +104,7 @@
 			height: 100%;
 			min-height: 0;
 		}
-		
+
 		.bento-card {
 			border-radius: 12px;
 			overflow: hidden;
@@ -112,35 +112,35 @@
 			display: flex;
 			flex-direction: column;
 		}
-		
+
 		/* Large card: 70% width (21 columns out of 30) */
 		.bento-card-large {
 			grid-column: 1 / 22;
 			grid-row: 1;
 		}
-		
+
 		/* Small card: 30% width (9 columns out of 30) */
 		.bento-card-small {
 			grid-column: 22 / 31;
 			grid-row: 1;
 		}
-		
+
 		/* Bottom cards: each takes 10 columns (33.33% each) */
 		.bento-card-bottom:nth-child(3) {
 			grid-column: 1 / 11;
 			grid-row: 2;
 		}
-		
+
 		.bento-card-bottom:nth-child(4) {
 			grid-column: 11 / 21;
 			grid-row: 2;
 		}
-		
+
 		.bento-card-bottom:nth-child(5) {
 			grid-column: 21 / 31;
 			grid-row: 2;
 		}
-		
+
 		/* Footer: spans all columns, fixed minimum height */
 		.bento-footer {
 			grid-column: 1 / -1;
@@ -158,17 +158,17 @@
 			flex-shrink: 0;
 			border-radius: 12px;
 		}
-		
+
 		.bento-footer a {
-			margin: 0 4px;
+			margin: 0 12px;
 			color: white;
 			text-decoration: none;
 		}
-		
+
 		.bento-footer a:hover {
 			text-decoration: underline;
 		}
-		
+
 		/* Responsive: On smaller screens */
 		@media (max-width: 1024px) {
 			.bento-grid-container {
@@ -177,42 +177,42 @@
 				/* Rows: large card, 2 rows for 4 cards (2x2), footer (min-content - fixed minimum height) */
 				grid-template-rows: 1fr 1fr 1fr min-content;
 			}
-			
+
 			/* Large card: full width on first row */
 			.bento-card-large {
 				grid-column: 1 / -1;
 				grid-row: 1;
 			}
-			
+
 			/* Small card (Top Teams): first card of second row */
 			.bento-card-small {
 				grid-column: 1;
 				grid-row: 2;
 			}
-			
+
 			/* Bottom cards: arranged in 2 rows of 2 cards each */
 			.bento-card-bottom:nth-child(3) {
 				grid-column: 2;
 				grid-row: 2;
 			}
-			
+
 			.bento-card-bottom:nth-child(4) {
 				grid-column: 1;
 				grid-row: 3;
 			}
-			
+
 			.bento-card-bottom:nth-child(5) {
 				grid-column: 2;
 				grid-row: 3;
 			}
-			
+
 			/* Footer: always at the end, full width */
 			.bento-footer {
 				grid-column: 1 / -1;
 				grid-row: 4;
 			}
 		}
-		
+
 		/* Medium screens: Keep 30-column layout */
 		@media (min-width: 1025px) and (max-width: 1400px) {
 			.bento-grid-container {
