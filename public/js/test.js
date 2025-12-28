@@ -24,29 +24,255 @@ const sampleData = [
 
 // Generate sample payload based on event data
 function generateSamplePayload(event) {
+	const now = new Date();
 	const basePayload = {
-		event: event.event,
-		timestamp: new Date().toISOString(),
-		user_id: event.name.toLowerCase().replace(' ', '.'),
+		id: event.id,
+		timestamp: now.toISOString(),
+		received_at: new Date(now.getTime() - 100).toISOString(), // 100ms abans del timestamp
+		telemetry_schema_version: 2,
 		area: event.area,
-		company: event.company
+		event: event.event,
+		success: event.status === 'success',
+		version: '1.0.0',
+		error_message: event.error || null
 	};
 
-	if (event.event === 'tool_call') {
-		basePayload.tool = event.tool;
-		basePayload.query = event.tool === 'executeQuery' ? 'SELECT Id, Name FROM Account LIMIT 10' : null;
-		basePayload.result = event.status === 'success' ? {records: 10, success: true} : null;
-		if (event.status === 'error') {
-			basePayload.error = event.error;
-		}
-	} else if (event.event === 'session_start') {
-		basePayload.session_id = `session-${event.id}`;
-		basePayload.version = '1.0.0';
-	} else if (event.event === 'custom') {
-		basePayload.custom_data = {message: event.payload};
-	}
-
 	return basePayload;
+}
+
+// Create event details form HTML
+function createEventDetailsFormHTML(event) {
+	const payload = generateSamplePayload(event);
+	
+	const formatDate = (dateString) => {
+		if (!dateString) return '';
+		try {
+			const date = new Date(dateString);
+			if (isNaN(date.getTime())) return dateString;
+			
+			// Format: "15 Jan 2024, 14:30:45" (day month year, hour:minute:second)
+			const options = {
+				day: 'numeric',
+				month: 'short',
+				year: 'numeric',
+				hour: '2-digit',
+				minute: '2-digit',
+				second: '2-digit',
+				hour12: false
+			};
+			return date.toLocaleDateString('en-GB', options);
+		} catch (e) {
+			return dateString;
+		}
+	};
+	
+	const formatValue = (value) => {
+		if (value === null || value === undefined) {
+			return '';
+		}
+		if (typeof value === 'object') {
+			return JSON.stringify(value, null, 2);
+		}
+		return String(value);
+	};
+
+	const createInputHTML = (id, name, label, value, placeholder = '', type = 'text', roundedClasses = '') => {
+		return `
+			<div class="bg-white dark:bg-white/5 px-3 pt-2.5 pb-1.5 outline-1 -outline-offset-1 outline-gray-300 dark:outline-gray-700 focus-within:relative focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-indigo-600 dark:focus-within:outline-indigo-500 ${roundedClasses}">
+				<label for="${id}" class="block text-xs font-medium text-gray-900 dark:text-white">${label}</label>
+				<input 
+					id="${id}" 
+					name="${name}" 
+					type="${type}" 
+					value="${formatValue(value).replace(/"/g, '&quot;')}" 
+					placeholder="${placeholder}" 
+					aria-label="${label}" 
+					readonly 
+					class="block w-full text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none" 
+					style="font-size: 13.5px;"
+				/>
+			</div>
+		`;
+	};
+
+	const createTextareaHTML = (id, name, label, value, placeholder = '') => {
+		return `
+			<div class="rounded-md bg-white dark:bg-white/5 px-3 pt-2.5 pb-1.5 outline-1 -outline-offset-1 outline-gray-300 dark:outline-gray-700 focus-within:relative focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-indigo-600 dark:focus-within:outline-indigo-500">
+				<label for="${id}" class="block text-xs font-medium text-gray-900 dark:text-white">${label}</label>
+				<textarea 
+					id="${id}" 
+					name="${name}" 
+					placeholder="${placeholder}" 
+					aria-label="${label}" 
+					readonly 
+					rows="8"
+					class="block w-full text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none resize-y" 
+					style="font-size: 13.5px;"
+				>${formatValue(value).replace(/</g, '&lt;').replace(/>/g, '&gt;')}</textarea>
+			</div>
+		`;
+	};
+
+	let formHTML = '<div style="max-width: 700px; margin: 0 auto; padding-left: 30px; padding-right: 30px;">';
+
+	// Event Information fieldset
+	formHTML += '<fieldset>';
+	formHTML += '<legend class="block text-sm/6 font-semibold text-gray-900 dark:text-white">Event Information</legend>';
+	formHTML += '<div class="mt-2 -space-y-px">';
+	
+	// Request ID (top, full width)
+	formHTML += createInputHTML(
+		`event-id-${event.id}`,
+		'id',
+		'Request ID',
+		payload.id,
+		'Request ID',
+		'text',
+		'rounded-t-md'
+	);
+
+	// Area and Event (side by side as badges) - Second row
+	const getLevelBadgeClass = (area) => {
+		const levelMap = {
+			'Salesforce': 'tool',
+			'Apex': 'session',
+			'general': 'general'
+		};
+		const levelClass = levelMap[area] || 'session';
+		return `level-badge ${levelClass}`;
+	};
+
+	const getEventBadgeClass = (eventType) => {
+		const eventColorMap = {
+			'tool_call': 'green',
+			'tool_error': 'indigo',
+			'session_start': 'pink',
+			'session_end': 'yellow',
+			'error': 'green',
+			'custom': 'indigo'
+		};
+		const colorClass = eventColorMap[eventType] || 'green';
+		return `event-badge ${colorClass}`;
+	};
+
+	formHTML += '<div class="grid grid-cols-2 gap-0">';
+	formHTML += `
+		<div class="bg-white dark:bg-white/5 px-3 pt-2.5 pb-1.5 outline-1 -outline-offset-1 outline-gray-300 dark:outline-gray-700 -mr-px">
+			<label class="block text-xs font-medium text-gray-900 dark:text-white mb-1.5">Area</label>
+			<div class="flex items-center">
+				<span class="${getLevelBadgeClass(payload.area)}">${formatValue(payload.area)}</span>
+			</div>
+		</div>
+		<div class="bg-white dark:bg-white/5 px-3 pt-2.5 pb-1.5 outline-1 -outline-offset-1 outline-gray-300 dark:outline-gray-700">
+			<label class="block text-xs font-medium text-gray-900 dark:text-white mb-1.5">Event</label>
+			<div class="flex items-center">
+				<span class="${getEventBadgeClass(payload.event)}">${formatValue(payload.event)}</span>
+			</div>
+		</div>
+	`;
+	formHTML += '</div>';
+
+	// Timestamp and Received At (side by side)
+	formHTML += '<div class="grid grid-cols-2 gap-0">';
+	formHTML += `
+		<div class="bg-white dark:bg-white/5 px-3 pt-2.5 pb-1.5 outline-1 -outline-offset-1 outline-gray-300 dark:outline-gray-700 focus-within:relative focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-indigo-600 dark:focus-within:outline-indigo-500 -mr-px">
+			<label for="event-timestamp-${event.id}" class="block text-xs font-medium text-gray-900 dark:text-white">Timestamp</label>
+			<input 
+				id="event-timestamp-${event.id}" 
+				name="timestamp" 
+				type="text" 
+				value="${formatDate(payload.timestamp).replace(/"/g, '&quot;')}" 
+				placeholder="Timestamp" 
+				aria-label="Timestamp" 
+				readonly 
+				class="block w-full text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none" 
+				style="font-size: 13.5px;"
+			/>
+		</div>
+		<div class="bg-white dark:bg-white/5 px-3 pt-2.5 pb-1.5 outline-1 -outline-offset-1 outline-gray-300 dark:outline-gray-700 focus-within:relative focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-indigo-600 dark:focus-within:outline-indigo-500">
+			<label for="event-received-at-${event.id}" class="block text-xs font-medium text-gray-900 dark:text-white">Received At</label>
+			<input 
+				id="event-received-at-${event.id}" 
+				name="received_at" 
+				type="text" 
+				value="${formatDate(payload.received_at).replace(/"/g, '&quot;')}" 
+				placeholder="Received At" 
+				aria-label="Received At" 
+				readonly 
+				class="block w-full text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none" 
+				style="font-size: 13.5px;"
+			/>
+		</div>
+	`;
+	formHTML += '</div>';
+
+	// Schema Version and Success (side by side)
+	formHTML += '<div class="grid grid-cols-2 gap-0">';
+	formHTML += `
+		<div class="bg-white dark:bg-white/5 px-3 pt-2.5 pb-1.5 outline-1 -outline-offset-1 outline-gray-300 dark:outline-gray-700 focus-within:relative focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-indigo-600 dark:focus-within:outline-indigo-500 -mr-px">
+			<label for="event-schema-version-${event.id}" class="block text-xs font-medium text-gray-900 dark:text-white">Request schema version</label>
+			<input 
+				id="event-schema-version-${event.id}" 
+				name="telemetry_schema_version" 
+				type="text" 
+				value="${formatValue(payload.telemetry_schema_version).replace(/"/g, '&quot;')}" 
+				placeholder="Request schema version" 
+				aria-label="Request schema version" 
+				readonly 
+				class="block w-full text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none" 
+				style="font-size: 13.5px;"
+			/>
+		</div>
+		<div class="bg-white dark:bg-white/5 px-3 pt-2.5 pb-1.5 outline-1 -outline-offset-1 outline-gray-300 dark:outline-gray-700">
+			<label class="block text-xs font-medium text-gray-900 dark:text-white mb-1.5">Success</label>
+			<div class="flex items-center">
+				${payload.success === true || payload.success === 'true' 
+					? '<img src="/resources/ok.png" alt="OK" class="status-indicator ok" loading="lazy">'
+					: '<img src="/resources/ko.png" alt="KO" class="status-indicator ko" loading="lazy">'}
+			</div>
+		</div>
+	`;
+	formHTML += '</div>';
+
+	// Version and Error Message (side by side)
+	formHTML += '<div class="grid grid-cols-2 gap-0">';
+	formHTML += `
+		<div class="bg-white dark:bg-white/5 px-3 pt-2.5 pb-1.5 outline-1 -outline-offset-1 outline-gray-300 dark:outline-gray-700 focus-within:relative focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-indigo-600 dark:focus-within:outline-indigo-500 rounded-bl-md -mr-px">
+			<label for="event-version-${event.id}" class="block text-xs font-medium text-gray-900 dark:text-white">Server version</label>
+			<input 
+				id="event-version-${event.id}" 
+				name="version" 
+				type="text" 
+				value="${formatValue(payload.version).replace(/"/g, '&quot;')}" 
+				placeholder="Server version" 
+				aria-label="Server version" 
+				readonly 
+				class="block w-full text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none" 
+				style="font-size: 13.5px;"
+			/>
+		</div>
+		<div class="bg-white dark:bg-white/5 px-3 pt-2.5 pb-1.5 outline-1 -outline-offset-1 outline-gray-300 dark:outline-gray-700 focus-within:relative focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-indigo-600 dark:focus-within:outline-indigo-500 rounded-br-md">
+			<label for="event-error-message-${event.id}" class="block text-xs font-medium text-gray-900 dark:text-white">Error Message</label>
+			<input 
+				id="event-error-message-${event.id}" 
+				name="error_message" 
+				type="text" 
+				value="${formatValue(payload.error_message).replace(/"/g, '&quot;')}" 
+				placeholder="Error Message" 
+				aria-label="Error Message" 
+				readonly 
+				class="block w-full text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none" 
+				style="font-size: 13.5px;"
+			/>
+		</div>
+	`;
+	formHTML += '</div>';
+
+	formHTML += '</div>';
+	formHTML += '</fieldset>';
+
+	formHTML += '</div>';
+	return formHTML;
 }
 
 (async function initTestPage() {
@@ -100,27 +326,30 @@ function generateSamplePayload(event) {
 		return `event-badge ${colorClass}`;
 	};
 
-	const rows = sampleData.map((row, index) => `
-		<tr style="height: 46px;">
-			<td class="border-b border-gray-200 dark:border-white/10 pl-4 pr-2 text-center font-medium text-gray-500 dark:text-gray-400" style="height: 46px; vertical-align: middle;">
-				<button type="button" style="background: none; border: none; cursor: pointer; padding: 4px;">
+	const rows = sampleData.map((row, index) => {
+		const isLast = index === sampleData.length - 1;
+		const borderClass = isLast ? '' : 'border-b border-gray-200 dark:border-white/10';
+		return `
+		<tr data-event-id="${row.id}" class="test-table-row" style="height: 46px;">
+			<td class="${borderClass} pl-4 pr-2 text-center font-medium text-gray-500 dark:text-gray-400" style="height: 46px; vertical-align: middle;">
+				<button type="button" id="expand-btn-${row.id}" class="expand-btn" onclick="toggleRowExpand(${row.id})" style="background: none; border: none; cursor: pointer; padding: 4px;">
 					<i class="fa-solid fa-chevron-right text-gray-400"></i>
 				</button>
 			</td>
-			<td class="border-b border-gray-200 dark:border-white/10 pr-3 pl-4 whitespace-nowrap text-gray-700 dark:text-gray-300 sm:pl-6 " style="height: 46px; vertical-align: middle;">${row.date}</td>
-			<td class="border-b border-gray-200 dark:border-white/10 px-3 font-medium whitespace-nowrap text-gray-500 dark:text-gray-400" style="height: 46px; vertical-align: middle;">${row.name}</td>
-			<td class="hidden border-b border-gray-200 dark:border-white/10 px-3 whitespace-nowrap text-gray-500 dark:text-gray-400 md:table-cell" style="height: 46px; vertical-align: middle;">${row.company}</td>
-			<td class="border-b border-gray-200 dark:border-white/10 px-3 whitespace-nowrap text-gray-500 dark:text-gray-400" style="height: 46px; vertical-align: middle;">
+			<td class="${borderClass} pr-3 pl-4 whitespace-nowrap text-gray-700 dark:text-gray-300 sm:pl-6 " style="height: 46px; vertical-align: middle;">${row.date}</td>
+			<td class="${borderClass} px-3 font-medium whitespace-nowrap text-gray-500 dark:text-gray-400" style="height: 46px; vertical-align: middle;">${row.name}</td>
+			<td class="hidden ${borderClass} px-3 whitespace-nowrap text-gray-500 dark:text-gray-400 md:table-cell" style="height: 46px; vertical-align: middle;">${row.company}</td>
+			<td class="${borderClass} px-3 whitespace-nowrap text-gray-500 dark:text-gray-400" style="height: 46px; vertical-align: middle;">
 				<span class="${getLevelBadgeClass(row.area)}">${row.area}</span>
 			</td>
-			<td class="border-b border-gray-200 dark:border-white/10 px-3 whitespace-nowrap text-gray-500 dark:text-gray-400" style="height: 46px; vertical-align: middle;">
+			<td class="${borderClass} px-3 whitespace-nowrap text-gray-500 dark:text-gray-400" style="height: 46px; vertical-align: middle;">
 				<span class="${getEventBadgeClass(row.event)}">${row.event}</span>
 			</td>
-			<td class="hidden border-b border-gray-200 dark:border-white/10 px-3 whitespace-nowrap text-gray-500 dark:text-gray-400 lg:table-cell" style="height: 46px; vertical-align: middle;">${row.tool || 'N/A'}</td>
-			<td class="border-b border-gray-200 dark:border-white/10 px-3 whitespace-nowrap text-center" style="height: 46px; vertical-align: middle;">${statusIcon(row.status)}</td>
-			<td class="hidden border-b border-gray-200 dark:border-white/10 px-3 whitespace-nowrap text-gray-500 dark:text-gray-400 xl:table-cell overflow-hidden text-ellipsis max-w-48" style="height: 46px; vertical-align: middle;">${row.error || ''}</td>
-			<td class="border-b border-gray-200 dark:border-white/10 px-3 text-center text-gray-500 dark:text-gray-400" style="height: 46px; vertical-align: middle;">${payloadIcon(row.id)}</td>
-			<td class="border-b border-gray-200 dark:border-white/10 pr-4 pl-3 text-right font-medium whitespace-nowrap sm:pr-8 lg:pr-8" style="height: 46px; vertical-align: middle;">
+			<td class="hidden ${borderClass} px-3 whitespace-nowrap text-gray-500 dark:text-gray-400 lg:table-cell" style="height: 46px; vertical-align: middle;">${row.tool || 'N/A'}</td>
+			<td class="${borderClass} px-3 whitespace-nowrap text-center" style="height: 46px; vertical-align: middle;">${statusIcon(row.status)}</td>
+			<td class="hidden ${borderClass} px-3 whitespace-nowrap text-gray-500 dark:text-gray-400 xl:table-cell overflow-hidden text-ellipsis max-w-48" style="height: 46px; vertical-align: middle;">${row.error || ''}</td>
+			<td class="${borderClass} px-3 text-center text-gray-500 dark:text-gray-400" style="height: 46px; vertical-align: middle;">${payloadIcon(row.id)}</td>
+			<td class="${borderClass} pr-4 pl-3 text-right font-medium whitespace-nowrap sm:pr-8 lg:pr-8" style="height: 46px; vertical-align: middle;">
 				<button type="button" class="actions-btn hover:text-indigo-900 dark:hover:text-indigo-400" onclick="toggleActionsDropdown(event, ${row.id})" style="background: none; border: none; cursor: pointer; padding: 4px;">
 					<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
 						<circle cx="8" cy="3" r="1.5"/>
@@ -138,48 +367,14 @@ function generateSamplePayload(event) {
 				</div>
 			</td>
 		</tr>
-	`).join('');
-
-	const lastRow = sampleData.at(-1);
-	const lastRowHtml = `
-		<tr style="height: 46px;">
-			<td class="pl-4 pr-2 text-center font-medium text-gray-500 dark:text-gray-400" style="height: 46px; vertical-align: middle;">
-				<button type="button" style="background: none; border: none; cursor: pointer; padding: 4px;">
-					<i class="fa-solid fa-chevron-right text-gray-400"></i>
-				</button>
-			</td>
-			<td class="pr-3 pl-4 whitespace-nowrap text-gray-700 dark:text-gray-300 sm:pl-6" style="height: 46px; vertical-align: middle;">${lastRow.date}</td>
-			<td class="px-3 font-medium whitespace-nowrap text-gray-500 dark:text-gray-400" style="height: 46px; vertical-align: middle;">${lastRow.name}</td>
-			<td class="hidden px-3 whitespace-nowrap text-gray-500 dark:text-gray-400 md:table-cell" style="height: 46px; vertical-align: middle;">${lastRow.company}</td>
-			<td class="px-3 whitespace-nowrap text-gray-500 dark:text-gray-400" style="height: 46px; vertical-align: middle;">
-				<span class="${getLevelBadgeClass(lastRow.area)}">${lastRow.area}</span>
-			</td>
-			<td class="px-3 whitespace-nowrap text-gray-500 dark:text-gray-400" style="height: 46px; vertical-align: middle;">
-				<span class="${getEventBadgeClass(lastRow.event)}">${lastRow.event}</span>
-			</td>
-			<td class="hidden px-3 whitespace-nowrap text-gray-500 dark:text-gray-400 lg:table-cell" style="height: 46px; vertical-align: middle;">${lastRow.tool || 'N/A'}</td>
-			<td class="px-3 whitespace-nowrap text-center" style="height: 46px; vertical-align: middle;">${statusIcon(lastRow.status)}</td>
-			<td class="hidden px-3 whitespace-nowrap text-gray-500 dark:text-gray-400 xl:table-cell overflow-hidden text-ellipsis max-w-48" style="height: 46px; vertical-align: middle;">${lastRow.error || ''}</td>
-			<td class="px-3 text-center text-gray-500 dark:text-gray-400" style="height: 46px; vertical-align: middle;">${payloadIcon(lastRow.id)}</td>
-			<td class="pr-4 pl-3 text-right font-medium whitespace-nowrap sm:pr-8 lg:pr-8" style="height: 46px; vertical-align: middle;">
-				<button type="button" class="actions-btn hover:text-indigo-900 dark:hover:text-indigo-400" onclick="toggleActionsDropdown(event, ${lastRow.id})" style="background: none; border: none; cursor: pointer; padding: 4px;">
-					<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-						<circle cx="8" cy="3" r="1.5"/>
-						<circle cx="8" cy="8" r="1.5"/>
-						<circle cx="8" cy="13" r="1.5"/>
-					</svg>
-				</button>
-				<div class="actions-dropdown actions-dropdown-left" id="dropdown-${lastRow.id}">
-					<div class="actions-dropdown-item" onclick="copyEventPayload(${lastRow.id})">
-						<span>Copy payload</span>
-					</div>
-					<div class="actions-dropdown-item delete" onclick="confirmDeleteEvent(${lastRow.id})">
-						<span>Move to trash</span>
-					</div>
-				</div>
+		<tr class="test-item-expanded" id="expanded-${row.id}">
+			<td colspan="11" class="log-description-expanded px-3 py-4">
+				${createEventDetailsFormHTML(row)}
 			</td>
 		</tr>
 	`;
+	}).join('');
+
 
 	testContent.innerHTML = `
 		<div>
@@ -208,7 +403,6 @@ function generateSamplePayload(event) {
 							</thead>
 							<tbody>
 								${rows}
-								${lastRowHtml}
 							</tbody>
 						</table>
 					</div>
@@ -216,6 +410,24 @@ function generateSamplePayload(event) {
 			</div>
 		</div>
 	`;
+
+	// Add click handlers to rows for expansion
+	const tbody = testContent.querySelector('tbody');
+	if (tbody) {
+		const mainRows = tbody.querySelectorAll('tr[data-event-id]');
+		mainRows.forEach(row => {
+			row.addEventListener('click', (evt) => {
+				// Don't expand if clicking on actions button or dropdown
+				if (evt.target.closest('.actions-btn') || evt.target.closest('.actions-dropdown') || evt.target.closest('.expand-btn')) {
+					return;
+				}
+				const eventId = row.getAttribute('data-event-id');
+				if (eventId) {
+					toggleRowExpand(Number.parseInt(eventId, 10));
+				}
+			});
+		});
+	}
 
 	// Listen for soft navigation events
 	window.addEventListener('softNav:pageMounted', (event) => {
@@ -378,10 +590,30 @@ function closePayloadModal() {
 }
 
 // Actions dropdown functions
+let dropdownScrollPosition = null;
+let scrollHandler = null;
+let scrollListeners = [];
+
 function closeAllDropdowns() {
 	document.querySelectorAll('.actions-dropdown').forEach(dropdown => {
 		dropdown.classList.remove('show');
 	});
+	// Clean up scroll listeners
+	if (scrollHandler) {
+		window.removeEventListener('scroll', scrollHandler, true);
+		document.removeEventListener('scroll', scrollHandler, true);
+		
+		// Remove listeners from all tracked containers
+		scrollListeners.forEach(({element, handler}) => {
+			if (element && element.removeEventListener) {
+				element.removeEventListener('scroll', handler, true);
+			}
+		});
+		
+		scrollHandler = null;
+		scrollListeners = [];
+	}
+	dropdownScrollPosition = null;
 }
 
 function toggleActionsDropdown(e, eventId) {
@@ -406,15 +638,15 @@ function toggleActionsDropdown(e, eventId) {
 			dropdown.style.opacity = '0';
 			dropdown.style.display = 'block';
 			dropdown.style.pointerEvents = 'none';
-			
+
 			// Force a reflow to ensure the element is laid out
 			void dropdown.offsetHeight;
-			
+
 			const dropdownRect = dropdown.getBoundingClientRect();
 
 			// Position dropdown to the left of the button, vertically centered
-			let left = rect.left - dropdownRect.width - 8;
-			let top = rect.top + (rect.height / 2) - (dropdownRect.height / 2);
+			let left = rect.left - dropdownRect.width - 8 - (dropdownRect.width / 2) - 13;
+			let top = rect.top + (rect.height / 2) - (dropdownRect.height / 2) - (dropdownRect.height / 2) - 18;
 
 			// Check if dropdown would go off the left edge
 			if (left < 4) {
@@ -443,7 +675,77 @@ function toggleActionsDropdown(e, eventId) {
 		// Use requestAnimationFrame to ensure the positioning is applied before transition
 		requestAnimationFrame(() => {
 			dropdown.classList.add('show');
+			
+			// Set up scroll listener to close dropdown when table scrolls
+			dropdownScrollPosition = {
+				windowScrollY: window.scrollY || window.pageYOffset,
+				windowScrollX: window.scrollX || window.pageXOffset
+			};
+			
+			// Find scrollable container (could be window or a container element)
+			const containerContent = document.querySelector('.container-content');
+			const testContent = document.getElementById('testContent');
+			
+			if (containerContent) {
+				dropdownScrollPosition.containerScrollTop = containerContent.scrollTop;
+				dropdownScrollPosition.containerScrollLeft = containerContent.scrollLeft;
+			}
+			
+			if (testContent) {
+				dropdownScrollPosition.testContentScrollTop = testContent.scrollTop;
+				dropdownScrollPosition.testContentScrollLeft = testContent.scrollLeft;
+			}
+			
+			// Create scroll handler
+			scrollHandler = () => {
+				if (!dropdownScrollPosition) return;
+				
+				let scrollDelta = 0;
+				
+				// Check window scroll
+				const currentWindowScrollY = window.scrollY || window.pageYOffset;
+				const currentWindowScrollX = window.scrollX || window.pageXOffset;
+				const windowDeltaY = Math.abs(currentWindowScrollY - dropdownScrollPosition.windowScrollY);
+				const windowDeltaX = Math.abs(currentWindowScrollX - dropdownScrollPosition.windowScrollX);
+				scrollDelta = Math.max(windowDeltaY, windowDeltaX);
+				
+				// Check container scroll if it exists
+				if (containerContent && dropdownScrollPosition.containerScrollTop !== undefined) {
+					const containerDeltaY = Math.abs(containerContent.scrollTop - dropdownScrollPosition.containerScrollTop);
+					const containerDeltaX = Math.abs(containerContent.scrollLeft - dropdownScrollPosition.containerScrollLeft);
+					scrollDelta = Math.max(scrollDelta, containerDeltaY, containerDeltaX);
+				}
+				
+				// Check testContent scroll if it exists
+				if (testContent && dropdownScrollPosition.testContentScrollTop !== undefined) {
+					const testContentDeltaY = Math.abs(testContent.scrollTop - dropdownScrollPosition.testContentScrollTop);
+					const testContentDeltaX = Math.abs(testContent.scrollLeft - dropdownScrollPosition.testContentScrollLeft);
+					scrollDelta = Math.max(scrollDelta, testContentDeltaY, testContentDeltaX);
+				}
+				
+				// Close dropdown if scroll has moved 3px or more
+				if (scrollDelta >= 3) {
+					closeAllDropdowns();
+				}
+			};
+			
+			// Add scroll listeners to window and document
+			window.addEventListener('scroll', scrollHandler, true);
+			document.addEventListener('scroll', scrollHandler, true);
+			
+			// Also listen to scroll on container elements
+			if (containerContent) {
+				containerContent.addEventListener('scroll', scrollHandler, true);
+				scrollListeners.push({element: containerContent, handler: scrollHandler});
+			}
+			if (testContent) {
+				testContent.addEventListener('scroll', scrollHandler, true);
+				scrollListeners.push({element: testContent, handler: scrollHandler});
+			}
 		});
+	} else {
+		// Close dropdown if clicking to close
+		closeAllDropdowns();
 	}
 }
 
@@ -482,12 +784,36 @@ document.addEventListener('click', (e) => {
 	}
 });
 
+// Toggle row expansion
+function toggleRowExpand(eventId) {
+	const expandedRow = document.getElementById(`expanded-${eventId}`);
+	const mainRow = document.querySelector(`tr[data-event-id="${eventId}"]`);
+	const expandBtn = document.getElementById(`expand-btn-${eventId}`);
+
+	if (!expandedRow || !mainRow || !expandBtn) {
+		return;
+	}
+
+	if (expandedRow.classList.contains('expanded')) {
+		// Collapse
+		expandedRow.classList.remove('expanded');
+		expandBtn.classList.remove('expanded');
+		mainRow.classList.remove('expanded');
+	} else {
+		// Expand
+		expandedRow.classList.add('expanded');
+		expandBtn.classList.add('expanded');
+		mainRow.classList.add('expanded');
+	}
+}
+
 // Make functions globally available
 window.loadEventPayload = loadEventPayload;
 window.closePayloadModal = closePayloadModal;
 window.toggleActionsDropdown = toggleActionsDropdown;
 window.copyEventPayload = copyEventPayload;
 window.confirmDeleteEvent = confirmDeleteEvent;
+window.toggleRowExpand = toggleRowExpand;
 
 // Refresh function for the header button
 window.refreshTest = function refreshTest(event) {
