@@ -1,7 +1,7 @@
 // @ts-nocheck
 // Lightweight client-side navigation to avoid repainting shared chrome
 (() => {
-	const SUPPORTED_PATHS = ['/', '/logs', '/teams', '/people'];
+	const SUPPORTED_PATHS = ['/', '/logs', '/teams', '/people', '/test'];
 	const SOFT_NAV_SELECTOR = [
 		'a.top-nav-link',
 		'a.top-nav-logo',
@@ -13,7 +13,8 @@
 		'/': [{src: '/js/global-cache.js'}, {src: '/js/index.js', type: 'module'}],
 		'/logs': [{src: '/js/global-cache.js'}, {src: '/js/event-log.js', type: 'module'}],
 		'/teams': [{src: '/js/global-cache.js'}, {src: '/js/teams.js', type: 'module'}],
-		'/people': [{src: '/js/global-cache.js'}, {src: '/js/people.js', type: 'module'}]
+		'/people': [{src: '/js/global-cache.js'}, {src: '/js/people.js', type: 'module'}],
+		'/test': [{src: '/js/global-cache.js'}, {src: '/js/test.js', type: 'module'}]
 	};
 
 	// Crossfade transition duration in milliseconds

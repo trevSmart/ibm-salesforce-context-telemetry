@@ -466,13 +466,8 @@
 		// Close on escape
 		document.addEventListener('keydown', (e) => {
 			if (e.key === 'Escape' && isOpen) {
-				// Don't close if user is editing in the command palette input
-				const activeElement = document.activeElement;
-				const isEditingInPalette = activeElement && activeElement.id === 'commandPaletteInput';
-
-				if (!isEditingInPalette) {
-					hideCommandPalette();
-				}
+				// Always close on ESC when palette is open
+				hideCommandPalette();
 			}
 		});
 	}

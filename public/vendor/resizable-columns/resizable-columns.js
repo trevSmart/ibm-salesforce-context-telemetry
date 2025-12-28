@@ -16,6 +16,8 @@ class ResizableColumns {
     this.activeColumn = null;
     this.startX = 0;
     this.startWidth = 0;
+    this.previewLine = null;
+    this.currentWidth = 0;
 
     this.init();
   }
@@ -67,7 +69,7 @@ class ResizableColumns {
       position: absolute;
       top: 0;
       right: 0;
-      width: 8px;
+      width: 4px;
       height: 100%;
       cursor: col-resize;
       user-select: none;
@@ -96,6 +98,22 @@ class ResizableColumns {
       this.activeColumn = header;
       this.startX = e.pageX;
       this.startWidth = header.offsetWidth;
+      this.currentWidth = this.startWidth;
+
+      // Cache position calculations
+      const tableContainer = this.table.closest('.logs-table-container');
+      const containerRect = tableContainer ? tableContainer.getBoundingClientRect() : this.table.getBoundingClientRect();
+      const headerRect = this.activeColumn.getBoundingClientRect();
+
+      // Use the container's CLIENT height (visible area), not scroll height (total content)
+      this.cachedPositions = {
+        containerTop: containerRect.top,
+        containerHeight: tableContainer ? tableContainer.clientHeight : containerRect.height,
+        initialLeft: headerRect.right
+      };
+
+      // Create preview line
+      this.createPreviewLine();
 
       resizer.style.background = 'rgba(59, 130, 246, 0.5)';
       document.body.style.cursor = 'col-resize';
@@ -106,16 +124,53 @@ class ResizableColumns {
     });
   }
 
+  createPreviewLine() {
+    // Create a visual indicator line
+    this.previewLine = document.createElement('div');
+    this.previewLine.className = 'column-resize-preview';
+
+    this.previewLine.style.cssText = `
+      position: fixed;
+      top: ${this.cachedPositions.containerTop}px;
+      left: ${this.cachedPositions.initialLeft}px;
+      width: 2px;
+      height: ${this.cachedPositions.containerHeight}px;
+      background: rgba(59, 130, 246, 0.8);
+      z-index: 9999;
+      pointer-events: none;
+      box-shadow: 0 0 4px rgba(59, 130, 246, 0.5);
+    `;
+
+    document.body.appendChild(this.previewLine);
+  }
+
+  updatePreviewLine(diff) {
+    if (!this.previewLine) return;
+
+    // Simple calculation without DOM queries
+    const newLeft = this.cachedPositions.initialLeft + diff;
+    this.previewLine.style.left = newLeft + 'px';
+  }
+
+  removePreviewLine() {
+    if (this.previewLine && this.previewLine.parentNode) {
+      this.previewLine.parentNode.removeChild(this.previewLine);
+      this.previewLine = null;
+    }
+  }
+
   handleMouseMove = (e) => {
     if (!this.activeColumn) return;
 
     const diff = e.pageX - this.startX;
     const newWidth = Math.max(this.options.minWidth, this.startWidth + diff);
 
-    this.activeColumn.style.width = newWidth + 'px';
+    // Only update the preview line, not the actual column
+    this.currentWidth = newWidth;
+    this.updatePreviewLine(diff);
   }
 
-  handleMouseUp = (e) => {
+  handleMouseUp = () => {
     if (!this.activeColumn) return;
 
     const resizer = this.activeColumn.querySelector('.column-resizer');
@@ -123,10 +178,19 @@ class ResizableColumns {
       resizer.style.background = '';
     }
 
+    // Now apply the actual width change
+    if (this.currentWidth !== this.startWidth) {
+      this.activeColumn.style.width = this.currentWidth + 'px';
+    }
+
+    // Remove preview line
+    this.removePreviewLine();
+
     // Save widths to store
     this.saveWidths();
 
     this.activeColumn = null;
+    this.currentWidth = 0;
     document.body.style.cursor = '';
     document.body.style.userSelect = '';
 

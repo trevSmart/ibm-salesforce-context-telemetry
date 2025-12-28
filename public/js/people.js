@@ -133,8 +133,11 @@ async function transitionPeopleContent(newContent) {
 		return;
 	}
 
+	// Store original position to restore it later
+	const originalPosition = window.getComputedStyle(container).position;
+
 	// Ensure container has relative positioning for absolute children
-	if (window.getComputedStyle(container).position === 'static') {
+	if (originalPosition === 'static') {
 		container.style.position = 'relative';
 	}
 
@@ -193,6 +196,17 @@ async function transitionPeopleContent(newContent) {
 	newContent.style.transition = '';
 	newContent.style.opacity = '';
 	newContent.style.pointerEvents = '';
+
+	// Restore container's original position style
+	if (originalPosition === 'static') {
+		container.style.position = '';
+	}
+
+	// Reset scroll position to top after transition to prevent scroll issues
+	// Use requestAnimationFrame to ensure DOM updates are complete
+	requestAnimationFrame(() => {
+		window.scrollTo({top: 0, behavior: 'auto'});
+	});
 }
 
 async function renderPersonDetail(personId) {
@@ -573,6 +587,8 @@ async function initPeoplePage() {
 			peopleContent.innerHTML = '';
 			peopleContent.appendChild(listContent);
 		}
+		// Reset scroll position to top after initial load
+		window.scrollTo({top: 0, behavior: 'auto'});
 	} catch (error) {
 		console.error('Error loading people:', error);
 		showToast(`Error loading people page: ${error.message || 'Unknown error'}`, 'error');
@@ -775,6 +791,8 @@ window.addEventListener('softNav:pageMounted', async (event) => {
 				peopleContent.innerHTML = '';
 				peopleContent.appendChild(listContent);
 			}
+			// Reset scroll position to top after initial load
+			window.scrollTo({top: 0, behavior: 'auto'});
 		}
 	}
 });

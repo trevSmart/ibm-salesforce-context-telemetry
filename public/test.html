@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Test - IBM Salesforce Context Telemetry</title>
+	<link rel="icon" type="image/svg+xml" sizes="any" href="/resources/favicon.svg">
+	<link rel="icon" type="image/webp" sizes="32x32" href="/resources/favicon.webp">
+
+	<!-- Preload local fonts and main stylesheet -->
+	<link rel="preload" href="/css/output.css" as="style">
+	<link rel="stylesheet" href="/css/output.css">
+
+	<!-- Load FontAwesome -->
+	<link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
+	<link rel="stylesheet" href="/vendor/fontawesome/css/v4-shims.min.css">
+	<script src="/js/polyfills.js" defer></script>
+	<script src="https://cdn.jsdelivr.net/npm/@tailwindplus/elements@1" type="module" defer></script>
+	<script>
+		// Apply theme immediately before page render to prevent flash
+		(function () {
+			// #region agent log
+			fetch('http://127.0.0.1:7245/ingest/37b679e3-a739-46a8-ad06-3550006f26bc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'test.html:23',message:'Theme init start',data:{timestamp:Date.now()},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'A'})}).catch(()=>{});
+			// #endregion
+			const savedTheme = localStorage.getItem('theme');
+			// #region agent log
+			fetch('http://127.0.0.1:7245/ingest/37b679e3-a739-46a8-ad06-3550006f26bc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'test.html:25',message:'Saved theme from localStorage',data:{savedTheme:savedTheme},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'A'})}).catch(()=>{});
+			// #endregion
+			const theme = savedTheme || 'light';
+			// #region agent log
+			fetch('http://127.0.0.1:7245/ingest/37b679e3-a739-46a8-ad06-3550006f26bc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'test.html:27',message:'Final theme selected',data:{theme:theme,hasSavedTheme:!!savedTheme},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'A'})}).catch(()=>{});
+			// #endregion
+			if (theme === 'dark') {
+				// #region agent log
+				fetch('http://127.0.0.1:7245/ingest/37b679e3-a739-46a8-ad06-3550006f26bc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'test.html:29',message:'Adding dark class to documentElement',data:{theme:theme},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'A'})}).catch(()=>{});
+				// #endregion
+				document.documentElement.classList.add('dark');
+				// #region agent log
+				fetch('http://127.0.0.1:7245/ingest/37b679e3-a739-46a8-ad06-3550006f26bc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'test.html:31',message:'Dark class added',data:{hasDarkClass:document.documentElement.classList.contains('dark')},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'A'})}).catch(()=>{});
+				// #endregion
+			} else {
+				// #region agent log
+				fetch('http://127.0.0.1:7245/ingest/37b679e3-a739-46a8-ad06-3550006f26bc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'test.html:34',message:'Light theme, not adding dark class',data:{theme:theme},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'A'})}).catch(()=>{});
+				// #endregion
+			}
+		})();
+	</script>
+</head>
+
+<body class="test-page cursor-default">
+	<div class="container main-container">
+		<div id="global-header-placeholder"></div>
+		<script src="/js/command-palette.js"></script>
+		<script src="/js/header.js"></script>
+		<script>
+			// Initialize header for test page
+			initGlobalHeader();
+		</script>
+		<div class="container-content">
+			<div class="teams-header" style="display: flex; align-items: flex-end; justify-content: space-between; gap: 16px;">
+				<div class="teams-breadcrumbs" style="display: flex; flex-direction: column; gap: 6px;">
+					<div style="display: flex; align-items: center; gap: 12px;">
+						<a href="/" class="back-link subtitle" data-soft-nav="true">← Back to Dashboard</a>
+					</div>
+					<div class="log-viewer-title font-semibold">Test</div>
+				</div>
+			</div>
+			<div id="testContent" class="px-6 sm:px-8">
+				<!-- Content will be loaded by test.js -->
+				<div class="teams-loading">
+					<p>Loading test page...</p>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<script src="/js/global-cache.js" defer></script>
+	<script src="/js/navigation.js" defer></script>
+	<script src="/js/user-menu.js" defer></script>
+	<script src="/js/csrf-helper.js" defer></script>
+	<script src="/js/notifications.js" type="module" defer></script>
+	<script type="module" src="/js/app.js" defer></script>
+	<script type="module" src="/js/test.js" defer></script>
+
+</body>
+
+</html>

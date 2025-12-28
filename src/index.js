@@ -21,11 +21,12 @@ const __dirname = dirname(__filename);
 const isDevelopment = process.env.NODE_ENV !== 'production';
 
 // Global rate limiter for all GET requests
+// More lenient in development to allow for testing and navigation
 const globalRateLimiter = rateLimit({
 	standardHeaders: true,
 	legacyHeaders: false,
 	windowMs: 60 * 1000, // 1 minute
-	max: 100, // limit each IP to 100 GET requests per minute
+	max: isDevelopment ? 1000 : 100, // limit each IP to 1000 requests/min in dev, 100 in production
 	message: {
 		status: 'error',
 		message: 'Too many requests. Please try again later.'
@@ -139,10 +140,29 @@ app.use(cookieParser()); // Parse cookies
 app.use(express.json({limit: '10mb'})); // Parse JSON request bodies with size limit
 app.use(express.urlencoded({extended: true, limit: '10mb'})); // Parse URL-encoded bodies (for login form)
 
-// Apply global rate limiter only to GET requests
+// Apply global rate limiter only to GET requests, excluding static assets and authenticated API endpoints
+// Authenticated endpoints already have auth protection, so rate limiting is less critical
 app.use((req, res, next) => {
 	if (req.method === 'GET') {
-		return globalRateLimiter(req, res, next);
+		// Exclude static assets from rate limiting (JS, CSS, fonts, images, vendor files)
+		const staticAssetPatterns = [
+			/\.(js|css|woff|woff2|ttf|svg|jpg|jpeg|png|gif|ico|webp|json)$/i,
+			/^\/js\//,
+			/^\/css\//,
+			/^\/fonts\//,
+			/^\/vendor\//,
+			/^\/resources\//
+		];
+
+		const isStaticAsset = staticAssetPatterns.some(pattern => pattern.test(req.path));
+
+		// Exclude authenticated API endpoints from global rate limiting
+		// These endpoints require authentication, so they're already protected
+		const isApiEndpoint = req.path.startsWith('/api/');
+
+		if (!isStaticAsset && !isApiEndpoint) {
+			return globalRateLimiter(req, res, next);
+		}
 	}
 	next();
 });
@@ -2585,6 +2605,15 @@ app.get('/people', auth.requireAuth, auth.requireRole('administrator'), (_req, r
 		res.sendFile(peoplePath);
 	} else {
 		res.status(404).send('People page not found');
+	}
+});
+
+app.get('/test', auth.requireAuth, auth.requireRole('administrator'), (_req, res) => {
+	const testPath = path.join(__dirname, '..', 'public', 'test.html');
+	if (fs.existsSync(testPath)) {
+		res.sendFile(testPath);
+	} else {
+		res.status(404).send('Test page not found');
 	}
 });
 

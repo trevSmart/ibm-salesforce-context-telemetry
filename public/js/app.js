@@ -30,6 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
  * Set up global ESC key handler for input fields
  * - If input has value: clear it and stop propagation
  * - If input has no value: allow propagation (let ESC work normally for modals, etc.)
+ * - Exception: command palette input should close the palette instead of clearing
  */
 function setupInputEscHandler() {
     // Use capture phase to intercept before other handlers
@@ -42,6 +43,19 @@ function setupInputEscHandler() {
 
         // Only handle INPUT and TEXTAREA elements
         if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
+            // Special case: command palette input should close the palette
+            if (activeElement.id === 'commandPaletteInput') {
+                // Check if command palette is open
+                if (typeof window.isCommandPaletteOpen === 'function' && window.isCommandPaletteOpen()) {
+                    // Close the palette instead of clearing the input
+                    if (typeof window.hideCommandPalette === 'function') {
+                        window.hideCommandPalette();
+                    }
+                    e.stopPropagation();
+                    return;
+                }
+            }
+
             const hasValue = activeElement.value && activeElement.value.trim().length > 0;
 
             if (hasValue) {

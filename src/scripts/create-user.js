@@ -8,7 +8,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import {init, getUserByUsername, createUser, close} from '../storage/database.js';
-import {hashPassword} from '../auth/auth.js';
+import {hashPassword, normalizeRole} from '../auth/auth.js';
 
 async function createUserScript() {
 	const username = process.argv[2];
@@ -34,7 +34,8 @@ async function createUserScript() {
 
 		// Hash password
 		const passwordHash = await hashPassword(password);
-		const normalizedRole = roleInput ? 'administrator' : 'basic'; // Simple role handling for now
+		// Normalize role using auth module (supports basic, advanced, administrator, god)
+		const normalizedRole = roleInput ? normalizeRole(roleInput) : 'basic';
 
 		// Create user
 		const user = await createUser(username, passwordHash, normalizedRole);

@@ -33,6 +33,11 @@
 			if (typeof window.refreshPeople === 'function') {
 				window.refreshPeople(event);
 			}
+		} else if (currentPath.startsWith('/test')) {
+			// Test page
+			if (typeof window.refreshTest === 'function') {
+				window.refreshTest(event);
+			}
 		}
 	}
 
@@ -80,12 +85,13 @@
 
 	/**
    * Build the global header HTML - automatically detects page context
+   * @param {string} userRole - User role to determine visibility of certain links
    * @returns {string} Header HTML
    */
-	function buildHeaderHTML() {
+	function buildHeaderHTML(userRole = null) {
 		// Auto-detect active page from current URL
 		const currentPath = window.location.pathname;
-		const activePage = currentPath === '/' ? '/' :currentPath.startsWith('/logs') ? '/logs' :currentPath.startsWith('/teams') ? '/teams' :currentPath.startsWith('/people') ? '/people' :currentPath.startsWith('/users') ? '/users' : '/';
+		const activePage = currentPath === '/' ? '/' :currentPath.startsWith('/logs') ? '/logs' :currentPath.startsWith('/teams') ? '/teams' :currentPath.startsWith('/people') ? '/people' :currentPath.startsWith('/test') ? '/test' :currentPath.startsWith('/users') ? '/users' : '/';
 
 		// Refresh button properties - use dynamic handler for all pages
 		const showBadge = currentPath.startsWith('/logs');
@@ -103,6 +109,11 @@
 		// Secondary button content (always settings)
 		const secondaryButtonHTML = ``;
 
+		// Only show Test link if user has "god" role
+		const testLinkHTML = userRole === 'god' 
+			? `<a href="/test" class="top-nav-link${activePage === '/test' ? ' active' : ''}">Test</a>`
+			: '';
+
 		return `
       <nav class="top-nav">
         <a href="/" class="top-nav-logo">
@@ -116,6 +127,7 @@
           <a href="/logs" class="top-nav-link${activePage === '/logs' ? ' active' : ''}">Logs</a>
           <a href="/teams" class="top-nav-link${activePage === '/teams' ? ' active' : ''}">Teams</a>
           <a href="/people" class="top-nav-link${activePage === '/people' ? ' active' : ''}">People</a>
+          ${testLinkHTML}
         </div>
         <div class="top-nav-actions">
           <button type="button" class="icon-btn navbar-btn-icon" aria-label="Command Palette" data-tooltip="Command Palette" data-tooltip-position="top" onclick="window.showCommandPalette && window.showCommandPalette()">
@@ -157,18 +169,41 @@
 
 	/**
    * Initialize the header on the page - automatically detects page context
+   * Fetches user role to conditionally show certain links (e.g., Test link for god users)
    */
-	function initHeader() {
+	async function initHeader() {
+		// Get user role from cached auth data or API
+		let userRole = null;
+		try {
+			if (window.__cachedAuthData && window.__cachedAuthData.authenticated) {
+				userRole = window.__cachedAuthData.role || null;
+			} else {
+				const response = await fetch('/api/auth/status', {
+					credentials: 'include'
+				});
+				if (response.ok) {
+					const data = await response.json();
+					userRole = data.role || null;
+					// Cache for future use
+					if (!window.__cachedAuthData) {
+						window.__cachedAuthData = data;
+					}
+				}
+			}
+		} catch (error) {
+			console.warn('Could not fetch user role for header:', error);
+		}
+
 		// Find the header placeholder or existing nav element
 		const headerPlaceholder = document.getElementById('global-header-placeholder');
 		const existingNav = document.querySelector('nav.top-nav');
 
 		if (headerPlaceholder) {
 			// Replace placeholder with header
-			headerPlaceholder.outerHTML = buildHeaderHTML();
+			headerPlaceholder.outerHTML = buildHeaderHTML(userRole);
 		} else if (existingNav) {
 			// Replace existing nav (for backward compatibility during migration)
-			existingNav.outerHTML = buildHeaderHTML();
+			existingNav.outerHTML = buildHeaderHTML(userRole);
 		} else {
 			console.warn('No header placeholder or existing nav found');
 

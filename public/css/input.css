@@ -163,7 +163,8 @@
   body.teams-page,
   body.login-page,
   body.health-page,
-  body.users-page {
+  body.users-page,
+  body.test-page {
     background: #8896b5;
     padding: 20px;
     position: relative;
@@ -174,7 +175,8 @@
   html.dark body.teams-page,
   html.dark body.login-page,
   html.dark body.health-page,
-  html.dark body.users-page {
+  html.dark body.users-page,
+  html.dark body.test-page {
     background: #18181b url("/resources/bg-01.jpg") center center / cover no-repeat fixed;
     background-blend-mode: soft-light;
   }
@@ -574,6 +576,38 @@
     width: 100%;
   }
 
+  /* People page body centering (match dashboard) */
+  body.users-page {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  body.users-page #peopleContent {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    max-width: 1400px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  /* Test page body centering (match dashboard) */
+  body.test-page {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  body.test-page #testContent {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    max-width: 1400px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
   .main-container {
     position: relative;
     z-index: 10;
@@ -840,6 +874,12 @@
   html.dark .container {
     background: var(--main-container-bg);
     border: 1px solid #1f1f1f;
+  }
+
+  @media (width >= 80rem) {
+    .container {
+      max-width: 86rem;
+    }
   }
 
 
@@ -3337,8 +3377,7 @@
   }
 
   .logs-table th {
-    padding: 8px 0;
-    padding-left: 0;
+    padding: 8px 6px;
     text-align: left;
     font-weight: 300;
     color: var(--text-secondary);
@@ -3355,6 +3394,8 @@
   }
 
   .logs-table td {
+    padding-left: 6px;
+    padding-right: 6px;
     font-weight: 300;
     color: inherit;
     flex-shrink: 0;
@@ -3363,10 +3404,11 @@
 
   .logs-table th.expand-column,
   .logs-table td.expand-column {
-    width: 36px;
-    min-width: 36px;
-    padding-left: 8px;
-    padding-right: 4px;
+    width: 44px;
+    min-width: 44px;
+    max-width: 44px;
+    padding-left: 6px;
+    padding-right: 6px;
     text-align: center;
   }
 
@@ -3379,22 +3421,22 @@
 
   .logs-table th.col-user,
   .logs-table td.col-user {
-    width: 260px;
-    min-width: 260px;
+    width: 118px;
+    min-width: 118px;
     text-align: left;
   }
 
   .logs-table th.col-company,
   .logs-table td.col-company {
-    width: 250px;
-    min-width: 250px;
+    width: 110px;
+    min-width: 110px;
     text-align: left;
   }
 
   .logs-table th.col-area,
   .logs-table td.col-area {
-    width: 65px;
-    min-width: 65px;
+    width: 70px;
+    min-width: 70px;
     text-align: left;
   }
 
@@ -3414,28 +3456,28 @@
 
   .logs-table th.col-status,
   .logs-table td.col-status {
-    width: 66px !important;
-    min-width: 66px !important;
+    width: 63px !important;
+    min-width: 63px !important;
     text-align: left;
   }
 
   .logs-table th.col-error,
   .logs-table td.col-error {
-    width: 150px;
-    min-width: 150px;
+    width: 118px;
+    min-width: 118px;
     text-align: left;
   }
 
   .logs-table th.col-payload,
   .logs-table td.col-payload {
-    width: 61px !important;
-    min-width: 61px !important;
+    width: 55px !important;
+    min-width: 55px !important;
   }
 
   .logs-table th.col-actions,
   .logs-table td.col-actions {
-    width: 43px;
-    min-width: 43px;
+    width: 108px;
+    min-width: 108px;
     text-align: right;
   }
 
@@ -4508,7 +4550,7 @@
   }
 
   .actions-dropdown {
-    position: fixed;
+    position: fixed !important;
     background: white;
     border: 1px solid var(--border-color);
     border-radius: 6px;
@@ -4518,7 +4560,7 @@
     opacity: 0;
     transform: scale(0.95);
     pointer-events: none;
-    overflow: hidden;
+    overflow: visible;
     display: block;
     visibility: visible;
     transition: opacity 0.12s ease-out, transform 0.15s ease-out;
@@ -4572,6 +4614,44 @@
 
   .actions-dropdown-item.delete:hover {
     background: var(--level-error-bg);
+  }
+
+  /* Nubbin for actions dropdown when positioned to the left of button */
+  .actions-dropdown-left {
+    overflow: visible;
+  }
+
+  .actions-dropdown-left::after {
+    content: '';
+    position: absolute;
+    right: -6px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 6px 0 6px 6px;
+    border-color: transparent transparent transparent white;
+    z-index: 1;
+  }
+
+  html.dark .actions-dropdown-left::after {
+    border-color: transparent transparent transparent #27272a;
+  }
+
+  /* Nubbin border to match dropdown border */
+  .actions-dropdown-left::before {
+    content: '';
+    position: absolute;
+    right: -7px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 7px 0 7px 7px;
+    border-color: transparent transparent transparent var(--border-color);
+    z-index: 0;
   }
 
   /* Confirm modal (used on dashboard + event log) */
@@ -4728,85 +4808,122 @@
   }
 
   .confirm-modal.payload-modal {
-    max-width: 840px;
-    max-height: 82vh;
+    max-width: 700px;
+    max-height: 85vh;
     display: flex;
     flex-direction: column;
     overflow: hidden;
   }
 
   .payload-modal-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid var(--border-color);
-  }
-
-  .payload-modal-close {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    border-radius: 999px;
-    border: 1px solid transparent;
-    color: var(--text-secondary);
-    background: transparent;
-    cursor: pointer;
-    transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
-  }
-
-  .payload-modal-close svg {
-    width: 18px;
-    height: 18px;
-    stroke: currentColor;
-    stroke-width: 1.8;
-    fill: none;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-  }
-
-  .payload-modal-close:hover {
-    color: var(--text-primary);
-    border-color: var(--border-color);
-    background: var(--bg-secondary);
+    margin: 0;
+    padding: 0;
   }
 
   .payload-modal-content {
     flex: 1;
     min-height: 0;
-    margin-top: 12px;
+    display: flex;
+    flex-direction: column;
   }
 
-  .payload-modal-textarea {
-    width: 100%;
-    height: 100%;
-    min-height: 360px;
+  .payload-modal-content > div {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
     max-height: 58vh;
-    resize: none;
-    border-radius: 10px;
-    border: 1px solid var(--border-color);
-    background: var(--bg-secondary);
-    color: var(--text-primary);
-    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
-    font-size: 0.7rem;
-    line-height: 1.5;
-    padding: 14px 16px;
   }
 
-  .payload-modal-textarea:focus {
-    outline: none;
-    border-color: var(--accent-color);
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+  .payload-modal-code {
+    flex: 1;
+    min-height: 0;
+    margin: 0;
+    padding: 12px 16px;
+    overflow-y: auto;
+    background: transparent;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
+    font-size: 0.75rem;
+    line-height: 1.5;
+  }
+
+  .payload-modal-code code {
+    display: block;
+    width: 100%;
+    color: inherit;
+    background: transparent;
+    padding: 0;
+    border: none;
+    font-size: inherit;
+    line-height: inherit;
+  }
+
+  /* Ensure Highlight.js code blocks don't have extra margins */
+  .payload-modal-code code[class*="language-"] {
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Switch Highlight.js theme based on dark mode */
+  html.dark #hljs-light-theme {
+    display: none;
+  }
+
+  html.dark #hljs-dark-theme {
+    display: block !important;
+    media: all;
+  }
+
+  html:not(.dark) #hljs-dark-theme {
+    display: none;
+  }
+
+  /* Custom Highlight.js styling - customize colors, fonts, etc. */
+  /* Light theme customizations */
+  html:not(.dark) .payload-modal-code .hljs-attr {
+    color: #0ea5e9; /* Custom property color */
+  }
+
+  html:not(.dark) .payload-modal-code .hljs-string {
+    color: #10b981; /* Custom string color */
+  }
+
+  html:not(.dark) .payload-modal-code .hljs-number {
+    color: #f59e0b; /* Custom number color */
+  }
+
+  html:not(.dark) .payload-modal-code .hljs-literal {
+    color: #8b5cf6; /* Custom boolean color */
+  }
+
+  html:not(.dark) .payload-modal-code .hljs-punctuation {
+    color: #64748b; /* Custom punctuation color */
+  }
+
+  /* Dark theme customizations */
+  html.dark .payload-modal-code .hljs-attr {
+    color: #60a5fa; /* Custom property color for dark mode */
+  }
+
+  html.dark .payload-modal-code .hljs-string {
+    color: #34d399; /* Custom string color for dark mode */
+  }
+
+  html.dark .payload-modal-code .hljs-number {
+    color: #fbbf24; /* Custom number color for dark mode */
+  }
+
+  html.dark .payload-modal-code .hljs-literal {
+    color: #a78bfa; /* Custom boolean color for dark mode */
+  }
+
+  html.dark .payload-modal-code .hljs-punctuation {
+    color: #94a3b8; /* Custom punctuation color for dark mode */
   }
 
   .payload-modal-footer {
     flex-shrink: 0;
-    padding-top: 12px;
-    border-top: 1px solid var(--border-color);
-    margin-top: 12px;
   }
 
   .confirm-modal-backdrop.visible .confirm-modal {
@@ -5913,7 +6030,7 @@ section > div > h3 + p {
   position: absolute;
   top: 0;
   right: 0;
-  width: 8px;
+  width: 4px;
   height: 100%;
   cursor: col-resize;
   user-select: none;
@@ -5921,13 +6038,22 @@ section > div > h3 + p {
   transition: background-color 0.15s ease;
 }
 
-/* Show border on the right side of resizable headers */
+/* Hide borders between columns in header by default */
 .logs-table[data-resizable-columns-id] thead th[data-resizable-column-id] {
-  border-right: 1px solid rgba(209, 213, 219, 0.5);
+  border-right: 0.5px solid transparent;
 }
 
 html.dark .logs-table[data-resizable-columns-id] thead th[data-resizable-column-id] {
-  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  border-right: 0.5px solid transparent;
+}
+
+/* Show border when hovering over header with resizer (for resizing) */
+.logs-table[data-resizable-columns-id] thead th[data-resizable-column-id]:hover {
+  border-right-color: rgba(209, 213, 219, 0.4);
+}
+
+html.dark .logs-table[data-resizable-columns-id] thead th[data-resizable-column-id]:hover {
+  border-right-color: rgba(255, 255, 255, 0.08);
 }
 
 /* Hover effect on resizer */
@@ -5938,4 +6064,20 @@ html.dark .logs-table[data-resizable-columns-id] thead th[data-resizable-column-
 /* Active state when dragging */
 .column-resizer.active {
   background: rgba(59, 130, 246, 0.5);
+}
+
+/* Preview line during column resize */
+.column-resize-preview {
+  position: fixed;
+  width: 2px;
+  background: rgba(59, 130, 246, 0.8);
+  z-index: 9999;
+  pointer-events: none;
+  box-shadow: 0 0 4px rgba(59, 130, 246, 0.5);
+  will-change: left;
+}
+
+html.dark .column-resize-preview {
+  background: rgba(96, 165, 250, 0.9);
+  box-shadow: 0 0 6px rgba(96, 165, 250, 0.6);
 }

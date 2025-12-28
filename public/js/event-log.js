@@ -5635,22 +5635,31 @@ function safeShowToast(message, type = 'info') {
 		const formattedPayload = JSON.stringify(payload, null, 2);
 
 		modal.innerHTML = `
-			<div class="payload-modal-header">
-				<div class="confirm-modal-title">Event Payload - ID ${eventId}</div>
-				<button type="button" class="payload-modal-close" aria-label="Close payload modal">
-					<svg viewBox="0 0 24 24" aria-hidden="true">
-						<path d="M6 18L18 6M6 6l12 12"></path>
-					</svg>
-				</button>
-			</div>
-			<div class="payload-modal-content">
-				<textarea class="payload-modal-textarea" readonly aria-label="Event payload JSON"></textarea>
-			</div>
-			<div class="payload-modal-footer">
-				<div class="confirm-modal-actions">
-					<button type="button" class="btn" data-action="copy-json">Copy JSON</button>
-					<button type="button" class="btn confirm-modal-btn-confirm" data-action="close-modal">Close</button>
+			<div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4 dark:bg-gray-800">
+				<div class="payload-modal-header">
+					<h3 id="payload-modal-title" class="text-base font-semibold text-gray-900 dark:text-white">Payload</h3>
 				</div>
+				<div class="payload-modal-content">
+					<div class="mt-4 rounded-lg outline-1 -outline-offset-1 outline-gray-300 dark:outline-white/10">
+						<label for="payload-code" class="sr-only">Event Payload JSON</label>
+						<pre class="payload-modal-code"><code id="payload-code" class="language-json" aria-label="Event payload JSON"></code></pre>
+					</div>
+				</div>
+			</div>
+			<div class="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6 dark:bg-gray-800/50">
+				<button type="button" class="inline-flex w-full justify-center items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-indigo-500 sm:ml-3 sm:w-auto" data-action="copy">
+					<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 mr-1.5">
+						<path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 0 0-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 0 1-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5a1.125 1.125 0 0 1-1.125-1.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H9.75" />
+					</svg>
+					<span data-copy-text>Copy</span>
+				</button>
+				<button type="button" class="mt-3 inline-flex w-full justify-center items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto dark:bg-gray-700 dark:text-white dark:ring-gray-600 dark:hover:bg-gray-600" data-action="save">
+					<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 mr-1.5">
+						<path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+					</svg>
+					Save
+				</button>
+				<button type="button" class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:ml-3 sm:w-auto dark:bg-gray-700 dark:text-white dark:ring-gray-600 dark:hover:bg-gray-600" data-action="close-modal">Close</button>
 			</div>
 		`;
 
@@ -5660,33 +5669,64 @@ function safeShowToast(message, type = 'info') {
 			backdrop.classList.add('visible');
 		});
 
-		const textarea = modal.querySelector('.payload-modal-textarea');
-		if (textarea) {
-			textarea.value = formattedPayload;
+		const codeElement = modal.querySelector('#payload-code');
+		if (codeElement) {
+			codeElement.textContent = formattedPayload;
+			// Apply Highlight.js syntax highlighting
+			// Use requestAnimationFrame to ensure Highlight.js is loaded
+			requestAnimationFrame(() => {
+				if (window.hljs && typeof window.hljs.highlightElement === 'function') {
+					hljs.highlightElement(codeElement);
+				} else {
+					// Fallback: wait a bit more if Highlight.js isn't ready yet
+					setTimeout(() => {
+						if (window.hljs && typeof window.hljs.highlightElement === 'function') {
+							hljs.highlightElement(codeElement);
+						}
+					}, 100);
+				}
+			});
 		}
 
-		const closeBtn = modal.querySelector('.payload-modal-close');
 		const closeAction = modal.querySelector('[data-action="close-modal"]');
-		const copyBtn = modal.querySelector('[data-action="copy-json"]');
+		const copyBtn = modal.querySelector('[data-action="copy"]');
+		const saveBtn = modal.querySelector('[data-action="save"]');
 
 		const handleClose = () => closePayloadModal();
-		if (closeBtn) {closeBtn.addEventListener('click', handleClose);}
 		if (closeAction) {closeAction.addEventListener('click', handleClose);}
 		if (copyBtn) {
 			copyBtn.addEventListener('click', async () => {
 				try {
 					await navigator.clipboard.writeText(formattedPayload);
-					const originalLabel = copyBtn.textContent;
-					copyBtn.textContent = 'Copied!';
-					copyBtn.disabled = true;
-					setTimeout(() => {
-						copyBtn.textContent = originalLabel || 'Copy JSON';
-						copyBtn.disabled = false;
-					}, 1600);
+					const textSpan = copyBtn.querySelector('[data-copy-text]');
+					if (textSpan) {
+						const originalText = textSpan.textContent;
+						textSpan.textContent = 'Copied!';
+						copyBtn.disabled = true;
+						setTimeout(() => {
+							textSpan.textContent = originalText;
+							copyBtn.disabled = false;
+						}, 1600);
+					}
 				} catch (error) {
 					console.error('Error copying payload:', error);
 					safeShowToast(`Error copying payload: ${  error.message}`, 'error');
 				}
+			});
+		}
+		if (saveBtn) {
+			saveBtn.addEventListener('click', () => {
+				// Create a blob with the JSON content
+				const blob = new Blob([formattedPayload], {type: 'application/json'});
+				const url = URL.createObjectURL(blob);
+				const a = document.createElement('a');
+				a.href = url;
+				a.download = `event-payload-${eventId}.json`;
+				document.body.appendChild(a);
+				a.click();
+				document.body.removeChild(a);
+				URL.revokeObjectURL(url);
+				safeShowToast('Payload saved successfully', 'success');
 			});
 		}
 
@@ -5715,7 +5755,13 @@ function safeShowToast(message, type = 'info') {
 			if (dialog?._payloadKeydownHandler) {
 				document.removeEventListener('keydown', dialog._payloadKeydownHandler);
 			}
-			modal.remove();
+			// Add hiding class to trigger transition
+			modal.classList.remove('visible');
+			modal.classList.add('hiding');
+			// Wait for transition to complete before removing
+			setTimeout(() => {
+				modal.remove();
+			}, 150); // Match transition duration
 		}
 	}
 

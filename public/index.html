@@ -20,6 +20,14 @@
 	<!-- Load FontAwesome -->
 	<link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
 	<link rel="stylesheet" href="/vendor/fontawesome/css/v4-shims.min.css">
+	<!-- Highlight.js for syntax highlighting -->
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github.min.css" id="hljs-light-theme">
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/atom-one-dark.min.css" id="hljs-dark-theme" media="none">
+	<script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"></script>
+	<script>
+		// Ensure Highlight.js is available globally
+		window.hljs = window.hljs || {};
+	</script>
 	<script src="/js/polyfills.js" defer></script>
 	<script src="https://cdn.jsdelivr.net/npm/@tailwindplus/elements@1" type="module" defer></script>
 	<script>
@@ -141,65 +149,67 @@
 									<div class="h-2 w-2 rounded-full bg-green-500 dark:bg-green-400"></div>
 								</div>
 							</div>
-							<p class="mt-1 text-sm text-gray-500 dark:text-gray-400"><a href="/health">View health check <span aria-hidden="true">&rarr;</span></a></p>
+							<p class="mt-1 text-sm text-gray-500 dark:text-gray-400"><a href="/health" class="inline-flex items-center gap-1.5"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-4 w-4"><path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244" /></svg>View health check</a></p>
 						</div>
-						<dl class="flex flex-wrap">
-							<div class="flex w-full flex-none gap-x-4 px-6 pt-6">
+						<dl class="flex flex-wrap px-2" style="font-size: 13.8px;">
+							<div class="flex w-full flex-none gap-x-2  px-6 pt-6">
 								<dt class="flex-none">
 									<span class="sr-only">Uptime</span>
-									<svg viewBox="0 0 20 20" fill="currentColor" data-slot="icon" aria-hidden="true" class="h-6 w-5 text-gray-400 dark:text-gray-500">
-										<path d="M4.632 3.533A2 2 0 0 1 6.577 2h6.846a2 2 0 0 1 1.945 1.533l1.976 8.234A3.489 3.489 0 0 0 16 11.5H4c.476 0 .93.095 1.344.267l-1.976-8.234Z" />
-										<path d="M4 13a2 2 0 1 0 0 4h12a2 2 0 1 0 0-4H4Z" />
+									<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" data-slot="icon" aria-hidden="true" class="h-[23px] w-[19px] text-gray-400 dark:text-gray-500">
+										<path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5m-9-6h.008v.008H12v-.008ZM12 15h.008v.008H12V15Zm0 2.25h.008v.008H12v-.008ZM9.75 15h.008v.008H9.75V15Zm0 2.25h.008v.008H9.75v-.008ZM7.5 15h.008v.008H7.5V15Zm0 2.25h.008v.008H7.5v-.008Zm6.75-4.5h.008v.008h-.008v-.008Zm0 2.25h.008v.008h-.008V15Zm0 2.25h.008v.008h-.008v-.008Zm2.25-4.5h.008v.008H16.5v-.008Zm0 2.25h.008v.008H16.5V15Z" />
 									</svg>
 								</dt>
-								<dd class="text-sm/6 text-gray-900 dark:text-white">
-									<span>Uptime:</span> <span class="font-semibold" id="serverStatsUptime">Loading...</span>
+								<dd class="dark:text-white">
+									<span class="text-gray-500">Uptime:</span>
+									<span id="serverStatsUptime">Loading...</span>
 								</dd>
 							</div>
-							<div class="mt-3 flex w-full flex-none gap-x-4 px-6">
+							<div class="mt-3 flex w-full flex-none gap-x-2 px-6">
 								<dt class="flex-none">
 									<span class="sr-only">Server Version</span>
-									<svg viewBox="0 0 20 20" fill="currentColor" data-slot="icon" aria-hidden="true" class="h-6 w-5 text-gray-400 dark:text-gray-500">
-										<path d="M12 2.25H8A2.75 2.75 0 0 0 5.25 5v.25H4A2.75 2.75 0 0 0 1.25 8v8A2.75 2.75 0 0 0 4 18.75h12A2.75 2.75 0 0 0 18.75 16V8A2.75 2.75 0 0 0 16 5.25h-1.25V5A2.75 2.75 0 0 0 12 2.25ZM7.5 5v.25h5V5A1.25 1.25 0 0 1 13.75 3.75h-7.5A1.25 1.25 0 0 1 5.25 5v.25h2.25ZM4 7.5A1.25 1.25 0 0 1 5.25 6.25h9.5A1.25 1.25 0 0 1 16 7.5v8.75a1.25 1.25 0 0 1-1.25 1.25H5.25A1.25 1.25 0 0 1 4 16.25V7.5Z" clip-rule="evenodd" fill-rule="evenodd" />
-										<path d="M10 8.5a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-1.5 0v-1.5A.75.75 0 0 1 10 8.5Zm0 4.25a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-1.5 0v-1.5a.75.75 0 0 1 .75-.75Z" />
+									<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" data-slot="icon" aria-hidden="true" class="h-[23px] w-[19px] text-gray-400 dark:text-gray-500">
+										<path stroke-linecap="round" stroke-linejoin="round" d="M8.242 5.992h12m-12 6.003H20.24m-12 5.999h12M4.117 7.495v-3.75H2.99m1.125 3.75H2.99m1.125 0H5.24m-1.92 2.577a1.125 1.125 0 1 1 1.591 1.59l-1.83 1.83h2.16M2.99 15.745h1.125a1.125 1.125 0 0 1 0 2.25H3.74m0-.002h.375a1.125 1.125 0 0 1 0 2.25H2.99" />
 									</svg>
 								</dt>
-								<dd class="text-sm/6 text-gray-500 dark:text-gray-400">
-									<span>Server Version:</span> <span class="font-semibold" id="serverStatsVersion">Loading...</span>
+								<dd>
+									<span class="text-gray-500">Server Version:</span>
+									<span id="serverStatsVersion">Loading...</span>
 								</dd>
 							</div>
-							<div class="mt-3 flex w-full flex-none gap-x-4 px-6">
+							<div class="mt-3 flex w-full flex-none gap-x-2 px-6">
 								<dt class="flex-none">
 									<span class="sr-only">Database Status</span>
-									<svg viewBox="0 0 20 20" fill="currentColor" data-slot="icon" aria-hidden="true" class="h-6 w-5 text-gray-400 dark:text-gray-500">
-										<path d="M12 2.25H8A2.75 2.75 0 0 0 5.25 5v.25H4A2.75 2.75 0 0 0 1.25 8v8A2.75 2.75 0 0 0 4 18.75h12A2.75 2.75 0 0 0 18.75 16V8A2.75 2.75 0 0 0 16 5.25h-1.25V5A2.75 2.75 0 0 0 12 2.25ZM7.5 5v.25h5V5A1.25 1.25 0 0 1 13.75 3.75h-7.5A1.25 1.25 0 0 1 5.25 5v.25h2.25ZM4 7.5A1.25 1.25 0 0 1 5.25 6.25h9.5A1.25 1.25 0 0 1 16 7.5v8.75a1.25 1.25 0 0 1-1.25 1.25H5.25A1.25 1.25 0 0 1 4 16.25V7.5Z" clip-rule="evenodd" fill-rule="evenodd" />
+									<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" data-slot="icon" aria-hidden="true" class="h-[23px] w-[19px] text-gray-400 dark:text-gray-500">
+										<path stroke-linecap="round" stroke-linejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125" />
 									</svg>
 								</dt>
-								<dd class="text-sm/6 text-gray-500 dark:text-gray-400">
-									<span>Database Size:</span> <span class="font-semibold" id="serverStatsDbSize">Loading...</span>
+								<dd>
+									<span class="text-gray-500">Database Size:</span>
+									<span id="serverStatsDbSize">Loading...</span>
 								</dd>
 							</div>
-							<div class="mt-3 flex w-full flex-none gap-x-4 px-6">
+							<div class="mt-3 flex w-full flex-none gap-x-2 px-6">
 								<dt class="flex-none">
 									<span class="sr-only">Last Updated</span>
-									<svg viewBox="0 0 20 20" fill="currentColor" data-slot="icon" aria-hidden="true" class="h-6 w-5 text-gray-400 dark:text-gray-500">
-										<path d="M5.25 12a.75.75 0 0 1 .75-.75h.01a.75.75 0 0 1 .75.75v.01a.75.75 0 0 1-.75.75H6a.75.75 0 0 1-.75-.75V12ZM6 13.25a.75.75 0 0 0-.75.75v.01c0 .414.336.75.75.75h.01a.75.75 0 0 0 .75-.75V14a.75.75 0 0 0-.75-.75H6ZM7.25 12a.75.75 0 0 1 .75-.75h.01a.75.75 0 0 1 .75.75v.01a.75.75 0 0 1-.75.75H8a.75.75 0 0 1-.75-.75V12ZM8 13.25a.75.75 0 0 0-.75.75v.01c0 .414.336.75.75.75h.01a.75.75 0 0 0 .75-.75V14a.75.75 0 0 0-.75-.75H8ZM9.25 10a.75.75 0 0 1 .75-.75h.01a.75.75 0 0 1 .75.75v.01a.75.75 0 0 1-.75.75H10a.75.75 0 0 1-.75-.75V10ZM10 11.25a.75.75 0 0 0-.75.75v.01c0 .414.336.75.75.75h.01a.75.75 0 0 0 .75-.75V12a.75.75 0 0 0-.75-.75H10ZM9.25 14a.75.75 0 0 1 .75-.75h.01a.75.75 0 0 1 .75.75v.01a.75.75 0 0 1-.75.75H10a.75.75 0 0 1-.75-.75V14ZM12 9.25a.75.75 0 0 0-.75.75v.01c0 .414.336.75.75.75h.01a.75.75 0 0 0 .75-.75V10a.75.75 0 0 0-.75-.75H12ZM11.25 12a.75.75 0 0 1 .75-.75h.01a.75.75 0 0 1 .75.75v.01a.75.75 0 0 1-.75.75H12a.75.75 0 0 1-.75-.75V12ZM12 13.25a.75.75 0 0 0-.75.75v.01c0 .414.336.75.75.75h.01a.75.75 0 0 0 .75-.75V14a.75.75 0 0 0-.75-.75H12ZM13.25 10a.75.75 0 0 1 .75-.75h.01a.75.75 0 0 1 .75.75v.01a.75.75 0 0 1-.75.75H14a.75.75 0 0 1-.75-.75V10ZM14 11.25a.75.75 0 0 0-.75.75v.01c0 .414.336.75.75.75h.01a.75.75 0 0 0 .75-.75V12a.75.75 0 0 0-.75-.75H14Z" />
-										<path d="M5.75 2a.75.75 0 0 1 .75.75V4h7V2.75a.75.75 0 0 1 1.5 0V4h.25A2.75 2.75 0 0 1 18 6.75v8.5A2.75 2.75 0 0 1 15.25 18H4.75A2.75 2.75 0 0 1 2 15.25v-8.5A2.75 2.75 0 0 1 4.75 4H5V2.75A.75.75 0 0 1 5.75 2Zm-1 5.5c-.69 0-1.25.56-1.25 1.25v6.5c0 .69.56 1.25 1.25 1.25h10.5c.69 0 1.25-.56 1.25-1.25v-6.5c0-.69-.56-1.25-1.25-1.25H4.75Z" clip-rule="evenodd" fill-rule="evenodd" />
+									<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" data-slot="icon" aria-hidden="true" class="h-[23px] w-[19px] text-gray-400 dark:text-gray-500">
+										<path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
 									</svg>
 								</dt>
-								<dd class="text-sm/6 text-gray-500 dark:text-gray-400">
-									<span>Last Updated:</span> <time class="font-semibold" id="serverStatsLastUpdated">never</time>
+								<dd>
+									<span class="text-gray-500">Last Updated:</span>
+									<time id="serverStatsLastUpdated">never</time>
 								</dd>
 							</div>
-							<div class="mt-3 flex w-full flex-none gap-x-4 px-6">
+							<div class="mt-3 flex w-full flex-none gap-x-2 px-6">
 								<dt class="flex-none">
 									<span class="sr-only">Load Time</span>
-									<svg viewBox="0 0 20 20" fill="currentColor" data-slot="icon" aria-hidden="true" class="h-6 w-5 text-gray-400 dark:text-gray-500">
-										<path d="M2.5 4A1.5 1.5 0 0 0 1 5.5V6h18v-.5A1.5 1.5 0 0 0 17.5 4h-15ZM19 8.5H1v6A1.5 1.5 0 0 0 2.5 16h15a1.5 1.5 0 0 0 1.5-1.5v-6ZM3 13.25a.75.75 0 0 1 .75-.75h1.5a.75.75 0 0 1 0 1.5h-1.5a.75.75 0 0 1-.75-.75Zm4.75-.75a.75.75 0 0 0 0 1.5h3.5a.75.75 0 0 0 0-1.5h-3.5Z" clip-rule="evenodd" fill-rule="evenodd" />
+									<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" data-slot="icon" aria-hidden="true" class="h-[23px] w-[19px] text-gray-400 dark:text-gray-500">
+										<path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
 									</svg>
 								</dt>
-								<dd class="text-sm/6 text-gray-500 dark:text-gray-400">
-									<span>Load Time:</span> <span class="font-semibold" id="serverStatsLoadTime">-</span>
+								<dd class>
+									<span class="text-gray-500">Load Time:</span>
+									<span id="serverStatsLoadTime">-</span>
 								</dd>
 							</div>
 						</dl>
