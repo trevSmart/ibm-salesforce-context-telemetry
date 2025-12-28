@@ -875,10 +875,27 @@ function showPayloadModal(payload, eventId) {
 		}
 	});
 
-	// Close modal on Escape key
+	// Close modal on Escape key and handle Cmd+A/Ctrl+A
 	const handleKeydown = function (e) {
 		if (e.key === 'Escape') {
 			closePayloadModal();
+		} else if ((e.metaKey || e.ctrlKey) && e.key === 'a') {
+			// Check if focus is within the payload modal
+			const activeElement = document.activeElement;
+			const isInModal = backdrop.contains(activeElement) || backdrop === activeElement;
+			
+			if (isInModal) {
+				e.preventDefault();
+				// Select all text in the code element
+				const codeEl = modal.querySelector('#payload-code');
+				if (codeEl) {
+					const range = document.createRange();
+					range.selectNodeContents(codeEl);
+					const selection = window.getSelection();
+					selection.removeAllRanges();
+					selection.addRange(range);
+				}
+			}
 		}
 	};
 	modal._payloadKeydownHandler = handleKeydown;
