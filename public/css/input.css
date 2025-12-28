@@ -813,9 +813,16 @@
     width: 8px;
   }
 
-  .sidebar::-webkit-scrollbar-track,
-  .logs-table-container::-webkit-scrollbar-track {
+  .sidebar::-webkit-scrollbar-track {
     background: var(--bg-secondary);
+  }
+
+  .logs-table-container::-webkit-scrollbar-track {
+    background: white;
+  }
+
+  html.dark .logs-table-container::-webkit-scrollbar-track {
+    background: rgb(17, 24, 39);
   }
 
   .sidebar::-webkit-scrollbar-thumb,
@@ -3015,6 +3022,7 @@
     flex-direction: column;
     overflow: hidden;
     min-height: 0;
+    padding-bottom: 20px;
   }
 
   .activity-table-layout {
@@ -3333,6 +3341,15 @@
     display: none;
   }
 
+  .logs-table-frame {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--bg-primary);
+  }
+
   .logs-table-container {
     flex: 1;
     overflow-y: auto;
@@ -3342,9 +3359,9 @@
     max-height: calc(100vh - 300px);
     display: block;
     text-align: start;
-    border-radius: 12px;
     padding-bottom: 12px;
     padding-right: 4px;
+    scrollbar-gutter: stable;
   }
 
   .logs-table {
@@ -3854,29 +3871,29 @@
     font-size: 11.5px;
   }
 
-  /* Test table row expansion styles */
-  .test-item-expanded:not(.expanded) {
+  /* Logs table row expansion styles */
+  .logs-item-expanded:not(.expanded) {
     display: none;
   }
 
-  .test-item-expanded.expanded {
+  .logs-item-expanded.expanded {
     display: table-row;
   }
 
-  .test-item-expanded td {
+  .logs-item-expanded td {
     border-top: none !important;
     padding-top: 0 !important;
   }
 
-  .test-item-expanded.expanded td {
+  .logs-item-expanded.expanded td {
     border-bottom: 1px solid rgb(229, 231, 235) !important;
   }
 
-  html.dark .test-item-expanded.expanded td {
+  html.dark .logs-item-expanded.expanded td {
     border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
   }
 
-  .test-item-expanded .log-description-expanded {
+  .logs-item-expanded .log-description-expanded {
     max-height: 0;
     padding: 0 16px !important;
     opacity: 0;
@@ -3884,31 +3901,31 @@
     transition: max-height 0.3s ease-out, opacity 0.25s ease-out, padding 0.3s ease-out;
   }
 
-  .test-item-expanded.expanded .log-description-expanded {
+  .logs-item-expanded.expanded .log-description-expanded {
     max-height: 2000px;
     padding: 24px 32px 28px 32px !important;
     opacity: 1;
   }
 
-  .test-table-row {
+  .logs-table-row {
     cursor: pointer;
     transition: background-color 0.15s ease;
   }
 
-  .test-table-row:hover {
+  .logs-table-row:hover {
     background-color: #fff7e9;
   }
 
-  html.dark .test-table-row:hover {
+  html.dark .logs-table-row:hover {
     background-color: rgba(14, 165, 233, 0.15);
   }
 
-  .test-table-row.expanded td {
+  .logs-table-row.expanded td {
     border-bottom: none !important;
   }
 
   /* Ensure seamless connection between expanded row and main row */
-  .test-table-row.expanded + .test-item-expanded.expanded {
+  .logs-table-row.expanded + .logs-item-expanded.expanded {
     margin-top: 0;
   }
 
@@ -4100,7 +4117,11 @@
   }
 
   .logs-table-container > div:last-child::-webkit-scrollbar-track {
-    background: transparent;
+    background: white;
+  }
+
+  html.dark .logs-table-container > div:last-child::-webkit-scrollbar-track {
+    background: rgb(17, 24, 39);
   }
 
   .logs-table-container > div:last-child::-webkit-scrollbar-thumb {

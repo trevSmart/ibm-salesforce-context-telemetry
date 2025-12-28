@@ -243,56 +243,11 @@
 								<div class="font-semibold mt-2.5">No events found</div>
 							</div>
 
-					<div class="logs-table-container" id="logsTableScroll">
-							<table class="logs-table min-w-full divide-y divide-gray-300 dark:divide-white/10" id="logsTable" data-resizable-columns-id="event-logs-table">
-									<thead class="text-xs">
-										<tr>
-											<th scope="col" class="expand-column sticky top-0 z-10 bg-white py-3 px-2 text-left font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:border-zinc-700 dark:bg-zinc-900 dark:text-white uppercase">
-												<span class="sr-only">Expand</span>
-											</th>
-											<th scope="col" class="col-date sticky top-0 z-10  bg-white py-3 text-left font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:border-zinc-700 dark:bg-zinc-900 dark:text-white uppercase" data-resizable-column-id="date">
-												Date
-											</th>
-											<th scope="col" class="col-user sticky top-0 z-10  bg-white py-3 text-left font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:border-zinc-700 dark:bg-zinc-900 dark:text-white uppercase user-column" data-resizable-column-id="user">
-												User
-											</th>
-											<th scope="col" class="col-company sticky top-0 z-10  bg-white py-3 text-left font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:border-zinc-700 dark:bg-zinc-900 dark:text-white uppercase hidden md:table-cell" data-resizable-column-id="company">
-												Company
-											</th>
-											<th scope="col" class="col-area sticky top-0 z-10  bg-white py-3 text-left font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:border-zinc-700 dark:bg-zinc-900 dark:text-white uppercase" data-resizable-column-id="area">
-												Area
-											</th>
-											<th scope="col" class="col-event sticky top-0 z-10  bg-white py-3 text-left font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:border-zinc-700 dark:bg-zinc-900 dark:text-white uppercase" data-resizable-column-id="event">
-												Event
-											</th>
-											<th scope="col" class="col-tool sticky top-0 z-10  bg-white py-3 text-left font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:border-zinc-700 dark:bg-zinc-900 dark:text-white uppercase hidden lg:table-cell" data-resizable-column-id="tool">
-												Tool
-											</th>
-											<th scope="col" class="col-status sticky top-0 z-10  bg-white py-3 text-center font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:border-zinc-700 dark:bg-zinc-900 dark:text-white uppercase" data-resizable-column-id="status">
-												Status
-											</th>
-											<th scope="col" class="col-error sticky top-0 z-10  bg-white py-3 text-left font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:border-zinc-700 dark:bg-zinc-900 dark:text-white uppercase hidden xl:table-cell" data-resizable-column-id="error">
-												Error
-											</th>
-											<th scope="col" class="col-payload sticky top-0 z-10  bg-white py-3 text-center font-semibold text-gray-900 backdrop-blur-sm backdrop-filter dark:border-zinc-700 dark:bg-zinc-900 dark:text-white uppercase" title="Payload" data-resizable-column-id="payload">
-												<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 1.125rem; height: 1.125rem; display: inline-block;">
-													<path stroke-linecap="round" stroke-linejoin="round" d="M17.25 6.75 22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3-4.5 16.5" />
-												</svg>
-											</th>
-											<th scope="col" class="col-actions sticky top-0 z-10  bg-white py-3 pl-3 pr-4 backdrop-blur-sm backdrop-filter dark:border-zinc-700 dark:bg-zinc-900 sm:pr-0">
-												<span class="sr-only">Actions</span>
-											</th>
-										</tr>
-									</thead>
-								<tbody id="logsBody">
-									<tr>
-										<td colspan="11" class="py-8 text-center text-gray-500 dark:text-gray-400">
-											Loading recent events...
-										</td>
-									</tr>
-									</tbody>
-								</table>
+					<div class="logs-table-frame">
+						<div class="logs-table-container" id="logsTableScroll" style="min-height: 400px; overflow-x: auto; overflow-y: auto;">
+							<!-- Table removed - space left blank -->
 						</div>
+					</div>
 
 					</div>
 				</div>

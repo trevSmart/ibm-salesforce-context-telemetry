@@ -491,7 +491,7 @@ function displayEvents(events, append = false) {
 
 		// Main row
 		const row = document.createElement('tr');
-		row.className = 'test-table-row';
+		row.className = 'logs-table-row';
 		row.setAttribute('data-event-id', event.id);
 		row.style.height = '46px';
 		
@@ -542,7 +542,7 @@ function displayEvents(events, append = false) {
 		
 		// Expanded row
 		const expandedRow = document.createElement('tr');
-		expandedRow.className = 'test-item-expanded';
+		expandedRow.className = 'logs-item-expanded';
 		expandedRow.id = `expanded-${event.id}`;
 		expandedRow.innerHTML = `
 			<td colspan="11" class="log-description-expanded px-3 py-4">
