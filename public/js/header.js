@@ -126,6 +126,7 @@
           <a href="/teams" class="top-nav-link${activePage === '/teams' ? ' active' : ''}">Teams</a>
           <a href="/people" class="top-nav-link${activePage === '/people' ? ' active' : ''}">People</a>
           ${testLinkHTML}
+          <div class="top-nav-animation"></div>
         </div>
         <div class="top-nav-actions">
           <button type="button" class="icon-btn navbar-btn-icon" aria-label="Command Palette" data-tooltip="Command Palette" data-tooltip-position="top" onclick="window.showCommandPalette && window.showCommandPalette()">
@@ -207,6 +208,374 @@
 
 		}
 
+		// Initialize navigation animation positions
+		initNavAnimation();
+
+	}
+
+	/**
+	 * Initialize the sliding animation for navigation links with physics-based movement
+	 * Implements acceleration, deceleration, and inertia for realistic movement
+	 */
+	function initNavAnimation() {
+		const linksContainer = document.querySelector('.top-nav-links');
+		const animation = document.querySelector('.top-nav-animation');
+
+		if (!animation || !linksContainer) return;
+
+		// Physics state
+		let currentLeft = 0;
+		let currentWidth = 0;
+		let targetLeft = 0;
+		let targetWidth = 0;
+		let velocity = 0; // pixels per frame
+		let animationFrameId = null;
+		let isAnimating = false;
+		let isBouncing = false; // whether we're in a bounce state
+		let isSlowReturn = false; // whether we're in slow return mode (returning to active link)
+		let isPointerInside = false;
+		let deferHoverUntilIdle = false;
+		let pendingHoverLink = null;
+
+		// Track start positions for width interpolation tied to movement
+		let animationStartLeft = 0;
+		let animationStartWidth = 0;
+
+		// Physics constants
+		const SPEED_MULTIPLIER = 3; // global speed control
+		const ACCELERATION = 1.3 * SPEED_MULTIPLIER; // acceleration rate (faster transitions)
+		const DECELERATION = 0.32 * SPEED_MULTIPLIER; // deceleration rate (keeps braking feel consistent at higher speed)
+		const MAX_VELOCITY = 18 * SPEED_MULTIPLIER; // base speed scale for normalization
+		const MIN_VELOCITY = 0.1; // minimum velocity to consider stopped
+		const DELAY_BEFORE_MOVE = 40 / SPEED_MULTIPLIER; // ms delay before starting movement
+		const DELAY_BEFORE_RETURN_TO_ACTIVE = 300 / SPEED_MULTIPLIER; // ms delay before returning to active link when leaving container
+		const BOUNCE_DAMPING = 0.3; // how much velocity is preserved on bounce (reduced to half for less overshoot)
+		const BOUNCE_THRESHOLD = 20; // distance threshold to trigger bounce (allow more overshoot)
+		const BOUNCE_MULTIPLIER = 0.65; // multiply bounce effect based on speed (reduced to half)
+		const BRAKING_DISTANCE = 16; // distance from target where we start braking/decelerating (later braking)
+
+		// Slow return physics constants (for gentle return to active link)
+		const SLOW_ACCELERATION = 0.18 * SPEED_MULTIPLIER; // slower acceleration for gentle return
+		const SLOW_DECELERATION = 0.002 * SPEED_MULTIPLIER; // slower deceleration for smoother return
+		const SLOW_MAX_VELOCITY = 10 * SPEED_MULTIPLIER; // slower max speed for gentle return
+
+		// Get all navigation links dynamically
+		const getNavLinks = () => {
+			return Array.from(linksContainer.querySelectorAll('.top-nav-link'));
+		};
+
+		// Get target position for a link
+		const getLinkPosition = (link) => {
+			if (!link) return null;
+			const linkRect = link.getBoundingClientRect();
+			const containerRect = linksContainer.getBoundingClientRect();
+			return {
+				left: linkRect.left - containerRect.left,
+				width: linkRect.width
+			};
+		};
+
+		const easeInOutCubic = (t) => {
+			if (t < 0.5) return 4 * t * t * t;
+			return 1 - Math.pow(-2 * t + 2, 3) / 2;
+		};
+
+		// Update animation element position
+		const updateAnimationElement = () => {
+			animation.style.left = `${currentLeft}px`;
+			animation.style.width = `${currentWidth}px`;
+		};
+
+		const handleAnimationComplete = () => {
+			isAnimating = false;
+			isSlowReturn = false;
+			if (deferHoverUntilIdle) {
+				deferHoverUntilIdle = false;
+				if (pendingHoverLink && isPointerInside) {
+					const nextLink = pendingHoverLink;
+					pendingHoverLink = null;
+					moveToTarget(nextLink);
+					return;
+				}
+			}
+			pendingHoverLink = null;
+		};
+
+		// Physics-based animation loop
+		const animate = () => {
+			const distance = targetLeft - currentLeft;
+			const distanceAbs = Math.abs(distance);
+			const direction = distance > 0 ? 1 : -1;
+			const totalDistance = Math.abs(targetLeft - animationStartLeft);
+
+			// Use slow constants if in slow return mode
+			const currentAcceleration = isSlowReturn ? SLOW_ACCELERATION : ACCELERATION;
+			const currentDeceleration = isSlowReturn ? SLOW_DECELERATION : DECELERATION;
+			const currentMaxVelocity = isSlowReturn ? SLOW_MAX_VELOCITY : MAX_VELOCITY;
+
+			// Check if we've overshot the target (passed it)
+			const hasOvershot = (velocity > 0 && currentLeft > targetLeft) || (velocity < 0 && currentLeft < targetLeft);
+
+			// If we've overshot and we're not already bouncing, start the bounce
+			if (hasOvershot && !isBouncing && Math.abs(velocity) > MIN_VELOCITY) {
+				// Start bounce: the velocity when crossing determines the bounce
+				// Higher velocity = traveled longer distance = more acceleration = bigger overshoot
+				isBouncing = true;
+				const currentSpeed = Math.abs(velocity);
+				// Speed factor: normalize to 0-1, but allow values > 1 for very fast movements
+				const speedFactor = Math.min(currentSpeed / currentMaxVelocity, 1.2); // Can go up to 1.2 for very fast
+				const distanceFactor = Math.min(totalDistance / 220, 1);
+				// Bounce strength: grows with speed and travel distance, minimal on short hops
+				const bounceStrength = BOUNCE_DAMPING
+					* (0.2 + speedFactor * 0.8)
+					* (0.25 + distanceFactor * 0.75)
+					* BOUNCE_MULTIPLIER;
+				velocity = -velocity * bounceStrength;
+			}
+
+			if (isBouncing) {
+				// During bounce, check if we've passed back through the target
+				const nowOvershootingOtherWay = (velocity < 0 && currentLeft <= targetLeft) || (velocity > 0 && currentLeft >= targetLeft);
+
+				if (nowOvershootingOtherWay || Math.abs(velocity) < MIN_VELOCITY) {
+					// Bounce complete, settle at target
+					isBouncing = false;
+					currentLeft = targetLeft;
+					currentWidth = targetWidth;
+					velocity = 0;
+					updateAnimationElement();
+					handleAnimationComplete();
+					return;
+				} else {
+					// Continue bouncing, apply lighter deceleration to maintain bounce effect
+					velocity *= (1 - currentDeceleration * 0.3); // Even slower deceleration during bounce
+				}
+			} else {
+				// Normal movement logic
+				// Check if we need to change direction (opposite to current velocity)
+				const needsDirectionChange = (velocity > 0 && direction < 0) || (velocity < 0 && direction > 0);
+
+				if (needsDirectionChange && Math.abs(velocity) > MIN_VELOCITY) {
+					// Decelerate current velocity first (changing direction)
+					velocity *= (1 - currentDeceleration);
+					if (Math.abs(velocity) < MIN_VELOCITY) {
+						velocity = 0;
+					}
+				} else if (distanceAbs > BRAKING_DISTANCE) {
+					// Far from target: strong initial burst, then gentler acceleration
+					const distanceFactor = Math.min(distanceAbs / 240, 1.25);
+					const travelProgress = totalDistance > 0 ? 1 - (distanceAbs / totalDistance) : 1;
+					const burstFactor = Math.max(0.4, Math.pow(1 - travelProgress, 0.5));
+					const accelerationForce = currentAcceleration * distanceFactor * burstFactor * direction;
+					velocity += accelerationForce;
+				} else if (distanceAbs > MIN_VELOCITY) {
+					// Within braking distance: decelerate a bit more to reduce overshoot
+					const brakingFactor = 1 - (distanceAbs / BRAKING_DISTANCE); // 0 to 1 as we approach
+					const decelRate = currentDeceleration * 0.08 * brakingFactor; // Later, lighter braking for more overshoot
+					velocity *= (1 - decelRate);
+
+					// Don't settle early - let it overshoot (but less)
+				} else {
+					// At target, stop
+					currentLeft = targetLeft;
+					currentWidth = targetWidth;
+					velocity = 0;
+					updateAnimationElement();
+					handleAnimationComplete();
+					return;
+				}
+			}
+
+			// Ensure we don't start from a dead stop
+			if (Math.abs(velocity) < 0.01 && distanceAbs > BRAKING_DISTANCE) {
+				velocity = direction * (1.3 * SPEED_MULTIPLIER);
+			}
+
+			// Update position based on velocity
+			currentLeft += velocity;
+
+			// Interpolate width based on travel progress so it doesn't jump ahead
+			const rawProgress = totalDistance > 0 ? Math.abs(currentLeft - animationStartLeft) / totalDistance : 1;
+			const clampedProgress = Math.min(Math.max(rawProgress, 0), 1);
+			const easedProgress = easeInOutCubic(clampedProgress);
+			currentWidth = animationStartWidth + (targetWidth - animationStartWidth) * easedProgress;
+
+			updateAnimationElement();
+
+			if (isAnimating) {
+				animationFrameId = requestAnimationFrame(animate);
+			}
+		};
+
+		// Start animation if not already running
+		const startAnimation = () => {
+			if (!isAnimating) {
+				isAnimating = true;
+				animationFrameId = requestAnimationFrame(animate);
+			}
+		};
+
+		// Set target and start moving
+		const moveToTarget = (link, slow = false) => {
+			const position = getLinkPosition(link);
+			if (!position) return;
+
+			targetLeft = position.left;
+			targetWidth = position.width;
+			isSlowReturn = slow; // Set slow return mode
+
+			// Reset debug state for new animation
+			animationStartLeft = currentLeft;
+			animationStartWidth = currentWidth;
+
+			startAnimation();
+		};
+
+		// Timeout for moving to hovered link
+		let hoverMoveTimeout = null;
+
+		// Add hover listeners to all links
+		const addHoverListeners = () => {
+			const navLinks = getNavLinks();
+			navLinks.forEach((link) => {
+				link.removeEventListener('mouseenter', handleLinkHover);
+				link.removeEventListener('mouseleave', handleLinkLeave);
+				link.addEventListener('mouseenter', handleLinkHover);
+				link.addEventListener('mouseleave', handleLinkLeave);
+			});
+		};
+
+		// Handle hover on any link - with small delay
+		const handleLinkHover = (event) => {
+			const link = event.currentTarget;
+
+			if (hoverMoveTimeout) {
+				clearTimeout(hoverMoveTimeout);
+			}
+
+			if (deferHoverUntilIdle && isAnimating) {
+				pendingHoverLink = link;
+				return;
+			}
+
+			hoverMoveTimeout = setTimeout(() => {
+				moveToTarget(link);
+				hoverMoveTimeout = null;
+			}, DELAY_BEFORE_MOVE);
+		};
+
+		// Handle mouse leave from link
+		const handleLinkLeave = () => {
+			if (hoverMoveTimeout) {
+				clearTimeout(hoverMoveTimeout);
+				hoverMoveTimeout = null;
+			}
+		};
+
+		// Timeout for returning to active link
+		let returnToActiveTimeout = null;
+
+		// Handle mouse leave from container
+		const handleContainerLeave = () => {
+			isPointerInside = false;
+			deferHoverUntilIdle = isAnimating;
+			if (returnToActiveTimeout) {
+				clearTimeout(returnToActiveTimeout);
+			}
+
+			returnToActiveTimeout = setTimeout(() => {
+				const navLinks = getNavLinks();
+				const activeLink = navLinks.find(link => link.classList.contains('active'));
+				if (activeLink) {
+					moveToTarget(activeLink, true); // Use slow return mode for gentle return
+				}
+				returnToActiveTimeout = null;
+			}, DELAY_BEFORE_RETURN_TO_ACTIVE);
+		};
+
+		// Handle mouse enter to container
+		const handleContainerEnter = () => {
+			isPointerInside = true;
+			if (returnToActiveTimeout) {
+				clearTimeout(returnToActiveTimeout);
+				returnToActiveTimeout = null;
+			}
+			if (hoverMoveTimeout) {
+				clearTimeout(hoverMoveTimeout);
+				hoverMoveTimeout = null;
+			}
+		};
+
+		// Set initial position
+		const setInitialPosition = () => {
+			const navLinks = getNavLinks();
+			if (navLinks.length === 0) return;
+
+			const activeLink = navLinks.find(link => link.classList.contains('active')) || navLinks[0];
+			const position = getLinkPosition(activeLink);
+
+			if (position) {
+				currentLeft = position.left;
+				currentWidth = position.width;
+				targetLeft = position.left;
+				targetWidth = position.width;
+				animationStartLeft = position.left;
+				animationStartWidth = position.width;
+				updateAnimationElement();
+				animation.style.opacity = '1';
+			}
+		};
+
+		// Watch for active class changes
+		const observer = new MutationObserver(() => {
+			const navLinks = getNavLinks();
+			const activeLink = navLinks.find(link => link.classList.contains('active'));
+			if (activeLink) {
+				moveToTarget(activeLink);
+			}
+		});
+
+		// Observe all links for class changes
+		const observeLinks = () => {
+			const navLinks = getNavLinks();
+			navLinks.forEach((link) => {
+				observer.observe(link, { attributes: true, attributeFilter: ['class'] });
+			});
+		};
+
+		// Add mouse leave and enter listeners
+		linksContainer.addEventListener('mouseleave', handleContainerLeave);
+		linksContainer.addEventListener('mouseenter', handleContainerEnter);
+
+		// Initialize
+		requestAnimationFrame(() => {
+			addHoverListeners();
+			setInitialPosition();
+			observeLinks();
+		});
+
+		// Update on window resize
+		let resizeTimeout;
+		const handleResize = () => {
+			clearTimeout(resizeTimeout);
+			resizeTimeout = setTimeout(() => {
+				const navLinks = getNavLinks();
+				const activeLink = navLinks.find(link => link.classList.contains('active')) || navLinks[0];
+				if (activeLink) {
+					moveToTarget(activeLink);
+				}
+			}, 100);
+		};
+
+		window.addEventListener('resize', handleResize);
+
+		// Re-initialize if links are added/removed
+		const linksObserver = new MutationObserver(() => {
+			addHoverListeners();
+			observeLinks();
+		});
+
+		linksObserver.observe(linksContainer, { childList: true, subtree: true });
 	}
 
 

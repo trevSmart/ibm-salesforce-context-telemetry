@@ -253,11 +253,12 @@
   .top-nav-links {
     display: flex;
     align-items: center;
-    gap: 22px;
+    gap: 0;
     letter-spacing: 0.13px;
     flex: 1;
     margin-left: 12px;
     justify-content: center;
+    position: relative;
   }
 
   .top-nav-search {
@@ -485,42 +486,42 @@
     font-size: 13.5px;
     font-weight: 300;
     letter-spacing: 0;
-    padding: 0;
+    padding: 8px 16px;
     position: relative;
+    z-index: 1;
     transition: color 0.2s ease;
     display: flex;
     align-items: center;
+    border-radius: 6px;
   }
 
   .top-nav-link:hover {
     color: #3a485f;
   }
 
-  .top-nav-link:hover:not(.active)::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 1px;
-    background: #ef4444;
-    border-radius: 1px;
-  }
-
   .top-nav-link.active {
-    color: #352424;
     font-weight: 500;
+    color: oklch(44.2% 0.017 285.786);
   }
 
-  .top-nav-link.active::after {
-    content: '';
+  /* Sliding animation background */
+  .top-nav-animation {
     position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 1px;
-    background: #ef4444;
-    border-radius: 1px;
+    height: calc(100% - 4px);
+    top: 2px;
+    z-index: 0;
+    background: #79c7ff2e;
+    border-radius: 6px;
+    transition: none; /* No CSS transition, using JavaScript physics */
+    pointer-events: none;
+    opacity: 0;
+    will-change: left, width;
+  }
+
+  /* Show animation when links container is hovered or has active link */
+  .top-nav-links:hover .top-nav-animation,
+  .top-nav-links .top-nav-link.active ~ .top-nav-animation {
+    opacity: 1;
   }
 
   html.dark .top-nav-logo {
@@ -534,6 +535,10 @@
   html.dark .top-nav-link:hover,
   html.dark .top-nav-link.active {
     color: #e4e4e7;
+  }
+
+  html.dark .top-nav-animation {
+    background: #79c7ff2e;
   }
 
   html.dark .top-nav-search-input,
@@ -4285,13 +4290,14 @@
     }
 
     .top-nav-links {
-      gap: 15px;
+      gap: 0;
       order: 2;
       flex: 1 1 100%;
     }
 
     .top-nav-link {
       font-size: 13.8px;
+      padding: 8px 16px;
     }
 
     .top-nav-search {
