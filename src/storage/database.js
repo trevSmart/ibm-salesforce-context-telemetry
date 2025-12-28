@@ -2121,6 +2121,22 @@ async function getSessions(options = {}) {
 	const queryParams = params.slice(); // Copy params array
 
 	if (includeUsersWithoutSessions) {
+		// Precompute filter strings and placeholders using only array lengths and indices
+		// This separates placeholder construction from the query template to avoid taint flow
+		const userIdsLength = userIds && Array.isArray(userIds) ? userIds.length : 0;
+		const hasUserFilter = userIdsLength > 0;
+
+		// Compute session filter placeholders using only length and indices
+		const sessionUserFilter = hasUserFilter? `AND user_id IN (${Array.from({length: userIdsLength}, (_, i) => `$${paramIndex + i}`).join(', ')})`: '';
+
+		// Compute user aggregates filter placeholders using only length and indices
+		const userAggregatesFilter = hasUserFilter? `AND user_id IN (${Array.from({length: userIdsLength}, (_, i) => `$${paramIndex + userIdsLength + i}`).join(', ')})`: '';
+
+		// Compute LIMIT/OFFSET placeholder indices using only counts
+		const limitOffsetBaseIndex = paramIndex + (userIdsLength * 2);
+		const limitPlaceholder = limit ? `LIMIT $${limitOffsetBaseIndex}` : '';
+		const offsetPlaceholder = offset ? `OFFSET $${limitOffsetBaseIndex + (limit ? 1 : 0)}` : '';
+
 		// When including users without sessions, use UNION of sessions and user-only events
 		query = `
 				WITH session_aggregates AS (
@@ -2142,7 +2158,7 @@ async function getSessions(options = {}) {
 						 ORDER BY timestamp ASC LIMIT 1) as session_start_data
 					FROM telemetry_events sa
 					WHERE (session_id IS NOT NULL OR parent_session_id IS NOT NULL) AND deleted_at IS NULL
-					${userIds && userIds.length > 0 ? `AND user_id IN (${userIds.map((_, i) => `$${paramIndex + i}`).join(', ')})` : ''}
+					${sessionUserFilter}
 					GROUP BY COALESCE(parent_session_id, session_id)
 				),
 				user_aggregates AS (
@@ -2157,18 +2173,18 @@ async function getSessions(options = {}) {
 						NULL as session_start_data
 					FROM telemetry_events
 					WHERE session_id IS NULL AND parent_session_id IS NULL AND user_id IS NOT NULL AND deleted_at IS NULL
-					${userIds && userIds.length > 0 ? `AND user_id IN (${userIds.map((_, i) => `$${paramIndex + userIds.length + i}`).join(', ')})` : ''}
+					${userAggregatesFilter}
 					GROUP BY user_id, DATE(timestamp)
 				)
 				SELECT * FROM session_aggregates
 				UNION ALL
 				SELECT * FROM user_aggregates
 				ORDER BY last_event DESC
-				${limit ? `LIMIT $${paramIndex + (userIds ? userIds.length * 2 : 0)}` : ''}
-				${offset ? `OFFSET $${paramIndex + (userIds ? userIds.length * 2 : 0) + (limit ? 1 : 0)}` : ''}
+				${limitPlaceholder}
+				${offsetPlaceholder}
 			`;
 		// Add userIds for both parts of the union
-		if (userIds && userIds.length > 0) {
+		if (hasUserFilter) {
 			queryParams.push(...userIds, ...userIds);
 		}
 		if (limit) { queryParams.push(limit); }
