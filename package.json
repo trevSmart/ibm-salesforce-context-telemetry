@@ -25,6 +25,9 @@
     "sync-schema-prod": "node src/scripts/sync-schema-to-prod.js",
     "drop-index-prod": "node src/scripts/drop-index-prod.js",
     "drop-covered-indexes-prod": "node src/scripts/drop-covered-indexes-prod.js",
+    "drop-covered-indexes": "node src/scripts/drop-covered-indexes.js",
+    "enable-pg-stat-statements": "node src/scripts/enable-pg-stat-statements.js",
+    "pg-stat-statements": "node src/scripts/pg-stat-statements.js",
     "pghero": "./dev/pghero-local/start.sh",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"

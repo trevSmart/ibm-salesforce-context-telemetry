@@ -160,14 +160,18 @@ async function init() {
 			created_at TIMESTAMPTZ DEFAULT NOW()
 		);
 
-		CREATE INDEX IF NOT EXISTS idx_event_id ON telemetry_events(event_id);
+		-- Removed duplicate indexes that are covered by composite indexes:
+		-- - idx_event_id (covered by idx_event_id_created_at)
+		-- - idx_created_at (covered by multiple composite indexes with created_at)
+		-- - idx_session_id (covered by idx_session_timestamp)
+		-- - idx_parent_session_id (covered by idx_parent_session_timestamp)
 		CREATE INDEX IF NOT EXISTS idx_timestamp ON telemetry_events(timestamp);
 		CREATE INDEX IF NOT EXISTS idx_server_id ON telemetry_events(server_id);
-		CREATE INDEX IF NOT EXISTS idx_created_at ON telemetry_events(created_at);
-		CREATE INDEX IF NOT EXISTS idx_session_id ON telemetry_events(session_id);
-		CREATE INDEX IF NOT EXISTS idx_parent_session_id ON telemetry_events(parent_session_id);
 		CREATE INDEX IF NOT EXISTS idx_event_id_created_at ON telemetry_events(event_id, created_at);
 		CREATE INDEX IF NOT EXISTS idx_user_created_at ON telemetry_events(user_id, created_at);
+		-- Composite indexes that cover the removed simple indexes:
+		CREATE INDEX IF NOT EXISTS idx_session_timestamp ON telemetry_events(session_id, timestamp);
+		CREATE INDEX IF NOT EXISTS idx_parent_session_timestamp ON telemetry_events(parent_session_id, timestamp);
 		CREATE INDEX IF NOT EXISTS idx_user_logins_username ON user_logins(username);
 		CREATE INDEX IF NOT EXISTS idx_user_logins_created_at ON user_logins(created_at);
 		CREATE INDEX IF NOT EXISTS idx_user_logins_successful ON user_logins(successful);
