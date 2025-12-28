@@ -105,10 +105,10 @@ function displayTable(queries, stats) {
 	console.log(`Total execution time: ${formatTime(stats.total_time || 0)}`);
 	console.log(`Average mean time: ${formatTime(stats.avg_mean_time || 0)}`);
 	console.log(`Max execution time: ${formatTime(stats.max_time || 0)}`);
-	
+
 	if (stats.total_cache_hits && stats.total_cache_reads) {
 		const totalBlocks = parseInt(stats.total_cache_hits) + parseInt(stats.total_cache_reads);
-		const hitRatio = totalBlocks > 0 
+		const hitRatio = totalBlocks > 0
 			? (100.0 * parseInt(stats.total_cache_hits) / totalBlocks).toFixed(2)
 			: 0;
 		console.log(`Cache hit ratio: ${hitRatio}%`);
@@ -186,6 +186,26 @@ async function main() {
 	const env = envArg ? envArg.split('=')[1] : 'local';
 	const top = topArg ? parseInt(topArg.split('=')[1]) : 10;
 	const format = formatArg ? formatArg.split('=')[1] : 'table';
+
+	// Safety check: prevent accidental execution in production
+	const isProduction = 
+		process.env.ENVIRONMENT === 'production' ||
+		process.env.NODE_ENV === 'production' ||
+		(process.env.DATABASE_URL && (
+			process.env.DATABASE_URL.includes('render.com') ||
+			process.env.DATABASE_URL.includes('amazonaws.com') ||
+			process.env.DATABASE_URL.includes('heroku.com')
+		)) ||
+		process.env.DATABASE_INTERNAL_URL;
+
+	if (isProduction && env !== 'prod') {
+		// If production environment detected but user didn't explicitly use --env=prod
+		// This is a safety measure to prevent accidental execution
+		console.error('❌ Error: Production environment detected');
+		console.error('   pg_stat_statements is only available in local development');
+		console.error('   If you really want to query production, use: --env=prod');
+		process.exit(1);
+	}
 
 	let dbUrl;
 	let envName;

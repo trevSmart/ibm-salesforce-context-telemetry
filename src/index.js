@@ -2560,6 +2560,136 @@ app.get('/api/database-size', auth.requireAuth, auth.requireRole('advanced'), as
 	}
 });
 
+app.get('/api/pg-stat-statements', auth.requireAuth, auth.requireRole('advanced'), async (req, res) => {
+	// Only allow in local development - never in production
+	const isProduction = 
+		process.env.ENVIRONMENT === 'production' ||
+		process.env.NODE_ENV === 'production' ||
+		(process.env.DATABASE_URL && (
+			process.env.DATABASE_URL.includes('render.com') ||
+			process.env.DATABASE_URL.includes('amazonaws.com') ||
+			process.env.DATABASE_URL.includes('heroku.com')
+		)) ||
+		process.env.DATABASE_INTERNAL_URL;
+
+	if (isProduction) {
+		return res.status(403).json({
+			status: 'error',
+			message: 'pg_stat_statements is only available in local development environments'
+		});
+	}
+
+	try {
+		const top = parseInt(req.query.top) || 10;
+		const slowOnly = req.query.slow === 'true';
+		const pool = db.getPostgresPool();
+
+		if (!pool) {
+			return res.status(503).json({
+				status: 'error',
+				message: 'Database connection not available'
+			});
+		}
+
+		// Check if extension exists
+		const extCheck = await pool.query(`
+			SELECT EXISTS(
+				SELECT 1 FROM pg_extension WHERE extname = 'pg_stat_statements'
+			) as exists;
+		`);
+
+		if (!extCheck.rows[0].exists) {
+			return res.status(404).json({
+				status: 'error',
+				message: 'pg_stat_statements extension is not enabled. Enable it with: npm run enable-pg-stat-statements'
+			});
+		}
+
+		// Get statistics summary
+		const statsResult = await pool.query(`
+			SELECT
+				COUNT(*) as total_queries,
+				SUM(calls) as total_calls,
+				SUM(total_exec_time) as total_time,
+				AVG(mean_exec_time) as avg_mean_time,
+				MAX(max_exec_time) as max_time,
+				SUM(shared_blks_hit) as total_cache_hits,
+				SUM(shared_blks_read) as total_cache_reads
+			FROM pg_stat_statements
+			WHERE query NOT LIKE '%pg_stat_statements%'
+		`);
+		const stats = statsResult.rows[0];
+
+		// Get top queries
+		let query = `
+			SELECT
+				query,
+				calls,
+				total_exec_time,
+				mean_exec_time,
+				max_exec_time,
+				rows,
+				shared_blks_hit,
+				shared_blks_read,
+				CASE
+					WHEN (shared_blks_hit + shared_blks_read) > 0
+					THEN 100.0 * shared_blks_hit / (shared_blks_hit + shared_blks_read)
+					ELSE 0
+				END as cache_hit_ratio
+			FROM pg_stat_statements
+			WHERE query NOT LIKE '%pg_stat_statements%'
+		`;
+
+		if (slowOnly) {
+			query += ' AND mean_exec_time > 100';
+		}
+
+		query += `
+			ORDER BY total_exec_time DESC
+			LIMIT $1
+		`;
+
+		const queriesResult = await pool.query(query, [top]);
+		const queries = queriesResult.rows;
+
+		// Calculate cache hit ratio
+		let cacheHitRatio = null;
+		if (stats.total_cache_hits && stats.total_cache_reads) {
+			const totalBlocks = parseInt(stats.total_cache_hits) + parseInt(stats.total_cache_reads);
+			if (totalBlocks > 0) {
+				cacheHitRatio = 100.0 * parseInt(stats.total_cache_hits) / totalBlocks;
+			}
+		}
+
+		res.json({
+			status: 'ok',
+			summary: {
+				total_queries: parseInt(stats.total_queries || 0),
+				total_calls: parseInt(stats.total_calls || 0),
+				total_execution_time_ms: parseFloat(stats.total_time || 0),
+				average_mean_time_ms: parseFloat(stats.avg_mean_time || 0),
+				max_execution_time_ms: parseFloat(stats.max_time || 0),
+				cache_hit_ratio: cacheHitRatio
+			},
+			queries: queries.map(q => ({
+				query: q.query,
+				calls: parseInt(q.calls || 0),
+				total_exec_time_ms: parseFloat(q.total_exec_time || 0),
+				mean_exec_time_ms: parseFloat(q.mean_exec_time || 0),
+				max_exec_time_ms: parseFloat(q.max_exec_time || 0),
+				rows: parseInt(q.rows || 0),
+				cache_hit_ratio: q.cache_hit_ratio ? parseFloat(q.cache_hit_ratio) : null
+			}))
+		});
+	} catch (error) {
+		console.error('Error fetching pg_stat_statements:', error);
+		res.status(500).json({
+			status: 'error',
+			message: error.message || 'Failed to fetch query statistics'
+		});
+	}
+});
+
 function formatBytes(bytes) {
 	if (bytes === 0) {return '0 Bytes';}
 	const k = 1024;

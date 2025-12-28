@@ -599,8 +599,6 @@
 			const password = document.getElementById('password').value;
 			const rememberMe = document.getElementById('rememberMe').checked;
 
-			console.log('[TRACE] login: Attempting login for user:', username);
-
 			// Hide error
 			clearError();
 			loginButton.disabled = true;
@@ -611,16 +609,13 @@
 					'Content-Type': 'application/json'
 				};
 
-				console.log('[TRACE] login: Sending login request...');
 				const response = await fetch('/login', {
 					method: 'POST',
 					headers: headers,
 					body: JSON.stringify({ username, password, rememberMe })
 				});
 
-				console.log('[TRACE] login: Login response status:', response.status);
 				const data = await response.json();
-				console.log('[TRACE] login: Login response data:', data);
 
 				if (response.ok && data.status === 'ok') {
 					// Redirect to home page
@@ -639,13 +634,10 @@
 		// Wait for CSRF helper to load, then check if already logged in
 		(async () => {
 			try {
-				console.log('[TRACE] login: Checking auth status...');
 				const response = await fetch('/api/auth/status');
-				console.log('[TRACE] login: Auth status response:', response.status);
 
 				// 401 is expected when not authenticated - don't treat as error
 				if (response.status === 401) {
-					console.log('[TRACE] login: User not authenticated (expected 401)');
 					// User not authenticated, focus on username field
 					const usernameField = document.getElementById('username');
 					if (usernameField) {
@@ -657,7 +649,6 @@
 				}
 
 				const data = await response.json();
-				console.log('[TRACE] login: Auth data:', data);
 
 				// Store CSRF token (CSRF helper loaded first via script tag)
 				if (window.setCsrfToken && data.csrfToken) {

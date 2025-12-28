@@ -65,6 +65,24 @@ async function main() {
 	const envArg = args.find(arg => arg.startsWith('--env='));
 	const env = envArg ? envArg.split('=')[1] : 'local';
 
+	// Safety check: prevent enabling in production
+	const isProduction = 
+		process.env.ENVIRONMENT === 'production' ||
+		process.env.NODE_ENV === 'production' ||
+		(process.env.DATABASE_URL && (
+			process.env.DATABASE_URL.includes('render.com') ||
+			process.env.DATABASE_URL.includes('amazonaws.com') ||
+			process.env.DATABASE_URL.includes('heroku.com')
+		)) ||
+		process.env.DATABASE_INTERNAL_URL;
+
+	if (isProduction && env !== 'prod') {
+		console.error('❌ Error: Production environment detected');
+		console.error('   pg_stat_statements cannot be enabled in production');
+		console.error('   This feature is only available for local development');
+		process.exit(1);
+	}
+
 	let dbUrl;
 	let envName;
 
@@ -103,13 +121,13 @@ async function main() {
 		if (exists) {
 			console.log('✅ pg_stat_statements extension is already enabled\n');
 			await pool.end();
-			return;
+			process.exit(0);
 		}
 
 		// Check shared_preload_libraries
 		console.log('🔍 Checking configuration...\n');
 		const preloadEnabled = await checkSharedPreloadLibraries(pool);
-		
+
 		if (preloadEnabled === false) {
 			console.log('❌ pg_stat_statements is not in shared_preload_libraries');
 			console.log('');
@@ -154,12 +172,11 @@ async function main() {
 					console.log('   On Render, you may not have superuser access');
 					console.log('   Check Render documentation for extension management');
 				}
-			} else if (error.message.includes('library "pg_stat_statements" is not available')) {
+			} else 			if (error.message.includes('library "pg_stat_statements" is not available')) {
 				console.log('⚠️  The pg_stat_statements library is not loaded');
 				console.log('   Make sure shared_preload_libraries includes pg_stat_statements');
 				console.log('   and PostgreSQL has been restarted');
 			}
-			await pool.end();
 			process.exit(1);
 		}
 

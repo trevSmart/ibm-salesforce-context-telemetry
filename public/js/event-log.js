@@ -57,10 +57,9 @@ function safeShowToast(message, type = 'info') {
 	let cachedAuthData = null;
 	(async () => {
 		try {
-			// Check if we already have cached auth data from previous page loads
-			if (window.__cachedAuthData && window.__cachedAuthData.authenticated) {
-				console.info('[Event Log] Using cached auth data from previous page load');
-				cachedAuthData = window.__cachedAuthData;
+		// Check if we already have cached auth data from previous page loads
+		if (window.__cachedAuthData && window.__cachedAuthData.authenticated) {
+			cachedAuthData = window.__cachedAuthData;
 				// Verify the cached data is still valid (basic check)
 				if (cachedAuthData.role !== 'advanced' && cachedAuthData.role !== 'administrator' && cachedAuthData.role !== 'god') {
 					window.location.href = '/';
@@ -1952,10 +1951,9 @@ function safeShowToast(message, type = 'info') {
 			const queryString = params.toString();
 
 			// Check if we have fresh cached event types data and no filters applied
-			let stats;
-			if (window.isCacheFresh('eventTypes') && queryString === '') {
-				console.info('[Event Log] Using cached event types data');
-				stats = window.__globalDataCache.eventTypes;
+		let stats;
+		if (window.isCacheFresh('eventTypes') && queryString === '') {
+			stats = window.__globalDataCache.eventTypes;
 			} else {
 				const url = queryString ? `/api/event-types?${queryString}` : '/api/event-types';
 				const response = await fetch(url, {
@@ -2021,10 +2019,9 @@ function safeShowToast(message, type = 'info') {
 			const cacheKey = `sessions_${queryString || 'default'}`;
 
 			// Check if we have fresh cached data and no filters applied
-			let sessions;
-			if (window.isCacheFresh(cacheKey) && params.toString() === '') {
-				console.info('[Event Log] Using cached sessions data');
-				sessions = window.__globalDataCache.sessions;
+		let sessions;
+		if (window.isCacheFresh(cacheKey) && params.toString() === '') {
+			sessions = window.__globalDataCache.sessions;
 			} else {
 				const url = queryString ? `/api/sessions?${queryString}` : '/api/sessions';
 				const response = await fetch(url, {
@@ -2436,10 +2433,9 @@ function safeShowToast(message, type = 'info') {
 
 			try {
 				// Check if we have fresh cached team stats data
-				let statsData;
-				if (window.isCacheFresh('teamStats')) {
-					console.info('[Event Log] Using cached team stats data');
-					statsData = window.__globalDataCache.teamStats;
+			let statsData;
+			if (window.isCacheFresh('teamStats')) {
+				statsData = window.__globalDataCache.teamStats;
 				} else {
 					const teamStatsUrl = '/api/team-stats';
 					logChartTrace('loadTeamsList: fetching aggregated team stats', {url: teamStatsUrl});
@@ -5159,9 +5155,8 @@ function safeShowToast(message, type = 'info') {
 			const thirtySecondsAgo = Date.now() - (30 * 1000);
 			const lastUpdated = window.__globalDataCache.lastUpdated[cacheKey];
 
-			if (lastUpdated && lastUpdated > thirtySecondsAgo && window.__globalDataCache[cacheKey]) {
-				console.info('[Event Log] Using cached database size data');
-				data = window.__globalDataCache[cacheKey];
+		if (lastUpdated && lastUpdated > thirtySecondsAgo && window.__globalDataCache[cacheKey]) {
+			data = window.__globalDataCache[cacheKey];
 			} else {
 				const response = await fetch('/api/database-size', {
 					credentials: 'include' // Ensure cookies are sent
@@ -5207,10 +5202,9 @@ function safeShowToast(message, type = 'info') {
 	async function loadUsers() {
 		try {
 			// Check if we have fresh cached telemetry users data
-			let data;
-			if (window.isCacheFresh('telemetryUsers')) {
-				console.info('[Event Log] Using cached telemetry users data');
-				data = window.__globalDataCache.telemetryUsers;
+		let data;
+		if (window.isCacheFresh('telemetryUsers')) {
+			data = window.__globalDataCache.telemetryUsers;
 			} else {
 				const response = await fetch('/api/telemetry-users?limit=50', {
 					credentials: 'include'

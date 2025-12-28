@@ -235,6 +235,7 @@ async function init() {
 
 		await ensureEventTypesInitialized();
 		await ensureCopilotUser();
+		await ensurePgStatStatements();
 }
 
 async function getEventTypeId(eventName) {
@@ -294,6 +295,73 @@ async function ensureEventTypesInitialized() {
 		}
 	} catch (error) {
 		console.error('Error initializing event types:', error);
+	}
+}
+
+/**
+ * Ensure pg_stat_statements extension is enabled
+ * This allows tracking query performance statistics
+ * Only works if PostgreSQL is configured with shared_preload_libraries = 'pg_stat_statements'
+ */
+async function ensurePgStatStatements() {
+	if (!db) {
+		return;
+	}
+
+	// Only enable for local development (not production on Render)
+	// Production on Render typically doesn't allow enabling extensions
+	// Multiple checks to ensure we're truly in local development:
+	const isProduction = 
+		process.env.ENVIRONMENT === 'production' ||
+		process.env.NODE_ENV === 'production' ||
+		(process.env.DATABASE_URL && (
+			process.env.DATABASE_URL.includes('render.com') ||
+			process.env.DATABASE_URL.includes('amazonaws.com') ||
+			process.env.DATABASE_URL.includes('heroku.com')
+		)) ||
+		process.env.DATABASE_INTERNAL_URL; // Internal URL is typically used in production (Render)
+
+	if (isProduction) {
+		return; // Skip for production - never enable pg_stat_statements in production
+	}
+
+	// Additional safety check: only enable if explicitly local
+	const isLocal = process.env.DATABASE_URL && 
+		(process.env.DATABASE_URL.includes('localhost') || 
+		 process.env.DATABASE_URL.includes('127.0.0.1'));
+
+	if (!isLocal) {
+		return; // Skip if not clearly local
+	}
+
+	try {
+		// Check if extension already exists
+		const checkResult = await db.query(`
+			SELECT EXISTS(
+				SELECT 1 FROM pg_extension WHERE extname = 'pg_stat_statements'
+			) as exists;
+		`);
+
+		if (checkResult.rows[0].exists) {
+			return; // Extension already exists
+		}
+
+		// Try to create extension
+		await db.query('CREATE EXTENSION IF NOT EXISTS pg_stat_statements;');
+		console.log('✅ pg_stat_statements extension enabled');
+	} catch (error) {
+		// Silently fail if extension can't be created
+		// This is expected if:
+		// - shared_preload_libraries doesn't include pg_stat_statements
+		// - PostgreSQL hasn't been restarted after configuration
+		// - User doesn't have permissions
+		if (error.message.includes('library "pg_stat_statements" is not available')) {
+			// This is expected if PostgreSQL isn't configured properly
+			// Don't log as error, just skip silently
+			return;
+		}
+		// Log other errors but don't fail initialization
+		console.warn('⚠️  Could not enable pg_stat_statements:', error.message);
 	}
 }
 
