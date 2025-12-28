@@ -40,15 +40,26 @@ class ResizableColumns {
 
       // Set initial width from saved state or current width
       if (savedWidths && columnId && savedWidths[columnId]) {
-        th.style.width = savedWidths[columnId] + 'px';
-      } else if (!th.style.width) {
-        th.style.width = th.offsetWidth + 'px';
+        const width = savedWidths[columnId] + 'px';
+        th.style.width = width;
+        th.style.maxWidth = width;
+        th.style.minWidth = width;
+      } else {
+        // Get the current computed width
+        const currentWidth = th.offsetWidth + 'px';
+        th.style.width = currentWidth;
+        th.style.maxWidth = currentWidth;
+        th.style.minWidth = currentWidth;
       }
 
       // Don't add resizer to the last column or columns without ID
       if (index < headers.length - 1 && columnId) {
         const resizer = this.createResizer();
-        th.style.position = 'relative';
+        // Only set position to relative if it's not already sticky
+        const computedStyle = window.getComputedStyle(th);
+        if (computedStyle.position !== 'sticky') {
+          th.style.position = 'relative';
+        }
         th.appendChild(resizer);
 
         this.columns.push({
@@ -69,11 +80,11 @@ class ResizableColumns {
       position: absolute;
       top: 0;
       right: 0;
-      width: 4px;
+      width: 8px;
       height: 100%;
       cursor: col-resize;
       user-select: none;
-      z-index: 1;
+      z-index: 100;
     `;
 
     // Add hover effect
@@ -181,6 +192,8 @@ class ResizableColumns {
     // Now apply the actual width change
     if (this.currentWidth !== this.startWidth) {
       this.activeColumn.style.width = this.currentWidth + 'px';
+      this.activeColumn.style.maxWidth = this.currentWidth + 'px';
+      this.activeColumn.style.minWidth = this.currentWidth + 'px';
     }
 
     // Remove preview line

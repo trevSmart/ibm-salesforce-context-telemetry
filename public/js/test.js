@@ -178,7 +178,7 @@ function createEventDetailsFormHTML(event) {
 		`;
 	};
 
-	const createTextareaHTML = (id, name, label, value, placeholder = '') => {
+	const _createTextareaHTML = (id, name, label, value, placeholder = '') => {
 		return `
 			<div class="rounded-md bg-white dark:bg-white/5 px-3 pt-2.5 pb-1.5 outline-1 -outline-offset-1 outline-gray-300 dark:outline-gray-700 focus-within:relative focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-indigo-600 dark:focus-within:outline-indigo-500">
 				<label for="${id}" class="block text-xs font-medium text-gray-900 dark:text-white">${label}</label>
@@ -393,9 +393,7 @@ async function loadEvents(options = {}) {
 			displayEvents(events, append);
 			// Calculate hasMore: if we got fewer events than requested, there are no more
 			// Also use data.hasMore if available (when total is computed)
-			hasMoreEvents = data.hasMore !== undefined 
-				? data.hasMore 
-				: events.length >= limit; // If we got a full page, assume there might be more
+			hasMoreEvents = data.hasMore !== undefined? data.hasMore: events.length >= limit; // If we got a full page, assume there might be more
 			currentOffset += events.length;
 			
 			// After appending, check if we need to load more immediately
@@ -608,9 +606,7 @@ function displayEvents(events, append = false) {
 
 	// Add click handlers to newly added rows for expansion
 	if (tbody) {
-		const newRows = append
-			? Array.from(tbody.querySelectorAll('tr[data-event-id]')).slice(-events.length) // Get only the newly added main rows (not expanded rows)
-			: tbody.querySelectorAll('tr[data-event-id]');
+		const newRows = append ? Array.from(tbody.querySelectorAll('tr[data-event-id]')).slice(-events.length) : tbody.querySelectorAll('tr[data-event-id]'); // Get only the newly added main rows (not expanded rows)
 		
 		newRows.forEach(row => {
 			// Check if event listener already exists
@@ -649,7 +645,7 @@ function shouldLoadMoreOnScroll() {
 		const clientHeight = testContent.clientHeight;
 		const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
 		return distanceFromBottom < 300; // Load more when 300px from bottom
-	} else {
+	} 
 		// Use page scroll
 		const scrollTop = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
 		const windowHeight = window.innerHeight || document.documentElement.clientHeight;
@@ -663,7 +659,7 @@ function shouldLoadMoreOnScroll() {
 
 		const distanceFromBottom = documentHeight - (scrollTop + windowHeight);
 		return distanceFromBottom < 300; // Load more when 300px from bottom
-	}
+	
 }
 
 function handleScroll() {
@@ -676,9 +672,6 @@ function handleScroll() {
 	}
 
 	if (shouldLoadMoreOnScroll()) {
-		const testContent = document.getElementById('testContent');
-		const hasOwnScroll = testContent && testContent.scrollHeight > testContent.clientHeight;
-		
 		loadEvents({append: true});
 	}
 }

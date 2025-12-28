@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 /**
  * Script to create composite index for pagination performance
  * Creates idx_deleted_at_created_at index on telemetry_events table
@@ -6,7 +5,6 @@
  * WHERE deleted_at IS NULL ORDER BY created_at DESC
  */
 
-const path = require('path');
 const {init, close} = require('../storage/database.js');
 
 async function createPaginationIndex() {

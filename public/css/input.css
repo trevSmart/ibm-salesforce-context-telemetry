@@ -249,7 +249,7 @@
     display: flex;
     align-items: center;
     gap: 22px;
-    letter-spacing: 0;
+    letter-spacing: 0.13px;
     flex: 1;
     margin-left: 12px;
   }
@@ -847,8 +847,8 @@
     position: relative;
     z-index: 10;
     /* text-align: center; */
-    max-width: 1250px;
-    width: min(95vw, 1250px);
+    width: 100%;
+    max-width: none;
     height: 85vh;
     min-height: 89vh;
     background: #e8ebec;
@@ -882,13 +882,6 @@
     background: var(--main-container-bg);
     border: 1px solid #1f1f1f;
   }
-
-  @media (width >= 80rem) {
-    .container {
-      max-width: 86rem;
-    }
-  }
-
 
   .dashboard-footer {
     flex: 4 0 0;
@@ -3417,6 +3410,28 @@
     color: inherit;
     flex-shrink: 0;
     transition: background-color 0.15s ease;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Exceptions for cells with buttons - allow buttons to be visible */
+  .logs-table td:has(button),
+  .logs-table td:has(.expand-btn),
+  .logs-table td:has(.actions-btn),
+  .logs-table td:has(.actions-dropdown) {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+  }
+
+  /* Ensure badges truncate properly */
+  .logs-table td .level-badge,
+  .logs-table td .event-badge {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .logs-table th.expand-column,
@@ -3528,10 +3543,6 @@
     height: 46px;
   }
 
-  .logs-table td {
-
-  }
-
   html.dark .logs-table tbody tr {
     background: transparent;
   }
@@ -3587,8 +3598,10 @@
     line-height: 1rem;
     font-weight: 500;
     text-transform: none;
-    width: auto;
-    min-width: fit-content;
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
     white-space: nowrap;
     box-sizing: border-box;
   }
@@ -3676,6 +3689,10 @@
     font-size: 0.7rem;
     font-weight: 500;
     line-height: 1rem;
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
     white-space: nowrap;
   }
 
@@ -6093,12 +6110,12 @@ section > div > h3 + p {
 }
 
 /* Resizable columns styles */
-.logs-table[data-resizable-columns-id] {
+table[data-resizable-columns-id] {
   table-layout: fixed;
 }
 
-.logs-table[data-resizable-columns-id] td,
-.logs-table[data-resizable-columns-id] th {
+table[data-resizable-columns-id] td,
+table[data-resizable-columns-id] th {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -6109,29 +6126,29 @@ section > div > h3 + p {
   position: absolute;
   top: 0;
   right: 0;
-  width: 4px;
+  width: 8px;
   height: 100%;
   cursor: col-resize;
   user-select: none;
-  z-index: 1;
+  z-index: 100;
   transition: background-color 0.15s ease;
 }
 
 /* Hide borders between columns in header by default */
-.logs-table[data-resizable-columns-id] thead th[data-resizable-column-id] {
+table[data-resizable-columns-id] thead th[data-resizable-column-id] {
   border-right: 0.5px solid transparent;
 }
 
-html.dark .logs-table[data-resizable-columns-id] thead th[data-resizable-column-id] {
+html.dark table[data-resizable-columns-id] thead th[data-resizable-column-id] {
   border-right: 0.5px solid transparent;
 }
 
 /* Show border when hovering over header with resizer (for resizing) */
-.logs-table[data-resizable-columns-id] thead th[data-resizable-column-id]:hover {
+table[data-resizable-columns-id] thead th[data-resizable-column-id]:hover {
   border-right-color: rgba(209, 213, 219, 0.4);
 }
 
-html.dark .logs-table[data-resizable-columns-id] thead th[data-resizable-column-id]:hover {
+html.dark table[data-resizable-columns-id] thead th[data-resizable-column-id]:hover {
   border-right-color: rgba(255, 255, 255, 0.08);
 }
 

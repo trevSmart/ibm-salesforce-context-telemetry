@@ -146,7 +146,7 @@ app.use((req, res, next) => {
 	if (req.method === 'GET') {
 		// Exclude static assets from rate limiting (JS, CSS, fonts, images, vendor files)
 		const staticAssetPatterns = [
-			/\.(js|css|woff|woff2|ttf|svg|jpg|jpeg|png|gif|ico|webp|json)$/i,
+			/\.(?:js|css|woff|woff2|ttf|svg|jpg|jpeg|png|gif|ico|webp|json)$/i,
 			/^\/js\//,
 			/^\/css\//,
 			/^\/fonts\//,

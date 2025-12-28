@@ -878,7 +878,7 @@ function safeShowToast(message, type = 'info') {
 	}
 
 	// Restore chart state from hover preview
-	function restoreChartState() {
+	function _restoreChartState() {
 		// Clear any pending hover timeout
 		if (hoverTimeoutId !== null) {
 			clearTimeout(hoverTimeoutId);
@@ -925,7 +925,7 @@ function safeShowToast(message, type = 'info') {
 	}
 
 	// Handle hover preview for session buttons
-	async function handleSessionHover(sessionId, sessionData = null) {
+	async function _handleSessionHover(sessionId, sessionData = null) {
 		// Don't preview if already selected and not in hover preview
 		if (selectedSession === sessionId && !isHoverPreviewActive) {
 			return;
@@ -2817,14 +2817,12 @@ function safeShowToast(message, type = 'info') {
 			const eventData = normalizeEventData(event.data);
 			const userLabel = extractUserLabelFromEvent(event, eventData);
 			const clientName = event.company_name || '';
-			const rawToolName = (event.event === 'tool_call' || event.event === 'tool_error') 
-				? (event.tool_name || event.toolName || '') 
-				: '';
+			const rawToolName = (event.event === 'tool_call' || event.event === 'tool_error')? (event.tool_name || event.toolName || ''): '';
 			const toolName = rawToolName || 'N/A';
 			const errorMessage = event.event === 'tool_error' ? (event.error_message || '') : '';
 			const area = event.area || 'N/A';
 			const eventType = event.event || 'N/A';
-			
+
 			// Search in various fields
 			const searchableText = [
 				userLabel,
@@ -2961,7 +2959,7 @@ function safeShowToast(message, type = 'info') {
 	}
 
 
-	function createEventDetailsForm(event) {
+	function _createEventDetailsForm(event) {
 		// event.data now contains the original payload exactly as received
 		const payload = event.data || {};
 
@@ -3230,7 +3228,7 @@ function safeShowToast(message, type = 'info') {
 		return formContainer;
 	}
 
-	function formatDescription(event) {
+	function _formatDescription(event) {
 		// If event doesn't have data field (payload not loaded), return special marker
 		if (!Object.hasOwn(event, 'data')) {
 			return '__VIEW_PAYLOAD_BUTTON__';
@@ -3329,7 +3327,7 @@ function safeShowToast(message, type = 'info') {
 			`;
 		};
 
-		const createTextareaHTML = (id, name, label, value, placeholder = '') => {
+		const _createTextareaHTML = (id, name, label, value, placeholder = '') => {
 			return `
 				<div class="rounded-md bg-white dark:bg-white/5 px-3 pt-2.5 pb-1.5 outline-1 -outline-offset-1 outline-gray-300 dark:outline-gray-700 focus-within:relative focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-indigo-600 dark:focus-within:outline-indigo-500">
 					<label for="${id}" class="block text-xs font-medium text-gray-900 dark:text-white">${label}</label>
@@ -3618,21 +3616,21 @@ function safeShowToast(message, type = 'info') {
 					<div class="flow-root">
 						<div class="-my-2">
 							<div class="inline-block min-w-full py-2 align-middle">
-								<table class="min-w-full border-separate border-spacing-0 bg-white dark:bg-gray-900" style="font-size: 13.5px !important; min-width: 100%;">
+								<table class="min-w-full border-separate border-spacing-0 bg-white dark:bg-gray-900" data-resizable-columns-id="event-logs-table" style="font-size: 13.5px !important; min-width: 100%;">
 									<thead class="bg-gray-50 dark:bg-gray-800/79">
 										<tr>
-											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 bg-gray-50/83 dark:bg-gray-800/79 py-3.5 pl-4 pr-2 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter" style="backdrop-filter: blur(1px);">
+											<th scope="col" data-resizable-column-id="expand" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 bg-gray-50/83 dark:bg-gray-800/79 py-3.5 pl-4 pr-2 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter" style="backdrop-filter: blur(1px);">
 												<span class="sr-only">Expand</span>
 											</th>
-											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 bg-gray-50/83 dark:bg-gray-800/79 py-3.5 pr-3 pl-4 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter sm:pl-6" style="max-width: 120px; width: 120px; backdrop-filter: blur(2px);">Date</th>
-											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 bg-gray-50/83 dark:bg-gray-800/79 px-3 py-3.5 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter" style="max-width: 120px; width: 120px; backdrop-filter: blur(2px);">User</th>
-											<th scope="col" class="sticky top-0 z-10 hidden border-b border-gray-300 dark:border-white/15 bg-gray-50/83 dark:bg-gray-800/79 px-3 py-3.5 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter md:table-cell" style="backdrop-filter: blur(2px);">Company</th>
-											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 bg-gray-50/83 dark:bg-gray-800/79 px-3 py-3.5 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter" style="max-width: 100px; width: 100px; backdrop-filter: blur(2px);">Area</th>
-											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 bg-gray-50/83 dark:bg-gray-800/79 px-3 py-3.5 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter" style="max-width: 120px; width: 120px; backdrop-filter: blur(2px);">Event</th>
-											<th scope="col" class="sticky top-0 z-10 hidden border-b border-gray-300 dark:border-white/15 bg-gray-50/83 dark:bg-gray-800/79 px-3 py-3.5 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter lg:table-cell" style="max-width: 150px; width: 150px; backdrop-filter: blur(2px);">Tool</th>
-											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 bg-gray-50/83 dark:bg-gray-800/79 px-3 py-3.5 text-center font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter" style="backdrop-filter: blur(2px);">Status</th>
-											<th scope="col" class="sticky top-0 z-10 hidden border-b border-gray-300 dark:border-white/15 bg-gray-50/83 dark:bg-gray-800/79 px-3 py-3.5 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter xl:table-cell" style="backdrop-filter: blur(2px);">Error</th>
-											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 bg-gray-50/83 dark:bg-gray-800/79 px-3 py-3.5 text-center font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter" style="backdrop-filter: blur(2px);">Payload</th>
+											<th scope="col" data-resizable-column-id="date" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 bg-gray-50/83 dark:bg-gray-800/79 py-3.5 pr-3 pl-4 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter sm:pl-6" style="max-width: 120px; width: 120px; backdrop-filter: blur(2px);">Date</th>
+											<th scope="col" data-resizable-column-id="user" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 bg-gray-50/83 dark:bg-gray-800/79 px-3 py-3.5 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter" style="max-width: 120px; width: 120px; backdrop-filter: blur(2px);">User</th>
+											<th scope="col" data-resizable-column-id="company" class="sticky top-0 z-10 hidden border-b border-gray-300 dark:border-white/15 bg-gray-50/83 dark:bg-gray-800/79 px-3 py-3.5 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter md:table-cell" style="backdrop-filter: blur(2px);">Company</th>
+											<th scope="col" data-resizable-column-id="area" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 bg-gray-50/83 dark:bg-gray-800/79 px-3 py-3.5 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter" style="max-width: 100px; width: 100px; backdrop-filter: blur(2px);">Area</th>
+											<th scope="col" data-resizable-column-id="event" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 bg-gray-50/83 dark:bg-gray-800/79 px-3 py-3.5 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter" style="max-width: 120px; width: 120px; backdrop-filter: blur(2px);">Event</th>
+											<th scope="col" data-resizable-column-id="tool" class="sticky top-0 z-10 hidden border-b border-gray-300 dark:border-white/15 bg-gray-50/83 dark:bg-gray-800/79 px-3 py-3.5 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter lg:table-cell" style="max-width: 150px; width: 150px; backdrop-filter: blur(2px);">Tool</th>
+											<th scope="col" data-resizable-column-id="status" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 bg-gray-50/83 dark:bg-gray-800/79 px-3 py-3.5 text-center font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter" style="backdrop-filter: blur(2px);">Status</th>
+											<th scope="col" data-resizable-column-id="error" class="sticky top-0 z-10 hidden border-b border-gray-300 dark:border-white/15 bg-gray-50/83 dark:bg-gray-800/79 px-3 py-3.5 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter xl:table-cell" style="backdrop-filter: blur(2px);">Error</th>
+											<th scope="col" data-resizable-column-id="payload" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 bg-gray-50/83 dark:bg-gray-800/79 px-3 py-3.5 text-center font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter" style="backdrop-filter: blur(2px);">Payload</th>
 											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 bg-gray-50/83 dark:bg-gray-800/79 py-3.5 pr-4 pl-3 backdrop-blur-sm backdrop-filter sm:pr-6 lg:pr-8" style="max-width: 60px; width: 60px; backdrop-filter: blur(2px);">
 												<span class="sr-only">Actions</span>
 											</th>
@@ -3651,13 +3649,22 @@ function safeShowToast(message, type = 'info') {
 			allLoadedEvents = [...filteredEvents];
 			// Get the tbody for adding event listeners
 			tbody = logsTableScroll.querySelector('tbody');
+
+			// Initialize resizable columns after table is created
+			if (window.ResizableColumns) {
+				const table = logsTableScroll.querySelector('table[data-resizable-columns-id]');
+				if (table) {
+					new ResizableColumns(table, {
+						store: window.resizableColumnsStore,
+						minWidth: 48
+					});
+				}
+			}
 		}
 
 		// Add click handlers to newly added rows for expansion
 		if (tbody) {
-			const newRows = append
-				? Array.from(tbody.querySelectorAll('tr[data-event-id]')).slice(-events.length) // Get only the newly added main rows (not expanded rows)
-				: tbody.querySelectorAll('tr[data-event-id]');
+			const newRows = append ? Array.from(tbody.querySelectorAll('tr[data-event-id]')).slice(-events.length) : tbody.querySelectorAll('tr[data-event-id]'); // Get only the newly added main rows (not expanded rows)
 
 			newRows.forEach(row => {
 				// Check if event listener already exists
@@ -3723,9 +3730,6 @@ function safeShowToast(message, type = 'info') {
 		}
 
 		if (shouldLoadMoreOnScroll()) {
-			const logsTableScroll = document.getElementById('logsTableScroll');
-			const hasOwnScroll = logsTableScroll && logsTableScroll.scrollHeight > logsTableScroll.clientHeight;
-
 			loadEvents({append: true});
 		}
 	}
@@ -4264,6 +4268,7 @@ function safeShowToast(message, type = 'info') {
 	// Keyboard navigation state
 	let keyboardNavigationMode = null; // 'sessions'
 	let selectedSessionIndex = -1;
+	let selectedEventIndex = -1;
 
 	// Remove keyboard selection from all elements
 	function clearKeyboardSelection() {
@@ -5819,12 +5824,12 @@ function safeShowToast(message, type = 'info') {
 			// Use requestAnimationFrame to ensure Highlight.js is loaded
 			requestAnimationFrame(() => {
 				if (window.hljs && typeof window.hljs.highlightElement === 'function') {
-					hljs.highlightElement(codeElement);
+					window.hljs.highlightElement(codeElement);
 				} else {
 					// Fallback: wait a bit more if Highlight.js isn't ready yet
 					setTimeout(() => {
 						if (window.hljs && typeof window.hljs.highlightElement === 'function') {
-							hljs.highlightElement(codeElement);
+							window.hljs.highlightElement(codeElement);
 						}
 					}, 100);
 				}

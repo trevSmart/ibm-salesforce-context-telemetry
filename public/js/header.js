@@ -110,9 +110,7 @@
 		const secondaryButtonHTML = ``;
 
 		// Only show Test link if user has "god" role
-		const testLinkHTML = userRole === 'god' 
-			? `<a href="/test" class="top-nav-link${activePage === '/test' ? ' active' : ''}">Test</a>`
-			: '';
+		const testLinkHTML = userRole === 'god'? `<a href="/test" class="top-nav-link${activePage === '/test' ? ' active' : ''}">Test</a>`: '';
 
 		return `
       <nav class="top-nav">
