@@ -311,8 +311,6 @@ export default [
 			'*.gz',
 			'*.rar',
 			'*.db',
-			'*.sqlite',
-			'*.sqlite3',
 		'*.lock',
 		'yarn.lock',
 		'pnpm-lock.yaml',

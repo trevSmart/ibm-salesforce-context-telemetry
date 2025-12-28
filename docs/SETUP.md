@@ -76,16 +76,13 @@ Prem `Ctrl + C` a la terminal on corre el servidor per aturar-lo.
 
 Render és un servei gratuït (amb limitacions) per desplegar aplicacions web.
 
-**⚠️ IMPORTANT**: Si utilitzes SQLite (per defecte), la base de dades es reinicialitza en cada deploy i perdràs tots els events. Per a producció a Render, **has d'utilitzar PostgreSQL**.
-
-**📖 Guia completa**: Consulta [RENDER_DEPLOYMENT.md](./RENDER_DEPLOYMENT.md) per instruccions detallades sobre com configurar PostgreSQL a Render i evitar la pèrdua de dades.
+**📖 Guia completa**: Consulta [RENDER_DEPLOYMENT.md](./RENDER_DEPLOYMENT.md) per instruccions detallades sobre com configurar PostgreSQL a Render.
 
 ### Resum ràpid:
 
 1. **Crear base de dades PostgreSQL** a Render
 2. **Configurar variables d'entorn**:
-   - `DB_TYPE=postgresql`
-   - `DATABASE_URL=<Internal Database URL de Render>`
+   - `DATABASE_URL=<Internal Database URL de Render>` (o preferiblement `DATABASE_INTERNAL_URL`)
    - `DATABASE_SSL=true`
 3. **Desplegar** el servei web
 

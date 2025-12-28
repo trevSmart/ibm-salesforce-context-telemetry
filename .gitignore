@@ -23,9 +23,6 @@ storage/*.sqlite
 storage/*.sqlite3
 *.db-wal
 *.db-shm
-# Exceptions: template databases can be committed
-!src/data/database-test-template.db
-!src/data/database-base-template.db
 
 # OS files
 .DS_Store
@@ -50,6 +47,11 @@ tmp/
 temp/
 create-user-render.sh
 dev/
+
+# PgHero local (Ruby dependencies)
+dev/pghero-local/vendor/
+dev/pghero-local/.bundle/
+dev/pghero-local/*.log
 
 # Test files
 test-*.js

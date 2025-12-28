@@ -155,7 +155,7 @@ function initSessionMiddleware() {
 			if (isProduction) {
 				console.warn('⚠️  WARNING: Using memorystore for sessions in production. Sessions will not persist across server restarts.');
 				console.warn('⚠️  To fix this, configure one of:');
-				console.warn('⚠️    - PostgreSQL: Set DB_TYPE=postgresql and DATABASE_URL');
+				console.warn('⚠️    - PostgreSQL: Set DATABASE_URL (or DATABASE_INTERNAL_URL)');
 				console.warn('⚠️    - Redis: Set REDIS_URL environment variable');
 			} else {
 				console.log('📦 Session store: memorystore (development - improved MemoryStore)');

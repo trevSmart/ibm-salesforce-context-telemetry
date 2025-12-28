@@ -5,9 +5,36 @@
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>Test - IBM Salesforce Context Telemetry</title>
+	<script>
+		// Apply theme immediately before page render to prevent flash
+		(function () {
+			const savedTheme = localStorage.getItem('theme');
+			const theme = savedTheme || 'light';
+			if (theme === 'dark') {
+				document.documentElement.classList.add('dark');
+			}
+		})();
+	</script>
 </head>
 
-<body>
+<body class="test-page cursor-default">
+	<div class="container main-container">
+		<div id="global-header-placeholder"></div>
+		<script src="/js/command-palette.js" defer></script>
+		<script src="/js/header.js" defer></script>
+		<script>
+			// Initialize header for test page after scripts are parsed
+			window.addEventListener('DOMContentLoaded', () => {
+				initGlobalHeader();
+			});
+		</script>
+		<div class="container-content">
+			<div style="padding: 24px;">
+				<h1>Test Page</h1>
+				<p>This is a minimal test page with header and container.</p>
+			</div>
+		</div>
+	</div>
 </body>
 
 </html>

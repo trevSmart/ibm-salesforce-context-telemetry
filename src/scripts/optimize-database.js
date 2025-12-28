@@ -39,7 +39,10 @@
  * improve read performance for JSON-based queries.
  */
 
-import {init, close, getSqliteDb, getPostgresPool} from '../storage/database.js';
+// Load environment variables from .env file
+import 'dotenv/config';
+
+import {init, close, getPostgresPool} from '../storage/database.js';
 
 async function main() {
 	console.log('🚀 Starting database optimization...\n');
@@ -48,18 +51,16 @@ async function main() {
 		// Initialize database connection
 		await init();
 		console.log('✅ Database connection established');
-
-		const dbType = process.env.DB_TYPE || 'sqlite';
-		console.log(`📊 Database type: ${dbType}\n`);
+		console.log('📊 Database type: PostgreSQL\n');
 
 		// Drop duplicate indexes
 		console.log('🗑️  Dropping duplicate indexes...');
-		await dropDuplicateIndexes();
+		await dropPostgreSQLIndexes();
 		console.log('✅ Duplicate indexes removed\n');
 
 		// Create performance indexes
 		console.log('⚡ Creating performance indexes...');
-		await createPerformanceIndexes();
+		await createPostgreSQLPerformanceIndexes();
 		console.log('✅ Performance indexes created\n');
 
 		console.log('🎉 Database optimization completed successfully!');
@@ -73,71 +74,8 @@ async function main() {
 	}
 }
 
-async function dropDuplicateIndexes() {
-	const dbType = process.env.DB_TYPE || 'sqlite';
-
-	if (dbType === 'sqlite') {
-		await dropSQLiteIndexes();
-	} else if (dbType === 'postgresql') {
-		await dropPostgreSQLIndexes();
-	}
-}
-
-async function dropSQLiteIndexes() {
-	const dbInstance = getSqliteDb ? getSqliteDb() : null;
-
-	if (!dbInstance) {
-		throw new Error('SQLite database instance not available');
-	}
-
-	const indexesToDrop = [
-		// person_usernames table
-		'idx_person_usernames_person_id',
-		'idx_person_usernames_username',
-		// remember_tokens table
-		'idx_remember_token_hash',
-		// team_event_users table
-		'idx_team_event_users_team_id',
-		// teams table
-		'idx_teams_name',
-		// telemetry_events table
-		'idx_session_logical',
-		'idx_pagination_created_at',
-		'idx_created_at',
-		'idx_event',
-		'idx_event_id',
-		'idx_parent_session_id',
-		'idx_session_id',
-		'idx_team_id',
-		'idx_user_id',
-		// users table
-		'idx_username'
-	];
-
-	console.log('   Dropping SQLite indexes...');
-
-	for (const indexName of indexesToDrop) {
-		try {
-			// Check if index exists first
-			const indexExists = dbInstance.prepare(`
-				SELECT name FROM sqlite_master
-				WHERE type='index' AND name=?
-			`).get(indexName);
-
-			if (indexExists) {
-				dbInstance.exec(`DROP INDEX IF EXISTS ${indexName}`);
-				console.log(`   ✓ Dropped index: ${indexName}`);
-			} else {
-				console.log(`   - Index ${indexName} does not exist (skipping)`);
-			}
-		} catch (error) {
-			console.log(`   ⚠️  Failed to drop index ${indexName}: ${error.message}`);
-		}
-	}
-}
-
 async function dropPostgreSQLIndexes() {
-	const dbInstance = getPostgresPool ? getPostgresPool() : null;
+	const dbInstance = getPostgresPool();
 
 	if (!dbInstance) {
 		throw new Error('PostgreSQL database instance not available');
@@ -189,53 +127,8 @@ async function dropPostgreSQLIndexes() {
 	}
 }
 
-// Create performance indexes for JSON operations
-async function createPerformanceIndexes() {
-	const dbType = process.env.DB_TYPE || 'sqlite';
-
-	if (dbType === 'sqlite') {
-		await createSQLitePerformanceIndexes();
-	} else if (dbType === 'postgresql') {
-		await createPostgreSQLPerformanceIndexes();
-	}
-}
-
-async function createSQLitePerformanceIndexes() {
-	const dbInstance = getSqliteDb ? getSqliteDb() : null;
-
-	if (!dbInstance) {
-		throw new Error('SQLite database instance not available');
-	}
-
-	console.log('   Creating SQLite performance indexes...');
-
-	// Note: SQLite has limited support for functional indexes
-	// We'll create regular indexes on commonly accessed fields
-	const indexesToCreate = [
-		// Index for NULL checks in denormalization query
-		'CREATE INDEX IF NOT EXISTS idx_telemetry_events_null_fields ON telemetry_events(org_id, user_name, tool_name, error_message)',
-		// Index for data IS NOT NULL checks
-		'CREATE INDEX IF NOT EXISTS idx_telemetry_events_data_not_null ON telemetry_events(data) WHERE data IS NOT NULL',
-
-		// Indexes for session queries (SQLite compatible)
-		'CREATE INDEX IF NOT EXISTS idx_telemetry_events_session_id_timestamp ON telemetry_events(session_id, timestamp)',
-		'CREATE INDEX IF NOT EXISTS idx_telemetry_events_parent_session_id_timestamp ON telemetry_events(parent_session_id, timestamp)',
-		'CREATE INDEX IF NOT EXISTS idx_telemetry_events_event_timestamp ON telemetry_events(event, timestamp)',
-		'CREATE INDEX IF NOT EXISTS idx_telemetry_events_user_timestamp ON telemetry_events(user_id, timestamp)',
-	];
-
-	for (const indexSql of indexesToCreate) {
-		try {
-			dbInstance.exec(indexSql);
-			console.log(`   ✓ Created performance index`);
-		} catch (error) {
-			console.log(`   ⚠️  Failed to create performance index: ${error.message}`);
-		}
-	}
-}
-
 async function createPostgreSQLPerformanceIndexes() {
-	const dbInstance = getPostgresPool ? getPostgresPool() : null;
+	const dbInstance = getPostgresPool();
 
 	if (!dbInstance) {
 		throw new Error('PostgreSQL database instance not available');
@@ -289,10 +182,6 @@ if (import.meta.url === `file://${process.argv[1]}`) {
 }
 
 export {
-	dropDuplicateIndexes,
-	dropSQLiteIndexes,
 	dropPostgreSQLIndexes,
-	createPerformanceIndexes,
-	createSQLitePerformanceIndexes,
 	createPostgreSQLPerformanceIndexes
 };

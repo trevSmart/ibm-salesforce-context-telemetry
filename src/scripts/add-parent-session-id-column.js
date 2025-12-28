@@ -5,27 +5,22 @@
  * Usage: node src/scripts/add-parent-session-id-column.js
  */
 
-const {Pool} = require('pg');
-require('dotenv').config();
+import {Pool} from 'pg';
+import 'dotenv/config';
 
 async function addParentSessionIdColumn() {
-	const dbType = process.env.DB_TYPE || 'sqlite';
-
-	if (dbType !== 'postgresql') {
-		console.log('⚠️  This script is designed for PostgreSQL databases.');
-		console.log('For SQLite, the column should be added automatically on startup.');
-		process.exit(1);
-	}
-
-	const connectionString = process.env.DATABASE_URL;
+	const connectionString = process.env.DATABASE_URL || process.env.DATABASE_INTERNAL_URL;
 	if (!connectionString) {
-		console.error('❌ DATABASE_URL environment variable is not set');
+		console.error('❌ DATABASE_URL or DATABASE_INTERNAL_URL environment variable is not set');
 		process.exit(1);
 	}
+
+	const isInternalUrl = Boolean(process.env.DATABASE_INTERNAL_URL);
+	const useSSL = isInternalUrl ? false : (process.env.DATABASE_SSL === 'true' ? {rejectUnauthorized: false} : false);
 
 	const pool = new Pool({
 		connectionString: connectionString,
-		ssl: process.env.DATABASE_SSL === 'true' ? {rejectUnauthorized: false} : false
+		ssl: useSSL
 	});
 
 	try {
@@ -84,6 +79,3 @@ async function addParentSessionIdColumn() {
 
 // Run the migration
 addParentSessionIdColumn();
-
-
-

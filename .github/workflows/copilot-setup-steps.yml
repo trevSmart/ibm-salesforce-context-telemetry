@@ -31,12 +31,21 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Set up PostgreSQL
+        uses: ankane/setup-postgres@v1
+        with:
+          postgresql-version: "16"
+
+      - name: Create database
+        run: |
+          psql -U postgres -c "CREATE DATABASE telemetry_test;" || true
+
       - name: Ensure admin user exists with administrator role
         env:
           ADMIN_USERNAME: ${{ secrets.COPILOT_ADMIN_USERNAME }}
           ADMIN_PASSWORD: ${{ secrets.COPILOT_ADMIN_PASSWORD }}
-          DB_TYPE: sqlite
-          DB_PATH: ./src/data/telemetry.db
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/telemetry_test
+          DATABASE_SSL: false
         run: |
           set -euo pipefail
 
@@ -52,7 +61,7 @@ jobs:
 
       - name: Generate test data
         env:
-          DB_TYPE: sqlite
-          DB_PATH: ./src/data/telemetry.db
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/telemetry_test
+          DATABASE_SSL: false
           ENVIRONMENT: dev
         run: node src/scripts/generate-test-data.js

@@ -604,7 +604,15 @@ function safeShowToast(message, type = 'info') {
 		const resizer = document.getElementById('horizontalResizer');
 		const activityCard = document.getElementById('sessionActivityCard');
 		if (!resizer || !activityCard) {
-			console.warn('Horizontal resizer: resizer or activityCard not found', {resizer, activityCard});
+			// Elements not found - this might be because the page isn't fully loaded yet
+			// Defer setup until DOM is ready
+			if (document.readyState === 'loading') {
+				window.addEventListener('DOMContentLoaded', () => {
+					requestAnimationFrame(() => setupHorizontalResizer());
+				});
+			} else {
+				console.warn('Horizontal resizer: resizer or activityCard not found after DOM ready', {resizer, activityCard});
+			}
 			return;
 		}
 
@@ -2034,7 +2042,15 @@ function safeShowToast(message, type = 'info') {
 			const sessionList = document.getElementById('sessionList');
 
 			if (!sessionList) {
-				console.error('sessionList element not found');
+				// Element not found - this might be because the page isn't fully loaded yet
+				// Defer loading until DOM is ready
+				if (document.readyState === 'loading') {
+					window.addEventListener('DOMContentLoaded', () => {
+						requestAnimationFrame(() => loadSessions());
+					});
+				} else {
+					console.error('sessionList element not found after DOM ready');
+				}
 				return;
 			}
 
@@ -2284,7 +2300,15 @@ function safeShowToast(message, type = 'info') {
 
 			const userList = document.getElementById('userList');
 			if (!userList) {
-				console.error('userList element not found');
+				// Element not found - this might be because the page isn't fully loaded yet
+				// Defer loading until DOM is ready
+				if (document.readyState === 'loading') {
+					window.addEventListener('DOMContentLoaded', () => {
+						requestAnimationFrame(() => loadUsersList());
+					});
+				} else {
+					console.error('userList element not found after DOM ready');
+				}
 				return;
 			}
 
@@ -2395,7 +2419,15 @@ function safeShowToast(message, type = 'info') {
 		try {
 			const teamList = document.getElementById('teamList');
 			if (!teamList) {
-				console.error('teamList element not found');
+				// Element not found - this might be because the page isn't fully loaded yet
+				// Defer loading until DOM is ready
+				if (document.readyState === 'loading') {
+					window.addEventListener('DOMContentLoaded', () => {
+						requestAnimationFrame(() => loadTeamsList());
+					});
+				} else {
+					console.error('teamList element not found after DOM ready');
+				}
 				return;
 			}
 
@@ -3541,24 +3573,24 @@ function safeShowToast(message, type = 'info') {
 			row.style.height = '46px';
 
 			row.innerHTML = `
-				<td class="${borderClass} pl-4 pr-2 text-center font-medium text-gray-500 dark:text-gray-400" style="height: 46px; vertical-align: middle;">
+				<td class="${borderClass} pl-2 pr-1 text-center font-medium text-gray-500 dark:text-gray-400" style="height: 46px; vertical-align: middle;">
 					<button type="button" id="expand-btn-${event.id}" class="expand-btn" onclick="toggleRowExpand(${event.id})" style="background: none; border: none; cursor: pointer; padding: 4px;">
 						<i class="fa-solid fa-chevron-right text-gray-400"></i>
 					</button>
 				</td>
-				<td class="${borderClass} pr-3 pl-4 whitespace-nowrap text-gray-700 dark:text-gray-300 sm:pl-6" style="height: 46px; vertical-align: middle; max-width: 120px; width: 120px;">${formatDate(event.timestamp)}</td>
-				<td class="${borderClass} px-3 font-medium whitespace-nowrap text-gray-500 dark:text-gray-400" style="height: 46px; vertical-align: middle; max-width: 120px; width: 120px;">${escapeHtml(userLabel)}</td>
-				<td class="hidden ${borderClass} px-3 whitespace-nowrap text-gray-500 dark:text-gray-400 md:table-cell" style="height: 46px; vertical-align: middle;">${escapeHtml(clientName)}</td>
-				<td class="${borderClass} px-3 whitespace-nowrap text-gray-500 dark:text-gray-400" style="height: 46px; vertical-align: middle; max-width: 100px; width: 100px;">
+				<td class="${borderClass} pr-2 pl-2 whitespace-nowrap text-gray-700 dark:text-gray-300" style="height: 46px; vertical-align: middle; max-width: 90px; width: 90px;">${formatDate(event.timestamp)}</td>
+				<td class="${borderClass} px-2 font-medium whitespace-nowrap text-gray-500 dark:text-gray-400" style="height: 46px; vertical-align: middle; max-width: 100px; width: 100px;">${escapeHtml(userLabel)}</td>
+				<td class="hidden ${borderClass} px-2 whitespace-nowrap text-gray-500 dark:text-gray-400 md:table-cell" style="height: 46px; vertical-align: middle;">${escapeHtml(clientName)}</td>
+				<td class="${borderClass} px-2 whitespace-nowrap text-gray-500 dark:text-gray-400" style="height: 46px; vertical-align: middle; max-width: 100px; width: 100px;">
 					<span class="${getLevelBadgeClass(event.area)}${!event.area ? ' na' : ''}">${escapeHtml(event.area || 'N/A')}</span>
 				</td>
-				<td class="${borderClass} px-3 whitespace-nowrap text-gray-500 dark:text-gray-400" style="height: 46px; vertical-align: middle; max-width: 120px; width: 120px;">
+				<td class="${borderClass} px-2 whitespace-nowrap text-gray-500 dark:text-gray-400" style="height: 46px; vertical-align: middle; max-width: 120px; width: 120px;">
 					<span class="${getEventBadgeClass(event.event)}">${escapeHtml(event.event || 'N/A')}</span>
 				</td>
-				<td class="hidden ${borderClass} px-3 whitespace-nowrap text-gray-500 dark:text-gray-400 lg:table-cell" style="height: 46px; vertical-align: middle; max-width: 150px; width: 150px;">${toolName}</td>
-				<td class="${borderClass} px-3 whitespace-nowrap text-center" style="height: 46px; vertical-align: middle;">${statusIcon}</td>
-				<td class="hidden ${borderClass} px-3 whitespace-nowrap text-gray-500 dark:text-gray-400 xl:table-cell overflow-hidden text-ellipsis max-w-48" style="height: 46px; vertical-align: middle;" title="${escapedErrorMessage}">${escapedErrorMessage}</td>
-				<td class="${borderClass} px-3 text-center text-gray-500 dark:text-gray-400" style="height: 46px; vertical-align: middle;">
+				<td class="hidden ${borderClass} px-2 whitespace-nowrap text-gray-500 dark:text-gray-400 lg:table-cell" style="height: 46px; vertical-align: middle; max-width: 150px; width: 150px;">${toolName}</td>
+				<td class="${borderClass} px-2 whitespace-nowrap text-center" style="height: 46px; vertical-align: middle;">${statusIcon}</td>
+				<td class="hidden ${borderClass} px-2 whitespace-nowrap text-gray-500 dark:text-gray-400 xl:table-cell overflow-hidden text-ellipsis max-w-48" style="height: 46px; vertical-align: middle;" title="${escapedErrorMessage}">${escapedErrorMessage}</td>
+				<td class="${borderClass} px-2 text-center text-gray-500 dark:text-gray-400" style="height: 46px; vertical-align: middle;">
 					<button type="button" onclick="loadEventPayload(${event.id})" class="text-gray-500 hover:text-[#2195cf] dark:text-white dark:hover:text-[#2195cf] p-1 rounded" title="View payload">
 						<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
 							<path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
@@ -3566,7 +3598,7 @@ function safeShowToast(message, type = 'info') {
 						</svg>
 					</button>
 				</td>
-				<td class="${borderClass} pr-4 pl-3 text-right font-medium whitespace-nowrap sm:pr-8 lg:pr-8" style="height: 46px; vertical-align: middle; max-width: 60px; width: 60px;">
+				<td class="${borderClass} pr-2 pl-2 text-right font-medium whitespace-nowrap" style="height: 46px; vertical-align: middle; max-width: 60px; width: 60px;">
 					<button type="button" class="actions-btn hover:text-indigo-900 dark:hover:text-indigo-400" onclick="toggleActionsDropdown(event, ${event.id})" style="background: none; border: none; cursor: pointer; padding: 4px;">
 						<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
 							<circle cx="8" cy="3" r="1.5"/>
@@ -3619,19 +3651,19 @@ function safeShowToast(message, type = 'info') {
 								<table class="min-w-full border-separate border-spacing-0 bg-white dark:bg-gray-900" data-resizable-columns-id="event-logs-table" style="font-size: 13.5px !important; min-width: 100%;">
 									<thead class="bg-gray-50 dark:bg-gray-800/79">
 										<tr>
-											<th scope="col" data-resizable-column-id="expand" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 bg-gray-50/83 dark:bg-gray-800/79 py-3.5 pl-4 pr-2 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter" style="backdrop-filter: blur(1px);">
+											<th scope="col" data-resizable-column-id="expand" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 bg-gray-50/83 dark:bg-gray-800/79 py-2 pl-2 pr-1 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter" style="backdrop-filter: blur(1px);">
 												<span class="sr-only">Expand</span>
 											</th>
-											<th scope="col" data-resizable-column-id="date" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 bg-gray-50/83 dark:bg-gray-800/79 py-3.5 pr-3 pl-4 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter sm:pl-6" style="max-width: 120px; width: 120px; backdrop-filter: blur(2px);">Date</th>
-											<th scope="col" data-resizable-column-id="user" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 bg-gray-50/83 dark:bg-gray-800/79 px-3 py-3.5 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter" style="max-width: 120px; width: 120px; backdrop-filter: blur(2px);">User</th>
-											<th scope="col" data-resizable-column-id="company" class="sticky top-0 z-10 hidden border-b border-gray-300 dark:border-white/15 bg-gray-50/83 dark:bg-gray-800/79 px-3 py-3.5 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter md:table-cell" style="backdrop-filter: blur(2px);">Company</th>
-											<th scope="col" data-resizable-column-id="area" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 bg-gray-50/83 dark:bg-gray-800/79 px-3 py-3.5 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter" style="max-width: 100px; width: 100px; backdrop-filter: blur(2px);">Area</th>
-											<th scope="col" data-resizable-column-id="event" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 bg-gray-50/83 dark:bg-gray-800/79 px-3 py-3.5 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter" style="max-width: 120px; width: 120px; backdrop-filter: blur(2px);">Event</th>
-											<th scope="col" data-resizable-column-id="tool" class="sticky top-0 z-10 hidden border-b border-gray-300 dark:border-white/15 bg-gray-50/83 dark:bg-gray-800/79 px-3 py-3.5 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter lg:table-cell" style="max-width: 150px; width: 150px; backdrop-filter: blur(2px);">Tool</th>
-											<th scope="col" data-resizable-column-id="status" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 bg-gray-50/83 dark:bg-gray-800/79 px-3 py-3.5 text-center font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter" style="backdrop-filter: blur(2px);">Status</th>
-											<th scope="col" data-resizable-column-id="error" class="sticky top-0 z-10 hidden border-b border-gray-300 dark:border-white/15 bg-gray-50/83 dark:bg-gray-800/79 px-3 py-3.5 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter xl:table-cell" style="backdrop-filter: blur(2px);">Error</th>
-											<th scope="col" data-resizable-column-id="payload" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 bg-gray-50/83 dark:bg-gray-800/79 px-3 py-3.5 text-center font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter" style="backdrop-filter: blur(2px);">Payload</th>
-											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 bg-gray-50/83 dark:bg-gray-800/79 py-3.5 pr-4 pl-3 backdrop-blur-sm backdrop-filter sm:pr-6 lg:pr-8" style="max-width: 60px; width: 60px; backdrop-filter: blur(2px);">
+											<th scope="col" data-resizable-column-id="date" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 bg-gray-50/83 dark:bg-gray-800/79 py-2 pr-2 pl-2 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter" style="max-width: 90px; width: 90px; backdrop-filter: blur(2px);">Date</th>
+											<th scope="col" data-resizable-column-id="user" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 bg-gray-50/83 dark:bg-gray-800/79 px-2 py-2 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter" style="max-width: 100px; width: 100px; backdrop-filter: blur(2px);">User</th>
+											<th scope="col" data-resizable-column-id="company" class="sticky top-0 z-10 hidden border-b border-gray-300 dark:border-white/15 bg-gray-50/83 dark:bg-gray-800/79 px-2 py-2 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter md:table-cell" style="backdrop-filter: blur(2px);">Company</th>
+											<th scope="col" data-resizable-column-id="area" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 bg-gray-50/83 dark:bg-gray-800/79 px-2 py-2 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter" style="max-width: 100px; width: 100px; backdrop-filter: blur(2px);">Area</th>
+											<th scope="col" data-resizable-column-id="event" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 bg-gray-50/83 dark:bg-gray-800/79 px-2 py-2 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter" style="max-width: 120px; width: 120px; backdrop-filter: blur(2px);">Event</th>
+											<th scope="col" data-resizable-column-id="tool" class="sticky top-0 z-10 hidden border-b border-gray-300 dark:border-white/15 bg-gray-50/83 dark:bg-gray-800/79 px-2 py-2 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter lg:table-cell" style="max-width: 150px; width: 150px; backdrop-filter: blur(2px);">Tool</th>
+											<th scope="col" data-resizable-column-id="status" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 bg-gray-50/83 dark:bg-gray-800/79 px-2 py-2 text-center font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter" style="backdrop-filter: blur(2px);">Status</th>
+											<th scope="col" data-resizable-column-id="error" class="sticky top-0 z-10 hidden border-b border-gray-300 dark:border-white/15 bg-gray-50/83 dark:bg-gray-800/79 px-2 py-2 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter xl:table-cell" style="backdrop-filter: blur(2px);">Error</th>
+											<th scope="col" data-resizable-column-id="payload" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 bg-gray-50/83 dark:bg-gray-800/79 px-2 py-2 text-center font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter" style="backdrop-filter: blur(2px);">Payload</th>
+											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 bg-gray-50/83 dark:bg-gray-800/79 py-2 pr-2 pl-2 backdrop-blur-sm backdrop-filter" style="max-width: 60px; width: 60px; backdrop-filter: blur(2px);">
 												<span class="sr-only">Actions</span>
 											</th>
 										</tr>
@@ -3658,16 +3690,16 @@ function safeShowToast(message, type = 'info') {
 						store: window.resizableColumnsStore,
 						maxWidth: 200,
 						columnWidths: {
-							expand: { initial: 50, min: 50, max: 50, fixed: true },
-							date: { initial: 108, min: 108, max: 200 },
-							user: { initial: 100, min: 100, max: 200 },
-							company: { initial: 120, min: 80, max: 200 },
-							area: { initial: 60, min: 60, max: 200 },
-							event: { initial: 68, min: 68, max: 200 },
-							tool: { initial: 108, min: 108, max: 200 },
-							status: { initial: 60, min: 60, max: 200 },
-							error: { initial: 120, min: 80, max: 200 },
-							payload: { initial: 60, min: 60, max: 200 }
+							expand: {initial: 50, min: 50, max: 50, fixed: true},
+							date: {initial: 108, min: 108, max: 200},
+							user: {initial: 100, min: 100, max: 200},
+							company: {initial: 120, min: 80, max: 200},
+							area: {initial: 60, min: 60, max: 200},
+							event: {initial: 68, min: 68, max: 200},
+							tool: {initial: 108, min: 108, max: 200},
+							status: {initial: 60, min: 60, max: 200},
+							error: {initial: 120, min: 80, max: 200},
+							payload: {initial: 60, min: 60, max: 200}
 						}
 					});
 				}
@@ -4085,10 +4117,14 @@ function safeShowToast(message, type = 'info') {
 		});
 	}
 
-	// Sort order change
-	const sortBtnEl = document.getElementById('sortBtn');
-	const sortIconEl = document.getElementById('sortIcon');
-	if (sortBtnEl && sortIconEl) {
+	// Sort order change - defer binding until header is loaded
+	function bindSortButton() {
+		const sortBtnEl = document.getElementById('sortBtn');
+		const sortIconEl = document.getElementById('sortIcon');
+		if (!sortBtnEl || !sortIconEl) {
+			return false;
+		}
+
 		// Update icon based on current sort order
 		function updateSortIcon() {
 			if (sortOrder === 'DESC') {
@@ -4112,14 +4148,33 @@ function safeShowToast(message, type = 'info') {
 			updateSortIcon();
 			loadEvents();
 		});
-	} else {
-		handleInitializationError('sort button binding', new Error('Sort button not found'));
+
+		return true;
+	}
+
+	if (!bindSortButton()) {
+		// Header builds the sort button on DOMContentLoaded; defer binding until it exists
+		window.addEventListener('DOMContentLoaded', () => {
+			requestAnimationFrame(() => {
+				if (!bindSortButton()) {
+					handleInitializationError('sort button binding', new Error('Sort button not found after header init'));
+				}
+			});
+		});
 	}
 
 	function setupInfiniteScroll() {
 		const logsTableScroll = document.getElementById('logsTableScroll');
 		if (!logsTableScroll) {
-			console.error('[Event Log] logsTableScroll not found for infinite scroll setup');
+			// Element not found - this might be because the page isn't fully loaded yet
+			// Defer setup until DOM is ready
+			if (document.readyState === 'loading') {
+				window.addEventListener('DOMContentLoaded', () => {
+					requestAnimationFrame(() => setupInfiniteScroll());
+				});
+			} else {
+				console.error('[Event Log] logsTableScroll not found after DOM ready');
+			}
 			return;
 		}
 
@@ -5570,7 +5625,14 @@ function safeShowToast(message, type = 'info') {
 		runSafeInitStep('tabs setup', setupTabs);
 		runSafeInitStep('user filter label', setupUserFilterLabel);
 		runSafeAsyncInitStep('event type stats', () => loadEventTypeStats(selectedSession));
-		runSafeAsyncInitStep('sessions list', () => loadSessions());
+		runSafeAsyncInitStep('sessions list', () => {
+			// Ensure DOM is ready before loading sessions
+			if (document.readyState === 'loading') {
+				window.addEventListener('DOMContentLoaded', () => loadSessions());
+			} else {
+				loadSessions();
+			}
+		});
 		runSafeAsyncInitStep('events table', () => loadEvents());
 		// Lazy load database size and users list - they're not critical for initial render
 		runSafeAsyncInitStep('database size', () => {
@@ -5579,9 +5641,23 @@ function safeShowToast(message, type = 'info') {
 		});
 		runSafeAsyncInitStep('users list', () => {
 			// Delay users list load slightly to prioritize critical data
-			setTimeout(() => loadUsersList(), 300);
+			setTimeout(() => {
+				// Ensure DOM is ready before loading users list
+				if (document.readyState === 'loading') {
+					window.addEventListener('DOMContentLoaded', () => loadUsersList());
+				} else {
+					loadUsersList();
+				}
+			}, 300);
 		});
-		runSafeAsyncInitStep('teams list', () => loadTeamsList());
+		runSafeAsyncInitStep('teams list', () => {
+			// Ensure DOM is ready before loading teams list
+			if (document.readyState === 'loading') {
+				window.addEventListener('DOMContentLoaded', () => loadTeamsList());
+			} else {
+				loadTeamsList();
+			}
+		});
 		runSafeAsyncInitStep('users for filter', () => loadUsers());
 		runSafeAsyncInitStep('auto refresh', () => updateAutoRefreshInterval());
 		runSafeInitStep('infinite scroll', () => setupInfiniteScroll());
@@ -5935,6 +6011,7 @@ function safeShowToast(message, type = 'info') {
 	window.toggleActionsDropdown = toggleActionsDropdown;
 	window.copyEventPayload = copyEventPayload;
 	window.confirmDeleteEvent = confirmDeleteEvent;
+	window.toggleRowExpand = toggleRowExpand;
 
 
 } // end guard to avoid duplicate execution

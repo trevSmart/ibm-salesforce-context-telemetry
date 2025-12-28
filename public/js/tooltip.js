@@ -32,6 +32,17 @@
 			document.addEventListener('mouseleave', this.handleMouseLeave.bind(this), true);
 			document.addEventListener('focus', this.handleFocus.bind(this), true);
 			document.addEventListener('blur', this.handleBlur.bind(this), true);
+			
+			// Listen for mouse leave on tooltip itself
+			this.tooltip.addEventListener('mouseleave', (event) => {
+				if (this.currentTarget && this.tooltip.classList.contains('visible')) {
+					const relatedTarget = event.relatedTarget;
+					// If not moving back to the target element, hide tooltip
+					if (!relatedTarget || (!this.currentTarget.contains(relatedTarget) && relatedTarget !== this.currentTarget)) {
+						this.hide();
+					}
+				}
+			});
 		}
 
 		/**
@@ -243,14 +254,48 @@
 		 */
 		handleMouseLeave(event) {
 			const target = this.getClosestTooltipElement(event.target);
-			// Check if we're leaving the element or moving to a child element
 			const relatedTarget = event.relatedTarget;
+			
 			if (target && this.currentTarget === target) {
 				// If moving to a child of the target, don't hide
 				if (relatedTarget && target.contains && target.contains(relatedTarget)) {
 					return;
 				}
-				this.hide();
+				// If moving to the tooltip itself, don't hide
+				if (relatedTarget && this.tooltip && this.tooltip.contains(relatedTarget)) {
+					return;
+				}
+				// If relatedTarget is null (mouse left window or moved too fast), hide immediately
+				if (!relatedTarget) {
+					this.hide();
+					return;
+				}
+				// For other cases, verify we're actually leaving
+				// Use a small delay to handle rapid mouse movements and verify the mouse position
+				const mouseX = event.clientX;
+				const mouseY = event.clientY;
+				const checkLeave = () => {
+					if (!this.currentTarget || !this.tooltip.classList.contains('visible')) {
+						return; // Already hidden
+					}
+					// Get current element at mouse position
+					const elementAtPoint = document.elementFromPoint(mouseX, mouseY);
+					if (elementAtPoint) {
+						const closestTooltip = this.getClosestTooltipElement(elementAtPoint);
+						// If still over target or tooltip, don't hide
+						if (closestTooltip === target || (this.tooltip && this.tooltip.contains(elementAtPoint))) {
+							return;
+						}
+						// Verify we're not over the target by checking if it contains the element at point
+						if (target.contains && target.contains(elementAtPoint)) {
+							return;
+						}
+					}
+					// If we get here, we're actually leaving - hide the tooltip
+					this.hide();
+				};
+				// Small delay to handle edge cases and rapid movements
+				setTimeout(checkLeave, 10);
 			}
 		}
 

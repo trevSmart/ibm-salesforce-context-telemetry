@@ -3387,7 +3387,7 @@
   }
 
   .logs-table th {
-    padding: 8px 6px;
+    padding: 6px 4px;
     text-align: left;
     font-weight: 300;
     color: var(--text-secondary);
@@ -3446,15 +3446,15 @@
 
   .logs-table th.col-date,
   .logs-table td.col-date {
-    width: 100px;
-    min-width: 100px;
+    width: 90px;
+    min-width: 90px;
     text-align: left;
   }
 
   .logs-table th.col-user,
   .logs-table td.col-user {
-    width: 118px;
-    min-width: 118px;
+    width: 100px;
+    min-width: 100px;
     text-align: left;
   }
 

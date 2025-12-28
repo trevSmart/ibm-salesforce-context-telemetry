@@ -128,19 +128,19 @@ NEVER RESTART THE SERVER AFTER CHANGES. IT HAS AUTO-RELOADING FEATURE.
 
 ### Data Storage and Environment Configuration
 
-The project uses a dual-database setup driven by environment variables:
+The project uses PostgreSQL for all environments (local development and production):
 
-| Environment | `DB_TYPE` | Location / Connection | Notes |
-|-------------|-----------|-----------------------|-------|
-| Local development | `sqlite` | `DB_PATH=./src/data/telemetry.db` | SQLite file lives inside the repo, ideal for quick iteration. |
-| Production on Render.com | `postgresql` | `DATABASE_URL=postgresql://<user>:<password>@<host>/<db>?sslmode=require` | Requires `DATABASE_SSL=true`. Credentials are provisioned by Render and must remain in environment secrets, not in docs. |
+| Environment | Location / Connection | Notes |
+|-------------|-----------------------|-------|
+| Local development | `DATABASE_URL=postgresql://localhost:5432/telemetry_local` | Local PostgreSQL database. Set `DATABASE_SSL=false` for local connections. |
+| Production on Render.com | `DATABASE_URL=postgresql://<user>:<password>@<host>/<db>?sslmode=require` | Requires `DATABASE_SSL=true`. Credentials are provisioned by Render and must remain in environment secrets, not in docs. Prefer `DATABASE_INTERNAL_URL` for faster internal networking within same region. |
 
 Key `.env` variables:
 
 - `TELEMETRY_UI_URL`: Full URL to the event log UI (set to Render URL in production, `http://localhost:3100/logs` locally).
-- `DB_TYPE`: Switch between `sqlite` and `postgresql`.
-- `DB_PATH`: Only used when `DB_TYPE=sqlite`; keep the relative path unless you need a custom location.
-- `DATABASE_URL` / `DATABASE_SSL`: Only used when `DB_TYPE=postgresql`.
+- `DATABASE_URL`: PostgreSQL connection string (external URL - used when DATABASE_INTERNAL_URL is not set).
+- `DATABASE_INTERNAL_URL`: Internal connection string for PostgreSQL (preferred for Render.com services in same region). When set, this URL will be used instead of DATABASE_URL for faster internal networking.
+- `DATABASE_SSL`: Enable SSL for PostgreSQL (true/false). Note: SSL is automatically disabled when using DATABASE_INTERNAL_URL.
 - `TELEMETRY_DISABLED`: Optional flag that temporarily disables ingestion (set to `false` in production).
 
 ### Database Tables

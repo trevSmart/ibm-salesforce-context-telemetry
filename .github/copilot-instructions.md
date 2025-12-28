@@ -158,14 +158,12 @@ curl -X POST http://localhost:3100/telemetry \
 
 ### Database Conventions
 
-- **Dual Database Support**: SQLite (dev) and PostgreSQL (production)
+- **PostgreSQL**: Required for all environments (local development and production)
 - **Connection**: Managed by `src/storage/database.js`
 - **Environment Config**:
-  - `DB_TYPE`: `sqlite` or `postgresql`
-  - `DB_PATH`: SQLite file path (e.g., `./data/telemetry.db`)
-  - `DATABASE_URL`: PostgreSQL connection string
-  - `DATABASE_SSL`: Enable SSL for PostgreSQL (`true`/`false`)
-- **Test Template Database**: A pre-initialized test template database (`src/data/database-test-template.db`) is available for quick setup in development/testing environments. If `telemetry.db` doesn't exist, it will be automatically copied from the test template database on first run. The test template includes:
+  - `DATABASE_URL`: PostgreSQL connection string (external URL - used when DATABASE_INTERNAL_URL is not set)
+  - `DATABASE_INTERNAL_URL`: Internal PostgreSQL connection string (preferred for Render.com services in same region)
+  - `DATABASE_SSL`: Enable SSL for PostgreSQL (`true`/`false`). Note: SSL is automatically disabled when using DATABASE_INTERNAL_URL
   - Complete schema with all tables and migrations
   - Single user `copilot` / `copilot` (role: god - full access)
   - Test telemetry data (sessions, tool calls, events) for testing and development
@@ -310,8 +308,8 @@ cp .env.example .env
 **Key Variables:**
 
 - `PORT`: Server port (default: 3100)
-- `DB_TYPE`: `sqlite` or `postgresql`
-- `DB_PATH`: SQLite file path
+- `DATABASE_URL`: PostgreSQL connection string (required)
+- `DATABASE_INTERNAL_URL`: Internal PostgreSQL connection string (optional, preferred for Render.com)
 - `DATABASE_URL`: PostgreSQL connection string
 - `DATABASE_SSL`: PostgreSQL SSL setting
 - `ADMIN_USERNAME`: Admin user

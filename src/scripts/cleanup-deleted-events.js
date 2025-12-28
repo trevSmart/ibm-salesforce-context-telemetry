@@ -28,9 +28,7 @@ async function main() {
 		// Initialize database connection
 		await dbModule.init();
 		console.log('✅ Database connection established');
-
-		const dbType = process.env.DB_TYPE || 'sqlite';
-		console.log(`📊 Database type: ${dbType}\n`);
+		console.log('📊 Database type: PostgreSQL\n');
 
 		// Perform cleanup
 		console.log(`🧹 Deleting events soft-deleted more than ${daysOld} days ago...`);

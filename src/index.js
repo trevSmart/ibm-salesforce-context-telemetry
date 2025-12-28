@@ -608,7 +608,6 @@ app.get('/health', async (req, res) => {
 
 			// Check database status (lightweight check)
 			let dbStatus = 'unknown';
-			const dbType = process.env.DB_TYPE || 'sqlite';
 			let totalEvents = 0;
 
 			try {
@@ -642,7 +641,7 @@ app.get('/health', async (req, res) => {
 				environment: process.env.NODE_ENV || 'development',
 				memory: memory,
 				database: {
-					type: dbType,
+					type: 'postgresql',
 					status: dbStatus
 				},
 				stats: {
@@ -706,7 +705,6 @@ app.get('/healthz', async (req, res) => {
 
 			// Check database status (lightweight check)
 			let dbStatus = 'unknown';
-			const dbType = process.env.DB_TYPE || 'sqlite';
 			let totalEvents = 0;
 
 			try {
@@ -740,7 +738,7 @@ app.get('/healthz', async (req, res) => {
 				environment: process.env.NODE_ENV || 'development',
 				memory: memory,
 				database: {
-					type: dbType,
+					type: 'postgresql',
 					status: dbStatus
 				},
 				stats: {

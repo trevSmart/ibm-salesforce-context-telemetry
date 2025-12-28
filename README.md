@@ -54,7 +54,7 @@ This telemetry server receives telemetry events from IBM Salesforce Context MCP 
 
 * **Telemetry Collection**: Receives telemetry events via REST API
 * **Web Dashboard**: Beautiful web interface to view and analyze telemetry data
-* **Database Storage**: Stores events in SQLite (default) or PostgreSQL
+* **Database Storage**: Stores events in PostgreSQL (local development and production)
 * **Multi-User Authentication**: Support for multiple users with database-backed authentication
 * **Standard Log Format**: Export logs in JSON Lines (JSONL) format - the industry standard
 * **Third-Party Integration**: Compatible with ELK Stack, Splunk, Datadog, Grafana Loki, BigQuery, and more
@@ -373,6 +373,16 @@ Update a user's password (requires authentication).
 
 ### Prerequisites
 
+- **PostgreSQL**: Required for all environments. Install PostgreSQL locally for development:
+  - macOS: `brew install postgresql@16 && brew services start postgresql@16`
+  - Linux: Use your distribution's package manager
+  - Windows: Download from [postgresql.org](https://www.postgresql.org/download/windows/)
+  
+  Then create a local database:
+  ```bash
+  createdb telemetry_local
+  ```
+
 * Node.js v18 or newer
 * npm or yarn
 
@@ -395,10 +405,9 @@ The server will start on port 3100 by default, or the port specified in the `POR
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `PORT` | Server port | `3100` |
-| `DB_TYPE` | Database type (`sqlite` or `postgresql`) | `sqlite` |
-| `DB_PATH` | Path to SQLite database file (SQLite only) | `./data/telemetry.db` |
-| `DATABASE_URL` | PostgreSQL connection string (PostgreSQL only) | - |
-| `DATABASE_SSL` | Enable SSL for PostgreSQL (`true`/`false`) | `false` |
+| `DATABASE_URL` | PostgreSQL connection string (external URL - used when DATABASE_INTERNAL_URL is not set) | Required |
+| `DATABASE_INTERNAL_URL` | Internal PostgreSQL connection string (preferred for Render.com services in same region) | Optional |
+| `DATABASE_SSL` | Enable SSL for PostgreSQL (`true`/`false`). Note: SSL is automatically disabled when using DATABASE_INTERNAL_URL | `false` (local), `true` (production) |
 | `ADMIN_USERNAME` | Admin username (for single-user auth) | `admin` |
 | `ADMIN_PASSWORD` | Admin password in plain text (will be hashed) | - |
 | `ADMIN_PASSWORD_HASH` | Admin password as bcrypt hash (recommended) | - |
@@ -408,15 +417,23 @@ The server will start on port 3100 by default, or the port specified in the `POR
 
 **Note**: For multi-user authentication, create users in the database using the API or scripts. Environment variables are used as a fallback for backward compatibility.
 
-**Database Templates**: Two database templates are available:
-- **Test Template** (`src/data/database-test-template.db`): For development/testing with user `copilot` (role: god) and test data. Create it with `npm run create-test-template-database`. If `telemetry.db` doesn't exist, it will be automatically copied from the test template on first run.
-- **Base Template** (`src/data/database-base-template.db`): For production deployments with user `god` (role: god) and no test data. Create it with `npm run create-initial-template-database`. Both templates can be committed to the repository.
+**Note**: PostgreSQL is required. For local development, install PostgreSQL and create a database:
+```bash
+# macOS
+brew install postgresql@16
+brew services start postgresql@16
+createdb telemetry_local
+
+# Then set in .env:
+DATABASE_URL=postgresql://localhost:5432/telemetry_local
+DATABASE_SSL=false
+```
 
 ## Architecture
 
 The server stores telemetry events and user data in a database:
 
-* **SQLite** (default) - File-based database, perfect for development and small deployments
+* **PostgreSQL** - Required for all environments (local development and production)
 * **PostgreSQL** - Production-ready database for high-volume deployments
 
 The database automatically creates two tables:

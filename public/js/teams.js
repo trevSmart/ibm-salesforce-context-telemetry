@@ -149,62 +149,32 @@ function showConfirmDialog({title, message, confirmText = 'Confirm', cancelText 
 		const isDark = document.documentElement.classList.contains('dark');
 		const dialogId = `confirm-dialog-${Date.now()}`;
 
-		// Icon for destructive vs normal actions
-		const iconHtml = destructive ? `
-			<div class="mx-auto flex shrink-0 items-center justify-center rounded-full ${isDark ? 'bg-red-500/10' : 'bg-red-100'} sm:mx-0 sm:size-10" style="width: 3rem; height: 3rem;">
-				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" data-slot="icon" aria-hidden="true" class="size-6 ${isDark ? 'text-red-400' : 'text-red-600'}">
-					<path d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" stroke-linecap="round" stroke-linejoin="round" />
-				</svg>
-			</div>
-		` : `
-			<div class="mx-auto flex size-12 items-center justify-center rounded-full ${isDark ? 'bg-green-500/10' : 'bg-green-100'}">
-				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" data-slot="icon" aria-hidden="true" class="size-6 ${isDark ? 'text-green-400' : 'text-green-600'}">
-					<path d="m4.5 12.75 6 6 9-13.5" stroke-linecap="round" stroke-linejoin="round" />
-				</svg>
-			</div>
-		`;
-
-		// Create dialog HTML
+		// Create dialog HTML using native <dialog> element
 		const dialogHtml = `
-			<el-dialog>
-				<dialog id="${dialogId}" aria-labelledby="${dialogId}-title" class="fixed inset-0 size-auto max-h-none max-w-none overflow-y-auto bg-transparent backdrop:bg-transparent">
-					<el-dialog-backdrop class="fixed inset-0 ${isDark ? 'bg-gray-900/50' : 'bg-gray-500/75'} transition-opacity data-closed:opacity-0 data-enter:duration-300 data-enter:ease-out data-leave:duration-200 data-leave:ease-in"></el-dialog-backdrop>
-
-					<div tabindex="0" class="flex min-h-full items-end justify-center p-4 text-center focus:outline-none sm:items-center sm:p-0">
-						<el-dialog-panel class="relative transform overflow-hidden rounded-lg ${isDark ? 'bg-gray-800' : 'bg-white'} px-4 pt-5 pb-4 text-left shadow-xl ${isDark ? 'outline -outline-offset-1 outline-white/10' : ''} transition-all data-closed:translate-y-4 data-closed:opacity-0 data-enter:duration-300 data-enter:ease-out data-leave:duration-200 data-leave:ease-in sm:my-8 sm:w-full sm:max-w-lg sm:p-6 data-closed:sm:translate-y-0 data-closed:sm:scale-95">
-							${destructive ? `
-								<div class="sm:flex sm:items-start">
-									${iconHtml}
-									<div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
-										<h3 id="${dialogId}-title" class="text-base font-semibold ${isDark ? 'text-white' : 'text-gray-900'}">${escapeHtml(title)}</h3>
-										<div class="mt-2">
-											<p class="text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}">${escapeHtml(message)}</p>
-										</div>
-									</div>
-								</div>
-								<div class="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
-									<button type="button" data-action="confirm" class="inline-flex w-full justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-red-500 sm:ml-3 sm:w-auto">${escapeHtml(confirmText)}</button>
-									<button type="button" data-action="cancel" class="mt-3 inline-flex w-full justify-center rounded-md ${isDark ? 'bg-white/10 hover:bg-white/20 text-white inset-ring-1 inset-ring-white/5' : 'bg-white hover:bg-gray-50 text-gray-900 shadow-xs inset-ring-1 inset-ring-gray-300'} px-3 py-2 text-sm font-semibold sm:mt-0 sm:w-auto">${escapeHtml(cancelText)}</button>
-								</div>
-							` : `
-								<div>
-									${iconHtml}
-									<div class="mt-3 text-center sm:mt-5">
-										<h3 id="${dialogId}-title" class="text-base font-semibold ${isDark ? 'text-white' : 'text-gray-900'}">${escapeHtml(title)}</h3>
-										<div class="mt-2">
-											<p class="text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}">${escapeHtml(message)}</p>
-										</div>
-									</div>
-								</div>
-								<div class="mt-5 sm:mt-6 sm:grid sm:grid-flow-row-dense sm:grid-cols-2 sm:gap-3">
-									<button type="button" data-action="confirm" class="inline-flex w-full justify-center rounded-md ${isDark ? 'bg-indigo-500 hover:bg-indigo-400 focus-visible:outline-indigo-500' : 'bg-indigo-600 hover:bg-indigo-500 focus-visible:outline-indigo-600'} px-3 py-2 text-sm font-semibold text-white focus-visible:outline-2 focus-visible:outline-offset-2 sm:col-start-2">${escapeHtml(confirmText)}</button>
-									<button type="button" data-action="cancel" class="mt-3 inline-flex w-full justify-center rounded-md ${isDark ? 'bg-white/10 hover:bg-white/20 text-white inset-ring-1 inset-ring-white/5' : 'bg-white hover:bg-gray-50 text-gray-900 shadow-xs inset-ring-1 inset-ring-gray-300'} px-3 py-2 text-sm font-semibold sm:col-start-1 sm:mt-0">${escapeHtml(cancelText)}</button>
-								</div>
-							`}
-						</el-dialog-panel>
+			<div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" id="${dialogId}-backdrop">
+				<div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6 transform transition-all">
+					<div class="flex items-start">
+						<div class="mx-auto flex shrink-0 items-center justify-center rounded-full ${destructive ? (isDark ? 'bg-red-500/10' : 'bg-red-100') : (isDark ? 'bg-green-500/10' : 'bg-green-100')} sm:mx-0 sm:size-10" style="width: 3rem; height: 3rem;">
+							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="size-6 ${destructive ? (isDark ? 'text-red-400' : 'text-red-600') : (isDark ? 'text-green-400' : 'text-green-600')}">
+								${destructive ?
+									'<path d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" stroke-linecap="round" stroke-linejoin="round" />' :
+									'<path d="m4.5 12.75 6 6 9-13.5" stroke-linecap="round" stroke-linejoin="round" />'
+								}
+							</svg>
+						</div>
+						<div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left flex-1">
+							<h3 class="text-base font-semibold ${isDark ? 'text-white' : 'text-gray-900'}">${escapeHtml(title)}</h3>
+							<div class="mt-2">
+								<p class="text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}">${escapeHtml(message)}</p>
+							</div>
+						</div>
 					</div>
-				</dialog>
-			</el-dialog>
+					<div class="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse gap-3">
+						<button type="button" data-action="confirm" class="inline-flex w-full justify-center rounded-md ${destructive ? 'bg-red-600 hover:bg-red-500' : 'bg-indigo-600 hover:bg-indigo-500'} px-3 py-2 text-sm font-semibold text-white shadow-xs sm:ml-3 sm:w-auto">${escapeHtml(confirmText)}</button>
+						<button type="button" data-action="cancel" class="mt-3 inline-flex w-full justify-center rounded-md ${isDark ? 'bg-white/10 hover:bg-white/20 text-white inset-ring-1 inset-ring-white/5' : 'bg-white hover:bg-gray-50 text-gray-900 shadow-xs inset-ring-1 inset-ring-gray-300'} px-3 py-2 text-sm font-semibold sm:mt-0 sm:w-auto">${escapeHtml(cancelText)}</button>
+					</div>
+				</div>
+			</div>
 		`;
 
 		// Append to body
@@ -212,24 +182,27 @@ function showConfirmDialog({title, message, confirmText = 'Confirm', cancelText 
 		container.innerHTML = dialogHtml;
 		document.body.appendChild(container);
 
-		const dialog = document.getElementById(dialogId);
-		const confirmBtn = dialog.querySelector('[data-action="confirm"]');
-		const cancelBtn = dialog.querySelector('[data-action="cancel"]');
+		const backdrop = document.getElementById(`${dialogId}-backdrop`);
+		const confirmBtn = container.querySelector('[data-action="confirm"]');
+		const cancelBtn = container.querySelector('[data-action="cancel"]');
 
 		let resolved = false;
 
-		// Cleanup function to remove dialog and all event listeners
+		// Cleanup function
 		const cleanup = () => {
-			// Wait for dialog close animation to complete
+			// Add fade out animation
+			backdrop.style.opacity = '0';
 			setTimeout(() => {
 				container.remove();
-			}, 250); // Slightly less than the 300ms animation duration
+			}, 200);
 		};
 
 		// Resolve helper to prevent multiple resolutions
 		const resolveOnce = (value) => {
 			if (!resolved) {
 				resolved = true;
+				// Cleanup event listener
+				document.removeEventListener('keydown', handleKeydown);
 				cleanup();
 				resolve(value);
 			}
@@ -237,23 +210,34 @@ function showConfirmDialog({title, message, confirmText = 'Confirm', cancelText 
 
 		// Handle confirm
 		confirmBtn.addEventListener('click', () => {
-			dialog.close();
 			resolveOnce(true);
 		});
 
 		// Handle cancel
 		cancelBtn.addEventListener('click', () => {
-			dialog.close();
 			resolveOnce(false);
 		});
 
-		// Handle dialog close (ESC key or backdrop click)
-		dialog.addEventListener('close', () => {
-			resolveOnce(false);
+		// Handle backdrop click
+		backdrop.addEventListener('click', (e) => {
+			if (e.target === backdrop) {
+				resolveOnce(false);
+			}
 		});
 
-		// Show the dialog
-		dialog.showModal();
+		// Handle ESC key
+		const handleKeydown = (e) => {
+			if (e.key === 'Escape') {
+				e.preventDefault();
+				resolveOnce(false);
+			}
+		};
+		document.addEventListener('keydown', handleKeydown);
+
+		// Animate in
+		requestAnimationFrame(() => {
+			backdrop.style.opacity = '1';
+		});
 	});
 }
 
@@ -430,15 +414,26 @@ async function updateTeamWithLogo(teamId, updates, logoFile, removeLogo) {
 async function deleteTeam(teamId) {
 	try {
 		const headers = await buildCsrfHeaders(false);
+		console.log('Delete team headers:', headers); // Debug logging
+
 		const response = await fetch(`/api/teams/${teamId}`, {
 			method: 'DELETE',
 			headers,
 			credentials: 'same-origin'
 		});
 
+		console.log('Delete team response:', response.status, response.statusText); // Debug logging
+
 		if (!response.ok) {
-			const data = await response.json();
-			throw new Error(data.message || `HTTP ${response.status}`);
+			let errorMessage = `HTTP ${response.status}`;
+			try {
+				const data = await response.json();
+				errorMessage = data.message || errorMessage;
+			} catch (e) {
+				// If we can't parse JSON, use the status text
+				errorMessage = response.statusText || errorMessage;
+			}
+			throw new Error(errorMessage);
 		}
 
 		return true;
@@ -965,19 +960,38 @@ function showTeamFormModal(team = null) {
 	let removeLogo = false;
 
 	if (logoContainer && logoInput) {
-		logoContainer.addEventListener('click', () => {
+		// Remove any existing click handler to prevent duplicates
+		const existingHandler = logoContainer._logoClickHandler;
+		if (existingHandler) {
+			logoContainer.removeEventListener('click', existingHandler);
+		}
+
+		// Create and store the click handler
+		const clickHandler = () => {
 			logoInput.click();
-		});
+		};
+		logoContainer._logoClickHandler = clickHandler;
+		logoContainer.addEventListener('click', clickHandler);
 	}
 
 	if (logoInput) {
-		logoInput.addEventListener('change', (e) => {
+		// Remove any existing change handler to prevent duplicates
+		const existingChangeHandler = logoInput._logoChangeHandler;
+		if (existingChangeHandler) {
+			logoInput.removeEventListener('change', existingChangeHandler);
+		}
+
+		// Create and store the change handler
+		const changeHandler = (e) => {
 			const file = e.target.files[0];
 			if (file) {
 				// Validate file size (500KB max)
 				if (file.size > 500 * 1024) {
 					showToast('Logo file is too large. Maximum size is 500KB.', 'error');
-					e.target.value = '';
+					// Clear input after a short delay to prevent re-triggering change event
+					setTimeout(() => {
+						if (logoInput) logoInput.value = '';
+					}, 100);
 					return;
 				}
 
@@ -985,7 +999,10 @@ function showTeamFormModal(team = null) {
 				const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
 				if (!allowedTypes.includes(file.type)) {
 					showToast('Invalid file type. Only PNG, JPEG, and WebP images are allowed.', 'error');
-					e.target.value = '';
+					// Clear input after a short delay to prevent re-triggering change event
+					setTimeout(() => {
+						if (logoInput) logoInput.value = '';
+					}, 100);
 					return;
 				}
 
@@ -1000,7 +1017,9 @@ function showTeamFormModal(team = null) {
 			} else {
 				logoPreviewNew.style.display = 'none';
 			}
-		});
+		};
+		logoInput._logoChangeHandler = changeHandler;
+		logoInput.addEventListener('change', changeHandler);
 	}
 
 	// Handle remove logo button
@@ -1064,27 +1083,29 @@ function showTeamFormModal(team = null) {
 }
 
 async function showDeleteTeamConfirm(team) {
-	const confirmed = await showConfirmDialog({
-		title: 'Delete team',
-		message: `Are you sure you want to delete "${team.name}"? This will unassign all orgs and users from this team.`,
-		confirmText: 'Delete team',
-		cancelText: 'Cancel',
-		destructive: true
-	});
+	try {
+		const confirmed = await showConfirmDialog({
+			title: 'Delete team',
+			message: `Are you sure you want to delete "${team.name}"? This will unassign all orgs and users from this team.`,
+			confirmText: 'Delete team',
+			cancelText: 'Cancel',
+			destructive: true
+		});
 
-	if (!confirmed) {
-		return;
-	}
+		if (!confirmed) {
+			return;
+		}
 
-	deleteTeam(team.id).then(async () => {
+		await deleteTeam(team.id);
 		showToast('Team deleted successfully', 'success');
 		currentView = 'list';
 		await loadTeams();
 		const listContent = renderTeamsList();
 		await transitionTeamsContent(listContent);
-	}).catch(error => {
+	} catch (error) {
+		console.error('Delete team error:', error);
 		showToast(error.message || 'Failed to delete team', 'error');
-	});
+	}
 }
 
 async function showAddOrgModal(teamId) {

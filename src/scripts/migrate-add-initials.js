@@ -18,9 +18,7 @@ async function main() {
 		// Initialize database connection
 		await dbModule.init();
 		console.log('✅ Database connection established');
-
-		const dbType = process.env.DB_TYPE || 'sqlite';
-		console.log(`📊 Database type: ${dbType}\n`);
+		console.log('📊 Database type: PostgreSQL\n');
 
 		// Add initials column
 		console.log('🔧 Adding initials column...');
@@ -39,29 +37,13 @@ async function main() {
 }
 
 async function addInitialsColumn() {
-	const dbType = process.env.DB_TYPE || 'sqlite';
-
-	if (dbType === 'sqlite') {
-		const db = dbModule;
-		const dbInstance = db.getSqliteDb ? db.getSqliteDb() : null;
-		if (dbInstance) {
-			const columns = dbInstance.prepare('PRAGMA table_info(people)').all();
-			const columnNames = columns.map(col => col.name);
-
-			if (!columnNames.includes('initials')) {
-				dbInstance.exec('ALTER TABLE people ADD COLUMN initials TEXT');
-				console.log('   Added initials column');
-			} else {
-				console.log('   initials column already exists');
-			}
-		}
-	} else if (dbType === 'postgresql') {
-		const db = dbModule;
-		const dbInstance = db.getPostgresPool ? db.getPostgresPool() : null;
-		if (dbInstance) {
-			await dbInstance.query('ALTER TABLE IF EXISTS people ADD COLUMN IF NOT EXISTS initials TEXT');
-			console.log('   Ensured initials column exists');
-		}
+	const db = dbModule;
+	const dbInstance = db.getPostgresPool ? db.getPostgresPool() : null;
+	if (dbInstance) {
+		await dbInstance.query('ALTER TABLE IF EXISTS people ADD COLUMN IF NOT EXISTS initials TEXT');
+		console.log('   Ensured initials column exists');
+	} else {
+		throw new Error('PostgreSQL database instance not available');
 	}
 }
 
