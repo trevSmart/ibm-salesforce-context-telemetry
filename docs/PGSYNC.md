@@ -184,10 +184,29 @@ data_rules:
   email: unique_email  # Genera un email únic
 ```
 
+## Eliminar Índexs de Producció
+
+**pgsync NO elimina índexs** per seguretat. Per eliminar índexs de producció, usa el script `drop-index-prod.js`:
+
+```bash
+# Llistar tots els índexs
+DATABASE_URL_PROD="..." npm run drop-index-prod -- --list
+
+# Trobar índexs duplicats que es poden eliminar
+DATABASE_URL_PROD="..." npm run drop-index-prod -- --find-duplicates
+
+# Eliminar un índex específic (dry-run)
+DATABASE_URL_PROD="..." npm run drop-index-prod -- idx_old_index
+
+# Eliminar un índex específic (real)
+DATABASE_URL_PROD="..." npm run drop-index-prod -- idx_old_index --confirm
+```
+
 ## Limitacions
 
-- **pgsync NO elimina** columnes o taules que existeixen a producció però no a local (seguretat)
+- **pgsync NO elimina** columnes, taules o índexs que existeixen a producció però no a local (seguretat)
 - Per eliminar columnes, cal fer-ho manualment amb `ALTER TABLE ... DROP COLUMN`
+- Per eliminar índexs, usa el script `drop-index-prod.js` (vegeu secció anterior)
 - **pgsync NO sincronitza** extensions de PostgreSQL
 - Les claus foranes poden causar problemes; usa `--defer-constraints` si cal
 

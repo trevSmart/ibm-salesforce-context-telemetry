@@ -377,7 +377,7 @@ Update a user's password (requires authentication).
   - macOS: `brew install postgresql@16 && brew services start postgresql@16`
   - Linux: Use your distribution's package manager
   - Windows: Download from [postgresql.org](https://www.postgresql.org/download/windows/)
-  
+
   Then create a local database:
   ```bash
   createdb telemetry_local
