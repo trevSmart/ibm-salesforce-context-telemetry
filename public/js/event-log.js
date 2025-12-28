@@ -1497,8 +1497,8 @@ function safeShowToast(message, type = 'info') {
 
 		const seriesData = buckets.map((count, index) => {
 			const ts = windowStart.getTime() + (index * slotMs);
-			// Use 0 for zero values so the line is always visible
-			return [ts, count];
+			// Use null for zero values so the line doesn't show
+			return [ts, count || null];
 		});
 
 		const maxBucketCount = buckets.length ? Math.max(...buckets) : 0;
@@ -1553,8 +1553,8 @@ function safeShowToast(message, type = 'info') {
 		sessionBuckets.forEach((buckets, sessionId) => {
 			const seriesData = buckets.map((count, index) => {
 				const ts = windowStart.getTime() + (index * slotMs);
-				// Use 0 for zero values so the line is always visible
-				return [ts, count];
+				// Use null for zero values so the line doesn't show
+				return [ts, count || null];
 			});
 			maxBucketCount = Math.max(maxBucketCount, ...buckets, maxBucketCount);
 			seriesList.push({
@@ -1772,7 +1772,7 @@ function safeShowToast(message, type = 'info') {
 			smooth: 0.55,
 			smoothMonotone: 'x', // prevent bezier overshoot while keeping curvature
 			showSymbol: false,
-			connectNulls: true, // Connect valid points even if there are null values between them
+			connectNulls: false, // Don't connect points when there are null values between them
 			lineStyle: {width: 3, color: hexToRgba('#53cf98', 0.5)}, // More transparent line
 			areaStyle: {
 				color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
@@ -1794,7 +1794,7 @@ function safeShowToast(message, type = 'info') {
 			smooth: 0.65,
 			smoothMonotone: 'x',
 			showSymbol: false,
-			connectNulls: true, // Connect valid points even if there are null values between them
+			connectNulls: false, // Don't connect points when there are null values between them
 			lineStyle: {width: 2.5, color: hexToRgba(color, 0.5)}, // More transparent line
 			areaStyle: {
 				color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
