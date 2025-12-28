@@ -3854,6 +3854,64 @@
     font-size: 11.5px;
   }
 
+  /* Test table row expansion styles */
+  .test-item-expanded:not(.expanded) {
+    display: none;
+  }
+
+  .test-item-expanded.expanded {
+    display: table-row;
+  }
+
+  .test-item-expanded td {
+    border-top: none !important;
+    padding-top: 0 !important;
+  }
+
+  .test-item-expanded.expanded td {
+    border-bottom: 1px solid rgb(229, 231, 235) !important;
+  }
+
+  html.dark .test-item-expanded.expanded td {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+  }
+
+  .test-item-expanded .log-description-expanded {
+    max-height: 0;
+    padding: 0 16px !important;
+    opacity: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out, opacity 0.25s ease-out, padding 0.3s ease-out;
+  }
+
+  .test-item-expanded.expanded .log-description-expanded {
+    max-height: 2000px;
+    padding: 24px 32px 28px 32px !important;
+    opacity: 1;
+  }
+
+  .test-table-row {
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+  }
+
+  .test-table-row:hover {
+    background-color: #fff7e9;
+  }
+
+  html.dark .test-table-row:hover {
+    background-color: rgba(14, 165, 233, 0.15);
+  }
+
+  .test-table-row.expanded td {
+    border-bottom: none !important;
+  }
+
+  /* Ensure seamless connection between expanded row and main row */
+  .test-table-row.expanded + .test-item-expanded.expanded {
+    margin-top: 0;
+  }
+
   .json-pretty {
     font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
     font-size: 11.5px;
@@ -4554,7 +4612,7 @@
     background: white;
     border: 1px solid var(--border-color);
     border-radius: 6px;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02), 0 0 1px rgba(0, 0, 0, 0.01), 0 2px 3px rgba(0, 0, 0, 0.03);
+    box-shadow: 1px 2px 4px rgba(0, 0, 0, 0.06), 1px 1px 2px rgba(0, 0, 0, 0.03), 1px 3px 5px rgba(0, 0, 0, 0.04);
     min-width: 150px;
     z-index: 1000;
     opacity: 0;
@@ -4569,7 +4627,7 @@
   html.dark .actions-dropdown {
     background: #27272a;
     border-color: #3f3f46;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+    box-shadow: 1px 4px 6px -1px rgba(0, 0, 0, 0.35), 1px 2px 4px -1px rgba(0, 0, 0, 0.25), 1px 5px 10px rgba(0, 0, 0, 0.2);
   }
 
   .actions-dropdown.show {
@@ -4596,7 +4654,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 0.875rem;
+    font-size: 13.5px;
     color: var(--text-primary);
   }
 
