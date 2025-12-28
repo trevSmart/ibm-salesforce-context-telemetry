@@ -402,9 +402,14 @@ function toggleActionsDropdown(e, eventId) {
 			const rect = button.getBoundingClientRect();
 
 			// Ensure dropdown doesn't go off-screen
-			// First, make it visible temporarily to measure its size
-			dropdown.style.visibility = 'hidden';
+			// First, make it visible with opacity 0 to measure its size accurately
+			dropdown.style.opacity = '0';
 			dropdown.style.display = 'block';
+			dropdown.style.pointerEvents = 'none';
+			
+			// Force a reflow to ensure the element is laid out
+			void dropdown.offsetHeight;
+			
 			const dropdownRect = dropdown.getBoundingClientRect();
 
 			// Position dropdown to the left of the button, vertically centered
@@ -430,12 +435,12 @@ function toggleActionsDropdown(e, eventId) {
 			dropdown.style.left = `${Math.max(4, left)}px`;
 			dropdown.style.right = 'auto';
 			dropdown.style.bottom = 'auto';
-			dropdown.style.visibility = 'visible';
-			dropdown.style.display = 'block';
 			dropdown.style.zIndex = '10000';
+			dropdown.style.opacity = '';
+			dropdown.style.pointerEvents = '';
 		}
 
-		// Use requestAnimationFrame to ensure the element is visible before transition
+		// Use requestAnimationFrame to ensure the positioning is applied before transition
 		requestAnimationFrame(() => {
 			dropdown.classList.add('show');
 		});
