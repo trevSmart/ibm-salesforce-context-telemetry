@@ -43,13 +43,13 @@ function generateSamplePayload(event) {
 // Create event details form HTML
 function createEventDetailsFormHTML(event) {
 	const payload = generateSamplePayload(event);
-	
+
 	const formatDate = (dateString) => {
-		if (!dateString) return '';
+		if (!dateString) {return '';}
 		try {
 			const date = new Date(dateString);
-			if (isNaN(date.getTime())) return dateString;
-			
+			if (isNaN(date.getTime())) {return dateString;}
+
 			// Format: "15 Jan 2024, 14:30:45" (day month year, hour:minute:second)
 			const options = {
 				day: 'numeric',
@@ -65,7 +65,7 @@ function createEventDetailsFormHTML(event) {
 			return dateString;
 		}
 	};
-	
+
 	const formatValue = (value) => {
 		if (value === null || value === undefined) {
 			return '';
@@ -80,15 +80,15 @@ function createEventDetailsFormHTML(event) {
 		return `
 			<div class="bg-white dark:bg-white/5 px-3 pt-2.5 pb-1.5 outline-1 -outline-offset-1 outline-gray-300 dark:outline-gray-700 focus-within:relative focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-indigo-600 dark:focus-within:outline-indigo-500 ${roundedClasses}">
 				<label for="${id}" class="block text-xs font-medium text-gray-900 dark:text-white">${label}</label>
-				<input 
-					id="${id}" 
-					name="${name}" 
-					type="${type}" 
-					value="${formatValue(value).replace(/"/g, '&quot;')}" 
-					placeholder="${placeholder}" 
-					aria-label="${label}" 
-					readonly 
-					class="block w-full text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none" 
+				<input
+					id="${id}"
+					name="${name}"
+					type="${type}"
+					value="${formatValue(value).replace(/"/g, '&quot;')}"
+					placeholder="${placeholder}"
+					aria-label="${label}"
+					readonly
+					class="block w-full text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none"
 					style="font-size: 13.5px;"
 				/>
 			</div>
@@ -99,14 +99,14 @@ function createEventDetailsFormHTML(event) {
 		return `
 			<div class="rounded-md bg-white dark:bg-white/5 px-3 pt-2.5 pb-1.5 outline-1 -outline-offset-1 outline-gray-300 dark:outline-gray-700 focus-within:relative focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-indigo-600 dark:focus-within:outline-indigo-500">
 				<label for="${id}" class="block text-xs font-medium text-gray-900 dark:text-white">${label}</label>
-				<textarea 
-					id="${id}" 
-					name="${name}" 
-					placeholder="${placeholder}" 
-					aria-label="${label}" 
-					readonly 
+				<textarea
+					id="${id}"
+					name="${name}"
+					placeholder="${placeholder}"
+					aria-label="${label}"
+					readonly
 					rows="8"
-					class="block w-full text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none resize-y" 
+					class="block w-full text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none resize-y"
 					style="font-size: 13.5px;"
 				>${formatValue(value).replace(/</g, '&lt;').replace(/>/g, '&gt;')}</textarea>
 			</div>
@@ -119,7 +119,7 @@ function createEventDetailsFormHTML(event) {
 	formHTML += '<fieldset>';
 	formHTML += '<legend class="block text-sm/6 font-semibold text-gray-900 dark:text-white">Event Information</legend>';
 	formHTML += '<div class="mt-2 -space-y-px">';
-	
+
 	// Request ID (top, full width)
 	formHTML += createInputHTML(
 		`event-id-${event.id}`,
@@ -177,29 +177,29 @@ function createEventDetailsFormHTML(event) {
 	formHTML += `
 		<div class="bg-white dark:bg-white/5 px-3 pt-2.5 pb-1.5 outline-1 -outline-offset-1 outline-gray-300 dark:outline-gray-700 focus-within:relative focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-indigo-600 dark:focus-within:outline-indigo-500 -mr-px">
 			<label for="event-timestamp-${event.id}" class="block text-xs font-medium text-gray-900 dark:text-white">Timestamp</label>
-			<input 
-				id="event-timestamp-${event.id}" 
-				name="timestamp" 
-				type="text" 
-				value="${formatDate(payload.timestamp).replace(/"/g, '&quot;')}" 
-				placeholder="Timestamp" 
-				aria-label="Timestamp" 
-				readonly 
-				class="block w-full text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none" 
+			<input
+				id="event-timestamp-${event.id}"
+				name="timestamp"
+				type="text"
+				value="${formatDate(payload.timestamp).replace(/"/g, '&quot;')}"
+				placeholder="Timestamp"
+				aria-label="Timestamp"
+				readonly
+				class="block w-full text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none"
 				style="font-size: 13.5px;"
 			/>
 		</div>
 		<div class="bg-white dark:bg-white/5 px-3 pt-2.5 pb-1.5 outline-1 -outline-offset-1 outline-gray-300 dark:outline-gray-700 focus-within:relative focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-indigo-600 dark:focus-within:outline-indigo-500">
 			<label for="event-received-at-${event.id}" class="block text-xs font-medium text-gray-900 dark:text-white">Received At</label>
-			<input 
-				id="event-received-at-${event.id}" 
-				name="received_at" 
-				type="text" 
-				value="${formatDate(payload.received_at).replace(/"/g, '&quot;')}" 
-				placeholder="Received At" 
-				aria-label="Received At" 
-				readonly 
-				class="block w-full text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none" 
+			<input
+				id="event-received-at-${event.id}"
+				name="received_at"
+				type="text"
+				value="${formatDate(payload.received_at).replace(/"/g, '&quot;')}"
+				placeholder="Received At"
+				aria-label="Received At"
+				readonly
+				class="block w-full text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none"
 				style="font-size: 13.5px;"
 			/>
 		</div>
@@ -211,24 +211,22 @@ function createEventDetailsFormHTML(event) {
 	formHTML += `
 		<div class="bg-white dark:bg-white/5 px-3 pt-2.5 pb-1.5 outline-1 -outline-offset-1 outline-gray-300 dark:outline-gray-700 focus-within:relative focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-indigo-600 dark:focus-within:outline-indigo-500 -mr-px">
 			<label for="event-schema-version-${event.id}" class="block text-xs font-medium text-gray-900 dark:text-white">Request schema version</label>
-			<input 
-				id="event-schema-version-${event.id}" 
-				name="telemetry_schema_version" 
-				type="text" 
-				value="${formatValue(payload.telemetry_schema_version).replace(/"/g, '&quot;')}" 
-				placeholder="Request schema version" 
-				aria-label="Request schema version" 
-				readonly 
-				class="block w-full text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none" 
+			<input
+				id="event-schema-version-${event.id}"
+				name="telemetry_schema_version"
+				type="text"
+				value="${formatValue(payload.telemetry_schema_version).replace(/"/g, '&quot;')}"
+				placeholder="Request schema version"
+				aria-label="Request schema version"
+				readonly
+				class="block w-full text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none"
 				style="font-size: 13.5px;"
 			/>
 		</div>
 		<div class="bg-white dark:bg-white/5 px-3 pt-2.5 pb-1.5 outline-1 -outline-offset-1 outline-gray-300 dark:outline-gray-700">
 			<label class="block text-xs font-medium text-gray-900 dark:text-white mb-1.5">Success</label>
 			<div class="flex items-center">
-				${payload.success === true || payload.success === 'true' 
-					? '<img src="/resources/ok.png" alt="OK" class="status-indicator ok" loading="lazy">'
-					: '<img src="/resources/ko.png" alt="KO" class="status-indicator ko" loading="lazy">'}
+				${payload.success === true || payload.success === 'true'? '<img src="/resources/ok.png" alt="OK" class="status-indicator ok" loading="lazy">': '<img src="/resources/ko.png" alt="KO" class="status-indicator ko" loading="lazy">'}
 			</div>
 		</div>
 	`;
@@ -239,29 +237,29 @@ function createEventDetailsFormHTML(event) {
 	formHTML += `
 		<div class="bg-white dark:bg-white/5 px-3 pt-2.5 pb-1.5 outline-1 -outline-offset-1 outline-gray-300 dark:outline-gray-700 focus-within:relative focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-indigo-600 dark:focus-within:outline-indigo-500 rounded-bl-md -mr-px">
 			<label for="event-version-${event.id}" class="block text-xs font-medium text-gray-900 dark:text-white">Server version</label>
-			<input 
-				id="event-version-${event.id}" 
-				name="version" 
-				type="text" 
-				value="${formatValue(payload.version).replace(/"/g, '&quot;')}" 
-				placeholder="Server version" 
-				aria-label="Server version" 
-				readonly 
-				class="block w-full text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none" 
+			<input
+				id="event-version-${event.id}"
+				name="version"
+				type="text"
+				value="${formatValue(payload.version).replace(/"/g, '&quot;')}"
+				placeholder="Server version"
+				aria-label="Server version"
+				readonly
+				class="block w-full text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none"
 				style="font-size: 13.5px;"
 			/>
 		</div>
 		<div class="bg-white dark:bg-white/5 px-3 pt-2.5 pb-1.5 outline-1 -outline-offset-1 outline-gray-300 dark:outline-gray-700 focus-within:relative focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-indigo-600 dark:focus-within:outline-indigo-500 rounded-br-md">
 			<label for="event-error-message-${event.id}" class="block text-xs font-medium text-gray-900 dark:text-white">Error Message</label>
-			<input 
-				id="event-error-message-${event.id}" 
-				name="error_message" 
-				type="text" 
-				value="${formatValue(payload.error_message).replace(/"/g, '&quot;')}" 
-				placeholder="Error Message" 
-				aria-label="Error Message" 
-				readonly 
-				class="block w-full text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none" 
+			<input
+				id="event-error-message-${event.id}"
+				name="error_message"
+				type="text"
+				value="${formatValue(payload.error_message).replace(/"/g, '&quot;')}"
+				placeholder="Error Message"
+				aria-label="Error Message"
+				readonly
+				class="block w-full text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none"
 				style="font-size: 13.5px;"
 			/>
 		</div>
@@ -602,14 +600,14 @@ function closeAllDropdowns() {
 	if (scrollHandler) {
 		window.removeEventListener('scroll', scrollHandler, true);
 		document.removeEventListener('scroll', scrollHandler, true);
-		
+
 		// Remove listeners from all tracked containers
 		scrollListeners.forEach(({element, handler}) => {
 			if (element && element.removeEventListener) {
 				element.removeEventListener('scroll', handler, true);
 			}
 		});
-		
+
 		scrollHandler = null;
 		scrollListeners = [];
 	}
@@ -675,64 +673,64 @@ function toggleActionsDropdown(e, eventId) {
 		// Use requestAnimationFrame to ensure the positioning is applied before transition
 		requestAnimationFrame(() => {
 			dropdown.classList.add('show');
-			
+
 			// Set up scroll listener to close dropdown when table scrolls
 			dropdownScrollPosition = {
 				windowScrollY: window.scrollY || window.pageYOffset,
 				windowScrollX: window.scrollX || window.pageXOffset
 			};
-			
+
 			// Find scrollable container (could be window or a container element)
 			const containerContent = document.querySelector('.container-content');
 			const testContent = document.getElementById('testContent');
-			
+
 			if (containerContent) {
 				dropdownScrollPosition.containerScrollTop = containerContent.scrollTop;
 				dropdownScrollPosition.containerScrollLeft = containerContent.scrollLeft;
 			}
-			
+
 			if (testContent) {
 				dropdownScrollPosition.testContentScrollTop = testContent.scrollTop;
 				dropdownScrollPosition.testContentScrollLeft = testContent.scrollLeft;
 			}
-			
+
 			// Create scroll handler
 			scrollHandler = () => {
-				if (!dropdownScrollPosition) return;
-				
+				if (!dropdownScrollPosition) {return;}
+
 				let scrollDelta = 0;
-				
+
 				// Check window scroll
 				const currentWindowScrollY = window.scrollY || window.pageYOffset;
 				const currentWindowScrollX = window.scrollX || window.pageXOffset;
 				const windowDeltaY = Math.abs(currentWindowScrollY - dropdownScrollPosition.windowScrollY);
 				const windowDeltaX = Math.abs(currentWindowScrollX - dropdownScrollPosition.windowScrollX);
 				scrollDelta = Math.max(windowDeltaY, windowDeltaX);
-				
+
 				// Check container scroll if it exists
 				if (containerContent && dropdownScrollPosition.containerScrollTop !== undefined) {
 					const containerDeltaY = Math.abs(containerContent.scrollTop - dropdownScrollPosition.containerScrollTop);
 					const containerDeltaX = Math.abs(containerContent.scrollLeft - dropdownScrollPosition.containerScrollLeft);
 					scrollDelta = Math.max(scrollDelta, containerDeltaY, containerDeltaX);
 				}
-				
+
 				// Check testContent scroll if it exists
 				if (testContent && dropdownScrollPosition.testContentScrollTop !== undefined) {
 					const testContentDeltaY = Math.abs(testContent.scrollTop - dropdownScrollPosition.testContentScrollTop);
 					const testContentDeltaX = Math.abs(testContent.scrollLeft - dropdownScrollPosition.testContentScrollLeft);
 					scrollDelta = Math.max(scrollDelta, testContentDeltaY, testContentDeltaX);
 				}
-				
+
 				// Close dropdown if scroll has moved 3px or more
 				if (scrollDelta >= 3) {
 					closeAllDropdowns();
 				}
 			};
-			
+
 			// Add scroll listeners to window and document
 			window.addEventListener('scroll', scrollHandler, true);
 			document.addEventListener('scroll', scrollHandler, true);
-			
+
 			// Also listen to scroll on container elements
 			if (containerContent) {
 				containerContent.addEventListener('scroll', scrollHandler, true);
