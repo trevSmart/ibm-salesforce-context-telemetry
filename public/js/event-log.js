@@ -5975,7 +5975,7 @@ function safeShowToast(message, type = 'info') {
 				// Check if focus is within the payload modal
 				const activeElement = document.activeElement;
 				const isInModal = backdrop.contains(activeElement) || backdrop === activeElement;
-				
+
 				if (isInModal) {
 					e.preventDefault();
 					// Select all text in the code element

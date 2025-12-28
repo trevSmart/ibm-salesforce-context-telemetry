@@ -342,7 +342,7 @@ function createEventDetailsFormHTML(event) {
 
 	// Load events from API
 	await loadEvents();
-	
+
 	// Setup infinite scroll after initial load
 	// Use setTimeout to ensure DOM is fully rendered
 	setTimeout(() => {
@@ -395,7 +395,7 @@ async function loadEvents(options = {}) {
 			// Also use data.hasMore if available (when total is computed)
 			hasMoreEvents = data.hasMore !== undefined? data.hasMore: events.length >= limit; // If we got a full page, assume there might be more
 			currentOffset += events.length;
-			
+
 			// After appending, check if we need to load more immediately
 			// (in case the new content doesn't fill the viewport)
 			if (append) {
@@ -405,7 +405,7 @@ async function loadEvents(options = {}) {
 					if (testContent) {
 						const hasOwnScroll = testContent.scrollHeight > testContent.clientHeight;
 						const needsMore = !hasOwnScroll || (testContent.scrollHeight - testContent.clientHeight < 100);
-						
+
 						if (needsMore && shouldLoadMoreOnScroll() && hasMoreEvents && !isLoadingMore) {
 							loadEvents({append: true});
 						}
@@ -460,11 +460,11 @@ function displayEvents(events, append = false) {
 
 	// Create rows as DOM elements instead of HTML strings
 	const rowElements = [];
-	
+
 	events.forEach((event) => {
 		// When appending, we don't know if it's the last event overall, so always show border
 		const borderClass = 'border-b border-gray-200 dark:border-white/10';
-		
+
 		const eventData = normalizeEventData(event.data);
 		const userLabel = extractUserLabelFromEvent(event, eventData);
 		const clientName = event.company_name || '';
@@ -492,7 +492,7 @@ function displayEvents(events, append = false) {
 		row.className = 'logs-table-row';
 		row.setAttribute('data-event-id', event.id);
 		row.style.height = '46px';
-		
+
 		row.innerHTML = `
 			<td class="${borderClass} pl-4 pr-2 text-center font-medium text-gray-500 dark:text-gray-400" style="height: 46px; vertical-align: middle;">
 				<button type="button" id="expand-btn-${event.id}" class="expand-btn" onclick="toggleRowExpand(${event.id})" style="background: none; border: none; cursor: pointer; padding: 4px;">
@@ -537,7 +537,7 @@ function displayEvents(events, append = false) {
 				</div>
 			</td>
 		`;
-		
+
 		// Expanded row
 		const expandedRow = document.createElement('tr');
 		expandedRow.className = 'logs-item-expanded';
@@ -547,11 +547,11 @@ function displayEvents(events, append = false) {
 				${createEventDetailsFormHTML(event)}
 			</td>
 		`;
-		
+
 		rowElements.push(row);
 		rowElements.push(expandedRow);
 	});
-	
+
 	// For non-append mode, we still need the HTML string
 	const rows = append ? null : rowElements.map(row => row.outerHTML).join('');
 
@@ -607,7 +607,7 @@ function displayEvents(events, append = false) {
 	// Add click handlers to newly added rows for expansion
 	if (tbody) {
 		const newRows = append ? Array.from(tbody.querySelectorAll('tr[data-event-id]')).slice(-events.length) : tbody.querySelectorAll('tr[data-event-id]'); // Get only the newly added main rows (not expanded rows)
-		
+
 		newRows.forEach(row => {
 			// Check if event listener already exists
 			if (row.hasAttribute('data-listener-attached')) {
@@ -637,7 +637,7 @@ function shouldLoadMoreOnScroll() {
 
 	// Check if testContent has its own scroll (overflow-y: auto)
 	const hasOwnScroll = testContent.scrollHeight > testContent.clientHeight;
-	
+
 	if (hasOwnScroll) {
 		// testContent has its own scroll container
 		const scrollTop = testContent.scrollTop;
@@ -645,7 +645,7 @@ function shouldLoadMoreOnScroll() {
 		const clientHeight = testContent.clientHeight;
 		const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
 		return distanceFromBottom < 300; // Load more when 300px from bottom
-	} 
+	}
 		// Use page scroll
 		const scrollTop = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
 		const windowHeight = window.innerHeight || document.documentElement.clientHeight;
@@ -659,7 +659,7 @@ function shouldLoadMoreOnScroll() {
 
 		const distanceFromBottom = documentHeight - (scrollTop + windowHeight);
 		return distanceFromBottom < 300; // Load more when 300px from bottom
-	
+
 }
 
 function handleScroll() {
@@ -697,7 +697,7 @@ function setupInfiniteScroll() {
 		if (window._testPageScrollTimeout) {
 			clearTimeout(window._testPageScrollTimeout);
 		}
-		
+
 		// Set new timeout
 		window._testPageScrollTimeout = setTimeout(() => {
 			handleScroll();
@@ -707,7 +707,7 @@ function setupInfiniteScroll() {
 
 	// Check if testContent has its own scroll
 	const hasOwnScroll = testContent.scrollHeight > testContent.clientHeight;
-	
+
 	if (hasOwnScroll) {
 		// Listen to testContent scroll
 		testContent.addEventListener('scroll', window._testPageScrollHandler, {passive: true});
@@ -717,7 +717,7 @@ function setupInfiniteScroll() {
 		window.addEventListener('scroll', window._testPageScrollHandler, {passive: true});
 		console.log(`[Test Page] Infinite scroll setup on window (scrollHeight: ${document.documentElement.scrollHeight}, innerHeight: ${window.innerHeight}, hasMore: ${hasMoreEvents}, offset: ${currentOffset})`);
 	}
-	
+
 	// Also listen to wheel events for better detection
 	testContent.addEventListener('wheel', window._testPageScrollHandler, {passive: true});
 }
@@ -735,7 +735,7 @@ window.addEventListener('softNav:pageMounted', (event) => {
 async function loadEventPayload(eventId) {
 	// Try to find event in loaded events first
 	let event = loadedEvents.find(e => e.id === eventId);
-	
+
 	// If not found, fetch from API
 	if (!event) {
 		try {
@@ -748,12 +748,12 @@ async function loadEventPayload(eventId) {
 			return;
 		}
 	}
-	
+
 	if (!event) {
 		console.error('Event not found:', eventId);
 		return;
 	}
-	
+
 	// event.data contains the original payload
 	const payload = event.data || event;
 	showPayloadModal(payload, eventId);
@@ -883,7 +883,7 @@ function showPayloadModal(payload, eventId) {
 			// Check if focus is within the payload modal
 			const activeElement = document.activeElement;
 			const isInModal = backdrop.contains(activeElement) || backdrop === activeElement;
-			
+
 			if (isInModal) {
 				e.preventDefault();
 				// Select all text in the code element
@@ -1080,7 +1080,7 @@ function toggleActionsDropdown(e, eventId) {
 async function copyEventPayload(eventId) {
 	// Try to find event in loaded events first
 	let event = loadedEvents.find(e => e.id === eventId);
-	
+
 	// If not found, fetch from API
 	if (!event) {
 		try {
@@ -1093,12 +1093,12 @@ async function copyEventPayload(eventId) {
 			return;
 		}
 	}
-	
+
 	if (!event) {
 		console.error('Event not found:', eventId);
 		return;
 	}
-	
+
 	// event.data contains the original payload
 	const payload = event.data || event;
 	const formattedPayload = JSON.stringify(payload, null, 2);
