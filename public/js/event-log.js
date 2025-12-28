@@ -2177,37 +2177,6 @@ function safeShowToast(message, type = 'info') {
 						loadEventTypeStats(selectedSession);
 					});
 
-					// Add hover preview functionality
-					li.addEventListener('mouseenter', (e) => {
-						// Don't preview if hovering over actions button
-						if (e.target.closest('.session-item-actions')) {
-							return;
-						}
-						handleSessionHover(session.session_id, session);
-					});
-
-					li.addEventListener('mouseleave', (e) => {
-						// Don't restore if mouse is moving to actions button
-						if (e.relatedTarget && e.relatedTarget.closest('.session-item-actions')) {
-							return;
-						}
-						// Don't restore if mouse is still within the sessions area (sidebar-content)
-						// This includes gaps between buttons
-						if (e.relatedTarget && (
-							e.relatedTarget.closest('.sidebar-content') ||
-							e.relatedTarget.closest('.all-sessions-container') ||
-							e.relatedTarget.closest('#sessionList') ||
-							e.relatedTarget.closest('.session-list') ||
-							e.relatedTarget.closest('.session-item')
-						)) {
-							return;
-						}
-						// Only restore if not clicking (click will handle it) and cursor left sessions area
-						if (isHoverPreviewActive) {
-							restoreChartState();
-						}
-					});
-
 					sessionList.appendChild(li);
 				});
 
@@ -2835,6 +2804,41 @@ function safeShowToast(message, type = 'info') {
 		const statusLabel = isError ? 'KO' : 'OK';
 		const src = isError ? '/resources/ko.png' : '/resources/ok.png';
 		return `<img src="${src}" alt="${statusLabel}" class="status-indicator ${statusClass}" loading="lazy">`;
+	}
+
+	// Filter events based on search query
+	function filterEventsBySearch(events, query) {
+		if (!query || !query.trim()) {
+			return events;
+		}
+
+		const searchTerm = query.trim().toLowerCase();
+		return events.filter(event => {
+			const eventData = normalizeEventData(event.data);
+			const userLabel = extractUserLabelFromEvent(event, eventData);
+			const clientName = event.company_name || '';
+			const rawToolName = (event.event === 'tool_call' || event.event === 'tool_error') 
+				? (event.tool_name || event.toolName || '') 
+				: '';
+			const toolName = rawToolName || 'N/A';
+			const errorMessage = event.event === 'tool_error' ? (event.error_message || '') : '';
+			const area = event.area || 'N/A';
+			const eventType = event.event || 'N/A';
+			
+			// Search in various fields
+			const searchableText = [
+				userLabel,
+				clientName,
+				toolName,
+				errorMessage,
+				area,
+				eventType,
+				event.timestamp ? formatDate(event.timestamp) : '',
+				JSON.stringify(eventData)
+			].join(' ').toLowerCase();
+
+			return searchableText.includes(searchTerm);
+		});
 	}
 
 
@@ -3487,6 +3491,9 @@ function safeShowToast(message, type = 'info') {
 			return;
 		}
 
+		// Filter events by search query if present
+		const filteredEvents = filterEventsBySearch(events, searchQuery);
+
 		// If appending, find the tbody and add rows to it
 		// If not appending, replace the entire content
 		let tbody;
@@ -3503,7 +3510,7 @@ function safeShowToast(message, type = 'info') {
 		// Create rows as DOM elements instead of HTML strings
 		const rowElements = [];
 
-		events.forEach((event) => {
+		filteredEvents.forEach((event) => {
 			// When appending, we don't know if it's the last event overall, so always show border
 			const borderClass = 'border-b border-gray-200 dark:border-white/10';
 
@@ -3602,8 +3609,8 @@ function safeShowToast(message, type = 'info') {
 			rowElements.forEach(row => {
 				tbody.appendChild(row);
 			});
-			// Add events to allLoadedEvents array
-			allLoadedEvents.push(...events);
+			// Add filtered events to allLoadedEvents array
+			allLoadedEvents.push(...filteredEvents);
 		} else {
 			// Create new table structure
 			logsTableScroll.innerHTML = `
@@ -3612,21 +3619,21 @@ function safeShowToast(message, type = 'info') {
 						<div class="-my-2">
 							<div class="inline-block min-w-full py-2 align-middle">
 								<table class="min-w-full border-separate border-spacing-0 bg-white dark:bg-gray-900" style="font-size: 13.5px !important; min-width: 100%;">
-									<thead class="bg-gray-50 dark:bg-gray-800/75">
+									<thead class="bg-gray-50 dark:bg-gray-800/79">
 										<tr>
-											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 dark:bg-gray-900/75 py-3.5 pl-4 pr-2 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter">
+											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 bg-gray-50/83 dark:bg-gray-800/79 py-3.5 pl-4 pr-2 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter" style="backdrop-filter: blur(1px);">
 												<span class="sr-only">Expand</span>
 											</th>
-											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 dark:bg-gray-900/75 py-3.5 pr-3 pl-4 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter sm:pl-6" style="max-width: 120px; width: 120px;">Date</th>
-											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 dark:bg-gray-900/75 px-3 py-3.5 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter" style="max-width: 120px; width: 120px;">User</th>
-											<th scope="col" class="sticky top-0 z-10 hidden border-b border-gray-300 dark:border-white/15 dark:bg-gray-900/75 px-3 py-3.5 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter md:table-cell">Company</th>
-											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 dark:bg-gray-900/75 px-3 py-3.5 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter" style="max-width: 100px; width: 100px;">Area</th>
-											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 dark:bg-gray-900/75 px-3 py-3.5 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter" style="max-width: 120px; width: 120px;">Event</th>
-											<th scope="col" class="sticky top-0 z-10 hidden border-b border-gray-300 dark:border-white/15 dark:bg-gray-900/75 px-3 py-3.5 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter lg:table-cell" style="max-width: 150px; width: 150px;">Tool</th>
-											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 dark:bg-gray-900/75 px-3 py-3.5 text-center font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter">Status</th>
-											<th scope="col" class="sticky top-0 z-10 hidden border-b border-gray-300 dark:border-white/15 dark:bg-gray-900/75 px-3 py-3.5 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter xl:table-cell">Error</th>
-											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 dark:bg-gray-900/75 px-3 py-3.5 text-center font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter">Payload</th>
-											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 dark:bg-gray-900/75 py-3.5 pr-4 pl-3 backdrop-blur-sm backdrop-filter sm:pr-6 lg:pr-8" style="max-width: 60px; width: 60px;">
+											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 bg-gray-50/83 dark:bg-gray-800/79 py-3.5 pr-3 pl-4 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter sm:pl-6" style="max-width: 120px; width: 120px; backdrop-filter: blur(2px);">Date</th>
+											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 bg-gray-50/83 dark:bg-gray-800/79 px-3 py-3.5 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter" style="max-width: 120px; width: 120px; backdrop-filter: blur(2px);">User</th>
+											<th scope="col" class="sticky top-0 z-10 hidden border-b border-gray-300 dark:border-white/15 bg-gray-50/83 dark:bg-gray-800/79 px-3 py-3.5 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter md:table-cell" style="backdrop-filter: blur(2px);">Company</th>
+											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 bg-gray-50/83 dark:bg-gray-800/79 px-3 py-3.5 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter" style="max-width: 100px; width: 100px; backdrop-filter: blur(2px);">Area</th>
+											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 bg-gray-50/83 dark:bg-gray-800/79 px-3 py-3.5 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter" style="max-width: 120px; width: 120px; backdrop-filter: blur(2px);">Event</th>
+											<th scope="col" class="sticky top-0 z-10 hidden border-b border-gray-300 dark:border-white/15 bg-gray-50/83 dark:bg-gray-800/79 px-3 py-3.5 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter lg:table-cell" style="max-width: 150px; width: 150px; backdrop-filter: blur(2px);">Tool</th>
+											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 bg-gray-50/83 dark:bg-gray-800/79 px-3 py-3.5 text-center font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter" style="backdrop-filter: blur(2px);">Status</th>
+											<th scope="col" class="sticky top-0 z-10 hidden border-b border-gray-300 dark:border-white/15 bg-gray-50/83 dark:bg-gray-800/79 px-3 py-3.5 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter xl:table-cell" style="backdrop-filter: blur(2px);">Error</th>
+											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 bg-gray-50/83 dark:bg-gray-800/79 px-3 py-3.5 text-center font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter" style="backdrop-filter: blur(2px);">Payload</th>
+											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 bg-gray-50/83 dark:bg-gray-800/79 py-3.5 pr-4 pl-3 backdrop-blur-sm backdrop-filter sm:pr-6 lg:pr-8" style="max-width: 60px; width: 60px; backdrop-filter: blur(2px);">
 												<span class="sr-only">Actions</span>
 											</th>
 										</tr>
@@ -3640,8 +3647,8 @@ function safeShowToast(message, type = 'info') {
 					</div>
 				</div>
 			`;
-			// Store events in allLoadedEvents array
-			allLoadedEvents = [...events];
+			// Store filtered events in allLoadedEvents array
+			allLoadedEvents = [...filteredEvents];
 			// Get the tbody for adding event listeners
 			tbody = logsTableScroll.querySelector('tbody');
 		}
@@ -3689,7 +3696,7 @@ function safeShowToast(message, type = 'info') {
 			const clientHeight = logsTableScroll.clientHeight;
 			const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
 			return distanceFromBottom < 300; // Load more when 300px from bottom
-		} 
+		}
 			// Use page scroll
 			const scrollTop = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
 			const windowHeight = window.innerHeight || document.documentElement.clientHeight;
@@ -3703,7 +3710,7 @@ function safeShowToast(message, type = 'info') {
 
 			const distanceFromBottom = documentHeight - (scrollTop + windowHeight);
 			return distanceFromBottom < 300; // Load more when 300px from bottom
-		
+
 	}
 
 	function handleScroll() {
@@ -4207,29 +4214,6 @@ function safeShowToast(message, type = 'info') {
 			currentOffset = 0;
 			loadEvents();
 			loadEventTypeStats(selectedSession);
-		});
-
-		// Add hover preview functionality
-		item.addEventListener('mouseenter', () => {
-			handleSessionHover('all');
-		});
-
-		item.addEventListener('mouseleave', (e) => {
-			// Don't restore if mouse is still within the sessions area (sidebar-content)
-			// This includes gaps between buttons
-			if (e.relatedTarget && (
-				e.relatedTarget.closest('.sidebar-content') ||
-				e.relatedTarget.closest('.all-sessions-container') ||
-				e.relatedTarget.closest('#sessionList') ||
-				e.relatedTarget.closest('.session-list') ||
-				e.relatedTarget.closest('.session-item')
-			)) {
-				return;
-			}
-			// Only restore if not clicking (click will handle it) and cursor left sessions area
-			if (isHoverPreviewActive) {
-				restoreChartState();
-			}
 		});
 	});
 
