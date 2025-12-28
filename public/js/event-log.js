@@ -2980,7 +2980,9 @@ function safeShowToast(message, type = 'info') {
 			'session_start': 'pink',
 			'session_end': 'yellow',
 			'error': 'green',
-			'custom': 'indigo'
+			'custom': 'indigo',
+			'validation': 'gray',
+			'execution': 'green'
 		};
 		const colorClass = eventColorMap[eventType] || 'green';
 		return `event-badge ${colorClass}`;
