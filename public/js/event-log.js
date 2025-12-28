@@ -3656,7 +3656,19 @@ function safeShowToast(message, type = 'info') {
 				if (table) {
 					new ResizableColumns(table, {
 						store: window.resizableColumnsStore,
-						minWidth: 48
+						maxWidth: 200,
+						columnWidths: {
+							expand: { initial: 50, min: 50, max: 50, fixed: true },
+							date: { initial: 108, min: 108, max: 200 },
+							user: { initial: 100, min: 100, max: 200 },
+							company: { initial: 120, min: 80, max: 200 },
+							area: { initial: 60, min: 60, max: 200 },
+							event: { initial: 68, min: 68, max: 200 },
+							tool: { initial: 108, min: 108, max: 200 },
+							status: { initial: 60, min: 60, max: 200 },
+							error: { initial: 120, min: 80, max: 200 },
+							payload: { initial: 60, min: 60, max: 200 }
+						}
 					});
 				}
 			}

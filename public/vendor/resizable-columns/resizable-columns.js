@@ -8,6 +8,8 @@ class ResizableColumns {
     this.options = {
       store: options.store || null,
       minWidth: options.minWidth || 48,
+      maxWidth: options.maxWidth || 200,
+      columnWidths: options.columnWidths || {},
       ...options
     };
 
@@ -18,6 +20,8 @@ class ResizableColumns {
     this.startWidth = 0;
     this.previewLine = null;
     this.currentWidth = 0;
+    this.currentMinWidth = 0;
+    this.currentMaxWidth = 0;
 
     this.init();
   }
@@ -38,22 +42,29 @@ class ResizableColumns {
     headers.forEach((th, index) => {
       const columnId = th.getAttribute('data-resizable-column-id');
 
-      // Set initial width from saved state or current width
+      // Get column config if available
+      const columnConfig = this.options.columnWidths[columnId] || {};
+      const minWidth = columnConfig.min || this.options.minWidth;
+      const maxWidth = columnConfig.max || this.options.maxWidth;
+      const initialWidth = columnConfig.initial || minWidth;
+      const fixed = columnConfig.fixed || false;
+
+      // Set initial width from saved state or configured width
       if (savedWidths && columnId && savedWidths[columnId]) {
-        const width = savedWidths[columnId] + 'px';
+        const width = Math.min(Math.max(savedWidths[columnId], minWidth), maxWidth) + 'px';
         th.style.width = width;
-        th.style.maxWidth = width;
-        th.style.minWidth = width;
+        th.style.maxWidth = fixed ? width : maxWidth + 'px';
+        th.style.minWidth = minWidth + 'px';
       } else {
-        // Get the current computed width
-        const currentWidth = th.offsetWidth + 'px';
-        th.style.width = currentWidth;
-        th.style.maxWidth = currentWidth;
-        th.style.minWidth = currentWidth;
+        // Use configured initial width or current width
+        const width = fixed ? initialWidth : (initialWidth || th.offsetWidth);
+        th.style.width = width + 'px';
+        th.style.maxWidth = fixed ? width + 'px' : maxWidth + 'px';
+        th.style.minWidth = minWidth + 'px';
       }
 
-      // Don't add resizer to the last column or columns without ID
-      if (index < headers.length - 1 && columnId) {
+      // Don't add resizer to the last column, columns without ID, or fixed columns
+      if (index < headers.length - 1 && columnId && !fixed) {
         const resizer = this.createResizer();
         // Only set position to relative if it's not already sticky
         const computedStyle = window.getComputedStyle(th);
@@ -65,7 +76,9 @@ class ResizableColumns {
         this.columns.push({
           header: th,
           resizer: resizer,
-          columnId: columnId
+          columnId: columnId,
+          minWidth: minWidth,
+          maxWidth: maxWidth
         });
 
         this.attachResizerEvents(resizer, th);
@@ -110,6 +123,11 @@ class ResizableColumns {
       this.startX = e.pageX;
       this.startWidth = header.offsetWidth;
       this.currentWidth = this.startWidth;
+
+      // Find the column config to get min/max widths
+      const columnData = this.columns.find(col => col.header === header);
+      this.currentMinWidth = columnData ? columnData.minWidth : this.options.minWidth;
+      this.currentMaxWidth = columnData ? columnData.maxWidth : this.options.maxWidth;
 
       // Cache position calculations
       const tableContainer = this.table.closest('.logs-table-container');
@@ -174,7 +192,7 @@ class ResizableColumns {
     if (!this.activeColumn) return;
 
     const diff = e.pageX - this.startX;
-    const newWidth = Math.max(this.options.minWidth, this.startWidth + diff);
+    const newWidth = Math.min(Math.max(this.currentMinWidth, this.startWidth + diff), this.currentMaxWidth);
 
     // Only update the preview line, not the actual column
     this.currentWidth = newWidth;
@@ -192,8 +210,8 @@ class ResizableColumns {
     // Now apply the actual width change
     if (this.currentWidth !== this.startWidth) {
       this.activeColumn.style.width = this.currentWidth + 'px';
-      this.activeColumn.style.maxWidth = this.currentWidth + 'px';
-      this.activeColumn.style.minWidth = this.currentWidth + 'px';
+      this.activeColumn.style.maxWidth = this.currentMaxWidth + 'px';
+      this.activeColumn.style.minWidth = this.currentMinWidth + 'px';
     }
 
     // Remove preview line
@@ -204,6 +222,8 @@ class ResizableColumns {
 
     this.activeColumn = null;
     this.currentWidth = 0;
+    this.currentMinWidth = 0;
+    this.currentMaxWidth = 0;
     document.body.style.cursor = '';
     document.body.style.userSelect = '';
 
