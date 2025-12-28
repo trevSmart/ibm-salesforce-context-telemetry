@@ -1,13 +1,13 @@
 /**
  * Script to find duplicate indexes in PostgreSQL database
- * 
+ *
  * This script detects two types of duplicate indexes:
  * 1. Exact duplicates: Indexes with identical column sets, operator classes, expressions, and predicates
  * 2. Covered indexes: Indexes that are covered by more comprehensive composite indexes
- * 
- * Usage: 
+ *
+ * Usage:
  *   node src/scripts/find-duplicate-indexes.js [--drop]
- * 
+ *
  * Options:
  *   --drop: Actually drop the duplicate indexes (default: only report)
  *   --env=DEV|PROD: Specify which environment to check (default: uses DATABASE_URL from .env)
@@ -23,21 +23,21 @@ import {init, close, getPostgresPool} from '../storage/database.js';
  */
 async function findExactDuplicates(dbInstance) {
 	const query = `
-		SELECT 
+		SELECT
 			pg_size_pretty(sum(pg_relation_size(idx))::bigint) as size,
-			(array_agg(idx::text))[1] as idx1, 
+			(array_agg(idx::text))[1] as idx1,
 			(array_agg(idx::text))[2] as idx2,
-			(array_agg(idx::text))[3] as idx3, 
+			(array_agg(idx::text))[3] as idx3,
 			(array_agg(idx::text))[4] as idx4,
 			(array_agg(idx::text))[5] as idx5
 		FROM (
-			SELECT 
-				indexrelid::regclass as idx, 
+			SELECT
+				indexrelid::regclass as idx,
 				(indrelid::text || E'\\n' || indclass::text || E'\\n' || indkey::text || E'\\n' ||
 				 coalesce(indexprs::text,'') || E'\\n' || coalesce(indpred::text,'')) as key
 			FROM pg_index
 		) sub
-		GROUP BY key 
+		GROUP BY key
 		HAVING count(*) > 1
 		ORDER BY sum(pg_relation_size(idx)) DESC;
 	`;
@@ -99,7 +99,7 @@ async function findCoveredIndexes(dbInstance) {
 			pg_size_pretty(covered.index_size) AS size,
 			covered.index_def AS covered_def
 		FROM index_column_lists covered
-		JOIN index_column_lists covering 
+		JOIN index_column_lists covering
 			ON covered.table_name = covering.table_name
 			AND covered.index_name != covering.index_name
 			AND covered.column_list <@ covering.column_list  -- covered is subset of covering
@@ -159,7 +159,7 @@ async function main() {
 		// Find exact duplicates
 		console.log('📋 Searching for exact duplicate indexes...');
 		const exactDuplicates = await findExactDuplicates(dbInstance);
-		
+
 		if (exactDuplicates.length > 0) {
 			console.log(`\n⚠️  Found ${exactDuplicates.length} set(s) of exact duplicate indexes:\n`);
 			exactDuplicates.forEach((dup, idx) => {
@@ -184,7 +184,7 @@ async function main() {
 		// Find covered indexes
 		console.log('📋 Searching for indexes covered by other indexes...');
 		const coveredIndexes = await findCoveredIndexes(dbInstance);
-		
+
 		if (coveredIndexes.length > 0) {
 			console.log(`\n⚠️  Found ${coveredIndexes.length} covered index(es):\n`);
 			coveredIndexes.forEach((covered, idx) => {
@@ -200,7 +200,7 @@ async function main() {
 
 		// Combine all indexes to drop
 		const indexesToDrop = new Set();
-		
+
 		// Add duplicates (keep first, drop rest)
 		exactDuplicates.forEach(dup => {
 			[dup.idx2, dup.idx3, dup.idx4, dup.idx5]
@@ -215,7 +215,7 @@ async function main() {
 
 		if (indexesToDrop.size > 0) {
 			console.log(`\n📊 Summary: ${indexesToDrop.size} index(es) can be dropped\n`);
-			
+
 			if (shouldDrop) {
 				console.log('🗑️  Dropping duplicate indexes...\n');
 				for (const indexName of indexesToDrop) {
@@ -223,7 +223,7 @@ async function main() {
 						// Extract schema and index name
 						const parts = indexName.split('.');
 						const indexNameOnly = parts.length > 1 ? parts[parts.length - 1] : indexName;
-						
+
 						await dbInstance.query(`DROP INDEX IF EXISTS ${indexNameOnly}`);
 						console.log(`   ✓ Dropped: ${indexName}`);
 					} catch (error) {

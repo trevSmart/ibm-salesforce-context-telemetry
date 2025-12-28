@@ -1,0 +1,58 @@
+# pgsync configuration for IBM Salesforce Context Telemetry
+#
+# This configuration allows syncing database schema and data between
+# local development and production environments.
+#
+# IMPORTANT: Always backup production before syncing!
+
+# Source database (local development)
+from: <%= ENV['DATABASE_URL'] || 'postgresql://localhost:5432/telemetry_local' %>
+
+# Destination database (production)
+# Set this via DATABASE_URL_PROD environment variable
+# Example: DATABASE_URL_PROD=postgresql://user:pass@host/db pgsync --schema-only
+to: <%= ENV['DATABASE_URL_PROD'] || ENV['DATABASE_URL'] %>
+
+# Safety: Allow syncing to non-localhost (requires explicit configuration)
+to_safe: true
+
+# Exclude tables that shouldn't be synced
+exclude:
+  - user_logins  # Login history - don't sync to production
+  - remember_tokens  # Session tokens - don't sync
+
+# Data rules for sensitive data (if syncing data, not just schema)
+# These rules prevent sensitive data from leaving the source server
+data_rules:
+  # Example rules (uncomment if needed):
+  # password_hash: unique_secret
+  # email: unique_email
+
+# Groups for syncing related tables together
+groups:
+  # Sync people management tables
+  people:
+    - people
+    - person_usernames
+
+  # Sync organization data
+  orgs:
+    - orgs
+    - teams
+
+  # Sync system configuration
+  config:
+    - settings
+    - event_types
+
+  # Sync user accounts (be careful with this!)
+  users:
+    - users
+
+# Schema sync options
+# When using --schema-only, pgsync will:
+# - Create missing tables
+# - Add missing columns
+# - Add missing indexes
+# - WARNING: It will NOT drop columns or tables that exist in destination but not in source
+#   This is a safety feature to prevent accidental data loss

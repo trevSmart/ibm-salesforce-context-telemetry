@@ -1,7 +1,7 @@
 /**
  * Script to list all indexes in the database
  * Useful for debugging duplicate index issues
- * 
+ *
  * Usage: node src/scripts/list-all-indexes.js
  */
 

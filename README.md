@@ -549,6 +549,7 @@ Complete documentation is available in the [`docs/`](./docs/) directory, includi
 - Integration instructions
 - Database configuration
 - Performance optimizations
+- [Database schema synchronization with pgsync](./docs/PGSYNC.md) - Apply schema changes to production without full deploy
 
 ## API Specification
 

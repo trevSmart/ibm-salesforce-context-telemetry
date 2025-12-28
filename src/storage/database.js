@@ -69,6 +69,17 @@ async function init() {
 			created_at TIMESTAMPTZ DEFAULT NOW()
 		);
 
+		CREATE TABLE IF NOT EXISTS teams (
+			id SERIAL PRIMARY KEY,
+			name TEXT NOT NULL UNIQUE,
+			color TEXT,
+			logo_url TEXT,
+			logo_data BYTEA,
+			logo_mime TEXT,
+			created_at TIMESTAMPTZ DEFAULT NOW(),
+			updated_at TIMESTAMPTZ DEFAULT NOW()
+		);
+
 		CREATE TABLE IF NOT EXISTS telemetry_events (
 			id SERIAL PRIMARY KEY,
 			timestamp TIMESTAMPTZ NOT NULL,
@@ -77,9 +88,21 @@ async function init() {
 			session_id TEXT,
 			parent_session_id TEXT,
 			user_id TEXT,
+			event_id INTEGER NOT NULL REFERENCES event_types(id),
 			data JSONB NOT NULL,
 			received_at TIMESTAMPTZ NOT NULL,
-			created_at TIMESTAMPTZ DEFAULT NOW()
+			created_at TIMESTAMPTZ DEFAULT NOW(),
+			error_message TEXT,
+			org_id TEXT,
+			user_name TEXT,
+			tool_name TEXT,
+			company_name TEXT,
+			deleted_at TIMESTAMPTZ,
+			team_id INTEGER REFERENCES teams(id),
+			event TEXT,
+			area TEXT,
+			success BOOLEAN,
+			telemetry_schema_version INTEGER
 		);
 
 		CREATE TABLE IF NOT EXISTS users (
@@ -88,14 +111,18 @@ async function init() {
 			password_hash TEXT NOT NULL,
 			role TEXT NOT NULL DEFAULT 'basic',
 			created_at TIMESTAMPTZ DEFAULT NOW(),
-			last_login TIMESTAMPTZ
+			last_login TIMESTAMPTZ,
+			team_id INTEGER REFERENCES teams(id)
 		);
 
 		CREATE TABLE IF NOT EXISTS orgs (
 			server_id TEXT PRIMARY KEY,
 			company_name TEXT,
 			updated_at TIMESTAMPTZ DEFAULT NOW(),
-			created_at TIMESTAMPTZ DEFAULT NOW()
+			created_at TIMESTAMPTZ DEFAULT NOW(),
+			team_id INTEGER REFERENCES teams(id),
+			alias TEXT,
+			color TEXT
 		);
 
 		CREATE TABLE IF NOT EXISTS settings (
@@ -122,8 +149,6 @@ async function init() {
 			created_at TIMESTAMPTZ DEFAULT NOW(),
 			UNIQUE(person_id, username)
 		);
-		CREATE INDEX IF NOT EXISTS idx_person_usernames_person_id ON person_usernames(person_id);
-		CREATE INDEX IF NOT EXISTS idx_person_usernames_username ON person_usernames(username);
 
 		CREATE TABLE IF NOT EXISTS user_logins (
 			id SERIAL PRIMARY KEY,
@@ -135,56 +160,77 @@ async function init() {
 			created_at TIMESTAMPTZ DEFAULT NOW()
 		);
 
-		-- CREATE INDEX IF NOT EXISTS idx_event_id ON telemetry_events(event_id); -- Created by migration
+		CREATE INDEX IF NOT EXISTS idx_event_id ON telemetry_events(event_id);
 		CREATE INDEX IF NOT EXISTS idx_timestamp ON telemetry_events(timestamp);
 		CREATE INDEX IF NOT EXISTS idx_server_id ON telemetry_events(server_id);
 		CREATE INDEX IF NOT EXISTS idx_created_at ON telemetry_events(created_at);
 		CREATE INDEX IF NOT EXISTS idx_session_id ON telemetry_events(session_id);
-		CREATE INDEX IF NOT EXISTS idx_user_id ON telemetry_events(user_id);
 		CREATE INDEX IF NOT EXISTS idx_parent_session_id ON telemetry_events(parent_session_id);
-		CREATE INDEX IF NOT EXISTS idx_username ON users(username);
-		-- CREATE INDEX IF NOT EXISTS idx_event_id_created_at ON telemetry_events(event_id, created_at); -- Created by migration
+		CREATE INDEX IF NOT EXISTS idx_event_id_created_at ON telemetry_events(event_id, created_at);
 		CREATE INDEX IF NOT EXISTS idx_user_created_at ON telemetry_events(user_id, created_at);
 		CREATE INDEX IF NOT EXISTS idx_user_logins_username ON user_logins(username);
 		CREATE INDEX IF NOT EXISTS idx_user_logins_created_at ON user_logins(created_at);
 		CREATE INDEX IF NOT EXISTS idx_user_logins_successful ON user_logins(successful);
+
+		CREATE TABLE IF NOT EXISTS team_event_users (
+			id SERIAL PRIMARY KEY,
+			team_id INTEGER NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+			user_name TEXT NOT NULL,
+			created_at TIMESTAMPTZ DEFAULT NOW(),
+			UNIQUE(team_id, user_name)
+		);
+
+		CREATE TABLE IF NOT EXISTS user_event_stats (
+			user_id TEXT PRIMARY KEY,
+			event_count INTEGER NOT NULL DEFAULT 0,
+			last_event TIMESTAMPTZ,
+			display_name TEXT
+		);
+		CREATE INDEX IF NOT EXISTS idx_user_event_stats_last_event ON user_event_stats(last_event);
+
+		CREATE TABLE IF NOT EXISTS org_event_stats (
+			org_id TEXT PRIMARY KEY,
+			event_count INTEGER NOT NULL DEFAULT 0,
+			last_event TIMESTAMPTZ
+		);
+		CREATE INDEX IF NOT EXISTS idx_org_event_stats_last_event ON org_event_stats(last_event);
+
+		CREATE TABLE IF NOT EXISTS remember_tokens (
+			id SERIAL PRIMARY KEY,
+			user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+			token_hash TEXT NOT NULL UNIQUE,
+			expires_at TIMESTAMPTZ NOT NULL,
+			revoked_at TIMESTAMPTZ,
+			user_agent TEXT,
+			ip_address TEXT,
+			created_at TIMESTAMPTZ DEFAULT NOW()
+		);
+		CREATE INDEX IF NOT EXISTS idx_remember_user_id ON remember_tokens(user_id);
+		CREATE INDEX IF NOT EXISTS idx_remember_expires_at ON remember_tokens(expires_at);
+
+		CREATE INDEX IF NOT EXISTS idx_error_message ON telemetry_events(error_message);
+		CREATE INDEX IF NOT EXISTS idx_team_id_created_at ON telemetry_events(team_id, created_at);
+		CREATE INDEX IF NOT EXISTS idx_user_name_created_at ON telemetry_events(user_name, created_at);
+		CREATE INDEX IF NOT EXISTS idx_org_id_created_at ON telemetry_events(org_id, created_at);
+		CREATE INDEX IF NOT EXISTS idx_tool_name_created_at ON telemetry_events(tool_name, created_at);
+		CREATE INDEX IF NOT EXISTS idx_company_name_created_at ON telemetry_events(company_name, created_at);
+		CREATE INDEX IF NOT EXISTS idx_user_name_tool_name_created_at ON telemetry_events(user_name, tool_name, created_at);
+		CREATE INDEX IF NOT EXISTS idx_org_id_tool_name_created_at ON telemetry_events(org_id, tool_name, created_at);
+		CREATE INDEX IF NOT EXISTS idx_event_created_at ON telemetry_events(event, created_at);
+		CREATE INDEX IF NOT EXISTS idx_deleted_at_created_at ON telemetry_events(deleted_at, created_at);
+		CREATE INDEX IF NOT EXISTS idx_data_gin ON telemetry_events USING GIN (data);
+		CREATE INDEX IF NOT EXISTS idx_area ON telemetry_events(area);
+		CREATE INDEX IF NOT EXISTS idx_success ON telemetry_events(success);
+		CREATE INDEX IF NOT EXISTS idx_telemetry_schema_version ON telemetry_events(telemetry_schema_version);
+		CREATE INDEX IF NOT EXISTS idx_orgs_team_id ON orgs(team_id);
+		CREATE INDEX IF NOT EXISTS idx_orgs_alias ON orgs(alias);
+		CREATE INDEX IF NOT EXISTS idx_users_team_id ON users(team_id);
 	`);
 
 	db = pool;
 
-		await ensureUserRoleColumn();
-		await ensureTelemetryParentSessionColumn();
-		// ensureErrorMessageColumn must run before ensureDenormalizedColumns
-		// because populateDenormalizedColumns references the error_message column
-		await ensureErrorMessageColumn();
-		await ensureDenormalizedColumns();
-		await ensureSchemaV2Columns();
-
-		// Migrate existing events asynchronously (doesn't block startup)
-		migrateExistingEventsToSchemaV2().catch(err => {
-			console.warn('Background migration of existing events failed:', err);
-		});
-
-		await ensurePeopleInitialsColumn();
 		await ensureEventTypesInitialized();
-		await ensureEventMigration(); // Execute migration before creating indexes that reference event_id
-		await ensureEventStatsTables();
-		await ensureTeamsAndOrgsTables();
-		await ensureRememberTokensTable();
 		await ensureCopilotUser();
-}
-
-async function ensureErrorMessageColumn() {
-	if (!db) {
-		return;
-	}
-
-	try {
-		await db.query('ALTER TABLE IF EXISTS telemetry_events ADD COLUMN IF NOT EXISTS error_message TEXT');
-		await db.query('CREATE INDEX IF NOT EXISTS idx_error_message ON telemetry_events(error_message)');
-	} catch (error) {
-		console.error('Error ensuring error_message column:', error);
-	}
 }
 
 async function getEventTypeId(eventName) {
@@ -244,133 +290,6 @@ async function ensureEventTypesInitialized() {
 		}
 	} catch (error) {
 		console.error('Error initializing event types:', error);
-	}
-}
-
-async function ensureEventMigration() {
-	if (!db) {
-		return;
-	}
-
-	try {
-		// Check if migration is needed
-		const columnsResult = await db.query(`
-			SELECT column_name
-			FROM information_schema.columns
-			WHERE table_name = 'telemetry_events' AND table_schema = 'public'
-		`);
-		const columnNames = columnsResult.rows.map(row => row.column_name);
-
-		const hasEventColumn = columnNames.includes('event');
-		const hasEventIdColumn = columnNames.includes('event_id');
-
-		if (!hasEventIdColumn) {
-			// Log total rows in telemetry_events
-			await db.query('SELECT COUNT(*) as count FROM telemetry_events');
-
-			// Ensure event_types table has data before migration
-			// This is a safety check - ensureEventTypesInitialized() should have already run
-			const eventTypesCount = await db.query('SELECT COUNT(*) as count FROM event_types');
-			if (eventTypesCount.rows[0].count === 0) {
-				const eventTypes = [
-					{name: 'tool_call', description: 'Tool call event'},
-					{name: 'tool_error', description: 'Tool error event'},
-					{name: 'session_start', description: 'Session start event'},
-					{name: 'session_end', description: 'Session end event'},
-					{name: 'error', description: 'General error event'},
-					{name: 'custom', description: 'Custom event'}
-				];
-				for (const eventType of eventTypes) {
-					await db.query('INSERT INTO event_types (name, description) VALUES ($1, $2) ON CONFLICT (name) DO NOTHING', [eventType.name, eventType.description]);
-				}
-			}
-
-			// Start transaction
-			await db.query('BEGIN');
-
-			try {
-				// Add event_id column
-				await db.query('ALTER TABLE telemetry_events ADD COLUMN event_id INTEGER REFERENCES event_types(id)');
-
-				// Migrate data from event to event_id if event column exists
-				if (hasEventColumn) {
-					await db.query(`
-						UPDATE telemetry_events
-						SET event_id = event_types.id
-						FROM event_types
-						WHERE event_types.name = telemetry_events.event
-						AND telemetry_events.event_id IS NULL
-					`);
-				}
-
-				// Check if there are still NULL event_id values that need a default (regardless of event column)
-				const nullCountResult = await db.query('SELECT COUNT(*) as count FROM telemetry_events WHERE event_id IS NULL');
-				const nullCount = nullCountResult.rows[0].count;
-				if (nullCount > 0) {
-					// Assign default event type (custom) for NULL values
-					const defaultEventResult = await db.query('SELECT id FROM event_types WHERE name = $1', ['custom']);
-					if (defaultEventResult.rows.length > 0) {
-						const defaultEventId = defaultEventResult.rows[0].id;
-						await db.query('UPDATE telemetry_events SET event_id = $1 WHERE event_id IS NULL', [defaultEventId]);
-					} else {
-						console.error('Could not find default event type "custom"');
-						throw new Error('Default event type "custom" not found in event_types table');
-					}
-				} else {
-					console.log('All event_id values are already set, no default assignment needed');
-				}
-
-				// Drop old indexes that reference the event column
-				const indexesToDrop = ['idx_event', 'idx_event_created_at', 'idx_timestamp_event'];
-				for (const indexName of indexesToDrop) {
-					try {
-						await db.query(`DROP INDEX IF EXISTS ${indexName}`);
-					} catch (e) {
-						console.warn(`Could not drop index ${indexName}:`, e.message);
-					}
-				}
-
-				// Drop old event column if it exists
-				if (hasEventColumn) {
-					await db.query('ALTER TABLE telemetry_events DROP COLUMN event');
-				}
-
-				// Make event_id NOT NULL (after ensuring no NULL values exist)
-				const nullCheckResult = await db.query('SELECT COUNT(*) as count FROM telemetry_events WHERE event_id IS NULL');
-				if (nullCheckResult.rows[0].count > 0) {
-					throw new Error(`Cannot make event_id NOT NULL: ${nullCheckResult.rows[0].count} rows still have NULL values`);
-				}
-				await db.query('ALTER TABLE telemetry_events ALTER COLUMN event_id SET NOT NULL');
-
-				// Recreate indexes
-				await db.query('CREATE INDEX IF NOT EXISTS idx_event_id ON telemetry_events(event_id)');
-				await db.query('CREATE INDEX IF NOT EXISTS idx_event_id_created_at ON telemetry_events(event_id, created_at)');
-
-				await db.query('COMMIT');
-			} catch (error) {
-				await db.query('ROLLBACK');
-				throw error;
-			}
-		} else if (hasEventIdColumn) {
-			console.log('Event migration already completed - event_id column exists');
-		} else {
-			console.log('Unexpected state: event_id column not found');
-		}
-	} catch (error) {
-		console.error('Error during event migration:', error);
-		throw error; // Re-throw to fail initialization if migration fails
-	}
-}
-
-async function ensurePeopleInitialsColumn() {
-	if (!db) {
-		return;
-	}
-
-	try {
-		await db.query('ALTER TABLE IF EXISTS people ADD COLUMN IF NOT EXISTS initials TEXT');
-	} catch (error) {
-		console.error('Error ensuring initials column in people table:', error);
 	}
 }
 
@@ -2092,18 +2011,6 @@ function getSqliteDb() {
 	return null;
 }
 
-async function ensureUserRoleColumn() {
-	if (!db) {
-		return;
-	}
-
-	try {
-		await db.query('ALTER TABLE IF EXISTS users ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT \'basic\'');
-	} catch (error) {
-		console.error('Error ensuring user role column:', error);
-	}
-}
-
 /**
  * Get top users by event volume for the last N days (rolling window)
  * @param {number} limit - Maximum number of users to return (default 50)
@@ -2380,257 +2287,6 @@ async function getOrgTeamMappingsFromTeamsTable() {
 	return [];
 }
 
-async function ensureTelemetryParentSessionColumn() {
-	if (!db) {
-		return;
-	}
-
-	try {
-		await db.query('ALTER TABLE IF EXISTS telemetry_events ADD COLUMN IF NOT EXISTS parent_session_id TEXT');
-		await db.query('CREATE INDEX IF NOT EXISTS idx_parent_session_id ON telemetry_events(parent_session_id)');
-	} catch (error) {
-		console.error('Error ensuring telemetry parent_session_id column:', error);
-	}
-}
-
-/**
- * Ensure denormalized columns exist in telemetry_events table
- * Adds org_id, user_name, and tool_name columns for faster queries
- */
-async function ensureDenormalizedColumns() {
-	if (!db) {
-		return;
-	}
-
-	try {
-		// PostgreSQL supports IF NOT EXISTS in ALTER TABLE
-		await db.query('ALTER TABLE IF EXISTS telemetry_events ADD COLUMN IF NOT EXISTS org_id TEXT');
-		await db.query('ALTER TABLE IF EXISTS telemetry_events ADD COLUMN IF NOT EXISTS user_name TEXT');
-		await db.query('ALTER TABLE IF EXISTS telemetry_events ADD COLUMN IF NOT EXISTS tool_name TEXT');
-		await db.query('ALTER TABLE IF EXISTS telemetry_events ADD COLUMN IF NOT EXISTS company_name TEXT');
-		await db.query('ALTER TABLE IF EXISTS telemetry_events ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ');
-		await db.query('ALTER TABLE IF EXISTS telemetry_events ADD COLUMN IF NOT EXISTS team_id INTEGER REFERENCES teams(id)');
-		await db.query('ALTER TABLE IF EXISTS telemetry_events ADD COLUMN IF NOT EXISTS event TEXT');
-		await db.query('CREATE INDEX IF NOT EXISTS idx_deleted_at ON telemetry_events(deleted_at)');
-		await db.query('CREATE INDEX IF NOT EXISTS idx_team_id ON telemetry_events(team_id)');
-		await db.query('CREATE INDEX IF NOT EXISTS idx_team_id_created_at ON telemetry_events(team_id, created_at)');
-
-		// Create indexes for denormalized columns (if they don't exist)
-		await db.query('CREATE INDEX IF NOT EXISTS idx_user_name_created_at ON telemetry_events(user_name, created_at)');
-		await db.query('CREATE INDEX IF NOT EXISTS idx_org_id_created_at ON telemetry_events(org_id, created_at)');
-		await db.query('CREATE INDEX IF NOT EXISTS idx_tool_name_created_at ON telemetry_events(tool_name, created_at)');
-		await db.query('CREATE INDEX IF NOT EXISTS idx_company_name_created_at ON telemetry_events(company_name, created_at)');
-		await db.query('CREATE INDEX IF NOT EXISTS idx_user_name_tool_name_created_at ON telemetry_events(user_name, tool_name, created_at)');
-		await db.query('CREATE INDEX IF NOT EXISTS idx_org_id_tool_name_created_at ON telemetry_events(org_id, tool_name, created_at)');
-		await db.query('CREATE INDEX IF NOT EXISTS idx_event ON telemetry_events(event)');
-		await db.query('CREATE INDEX IF NOT EXISTS idx_event_created_at ON telemetry_events(event, created_at)');
-		// Composite index for common query pattern: WHERE deleted_at IS NULL ORDER BY created_at DESC
-		// This significantly improves performance for pagination queries
-		await db.query('CREATE INDEX IF NOT EXISTS idx_deleted_at_created_at ON telemetry_events(deleted_at, created_at)');
-
-		// GIN index for JSONB queries (PostgreSQL only)
-		await db.query('CREATE INDEX IF NOT EXISTS idx_data_gin ON telemetry_events USING GIN (data)');
-
-		// Populate existing data if columns were just added
-		await populateDenormalizedColumns();
-	} catch (error) {
-		console.error('Error ensuring denormalized columns:', error);
-	}
-}
-
-/**
- * Omple les columnes denormalitzades amb dades JSON existents als registres
- * Aquesta funció s'executa després d'afegir les columnes per emplenar dades existents
- *
- * Aquest procés és necessari quan s'afegeixen noves columnes denormalitzades a la taula,
- * ja que els registres existents tenen aquestes columnes buides. Extreu informació
- * del camp JSON 'data' i la guarda directament a les columnes per millorar el rendiment de consultes.
- */
-async function populateDenormalizedColumns() {
-	if (!db) {
-		return;
-	}
-
-	try {
-		// Verifica si cal emplenar dades (només si hi ha registres amb valors NULL a les noves columnes)
-		const result = await db.query(`
-			SELECT COUNT(*) as count
-			FROM telemetry_events
-			WHERE (org_id IS NULL OR user_name IS NULL OR tool_name IS NULL OR team_id IS NULL)
-				AND data IS NOT NULL
-			LIMIT 1
-		`);
-		const needsPopulation = result.rows.length > 0 && Number.parseInt(result.rows[0].count, 10) > 0;
-
-		if (!needsPopulation) {
-			return; // No data to populate
-		}
-
-
-		// Per PostgreSQL, usa una sola consulta UPDATE amb extracció JSON nativa
-			// Això és més eficient que processar registre a registre
-			await db.query(`
-        UPDATE telemetry_events
-        SET
-          -- Extreu org_id de diverses ubicacions possibles al JSON
-          org_id = COALESCE(
-            data->>'orgId',
-            data->'state'->'org'->>'id'
-          ),
-          -- Extreu user_name de diverses ubicacions possibles
-          user_name = COALESCE(
-            data->>'userName',
-            data->>'user_name',
-            data->'user'->>'name'
-          ),
-          -- Extreu tool_name
-          tool_name = COALESCE(
-            data->>'toolName',
-            data->>'tool'
-          ),
-          -- Extreu company_name dels nous formats
-          company_name = COALESCE(
-            data->'state'->'org'->'companyDetails'->>'Name',
-            data->'companyDetails'->>'Name'
-          ),
-          -- Extreu error_message per events tool_error
-          error_message = COALESCE(
-            data->>'errorMessage',
-            data->'error'->>'message'
-          )
-        WHERE (org_id IS NULL OR user_name IS NULL OR tool_name IS NULL OR error_message IS NULL)
-          AND data IS NOT NULL
-      `);
-
-		// Actualitza team_id basant-se en org_id per registres que el necessiten
-		await db.query(`
-			UPDATE telemetry_events
-			SET team_id = orgs.team_id
-			FROM orgs
-			WHERE telemetry_events.org_id = orgs.server_id
-				AND telemetry_events.team_id IS NULL
-				AND telemetry_events.org_id IS NOT NULL
-		`);
-
-		// Populate event column from event_types table based on event_id
-		// This runs separately from the JSON-based population above since event comes from a different table
-		const eventCheck = await db.query('SELECT COUNT(*) as count FROM telemetry_events WHERE event IS NULL AND event_id IS NOT NULL LIMIT 1');
-		if (eventCheck.rows.length > 0 && Number.parseInt(eventCheck.rows[0].count, 10) > 0) {
-			await db.query(`
-				UPDATE telemetry_events
-				SET event = event_types.name
-				FROM event_types
-				WHERE telemetry_events.event_id = event_types.id
-					AND telemetry_events.event IS NULL
-			`);
-		}
-
-	} catch (error) {
-		console.error('Error emplenant columnes denormalitzades:', error);
-	}
-}
-
-/**
- * Adds schema v2 columns to telemetry_events table for better query performance
- * - area: event area ('tool', 'session', 'general')
- * - success: operation success status
- * - telemetry_schema_version: original schema version (1 or 2)
- */
-async function ensureSchemaV2Columns() {
-	if (!db) {
-		return;
-	}
-
-	try {
-		await db.query('ALTER TABLE IF EXISTS telemetry_events ADD COLUMN IF NOT EXISTS area TEXT');
-		await db.query('CREATE INDEX IF NOT EXISTS idx_area ON telemetry_events(area)');
-		await db.query('ALTER TABLE IF EXISTS telemetry_events ADD COLUMN IF NOT EXISTS success BOOLEAN');
-		await db.query('CREATE INDEX IF NOT EXISTS idx_success ON telemetry_events(success)');
-		await db.query('ALTER TABLE IF EXISTS telemetry_events ADD COLUMN IF NOT EXISTS telemetry_schema_version INTEGER');
-		await db.query('CREATE INDEX IF NOT EXISTS idx_telemetry_schema_version ON telemetry_events(telemetry_schema_version)');
-	} catch (error) {
-		console.error('Error ensuring schema v2 columns:', error);
-	}
-}
-
-/**
- * Migrate existing events to schema v2 by populating area, success, and telemetry_schema_version columns
- * This is optional but recommended for better query performance and consistent data
- */
-async function migrateExistingEventsToSchemaV2() {
-	if (!db) {
-		return;
-	}
-
-	try {
-		// PostgreSQL: use UPDATE with JOIN for efficiency
-		const result = await db.query(`
-			UPDATE telemetry_events e
-			SET
-				area = CASE et.name
-					WHEN 'tool_call' THEN 'tool'
-					WHEN 'tool_error' THEN 'tool'
-					WHEN 'session_start' THEN 'session'
-					WHEN 'session_end' THEN 'session'
-					WHEN 'error' THEN 'general'
-					ELSE 'general'
-				END,
-				success = CASE et.name
-					WHEN 'tool_call' THEN true
-					WHEN 'session_start' THEN true
-					WHEN 'session_end' THEN true
-					WHEN 'custom' THEN true
-					ELSE false
-				END,
-				telemetry_schema_version = 1
-			FROM event_types et
-			WHERE e.event_id = et.id
-				AND (e.area IS NULL OR e.telemetry_schema_version IS NULL)
-		`);
-
-		if (result.rowCount > 0) {
-			console.log(`✅ Migration complete: ${result.rowCount} events migrated to schema v2`);
-		}
-	} catch (error) {
-		console.error('Error migrating existing events to schema v2:', error);
-		// Don't throw error - migration is optional
-		console.warn('Continuing without migration - new events will have schema v2 fields, old events will have NULL');
-	}
-}
-
-/**
- * Ensure event statistics tables exist and are backfilled
- * - user_event_stats: aggregated counters per user_id
- * - org_event_stats: aggregated counters per org_id (for team calculations)
- */
-async function ensureEventStatsTables() {
-	if (!db) {
-		return;
-	}
-
-	try {
-		await db.query(`
-			CREATE TABLE IF NOT EXISTS user_event_stats (
-				user_id TEXT PRIMARY KEY,
-				event_count INTEGER NOT NULL DEFAULT 0,
-				last_event TIMESTAMPTZ,
-				display_name TEXT
-			);
-			CREATE INDEX IF NOT EXISTS idx_user_event_stats_last_event ON user_event_stats(last_event);
-			CREATE TABLE IF NOT EXISTS org_event_stats (
-				org_id TEXT PRIMARY KEY,
-				event_count INTEGER NOT NULL DEFAULT 0,
-				last_event TIMESTAMPTZ
-			);
-			CREATE INDEX IF NOT EXISTS idx_org_event_stats_last_event ON org_event_stats(last_event);
-		`);
-
-		await backfillEventStatsIfEmpty();
-	} catch (error) {
-		console.error('Error ensuring event stats tables:', error);
-	}
-}
-
 /**
  * Convert any timestamp-ish input to ISO string for consistent ordering
  */
@@ -2646,71 +2302,6 @@ function normalizeStatsTimestamp(value) {
 		return Number.isNaN(date.getTime()) ? null : date.toISOString();
 	} catch {
 		return null;
-	}
-}
-
-/**
- * Backfill stats tables once so we start from the real totals
- */
-async function backfillEventStatsIfEmpty() {
-	if (!db) {
-		return;
-	}
-
-	try {
-		const hasUserStats = (await db.query('SELECT COUNT(*) as count FROM user_event_stats')).rows.some(row => Number.parseInt(row.count, 10) > 0);
-		const hasOrgStats = (await db.query('SELECT COUNT(*) as count FROM org_event_stats')).rows.some(row => Number.parseInt(row.count, 10) > 0);
-
-		if (hasUserStats && hasOrgStats) {
-			return;
-		}
-
-		if (!hasUserStats) {
-				await db.query(`
-          INSERT INTO user_event_stats (user_id, event_count, last_event, display_name)
-          SELECT
-            user_id,
-            COUNT(*) AS event_count,
-            MAX(timestamp) AS last_event,
-            (
-              SELECT user_name
-              FROM telemetry_events te2
-              WHERE te2.user_id = te.user_id
-                AND te2.user_name IS NOT NULL
-                AND TRIM(te2.user_name) != ''
-              ORDER BY te2.timestamp DESC
-              LIMIT 1
-            ) AS display_name
-          FROM telemetry_events te
-          WHERE user_id IS NOT NULL
-            AND TRIM(user_id) != ''
-          GROUP BY user_id
-          ON CONFLICT (user_id) DO UPDATE SET
-            event_count = EXCLUDED.event_count,
-            last_event = EXCLUDED.last_event,
-            display_name = COALESCE(EXCLUDED.display_name, user_event_stats.display_name)
-        `);
-			}
-
-		if (!hasOrgStats) {
-			await db.query(`
-				INSERT INTO org_event_stats (org_id, event_count, last_event)
-				SELECT
-					org_id,
-					COUNT(*) AS event_count,
-					MAX(timestamp) AS last_event
-				FROM telemetry_events
-				WHERE org_id IS NOT NULL
-					AND TRIM(org_id) != ''
-					AND deleted_at IS NULL
-				GROUP BY org_id
-				ON CONFLICT (org_id) DO UPDATE SET
-					event_count = EXCLUDED.event_count,
-					last_event = EXCLUDED.last_event
-			`);
-		}
-	} catch (error) {
-		console.error('Error backfilling event stats tables:', error);
 	}
 }
 
@@ -3055,75 +2646,6 @@ async function saveSetting(key, value) {
  * Creates teams table with id, name (unique), color, logo_url, timestamps
  * Adds team_id column to orgs and users tables
  */
-async function ensureTeamsAndOrgsTables() {
-	if (!db) {
-		return;
-	}
-
-	try {
-		// Create teams table
-			await db.query(`
-        CREATE TABLE IF NOT EXISTS teams (
-          id SERIAL PRIMARY KEY,
-          name TEXT NOT NULL UNIQUE,
-          color TEXT,
-          logo_url TEXT,
-          logo_data BYTEA,
-          logo_mime TEXT,
-          created_at TIMESTAMPTZ DEFAULT NOW(),
-          updated_at TIMESTAMPTZ DEFAULT NOW()
-        );
-        CREATE INDEX IF NOT EXISTS idx_teams_name ON teams(name);
-      `);
-
-			// Add logo_data and logo_mime columns if they don't exist
-			await db.query(`
-        ALTER TABLE teams
-        ADD COLUMN IF NOT EXISTS logo_data BYTEA;
-        ALTER TABLE teams
-        ADD COLUMN IF NOT EXISTS logo_mime TEXT;
-      `);
-
-			// Add team_id to orgs table if it doesn't exist
-			await db.query(`
-        ALTER TABLE IF EXISTS orgs
-        ADD COLUMN IF NOT EXISTS team_id INTEGER REFERENCES teams(id);
-        CREATE INDEX IF NOT EXISTS idx_orgs_team_id ON orgs(team_id);
-      `);
-
-			// Add alias and color to orgs table if they don't exist
-			await db.query(`
-        ALTER TABLE IF EXISTS orgs
-        ADD COLUMN IF NOT EXISTS alias TEXT;
-        CREATE INDEX IF NOT EXISTS idx_orgs_alias ON orgs(alias);
-        ALTER TABLE IF EXISTS orgs
-        ADD COLUMN IF NOT EXISTS color TEXT;
-      `);
-
-			// Add team_id to users table if it doesn't exist (for application users)
-			await db.query(`
-        ALTER TABLE IF EXISTS users
-        ADD COLUMN IF NOT EXISTS team_id INTEGER REFERENCES teams(id);
-        CREATE INDEX IF NOT EXISTS idx_users_team_id ON users(team_id);
-      `);
-
-		// Create team_event_users table for mapping event log users to teams
-		await db.query(`
-			CREATE TABLE IF NOT EXISTS team_event_users (
-				id SERIAL PRIMARY KEY,
-				team_id INTEGER NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
-				user_name TEXT NOT NULL,
-				created_at TIMESTAMPTZ DEFAULT NOW(),
-				UNIQUE(team_id, user_name)
-			);
-			CREATE INDEX IF NOT EXISTS idx_team_event_users_team_id ON team_event_users(team_id);
-			CREATE INDEX IF NOT EXISTS idx_team_event_users_user_name ON team_event_users(user_name);
-		`);
-	} catch (error) {
-		console.error('Error ensuring teams and orgs tables:', error);
-	}
-}
-
 /**
  * Team management functions
  */
@@ -3854,33 +3376,6 @@ async function assignUserToTeam(userId, teamId) {
 /**
  * Ensure remember_tokens table exists
  */
-async function ensureRememberTokensTable() {
-	if (!db) {
-		return;
-	}
-
-	try {
-		await db.query(`
-			CREATE TABLE IF NOT EXISTS remember_tokens (
-				id SERIAL PRIMARY KEY,
-				user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-				token_hash TEXT NOT NULL UNIQUE,
-				expires_at TIMESTAMPTZ NOT NULL,
-				revoked_at TIMESTAMPTZ,
-				user_agent TEXT,
-				ip_address TEXT,
-				created_at TIMESTAMPTZ DEFAULT NOW()
-			);
-
-			CREATE INDEX IF NOT EXISTS idx_remember_token_hash ON remember_tokens(token_hash);
-			CREATE INDEX IF NOT EXISTS idx_remember_user_id ON remember_tokens(user_id);
-			CREATE INDEX IF NOT EXISTS idx_remember_expires_at ON remember_tokens(expires_at);
-		`);
-	} catch (error) {
-		console.error('Error ensuring remember_tokens table:', error);
-	}
-}
-
 /**
  * Ensure Copilot user exists if COPILOT_USERNAME and COPILOT_PASSWORD are set
  * This is useful for GitHub Copilot environments where the database needs to be initialized

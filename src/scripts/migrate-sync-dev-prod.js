@@ -1,18 +1,18 @@
 /**
  * Complete migration script to sync PROD with DEV
- * 
+ *
  * This script performs all the migrations needed to sync PROD with DEV:
  * 1. Remove duplicate indexes
  * 2. Remove unused columns (people.notes, people.updated_at, teams.logo_filename)
  * 3. Update users.role default value to 'basic'
  * 4. Add missing indexes
- * 
- * Usage: 
+ *
+ * Usage:
  *   DATABASE_URL=<prod_url> node src/scripts/migrate-sync-dev-prod.js [--drop-duplicates]
- * 
+ *
  * Options:
  *   --drop-duplicates: Also drop duplicate indexes (default: only report)
- * 
+ *
  * IMPORTANT: Make sure to backup PROD before running this script!
  */
 
@@ -54,7 +54,7 @@ async function main() {
 		console.log('📋 Step 1: Checking for duplicate indexes...\n');
 		const exactDuplicates = await findExactDuplicates(dbInstance);
 		const coveredIndexes = await findCoveredIndexes(dbInstance);
-		
+
 		const indexesToDrop = new Set();
 		exactDuplicates.forEach(dup => {
 			[dup.idx2, dup.idx3, dup.idx4, dup.idx5]
@@ -123,17 +123,17 @@ async function main() {
 
 		// Step 4: Add missing indexes
 		console.log('📋 Step 4: Adding missing indexes...\n');
-		
+
 		// person_usernames.person_usernames_person_id_username_key
 		try {
 			const checkConstraint = await dbInstance.query(`
-				SELECT 1 FROM pg_constraint 
+				SELECT 1 FROM pg_constraint
 				WHERE conname = 'person_usernames_person_id_username_key'
 			`);
 			if (checkConstraint.rows.length === 0) {
 				await dbInstance.query(`
-					ALTER TABLE person_usernames 
-					ADD CONSTRAINT person_usernames_person_id_username_key 
+					ALTER TABLE person_usernames
+					ADD CONSTRAINT person_usernames_person_id_username_key
 					UNIQUE (person_id, username);
 				`);
 				console.log('   ✓ Added constraint: person_usernames.person_usernames_person_id_username_key');
@@ -194,7 +194,7 @@ async function main() {
 		// person_usernames.person_usernames_username_org_id_key
 		try {
 			const checkConstraint = await dbInstance.query(`
-				SELECT 1 FROM pg_constraint 
+				SELECT 1 FROM pg_constraint
 				WHERE conname = 'person_usernames_username_org_id_key'
 			`);
 			if (checkConstraint.rows.length === 0) {
@@ -209,8 +209,8 @@ async function main() {
 					console.log('   ℹ️  Please clean up duplicates before adding this constraint');
 				} else {
 					await dbInstance.query(`
-						ALTER TABLE person_usernames 
-						ADD CONSTRAINT person_usernames_username_org_id_key 
+						ALTER TABLE person_usernames
+						ADD CONSTRAINT person_usernames_username_org_id_key
 						UNIQUE (username, org_id);
 					`);
 					console.log('   ✓ Added constraint: person_usernames.person_usernames_username_org_id_key');

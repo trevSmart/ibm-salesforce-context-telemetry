@@ -1,11 +1,11 @@
 /**
  * Migration script to remove unused columns from production database
- * 
+ *
  * Removes the following columns that are not used in the code:
  * - people.notes
  * - people.updated_at
  * - teams.logo_filename
- * 
+ *
  * Usage: node src/scripts/migrate-remove-unused-columns.js
  */
 

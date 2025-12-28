@@ -1,9 +1,9 @@
 /**
  * Script to find duplicate indexes using PgHero's detection method
- * 
+ *
  * PgHero uses a specific query to detect duplicate indexes that are covered
  * by other indexes. This script replicates that logic.
- * 
+ *
  * Usage: node src/scripts/find-duplicates-pghero-style.js
  */
 
@@ -98,7 +98,7 @@ async function main() {
 				covering.index_name AS covering_index,
 				covered.index_def AS duplicate_def
 			FROM index_column_lists covered
-			JOIN index_column_lists covering 
+			JOIN index_column_lists covering
 				ON covered.table_name = covering.table_name
 				AND covered.index_name != covering.index_name
 				AND covered.column_list <@ covering.column_list
@@ -112,7 +112,7 @@ async function main() {
 
 		if (result.rows.length > 0) {
 			console.log(`⚠️  Found ${result.rows.length} duplicate index(es):\n`);
-			
+
 			result.rows.forEach((row, idx) => {
 				console.log(`${idx + 1}. ${row.table_name}.${row.duplicate_index}`);
 				console.log(`   Size: ${row.size}`);

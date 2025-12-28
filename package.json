@@ -22,6 +22,7 @@
     "update-admin-role": "node src/scripts/update-admin-role.js",
     "export-database": "node src/scripts/export-database.js",
     "import-database": "node src/scripts/import-database.js",
+    "sync-schema-prod": "node src/scripts/sync-schema-to-prod.js",
     "pghero": "./dev/pghero-local/start.sh",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"

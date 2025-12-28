@@ -1,9 +1,9 @@
 /**
  * Migration script to update users.role default value
- * 
+ *
  * Changes the default value of users.role from 'advanced' to 'basic' in production
  * Note: This only affects new records, not existing ones
- * 
+ *
  * Usage: node src/scripts/migrate-update-users-role-default.js
  */
 

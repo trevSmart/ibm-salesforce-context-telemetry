@@ -1,13 +1,13 @@
 /**
  * Migration script to add missing indexes to production database
- * 
+ *
  * Adds the following indexes that are missing in PROD:
  * - person_usernames.person_usernames_person_id_username_key (UNIQUE constraint)
  * - people.idx_person_email (if missing)
  * - people.idx_person_name (if missing)
  * - person_usernames.idx_person_username (if missing)
  * - person_usernames.person_usernames_username_org_id_key (UNIQUE constraint, if missing)
- * 
+ *
  * Usage: node src/scripts/migrate-add-missing-indexes-prod.js
  */
 
@@ -34,14 +34,14 @@ async function main() {
 		// Check and add person_usernames.person_usernames_person_id_username_key
 		try {
 			const checkConstraint = await dbInstance.query(`
-				SELECT 1 FROM pg_constraint 
+				SELECT 1 FROM pg_constraint
 				WHERE conname = 'person_usernames_person_id_username_key'
 			`);
-			
+
 			if (checkConstraint.rows.length === 0) {
 				await dbInstance.query(`
-					ALTER TABLE person_usernames 
-					ADD CONSTRAINT person_usernames_person_id_username_key 
+					ALTER TABLE person_usernames
+					ADD CONSTRAINT person_usernames_person_id_username_key
 					UNIQUE (person_id, username);
 				`);
 				console.log('   ✓ Added constraint: person_usernames.person_usernames_person_id_username_key');
@@ -55,13 +55,13 @@ async function main() {
 		// Check and add people.idx_person_email
 		try {
 			const checkIndex = await dbInstance.query(`
-				SELECT 1 FROM pg_indexes 
+				SELECT 1 FROM pg_indexes
 				WHERE indexname = 'idx_person_email'
 			`);
-			
+
 			if (checkIndex.rows.length === 0) {
 				await dbInstance.query(`
-					CREATE INDEX idx_person_email ON people(email) 
+					CREATE INDEX idx_person_email ON people(email)
 					WHERE email IS NOT NULL;
 				`);
 				console.log('   ✓ Added index: people.idx_person_email');
@@ -75,10 +75,10 @@ async function main() {
 		// Check and add people.idx_person_name
 		try {
 			const checkIndex = await dbInstance.query(`
-				SELECT 1 FROM pg_indexes 
+				SELECT 1 FROM pg_indexes
 				WHERE indexname = 'idx_person_name'
 			`);
-			
+
 			if (checkIndex.rows.length === 0) {
 				await dbInstance.query(`
 					CREATE INDEX idx_person_name ON people(name);
@@ -94,10 +94,10 @@ async function main() {
 		// Check and add person_usernames.idx_person_username
 		try {
 			const checkIndex = await dbInstance.query(`
-				SELECT 1 FROM pg_indexes 
+				SELECT 1 FROM pg_indexes
 				WHERE indexname = 'idx_person_username'
 			`);
-			
+
 			if (checkIndex.rows.length === 0) {
 				await dbInstance.query(`
 					CREATE INDEX idx_person_username ON person_usernames(username);
@@ -113,10 +113,10 @@ async function main() {
 		// Check and add person_usernames.person_usernames_username_org_id_key
 		try {
 			const checkConstraint = await dbInstance.query(`
-				SELECT 1 FROM pg_constraint 
+				SELECT 1 FROM pg_constraint
 				WHERE conname = 'person_usernames_username_org_id_key'
 			`);
-			
+
 			if (checkConstraint.rows.length === 0) {
 				// Check for duplicate data first
 				const duplicates = await dbInstance.query(`
@@ -125,14 +125,14 @@ async function main() {
 					GROUP BY username, org_id
 					HAVING COUNT(*) > 1
 				`);
-				
+
 				if (duplicates.rows.length > 0) {
 					console.log(`   ⚠️  Cannot add constraint: Found ${duplicates.rows.length} duplicate(s) in person_usernames(username, org_id)`);
 					console.log('   ℹ️  Please clean up duplicates before adding this constraint');
 				} else {
 					await dbInstance.query(`
-						ALTER TABLE person_usernames 
-						ADD CONSTRAINT person_usernames_username_org_id_key 
+						ALTER TABLE person_usernames
+						ADD CONSTRAINT person_usernames_username_org_id_key
 						UNIQUE (username, org_id);
 					`);
 					console.log('   ✓ Added constraint: person_usernames.person_usernames_username_org_id_key');
