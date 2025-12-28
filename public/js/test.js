@@ -3,52 +3,135 @@
 
 const REFRESH_ICON_ANIMATION_DURATION_MS = 700;
 
-// Test page content with event log table structure
-const sampleData = [
-		{id: 1, name: 'Lindsay Walton', date: '15 jan 14:30', company: 'Acme Corp', area: 'Salesforce', event: 'tool_call', tool: 'executeQuery', status: 'success', error: '', payload: 'Query executed successfully'},
-		{id: 2, name: 'Courtney Henry', date: '15 jan 15:45', company: 'Tech Solutions', area: 'Apex', event: 'session_start', tool: '', status: 'success', error: '', payload: 'Session initialized'},
-		{id: 3, name: 'Tom Cook', date: '15 jan 16:20', company: 'Acme Corp', area: 'Salesforce', event: 'tool_call', tool: 'getMetadata', status: 'error', error: 'Connection timeout', payload: 'Failed to fetch metadata'},
-		{id: 4, name: 'Whitney Francis', date: '15 jan 17:10', company: 'Tech Solutions', area: 'Apex', event: 'custom', tool: '', status: 'success', error: '', payload: 'Custom event logged'},
-		{id: 5, name: 'Leonard Krasner', date: '15 jan 18:00', company: 'Acme Corp', area: 'Salesforce', event: 'tool_call', tool: 'executeQuery', status: 'success', error: '', payload: 'Query executed successfully'},
-		{id: 6, name: 'Floyd Miles', date: '15 jan 19:15', company: 'Tech Solutions', area: 'Apex', event: 'session_start', tool: '', status: 'success', error: '', payload: 'Session initialized'},
-		{id: 7, name: 'Emily Selman', date: '15 jan 20:30', company: 'Acme Corp', area: 'Salesforce', event: 'tool_call', tool: 'getMetadata', status: 'error', error: 'Connection timeout', payload: 'Failed to fetch metadata'},
-		{id: 8, name: 'Kristin Watson', date: '15 jan 21:45', company: 'Tech Solutions', area: 'Apex', event: 'custom', tool: '', status: 'success', error: '', payload: 'Custom event logged'},
-		{id: 9, name: 'Emma Dorsey', date: '15 jan 22:00', company: 'Acme Corp', area: 'Salesforce', event: 'tool_call', tool: 'executeQuery', status: 'success', error: '', payload: 'Query executed successfully'},
-		{id: 10, name: 'Alicia Bell', date: '15 jan 23:20', company: 'Tech Solutions', area: 'Apex', event: 'session_start', tool: '', status: 'success', error: '', payload: 'Session initialized'},
-		{id: 11, name: 'Jenny Wilson', date: '16 jan 09:10', company: 'Acme Corp', area: 'Salesforce', event: 'tool_call', tool: 'getMetadata', status: 'error', error: 'Connection timeout', payload: 'Failed to fetch metadata'},
-		{id: 12, name: 'Anna Roberts', date: '16 jan 10:30', company: 'Tech Solutions', area: 'Apex', event: 'custom', tool: '', status: 'success', error: '', payload: 'Custom event logged'},
-		{id: 13, name: 'Benjamin Russel', date: '16 jan 11:45', company: 'Acme Corp', area: 'Salesforce', event: 'tool_call', tool: 'executeQuery', status: 'success', error: '', payload: 'Query executed successfully'},
-		{id: 14, name: 'Jeffrey Webb', date: '16 jan 12:00', company: 'Tech Solutions', area: 'Apex', event: 'session_start', tool: '', status: 'success', error: '', payload: 'Session initialized'},
-		{id: 15, name: 'Kathryn Murphy', date: '16 jan 13:15', company: 'Acme Corp', area: 'Salesforce', event: 'tool_call', tool: 'getMetadata', status: 'error', error: 'Connection timeout', payload: 'Failed to fetch metadata'}
-];
+// Store loaded events
+let loadedEvents = [];
 
-// Generate sample payload based on event data
-function generateSamplePayload(event) {
-	const now = new Date();
-	const basePayload = {
-		id: event.id,
-		timestamp: now.toISOString(),
-		received_at: new Date(now.getTime() - 100).toISOString(), // 100ms abans del timestamp
-		telemetry_schema_version: 2,
-		area: event.area,
-		event: event.event,
-		success: event.status === 'success',
-		version: '1.0.0',
-		error_message: event.error || null
+// Pagination state
+let currentOffset = 0;
+let hasMoreEvents = true;
+let isLoadingMore = false;
+const limit = 100; // Increased from 50 to reduce number of API calls
+
+// Helper functions
+function escapeHtml(unsafe) {
+	return String(unsafe)
+		.replace(/&/g, '&amp;')
+		.replace(/</g, '&lt;')
+		.replace(/>/g, '&gt;')
+		.replace(/"/g, '&quot;')
+		.replace(/'/g, '&#039;');
+}
+
+function formatDate(dateString) {
+	if (!dateString) {return '';}
+	const date = new Date(dateString);
+	const day = date.getDate();
+	const month = date.toLocaleString('default', {month: 'short'}).toLowerCase();
+	const hours = String(date.getHours());
+	const minutes = String(date.getMinutes()).padStart(2, '0');
+	return `${day} ${month} ${hours}:${minutes}`;
+}
+
+function normalizeEventData(rawData) {
+	if (!rawData) {
+		return {};
+	}
+	if (typeof rawData === 'object') {
+		return rawData;
+	}
+	try {
+		return JSON.parse(rawData);
+	} catch {
+		return {};
+	}
+}
+
+function extractUserLabelFromEvent(event, eventData) {
+	if (!event) {
+		return '';
+	}
+
+	// Prefer explicit user name fields from event data when available
+	if (eventData && typeof eventData === 'object') {
+		try {
+			const fromData =
+				(typeof eventData.userName === 'string' && eventData.userName.trim()) ||
+				(typeof eventData.user_name === 'string' && eventData.user_name.trim()) ||
+				(eventData.user &&
+					typeof eventData.user.name === 'string' &&
+					eventData.user.name.trim());
+
+			if (fromData) {
+				return String(fromData);
+			}
+		} catch {
+			// Ignore and fall through to other sources
+		}
+	}
+
+	// Fallback to user_id from the event itself
+	if (event.user_id) {
+		return String(event.user_id);
+	}
+
+	return '';
+}
+
+async function handleApiResponse(response) {
+	if (response.status === 401) {
+		window.location.href = '/login';
+		return null;
+	}
+	if (!response.ok) {
+		throw new Error(`HTTP error! status: ${response.status}`);
+	}
+	return response;
+}
+
+function getLevelClass(area) {
+	const levelMap = {
+		'tool': 'tool',
+		'session': 'session',
+		'general': 'general'
 	};
+	return levelMap[area] || 'session';
+}
 
-	return basePayload;
+function getLevelBadgeClass(area) {
+	const levelClass = getLevelClass(area);
+	return `level-badge ${levelClass}`;
+}
+
+function getEventBadgeClass(eventType) {
+	const eventColorMap = {
+		'tool_call': 'green',
+		'tool_error': 'indigo',
+		'session_start': 'pink',
+		'session_end': 'yellow',
+		'error': 'green',
+		'custom': 'indigo'
+	};
+	const colorClass = eventColorMap[eventType] || 'green';
+	return `event-badge ${colorClass}`;
+}
+
+function buildStatusIcon(isError) {
+	const statusClass = isError ? 'ko' : 'ok';
+	const statusLabel = isError ? 'KO' : 'OK';
+	const src = isError ? '/resources/ko.png' : '/resources/ok.png';
+	return `<img src="${src}" alt="${statusLabel}" class="status-indicator ${statusClass}" loading="lazy">`;
 }
 
 // Create event details form HTML
 function createEventDetailsFormHTML(event) {
-	const payload = generateSamplePayload(event);
+	// event.data now contains the original payload exactly as received
+	const payload = event.data || {};
 
-	const formatDate = (dateString) => {
+	const formatDateForForm = (dateString) => {
 		if (!dateString) {return '';}
 		try {
 			const date = new Date(dateString);
-			if (isNaN(date.getTime())) {return dateString;}
+			if (Number.isNaN(date.getTime())) {return dateString;}
 
 			// Format: "15 Jan 2024, 14:30:45" (day month year, hour:minute:second)
 			const options = {
@@ -61,7 +144,7 @@ function createEventDetailsFormHTML(event) {
 				hour12: false
 			};
 			return date.toLocaleDateString('en-GB', options);
-		} catch (e) {
+		} catch {
 			return dateString;
 		}
 	};
@@ -132,28 +215,6 @@ function createEventDetailsFormHTML(event) {
 	);
 
 	// Area and Event (side by side as badges) - Second row
-	const getLevelBadgeClass = (area) => {
-		const levelMap = {
-			'Salesforce': 'tool',
-			'Apex': 'session',
-			'general': 'general'
-		};
-		const levelClass = levelMap[area] || 'session';
-		return `level-badge ${levelClass}`;
-	};
-
-	const getEventBadgeClass = (eventType) => {
-		const eventColorMap = {
-			'tool_call': 'green',
-			'tool_error': 'indigo',
-			'session_start': 'pink',
-			'session_end': 'yellow',
-			'error': 'green',
-			'custom': 'indigo'
-		};
-		const colorClass = eventColorMap[eventType] || 'green';
-		return `event-badge ${colorClass}`;
-	};
 
 	formHTML += '<div class="grid grid-cols-2 gap-0">';
 	formHTML += `
@@ -181,7 +242,7 @@ function createEventDetailsFormHTML(event) {
 				id="event-timestamp-${event.id}"
 				name="timestamp"
 				type="text"
-				value="${formatDate(payload.timestamp).replace(/"/g, '&quot;')}"
+				value="${formatDateForForm(payload.timestamp).replace(/"/g, '&quot;')}"
 				placeholder="Timestamp"
 				aria-label="Timestamp"
 				readonly
@@ -195,7 +256,7 @@ function createEventDetailsFormHTML(event) {
 				id="event-received-at-${event.id}"
 				name="received_at"
 				type="text"
-				value="${formatDate(payload.received_at).replace(/"/g, '&quot;')}"
+				value="${formatDateForForm(payload.received_at).replace(/"/g, '&quot;')}"
 				placeholder="Received At"
 				aria-label="Received At"
 				readonly
@@ -279,141 +340,284 @@ function createEventDetailsFormHTML(event) {
 		return;
 	}
 
-	const statusIcon = (status) => {
-		if (status === 'success') {
-			return '<img src="/resources/ok.png" alt="OK" class="status-indicator ok" loading="lazy">';
-		} else if (status === 'error') {
-			return '<img src="/resources/ko.png" alt="KO" class="status-indicator ko" loading="lazy">';
+	// Load events from API
+	await loadEvents();
+	
+	// Setup infinite scroll after initial load
+	// Use setTimeout to ensure DOM is fully rendered
+	setTimeout(() => {
+		setupInfiniteScroll();
+	}, 100);
+}());
+
+async function loadEvents(options = {}) {
+	const append = Boolean(options.append); // If true, append events instead of replacing
+
+	// Prevent multiple simultaneous loads
+	if (isLoadingMore && append) {
+		return;
+	}
+
+	if (append) {
+		isLoadingMore = true;
+	} else {
+		currentOffset = 0;
+		hasMoreEvents = true;
+		loadedEvents = [];
+	}
+
+	const testContent = document.getElementById('testContent');
+	if (!testContent) {
+		return;
+	}
+
+	try {
+		const params = new URLSearchParams({
+			limit: limit.toString(),
+			offset: currentOffset.toString(),
+			orderBy: 'created_at',
+			order: 'desc'
+		});
+
+		const response = await fetch(`/api/events?${params}`);
+		const validResponse = await handleApiResponse(response);
+		if (!validResponse) {
+			isLoadingMore = false;
+			return;
 		}
-		return '<img src="/resources/ok.png" alt="OK" class="status-indicator ok" loading="lazy">';
-	};
+		const data = await validResponse.json();
 
-	const payloadIcon = (eventId) => {
-		return `<button type="button" onclick="loadEventPayload(${eventId})" class="text-gray-500 hover:text-[#2195cf] dark:text-white dark:hover:text-[#2195cf] p-1 rounded" title="View payload">
-			<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
-				<path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
-				<path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
-			</svg>
-		</button>`;
-	};
+		const events = Array.isArray(data.events) ? data.events : [];
 
-	const getLevelClass = (area) => {
-		const levelMap = {
-			'Salesforce': 'tool',
-			'Apex': 'session',
-			'general': 'general'
-		};
-		return levelMap[area] || 'session';
-	};
+		if (events.length > 0) {
+			displayEvents(events, append);
+			// Calculate hasMore: if we got fewer events than requested, there are no more
+			// Also use data.hasMore if available (when total is computed)
+			hasMoreEvents = data.hasMore !== undefined 
+				? data.hasMore 
+				: events.length >= limit; // If we got a full page, assume there might be more
+			currentOffset += events.length;
+			
+			// After appending, check if we need to load more immediately
+			// (in case the new content doesn't fill the viewport)
+			if (append) {
+				// Use requestAnimationFrame to ensure DOM is updated
+				requestAnimationFrame(() => {
+					const testContent = document.getElementById('testContent');
+					if (testContent) {
+						const hasOwnScroll = testContent.scrollHeight > testContent.clientHeight;
+						const needsMore = !hasOwnScroll || (testContent.scrollHeight - testContent.clientHeight < 100);
+						
+						if (needsMore && shouldLoadMoreOnScroll() && hasMoreEvents && !isLoadingMore) {
+							loadEvents({append: true});
+						}
+					}
+				});
+			}
+		} else {
+			hasMoreEvents = false;
+			console.log('[Test Page] No more events to load');
+			if (!append) {
+				testContent.innerHTML = `
+					<div class="teams-loading">
+						<p>No events found</p>
+					</div>
+				`;
+			}
+		}
+	} catch (error) {
+		console.error('Error loading events:', error);
+		if (!append) {
+			if (testContent) {
+				testContent.innerHTML = `
+					<div class="teams-loading">
+						<p>Error loading events: ${escapeHtml(error.message)}</p>
+					</div>
+				`;
+			}
+		}
+	} finally {
+		isLoadingMore = false;
+	}
+}
 
-	const getLevelBadgeClass = (area) => {
-		const levelClass = getLevelClass(area);
-		return `level-badge ${levelClass}`;
-	};
+function displayEvents(events, append = false) {
+	const testContent = document.getElementById('testContent');
+	if (!testContent) {
+		return;
+	}
 
-	const getEventBadgeClass = (eventType) => {
-		const eventColorMap = {
-			'tool_call': 'green',
-			'tool_error': 'indigo',
-			'session_start': 'pink',
-			'session_end': 'yellow',
-			'error': 'green',
-			'custom': 'indigo'
-		};
-		const colorClass = eventColorMap[eventType] || 'green';
-		return `event-badge ${colorClass}`;
-	};
+	// If appending, find the tbody and add rows to it
+	// If not appending, replace the entire content
+	let tbody;
+	if (append) {
+		tbody = testContent.querySelector('tbody');
+		if (!tbody) {
+			return;
+		}
+	} else {
+		// Clear existing content and create new table structure
+		testContent.innerHTML = '';
+	}
 
-	const rows = sampleData.map((row, index) => {
-		const isLast = index === sampleData.length - 1;
-		const borderClass = isLast ? '' : 'border-b border-gray-200 dark:border-white/10';
-		return `
-		<tr data-event-id="${row.id}" class="test-table-row" style="height: 46px;">
+	// Create rows as DOM elements instead of HTML strings
+	const rowElements = [];
+	
+	events.forEach((event) => {
+		// When appending, we don't know if it's the last event overall, so always show border
+		const borderClass = 'border-b border-gray-200 dark:border-white/10';
+		
+		const eventData = normalizeEventData(event.data);
+		const userLabel = extractUserLabelFromEvent(event, eventData);
+		const clientName = event.company_name || '';
+		const dataStatus = typeof eventData.status === 'string'? eventData.status.toLowerCase(): null;
+		const isToolFailure = event.event === 'tool_call' && (
+			dataStatus === 'error' ||
+			dataStatus === 'failed' ||
+			eventData.success === false ||
+			Boolean(eventData.error)
+		);
+		const isError = event.event === 'tool_error' || event.event === 'error' || isToolFailure;
+		const statusIcon = buildStatusIcon(isError);
+
+		// Extract tool name for tool events
+		const isToolEvent = event.event === 'tool_call' || event.event === 'tool_error';
+		const rawToolName = isToolEvent? (event.tool_name || event.toolName || ''): '';
+		const toolName = rawToolName ? escapeHtml(String(rawToolName)) : 'N/A';
+
+		// Extract error message for tool_error events
+		const errorMessage = event.event === 'tool_error'? (event.error_message || ''): '';
+		const escapedErrorMessage = errorMessage ? escapeHtml(String(errorMessage)) : '';
+
+		// Main row
+		const row = document.createElement('tr');
+		row.className = 'test-table-row';
+		row.setAttribute('data-event-id', event.id);
+		row.style.height = '46px';
+		
+		row.innerHTML = `
 			<td class="${borderClass} pl-4 pr-2 text-center font-medium text-gray-500 dark:text-gray-400" style="height: 46px; vertical-align: middle;">
-				<button type="button" id="expand-btn-${row.id}" class="expand-btn" onclick="toggleRowExpand(${row.id})" style="background: none; border: none; cursor: pointer; padding: 4px;">
+				<button type="button" id="expand-btn-${event.id}" class="expand-btn" onclick="toggleRowExpand(${event.id})" style="background: none; border: none; cursor: pointer; padding: 4px;">
 					<i class="fa-solid fa-chevron-right text-gray-400"></i>
 				</button>
 			</td>
-			<td class="${borderClass} pr-3 pl-4 whitespace-nowrap text-gray-700 dark:text-gray-300 sm:pl-6 " style="height: 46px; vertical-align: middle;">${row.date}</td>
-			<td class="${borderClass} px-3 font-medium whitespace-nowrap text-gray-500 dark:text-gray-400" style="height: 46px; vertical-align: middle;">${row.name}</td>
-			<td class="hidden ${borderClass} px-3 whitespace-nowrap text-gray-500 dark:text-gray-400 md:table-cell" style="height: 46px; vertical-align: middle;">${row.company}</td>
+			<td class="${borderClass} pr-3 pl-4 whitespace-nowrap text-gray-700 dark:text-gray-300 sm:pl-6 " style="height: 46px; vertical-align: middle;">${formatDate(event.timestamp)}</td>
+			<td class="${borderClass} px-3 font-medium whitespace-nowrap text-gray-500 dark:text-gray-400" style="height: 46px; vertical-align: middle;">${escapeHtml(userLabel)}</td>
+			<td class="hidden ${borderClass} px-3 whitespace-nowrap text-gray-500 dark:text-gray-400 md:table-cell" style="height: 46px; vertical-align: middle;">${escapeHtml(clientName)}</td>
 			<td class="${borderClass} px-3 whitespace-nowrap text-gray-500 dark:text-gray-400" style="height: 46px; vertical-align: middle;">
-				<span class="${getLevelBadgeClass(row.area)}">${row.area}</span>
+				<span class="${getLevelBadgeClass(event.area)}${!event.area ? ' na' : ''}">${escapeHtml(event.area || 'N/A')}</span>
 			</td>
 			<td class="${borderClass} px-3 whitespace-nowrap text-gray-500 dark:text-gray-400" style="height: 46px; vertical-align: middle;">
-				<span class="${getEventBadgeClass(row.event)}">${row.event}</span>
+				<span class="${getEventBadgeClass(event.event)}">${escapeHtml(event.event || 'N/A')}</span>
 			</td>
-			<td class="hidden ${borderClass} px-3 whitespace-nowrap text-gray-500 dark:text-gray-400 lg:table-cell" style="height: 46px; vertical-align: middle;">${row.tool || 'N/A'}</td>
-			<td class="${borderClass} px-3 whitespace-nowrap text-center" style="height: 46px; vertical-align: middle;">${statusIcon(row.status)}</td>
-			<td class="hidden ${borderClass} px-3 whitespace-nowrap text-gray-500 dark:text-gray-400 xl:table-cell overflow-hidden text-ellipsis max-w-48" style="height: 46px; vertical-align: middle;">${row.error || ''}</td>
-			<td class="${borderClass} px-3 text-center text-gray-500 dark:text-gray-400" style="height: 46px; vertical-align: middle;">${payloadIcon(row.id)}</td>
+			<td class="hidden ${borderClass} px-3 whitespace-nowrap text-gray-500 dark:text-gray-400 lg:table-cell" style="height: 46px; vertical-align: middle;">${toolName}</td>
+			<td class="${borderClass} px-3 whitespace-nowrap text-center" style="height: 46px; vertical-align: middle;">${statusIcon}</td>
+			<td class="hidden ${borderClass} px-3 whitespace-nowrap text-gray-500 dark:text-gray-400 xl:table-cell overflow-hidden text-ellipsis max-w-48" style="height: 46px; vertical-align: middle;" title="${escapedErrorMessage}">${escapedErrorMessage}</td>
+			<td class="${borderClass} px-3 text-center text-gray-500 dark:text-gray-400" style="height: 46px; vertical-align: middle;">
+				<button type="button" onclick="loadEventPayload(${event.id})" class="text-gray-500 hover:text-[#2195cf] dark:text-white dark:hover:text-[#2195cf] p-1 rounded" title="View payload">
+					<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
+						<path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+						<path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+					</svg>
+				</button>
+			</td>
 			<td class="${borderClass} pr-4 pl-3 text-right font-medium whitespace-nowrap sm:pr-8 lg:pr-8" style="height: 46px; vertical-align: middle;">
-				<button type="button" class="actions-btn hover:text-indigo-900 dark:hover:text-indigo-400" onclick="toggleActionsDropdown(event, ${row.id})" style="background: none; border: none; cursor: pointer; padding: 4px;">
+				<button type="button" class="actions-btn hover:text-indigo-900 dark:hover:text-indigo-400" onclick="toggleActionsDropdown(event, ${event.id})" style="background: none; border: none; cursor: pointer; padding: 4px;">
 					<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
 						<circle cx="8" cy="3" r="1.5"/>
 						<circle cx="8" cy="8" r="1.5"/>
 						<circle cx="8" cy="13" r="1.5"/>
 					</svg>
 				</button>
-				<div class="actions-dropdown actions-dropdown-left" id="dropdown-${row.id}">
-					<div class="actions-dropdown-item" onclick="copyEventPayload(${row.id})">
+				<div class="actions-dropdown actions-dropdown-left" id="dropdown-${event.id}">
+					<div class="actions-dropdown-item" onclick="copyEventPayload(${event.id})">
 						<span>Copy payload</span>
 					</div>
-					<div class="actions-dropdown-item delete" onclick="confirmDeleteEvent(${row.id})">
+					<div class="actions-dropdown-item delete" onclick="confirmDeleteEvent(${event.id})">
 						<span>Move to trash</span>
 					</div>
 				</div>
 			</td>
-		</tr>
-		<tr class="test-item-expanded" id="expanded-${row.id}">
+		`;
+		
+		// Expanded row
+		const expandedRow = document.createElement('tr');
+		expandedRow.className = 'test-item-expanded';
+		expandedRow.id = `expanded-${event.id}`;
+		expandedRow.innerHTML = `
 			<td colspan="11" class="log-description-expanded px-3 py-4">
-				${createEventDetailsFormHTML(row)}
+				${createEventDetailsFormHTML(event)}
 			</td>
-		</tr>
-	`;
-	}).join('');
+		`;
+		
+		rowElements.push(row);
+		rowElements.push(expandedRow);
+	});
+	
+	// For non-append mode, we still need the HTML string
+	const rows = append ? null : rowElements.map(row => row.outerHTML).join('');
 
-
-	testContent.innerHTML = `
-		<div>
-			<div class="flow-root">
-				<div class="-mx-4 -my-2 sm:-mx-6 lg:-mx-8">
-					<div class="inline-block min-w-full py-2 align-middle">
-						<table class="min-w-full border-separate border-spacing-0 bg-white dark:bg-gray-900" style="font-size: 13.5px !important;">
-							<thead class="bg-gray-50 dark:bg-gray-800/75">
-								<tr>
-									<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 dark:bg-gray-900/75 py-3.5 pl-4 pr-2 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter">
-										<span class="sr-only">Expand</span>
-									</th>
-									<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 dark:bg-gray-900/75 py-3.5 pr-3 pl-4 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter sm:pl-6">Date</th>
-									<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 dark:bg-gray-900/75 px-3 py-3.5 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter">User</th>
-									<th scope="col" class="sticky top-0 z-10 hidden border-b border-gray-300 dark:border-white/15 dark:bg-gray-900/75 px-3 py-3.5 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter md:table-cell">Company</th>
-									<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 dark:bg-gray-900/75 px-3 py-3.5 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter">Area</th>
-									<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 dark:bg-gray-900/75 px-3 py-3.5 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter">Event</th>
-									<th scope="col" class="sticky top-0 z-10 hidden border-b border-gray-300 dark:border-white/15 dark:bg-gray-900/75 px-3 py-3.5 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter lg:table-cell">Tool</th>
-									<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 dark:bg-gray-900/75 px-3 py-3.5 text-center font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter">Status</th>
-									<th scope="col" class="sticky top-0 z-10 hidden border-b border-gray-300 dark:border-white/15 dark:bg-gray-900/75 px-3 py-3.5 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter xl:table-cell">Error</th>
-									<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 dark:bg-gray-900/75 px-3 py-3.5 text-center font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter">Payload</th>
-									<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 dark:bg-gray-900/75 py-3.5 pr-4 pl-3 backdrop-blur-sm backdrop-filter sm:pr-6 lg:pr-8">
-										<span class="sr-only">Actions</span>
-									</th>
-								</tr>
-							</thead>
-							<tbody>
-								${rows}
-							</tbody>
-						</table>
+	if (append) {
+		// Append rows directly as DOM elements
+		rowElements.forEach(row => {
+			tbody.appendChild(row);
+		});
+		// Add events to loadedEvents array
+		loadedEvents.push(...events);
+	} else {
+		// Create new table structure
+		testContent.innerHTML = `
+			<div>
+				<div class="flow-root">
+					<div class="-mx-4 -my-2 sm:-mx-6 lg:-mx-8">
+						<div class="inline-block min-w-full py-2 align-middle">
+							<table class="min-w-full border-separate border-spacing-0 bg-white dark:bg-gray-900" style="font-size: 13.5px !important;">
+								<thead class="bg-gray-50 dark:bg-gray-800/75">
+									<tr>
+										<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 dark:bg-gray-900/75 py-3.5 pl-4 pr-2 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter">
+											<span class="sr-only">Expand</span>
+										</th>
+										<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 dark:bg-gray-900/75 py-3.5 pr-3 pl-4 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter sm:pl-6">Date</th>
+										<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 dark:bg-gray-900/75 px-3 py-3.5 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter">User</th>
+										<th scope="col" class="sticky top-0 z-10 hidden border-b border-gray-300 dark:border-white/15 dark:bg-gray-900/75 px-3 py-3.5 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter md:table-cell">Company</th>
+										<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 dark:bg-gray-900/75 px-3 py-3.5 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter">Area</th>
+										<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 dark:bg-gray-900/75 px-3 py-3.5 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter">Event</th>
+										<th scope="col" class="sticky top-0 z-10 hidden border-b border-gray-300 dark:border-white/15 dark:bg-gray-900/75 px-3 py-3.5 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter lg:table-cell">Tool</th>
+										<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 dark:bg-gray-900/75 px-3 py-3.5 text-center font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter">Status</th>
+										<th scope="col" class="sticky top-0 z-10 hidden border-b border-gray-300 dark:border-white/15 dark:bg-gray-900/75 px-3 py-3.5 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter xl:table-cell">Error</th>
+										<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 dark:bg-gray-900/75 px-3 py-3.5 text-center font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter">Payload</th>
+										<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 dark:bg-gray-900/75 py-3.5 pr-4 pl-3 backdrop-blur-sm backdrop-filter sm:pr-6 lg:pr-8">
+											<span class="sr-only">Actions</span>
+										</th>
+									</tr>
+								</thead>
+								<tbody>
+									${rows}
+								</tbody>
+							</table>
+						</div>
 					</div>
 				</div>
 			</div>
-		</div>
-	`;
+		`;
+		// Store events in loadedEvents array
+		loadedEvents = [...events];
+		// Get the tbody for adding event listeners
+		tbody = testContent.querySelector('tbody');
+	}
 
-	// Add click handlers to rows for expansion
-	const tbody = testContent.querySelector('tbody');
+	// Add click handlers to newly added rows for expansion
 	if (tbody) {
-		const mainRows = tbody.querySelectorAll('tr[data-event-id]');
-		mainRows.forEach(row => {
+		const newRows = append
+			? Array.from(tbody.querySelectorAll('tr[data-event-id]')).slice(-events.length) // Get only the newly added main rows (not expanded rows)
+			: tbody.querySelectorAll('tr[data-event-id]');
+		
+		newRows.forEach(row => {
+			// Check if event listener already exists
+			if (row.hasAttribute('data-listener-attached')) {
+				return;
+			}
+			row.setAttribute('data-listener-attached', 'true');
 			row.addEventListener('click', (evt) => {
 				// Don't expand if clicking on actions button or dropdown
 				if (evt.target.closest('.actions-btn') || evt.target.closest('.actions-dropdown') || evt.target.closest('.expand-btn')) {
@@ -426,23 +630,139 @@ function createEventDetailsFormHTML(event) {
 			});
 		});
 	}
+}
 
-	// Listen for soft navigation events
-	window.addEventListener('softNav:pageMounted', (event) => {
-		if (event.detail.path === '/test') {
-			// Re-initialize if needed
+// Infinite scroll handler
+function shouldLoadMoreOnScroll() {
+	const testContent = document.getElementById('testContent');
+	if (!testContent) {
+		return false;
+	}
+
+	// Check if testContent has its own scroll (overflow-y: auto)
+	const hasOwnScroll = testContent.scrollHeight > testContent.clientHeight;
+	
+	if (hasOwnScroll) {
+		// testContent has its own scroll container
+		const scrollTop = testContent.scrollTop;
+		const scrollHeight = testContent.scrollHeight;
+		const clientHeight = testContent.clientHeight;
+		const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
+		return distanceFromBottom < 300; // Load more when 300px from bottom
+	} else {
+		// Use page scroll
+		const scrollTop = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+		const windowHeight = window.innerHeight || document.documentElement.clientHeight;
+		const documentHeight = Math.max(
+			document.body.scrollHeight,
+			document.body.offsetHeight,
+			document.documentElement.clientHeight,
+			document.documentElement.scrollHeight,
+			document.documentElement.offsetHeight
+		);
+
+		const distanceFromBottom = documentHeight - (scrollTop + windowHeight);
+		return distanceFromBottom < 300; // Load more when 300px from bottom
+	}
+}
+
+function handleScroll() {
+	if (isLoadingMore) {
+		return;
+	}
+
+	if (!hasMoreEvents) {
+		return;
+	}
+
+	if (shouldLoadMoreOnScroll()) {
+		const testContent = document.getElementById('testContent');
+		const hasOwnScroll = testContent && testContent.scrollHeight > testContent.clientHeight;
+		
+		loadEvents({append: true});
+	}
+}
+
+function setupInfiniteScroll() {
+	const testContent = document.getElementById('testContent');
+	if (!testContent) {
+		console.error('[Test Page] testContent not found for infinite scroll setup');
+		return;
+	}
+
+	// Remove any existing scroll listeners to avoid duplicates
+	if (window._testPageScrollHandler) {
+		window.removeEventListener('scroll', window._testPageScrollHandler, {passive: true});
+		testContent.removeEventListener('scroll', window._testPageScrollHandler, {passive: true});
+		clearTimeout(window._testPageScrollTimeout);
+		window._testPageScrollTimeout = null;
+	}
+
+	// Create new scroll handler with debouncing
+	window._testPageScrollHandler = () => {
+		// Clear existing timeout
+		if (window._testPageScrollTimeout) {
+			clearTimeout(window._testPageScrollTimeout);
 		}
-	});
-}());
+		
+		// Set new timeout
+		window._testPageScrollTimeout = setTimeout(() => {
+			handleScroll();
+			window._testPageScrollTimeout = null;
+		}, 150);
+	};
+
+	// Check if testContent has its own scroll
+	const hasOwnScroll = testContent.scrollHeight > testContent.clientHeight;
+	
+	if (hasOwnScroll) {
+		// Listen to testContent scroll
+		testContent.addEventListener('scroll', window._testPageScrollHandler, {passive: true});
+		console.log(`[Test Page] Infinite scroll setup on testContent container (scrollHeight: ${testContent.scrollHeight}, clientHeight: ${testContent.clientHeight}, hasMore: ${hasMoreEvents}, offset: ${currentOffset})`);
+	} else {
+		// Listen to page scroll
+		window.addEventListener('scroll', window._testPageScrollHandler, {passive: true});
+		console.log(`[Test Page] Infinite scroll setup on window (scrollHeight: ${document.documentElement.scrollHeight}, innerHeight: ${window.innerHeight}, hasMore: ${hasMoreEvents}, offset: ${currentOffset})`);
+	}
+	
+	// Also listen to wheel events for better detection
+	testContent.addEventListener('wheel', window._testPageScrollHandler, {passive: true});
+}
+
+// Listen for soft navigation events
+window.addEventListener('softNav:pageMounted', (event) => {
+	if (event.detail.path === '/test') {
+		// Re-initialize if needed
+		loadEvents();
+		setupInfiniteScroll();
+	}
+});
 
 // Payload modal functions
-function loadEventPayload(eventId) {
-	const event = sampleData.find(e => e.id === eventId);
+async function loadEventPayload(eventId) {
+	// Try to find event in loaded events first
+	let event = loadedEvents.find(e => e.id === eventId);
+	
+	// If not found, fetch from API
+	if (!event) {
+		try {
+			const response = await fetch(`/api/events/${eventId}`);
+			const validResponse = await handleApiResponse(response);
+			if (!validResponse) {return;}
+			event = await validResponse.json();
+		} catch (error) {
+			console.error('Error loading event:', error);
+			return;
+		}
+	}
+	
 	if (!event) {
 		console.error('Event not found:', eventId);
 		return;
 	}
-	const payload = generateSamplePayload(event);
+	
+	// event.data contains the original payload
+	const payload = event.data || event;
 	showPayloadModal(payload, eventId);
 }
 
@@ -505,11 +825,11 @@ function showPayloadModal(payload, eventId) {
 		// Apply Highlight.js syntax highlighting
 		requestAnimationFrame(() => {
 			if (window.hljs && typeof window.hljs.highlightElement === 'function') {
-				hljs.highlightElement(codeElement);
+				window.hljs.highlightElement(codeElement);
 			} else {
 				setTimeout(() => {
 					if (window.hljs && typeof window.hljs.highlightElement === 'function') {
-						hljs.highlightElement(codeElement);
+						window.hljs.highlightElement(codeElement);
 					}
 				}, 100);
 			}
@@ -638,7 +958,7 @@ function toggleActionsDropdown(e, eventId) {
 			dropdown.style.pointerEvents = 'none';
 
 			// Force a reflow to ensure the element is laid out
-			void dropdown.offsetHeight;
+			const _ = dropdown.offsetHeight; // eslint-disable-line no-unused-vars
 
 			const dropdownRect = dropdown.getBoundingClientRect();
 
@@ -748,12 +1068,29 @@ function toggleActionsDropdown(e, eventId) {
 }
 
 async function copyEventPayload(eventId) {
-	const event = sampleData.find(e => e.id === eventId);
+	// Try to find event in loaded events first
+	let event = loadedEvents.find(e => e.id === eventId);
+	
+	// If not found, fetch from API
+	if (!event) {
+		try {
+			const response = await fetch(`/api/events/${eventId}`);
+			const validResponse = await handleApiResponse(response);
+			if (!validResponse) {return;}
+			event = await validResponse.json();
+		} catch (error) {
+			console.error('Error loading event:', error);
+			return;
+		}
+	}
+	
 	if (!event) {
 		console.error('Event not found:', eventId);
 		return;
 	}
-	const payload = generateSamplePayload(event);
+	
+	// event.data contains the original payload
+	const payload = event.data || event;
 	const formattedPayload = JSON.stringify(payload, null, 2);
 
 	try {
@@ -814,7 +1151,7 @@ window.confirmDeleteEvent = confirmDeleteEvent;
 window.toggleRowExpand = toggleRowExpand;
 
 // Refresh function for the header button
-window.refreshTest = function refreshTest(event) {
+window.refreshTest = async function refreshTest(event) {
 	if (event?.preventDefault) {
 		event.preventDefault();
 	}
@@ -824,9 +1161,13 @@ window.refreshTest = function refreshTest(event) {
 		icon.classList.add('rotating');
 	}
 	try {
-		// For test page, we can just reload the content or do nothing
-		// Since it's static content, we just show the animation
-		console.log('Test page refreshed');
+		// Reset pagination state and reload events from API
+		currentOffset = 0;
+		hasMoreEvents = true;
+		isLoadingMore = false;
+		await loadEvents();
+		// Re-setup infinite scroll after refresh
+		setupInfiniteScroll();
 	} catch (error) {
 		console.error('Error refreshing test page:', error);
 	} finally {
