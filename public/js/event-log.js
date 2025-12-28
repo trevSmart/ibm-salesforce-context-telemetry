@@ -2702,7 +2702,6 @@ function safeShowToast(message, type = 'info') {
 
 		startTime = performance.now();
 		// const loadingMessageEl = document.getElementById('loadingMessage');
-		const _logsTableEl = document.getElementById('logsTable');
 		const durationInfoEl = document.getElementById('durationInfo');
 		const errorMessageEl = document.getElementById('errorMessage');
 		const emptyStateEl = document.getElementById('emptyState');
@@ -2789,9 +2788,6 @@ function safeShowToast(message, type = 'info') {
 				displayEvents(fetchedEvents, append);
 				hasMoreEvents = data.hasMore || false;
 				currentOffset += fetchedEvents.length;
-				if (_logsTableEl) {
-					_logsTableEl.style.display = 'table';
-				}
 				handleNotificationState(fetchedEvents, triggeredByNotification);
 				if (!append) {
 					updateSessionActivityChart({sessionId: selectedSession});
@@ -2804,10 +2800,6 @@ function safeShowToast(message, type = 'info') {
 						emptyStateEl.style.display = 'block';
 					}
 					hideSessionActivityCard();
-					const tbody = document.getElementById('logsBody');
-					if (tbody) {
-						tbody.innerHTML = '';
-					}
 					allLoadedEvents = [];
 					updateTeamEventCounts(allLoadedEvents);
 				}
@@ -2935,221 +2927,6 @@ function safeShowToast(message, type = 'info') {
 		return '';
 	}
 
-	function displayEvents(events, append = false) {
-		// Enforce team filter just before rendering to avoid any leakage
-		const renderableEvents = selectedTeamKey ? events.filter(eventMatchesSelectedTeam) : events;
-		const tbody = document.getElementById('logsBody');
-
-		// Gracefully handle pages that don't include the legacy logs table
-		if (!tbody) {
-			console.warn('[Telemetry Viewer] logs table body not found; skipping legacy table render');
-			allLoadedEvents = append? [...allLoadedEvents, ...renderableEvents]: [...renderableEvents];
-			return;
-		}
-
-		// Save selected event state before clearing (only if not appending)
-		let selectedEventId = null;
-		const expandedEventIds = new Set();
-		if (!append) {
-			// Find the currently selected event (keyboard-selected)
-			const selectedRow = tbody.querySelector('tr.keyboard-selected[data-event-id]');
-			if (selectedRow) {
-				selectedEventId = selectedRow.getAttribute('data-event-id');
-			}
-
-			// Find all expanded events
-			const expandedRows = tbody.querySelectorAll('tr.log-item-expanded.expanded');
-			expandedRows.forEach(row => {
-				const expandedId = row.id.replace('expanded-', '');
-				if (expandedId) {
-					expandedEventIds.add(expandedId);
-				}
-			});
-
-			tbody.innerHTML = '';
-			allLoadedEvents = [];
-			// Reset keyboard navigation for events when new events are loaded
-			if (keyboardNavigationMode === 'events') {
-				selectedEventIndex = -1;
-			}
-		}
-
-		const showUserColumn = selectedSession === 'all';
-
-		// Toggle header visibility based on current view
-		const userHeader = document.querySelector('th.user-column');
-		if (userHeader) {
-			userHeader.style.display = showUserColumn ? '' : 'none';
-		}
-
-		renderableEvents.forEach(event => {
-			const levelClass = getLevelClass(event.area);
-			const levelBadgeClass = getLevelBadgeClass(event.area);
-			const eventBadgeClass = getEventBadgeClass(event.event);
-			const description = formatDescription(event);
-			const eventData = normalizeEventData(event.data);
-			const clientName = event.company_name || '';
-			const userLabel = extractUserLabelFromEvent(event, eventData);
-			const dataStatus = typeof eventData.status === 'string'? eventData.status.toLowerCase(): null;
-			const isToolFailure = event.event === 'tool_call' && (
-				dataStatus === 'error' ||
-				dataStatus === 'failed' ||
-				eventData.success === false ||
-				Boolean(eventData.error)
-			);
-			const isError = event.event === 'tool_error' || event.event === 'error' || isToolFailure;
-			const statusIcon = buildStatusIcon(isError);
-
-			// Extract tool name for tool events (tool_call or tool_error)
-			const isToolEvent = event.event === 'tool_call' || event.event === 'tool_error';
-			const rawToolName = isToolEvent? (event.tool_name || event.toolName || ''): '';
-			const toolName = rawToolName ? escapeHtml(String(rawToolName)) : '';
-
-			// Extract error message for tool_error events
-			const errorMessage = event.event === 'tool_error'? (event.error_message || ''): '';
-			const escapedErrorMessage = errorMessage ? escapeHtml(String(errorMessage)) : '';
-
-			// Main row
-			const row = document.createElement('tr');
-			row.className = `log-item-${levelClass}`;
-			row.setAttribute('data-event-id', event.id);
-			// Store event data in the row element to avoid API call when copying payload
-			row.setAttribute('data-event', JSON.stringify(event));
-			const userCellHtml = showUserColumn? `<td class="col-user hidden text-gray-700 sm:table-cell log-user whitespace-nowrap">${escapeHtml(userLabel)}</td>`: '';
-
-			row.innerHTML = `
-				<td class="expand-column col-expand px-2 font-medium text-gray-900 whitespace-nowrap" style="text-align: center;">
-					<button class="expand-btn" type="button" id="expand-btn-${event.id}" style="background: none; border: none; cursor: pointer; padding: 4px;">
-						<i class="fa-solid fa-chevron-right"></i>
-					</button>
-				</td>
-				<td class="col-date whitespace-nowrap">${formatDate(event.timestamp)}
-				</td>
-				${userCellHtml}
-				<td class="col-company hidden text-gray-500 md:table-cell log-client whitespace-nowrap">${escapeHtml(clientName)}</td>
-				<td class="col-area text-gray-500 whitespace-nowrap">
-					<span class="${levelBadgeClass}${!event.area ? ' na' : ''}">
-						${event.area || 'N/A'}
-					</span>
-				</td>
-				<td class="col-event text-gray-500 whitespace-nowrap">
-					<span class="${eventBadgeClass}">
-						${escapeHtml(event.event || 'N/A')}
-					</span>
-				</td>
-				<td class="col-tool hidden text-gray-500 lg:table-cell log-tool-name whitespace-nowrap">${toolName}</td>
-				<td class="col-status font-medium text-gray-900 whitespace-nowrap" style="text-align: center;">
-					${statusIcon}
-				</td>
-				<td class="col-error hidden text-gray-500 xl:table-cell log-error-message whitespace-nowrap overflow-hidden text-ellipsis max-w-48" title="${escapedErrorMessage}">${escapedErrorMessage}</td>
-				<td class="col-payload text-gray-500 text-center log-description">${description}</td>
-				<td class="col-actions pr-4 pl-3 text-right font-medium actions-cell whitespace-nowrap sm:pr-8 lg:pr-8">
-					<button class="actions-btn hover:text-indigo-900" onclick="toggleActionsDropdown(event, ${event.id})" style="background: none; border: none; cursor: pointer; padding: 4px;">
-						<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-							<circle cx="8" cy="3" r="1.5"/>
-							<circle cx="8" cy="8" r="1.5"/>
-							<circle cx="8" cy="13" r="1.5"/>
-						</svg>
-					</button>
-					<div class="actions-dropdown" id="dropdown-${event.id}">
-						<div class="actions-dropdown-item" onclick="copyEventPayload(${event.id})">
-							<span>Copy payload</span>
-						</div>
-						<div class="actions-dropdown-item delete" onclick="confirmDeleteEvent(${event.id})">
-							<span>Move to trash</span>
-						</div>
-					</div>
-				</td>
-			`;
-			const descriptionCell = row.querySelector('.log-description');
-			if (descriptionCell) {
-				if (description === '__VIEW_PAYLOAD_BUTTON__') {
-					descriptionCell.innerHTML = `<button onclick="loadEventPayload(${event.id})" class="text-gray-500 hover:text-[#2195cf] dark:text-white dark:hover:text-[#2195cf] p-1 rounded" title="View payload">
-						<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
-							<path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
-							<path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
-						</svg>
-					</button>`;
-					descriptionCell.title = 'Click to view payload';
-				} else {
-					descriptionCell.textContent = description;
-					descriptionCell.removeAttribute('title');
-				}
-			}
-			const expandButton = row.querySelector(`#expand-btn-${event.id}`);
-			if (expandButton) {
-				expandButton.addEventListener('click', (evt) => {
-					evt.stopPropagation();
-					toggleRowExpand(event.id);
-				});
-			}
-
-			row.addEventListener('click', (evt) => {
-				if (evt.target.closest('.actions-btn') || evt.target.closest('.actions-dropdown')) {
-					return;
-				}
-
-				toggleRowExpand(event.id);
-			});
-
-			tbody.appendChild(row);
-
-			// Expanded row
-			const expandedRow = document.createElement('tr');
-			expandedRow.className = `log-item-expanded log-item-${levelClass}`;
-			expandedRow.id = `expanded-${event.id}`;
-
-			const expandedTd = document.createElement('td');
-			expandedTd.colSpan = showUserColumn ? 10 : 9;
-			expandedTd.className = 'log-description-expanded px-3 py-4';
-
-			// Create form with event details instead of JSON
-			const formContainer = createEventDetailsForm(event);
-			expandedTd.appendChild(formContainer);
-
-			expandedRow.appendChild(expandedTd);
-			tbody.appendChild(expandedRow);
-		});
-
-		// Add events to accumulative array
-		if (append) {
-			allLoadedEvents.push(...renderableEvents);
-		} else {
-			allLoadedEvents = [...renderableEvents];
-
-			// Restore selected event and expanded state after rendering
-			if (selectedEventId) {
-				const restoredRow = tbody.querySelector(`tr[data-event-id="${selectedEventId}"]`);
-				if (restoredRow && !restoredRow.classList.contains('log-item-expanded')) {
-					restoredRow.classList.add('keyboard-selected');
-					// Update selectedEventIndex to match the restored row
-					const allEventRows = getAllEventRows();
-					selectedEventIndex = allEventRows.findIndex(row => row === restoredRow);
-					if (selectedEventIndex >= 0) {
-						restoredRow.scrollIntoView({behavior: 'smooth', block: 'nearest'});
-					}
-				}
-			}
-
-			// Restore expanded state for events that were expanded
-			expandedEventIds.forEach(eventId => {
-				const eventIdNum = Number.parseInt(eventId, 10);
-				if (!Number.isNaN(eventIdNum)) {
-					const mainRow = tbody.querySelector(`tr[data-event-id="${eventId}"]`);
-					const expandedRow = document.getElementById(`expanded-${eventId}`);
-					if (mainRow && expandedRow) {
-						// Restore expanded state
-						expandedRow.classList.add('expanded');
-						const expandBtn = document.getElementById(`expand-btn-${eventId}`);
-						if (expandBtn) {
-							expandBtn.classList.add('expanded');
-						}
-						mainRow.classList.add('expanded');
-					}
-				}
-			});
-		}
-	}
 
 	function getLevelClass(area) {
 		const levelMap = {
@@ -3465,6 +3242,10 @@ function safeShowToast(message, type = 'info') {
 		const mainRow = document.querySelector(`tr[data-event-id="${eventId}"]`);
 		const expandBtn = document.getElementById(`expand-btn-${eventId}`);
 
+		if (!expandedRow || !mainRow || !expandBtn) {
+			return;
+		}
+
 		if (expandedRow.classList.contains('expanded')) {
 			// Collapse
 			expandedRow.classList.remove('expanded');
@@ -3488,33 +3269,456 @@ function safeShowToast(message, type = 'info') {
 		return `${day} ${month} ${hours}:${minutes}`;
 	}
 
+	// Create event details form HTML
+	function createEventDetailsFormHTML(event) {
+		// event.data now contains the original payload exactly as received
+		const payload = event.data || {};
 
-	// Infinite scroll handler
-	function shouldLoadMoreOnScroll() {
-		const scrollContainer = document.getElementById('logsTableScroll');
+		const formatDateForForm = (dateString) => {
+			if (!dateString) {return '';}
+			try {
+				const date = new Date(dateString);
+				if (Number.isNaN(date.getTime())) {return dateString;}
 
-		// Prefer the table scroll container if it can scroll
-		if (scrollContainer) {
-			const scrollableHeight = scrollContainer.scrollHeight - scrollContainer.clientHeight;
-			if (scrollableHeight > 0) {
-				const distanceFromBottom = scrollContainer.scrollHeight - scrollContainer.scrollTop - scrollContainer.clientHeight;
-				if (distanceFromBottom < 50) {
-					return true;
-				}
+				// Format: "15 Jan 2024, 14:30:45" (day month year, hour:minute:second)
+				const options = {
+					day: 'numeric',
+					month: 'short',
+					year: 'numeric',
+					hour: '2-digit',
+					minute: '2-digit',
+					second: '2-digit',
+					hour12: false
+				};
+				return date.toLocaleDateString('en-GB', options);
+			} catch {
+				return dateString;
 			}
+		};
+
+		const formatValue = (value) => {
+			if (value === null || value === undefined) {
+				return '';
+			}
+			if (typeof value === 'object') {
+				return JSON.stringify(value, null, 2);
+			}
+			return String(value);
+		};
+
+		const createInputHTML = (id, name, label, value, placeholder = '', type = 'text', roundedClasses = '') => {
+			return `
+				<div class="bg-white dark:bg-white/5 px-3 pt-2.5 pb-1.5 outline-1 -outline-offset-1 outline-gray-300 dark:outline-gray-700 focus-within:relative focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-indigo-600 dark:focus-within:outline-indigo-500 ${roundedClasses}">
+					<label for="${id}" class="block text-xs font-medium text-gray-900 dark:text-white">${label}</label>
+					<input
+						id="${id}"
+						name="${name}"
+						type="${type}"
+						value="${formatValue(value).replace(/"/g, '&quot;')}"
+						placeholder="${placeholder}"
+						aria-label="${label}"
+						readonly
+						class="block w-full text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none"
+						style="font-size: 13.5px;"
+					/>
+				</div>
+			`;
+		};
+
+		const createTextareaHTML = (id, name, label, value, placeholder = '') => {
+			return `
+				<div class="rounded-md bg-white dark:bg-white/5 px-3 pt-2.5 pb-1.5 outline-1 -outline-offset-1 outline-gray-300 dark:outline-gray-700 focus-within:relative focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-indigo-600 dark:focus-within:outline-indigo-500">
+					<label for="${id}" class="block text-xs font-medium text-gray-900 dark:text-white">${label}</label>
+					<textarea
+						id="${id}"
+						name="${name}"
+						placeholder="${placeholder}"
+						aria-label="${label}"
+						readonly
+						rows="8"
+						class="block w-full text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none resize-y"
+						style="font-size: 13.5px;"
+					>${formatValue(value).replace(/</g, '&lt;').replace(/>/g, '&gt;')}</textarea>
+				</div>
+			`;
+		};
+
+		let formHTML = '<div style="max-width: 700px; margin: 0 auto; padding-left: 30px; padding-right: 30px;">';
+
+		// Event Information fieldset
+		formHTML += '<fieldset>';
+		formHTML += '<legend class="block text-sm/6 font-semibold text-gray-900 dark:text-white">Event Information</legend>';
+		formHTML += '<div class="mt-2 -space-y-px">';
+
+		// Request ID (top, full width)
+		formHTML += createInputHTML(
+			`event-id-${event.id}`,
+			'id',
+			'Request ID',
+			payload.id,
+			'Request ID',
+			'text',
+			'rounded-t-md'
+		);
+
+		// Area and Event (side by side as badges) - Second row
+		formHTML += '<div class="grid grid-cols-2 gap-0">';
+		formHTML += `
+			<div class="bg-white dark:bg-white/5 px-3 pt-2.5 pb-1.5 outline-1 -outline-offset-1 outline-gray-300 dark:outline-gray-700 -mr-px">
+				<label class="block text-xs font-medium text-gray-900 dark:text-white mb-1.5">Area</label>
+				<div class="flex items-center">
+					<span class="${getLevelBadgeClass(payload.area)}">${formatValue(payload.area)}</span>
+				</div>
+			</div>
+			<div class="bg-white dark:bg-white/5 px-3 pt-2.5 pb-1.5 outline-1 -outline-offset-1 outline-gray-300 dark:outline-gray-700">
+				<label class="block text-xs font-medium text-gray-900 dark:text-white mb-1.5">Event</label>
+				<div class="flex items-center">
+					<span class="${getEventBadgeClass(payload.event)}">${formatValue(payload.event)}</span>
+				</div>
+			</div>
+		`;
+		formHTML += '</div>';
+
+		// Timestamp and Received At (side by side)
+		formHTML += '<div class="grid grid-cols-2 gap-0">';
+		formHTML += `
+			<div class="bg-white dark:bg-white/5 px-3 pt-2.5 pb-1.5 outline-1 -outline-offset-1 outline-gray-300 dark:outline-gray-700 focus-within:relative focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-indigo-600 dark:focus-within:outline-indigo-500 -mr-px">
+				<label for="event-timestamp-${event.id}" class="block text-xs font-medium text-gray-900 dark:text-white">Timestamp</label>
+				<input
+					id="event-timestamp-${event.id}"
+					name="timestamp"
+					type="text"
+					value="${formatDateForForm(payload.timestamp).replace(/"/g, '&quot;')}"
+					placeholder="Timestamp"
+					aria-label="Timestamp"
+					readonly
+					class="block w-full text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none"
+					style="font-size: 13.5px;"
+				/>
+			</div>
+			<div class="bg-white dark:bg-white/5 px-3 pt-2.5 pb-1.5 outline-1 -outline-offset-1 outline-gray-300 dark:outline-gray-700 focus-within:relative focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-indigo-600 dark:focus-within:outline-indigo-500">
+				<label for="event-received-at-${event.id}" class="block text-xs font-medium text-gray-900 dark:text-white">Received At</label>
+				<input
+					id="event-received-at-${event.id}"
+					name="received_at"
+					type="text"
+					value="${formatDateForForm(payload.received_at).replace(/"/g, '&quot;')}"
+					placeholder="Received At"
+					aria-label="Received At"
+					readonly
+					class="block w-full text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none"
+					style="font-size: 13.5px;"
+				/>
+			</div>
+		`;
+		formHTML += '</div>';
+
+		// Schema Version and Success (side by side)
+		formHTML += '<div class="grid grid-cols-2 gap-0">';
+		formHTML += `
+			<div class="bg-white dark:bg-white/5 px-3 pt-2.5 pb-1.5 outline-1 -outline-offset-1 outline-gray-300 dark:outline-gray-700 focus-within:relative focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-indigo-600 dark:focus-within:outline-indigo-500 -mr-px">
+				<label for="event-schema-version-${event.id}" class="block text-xs font-medium text-gray-900 dark:text-white">Request schema version</label>
+				<input
+					id="event-schema-version-${event.id}"
+					name="telemetry_schema_version"
+					type="text"
+					value="${formatValue(payload.telemetry_schema_version).replace(/"/g, '&quot;')}"
+					placeholder="Request schema version"
+					aria-label="Request schema version"
+					readonly
+					class="block w-full text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none"
+					style="font-size: 13.5px;"
+				/>
+			</div>
+			<div class="bg-white dark:bg-white/5 px-3 pt-2.5 pb-1.5 outline-1 -outline-offset-1 outline-gray-300 dark:outline-gray-700">
+				<label class="block text-xs font-medium text-gray-900 dark:text-white mb-1.5">Success</label>
+				<div class="flex items-center">
+					${payload.success === true || payload.success === 'true'? '<img src="/resources/ok.png" alt="OK" class="status-indicator ok" loading="lazy">': '<img src="/resources/ko.png" alt="KO" class="status-indicator ko" loading="lazy">'}
+				</div>
+			</div>
+		`;
+		formHTML += '</div>';
+
+		// Version and Error Message (side by side)
+		formHTML += '<div class="grid grid-cols-2 gap-0">';
+		formHTML += `
+			<div class="bg-white dark:bg-white/5 px-3 pt-2.5 pb-1.5 outline-1 -outline-offset-1 outline-gray-300 dark:outline-gray-700 focus-within:relative focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-indigo-600 dark:focus-within:outline-indigo-500 rounded-bl-md -mr-px">
+				<label for="event-version-${event.id}" class="block text-xs font-medium text-gray-900 dark:text-white">Server version</label>
+				<input
+					id="event-version-${event.id}"
+					name="version"
+					type="text"
+					value="${formatValue(payload.version).replace(/"/g, '&quot;')}"
+					placeholder="Server version"
+					aria-label="Server version"
+					readonly
+					class="block w-full text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none"
+					style="font-size: 13.5px;"
+				/>
+			</div>
+			<div class="bg-white dark:bg-white/5 px-3 pt-2.5 pb-1.5 outline-1 -outline-offset-1 outline-gray-300 dark:outline-gray-700 focus-within:relative focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-indigo-600 dark:focus-within:outline-indigo-500 rounded-br-md">
+				<label for="event-error-message-${event.id}" class="block text-xs font-medium text-gray-900 dark:text-white">Error Message</label>
+				<input
+					id="event-error-message-${event.id}"
+					name="error_message"
+					type="text"
+					value="${formatValue(payload.error_message).replace(/"/g, '&quot;')}"
+					placeholder="Error Message"
+					aria-label="Error Message"
+					readonly
+					class="block w-full text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none"
+					style="font-size: 13.5px;"
+				/>
+			</div>
+		`;
+		formHTML += '</div>';
+
+		formHTML += '</div>';
+		formHTML += '</fieldset>';
+
+		formHTML += '</div>';
+		return formHTML;
+	}
+
+	// Display events function for logs table
+	function displayEvents(events, append = false) {
+		const logsTableScroll = document.getElementById('logsTableScroll');
+		if (!logsTableScroll) {
+			return;
 		}
 
-		// Fallback to page scroll (when the table container does not create its own scroll)
-		const distanceFromBottomPage = document.documentElement.scrollHeight - window.pageYOffset - window.innerHeight;
-		return distanceFromBottomPage < 50;
+		// If appending, find the tbody and add rows to it
+		// If not appending, replace the entire content
+		let tbody;
+		if (append) {
+			tbody = logsTableScroll.querySelector('tbody');
+			if (!tbody) {
+				return;
+			}
+		} else {
+			// Clear existing content and create new table structure
+			logsTableScroll.innerHTML = '';
+		}
+
+		// Create rows as DOM elements instead of HTML strings
+		const rowElements = [];
+
+		events.forEach((event) => {
+			// When appending, we don't know if it's the last event overall, so always show border
+			const borderClass = 'border-b border-gray-200 dark:border-white/10';
+
+			const eventData = normalizeEventData(event.data);
+			const userLabel = extractUserLabelFromEvent(event, eventData);
+			const clientName = event.company_name || '';
+			const dataStatus = typeof eventData.status === 'string'? eventData.status.toLowerCase(): null;
+			const isToolFailure = event.event === 'tool_call' && (
+				dataStatus === 'error' ||
+				dataStatus === 'failed' ||
+				eventData.success === false ||
+				Boolean(eventData.error)
+			);
+			const isError = event.event === 'tool_error' || event.event === 'error' || isToolFailure;
+			const statusIcon = buildStatusIcon(isError);
+
+			// Extract tool name for tool events
+			const isToolEvent = event.event === 'tool_call' || event.event === 'tool_error';
+			const rawToolName = isToolEvent? (event.tool_name || event.toolName || ''): '';
+			const toolName = rawToolName ? escapeHtml(String(rawToolName)) : 'N/A';
+
+			// Extract error message for tool_error events
+			const errorMessage = event.event === 'tool_error'? (event.error_message || ''): '';
+			const escapedErrorMessage = errorMessage ? escapeHtml(String(errorMessage)) : '';
+
+			// Main row
+			const row = document.createElement('tr');
+			row.className = 'logs-table-row';
+			row.setAttribute('data-event-id', event.id);
+			row.style.height = '46px';
+
+			row.innerHTML = `
+				<td class="${borderClass} pl-4 pr-2 text-center font-medium text-gray-500 dark:text-gray-400" style="height: 46px; vertical-align: middle;">
+					<button type="button" id="expand-btn-${event.id}" class="expand-btn" onclick="toggleRowExpand(${event.id})" style="background: none; border: none; cursor: pointer; padding: 4px;">
+						<i class="fa-solid fa-chevron-right text-gray-400"></i>
+					</button>
+				</td>
+				<td class="${borderClass} pr-3 pl-4 whitespace-nowrap text-gray-700 dark:text-gray-300 sm:pl-6" style="height: 46px; vertical-align: middle; max-width: 120px; width: 120px;">${formatDate(event.timestamp)}</td>
+				<td class="${borderClass} px-3 font-medium whitespace-nowrap text-gray-500 dark:text-gray-400" style="height: 46px; vertical-align: middle; max-width: 120px; width: 120px;">${escapeHtml(userLabel)}</td>
+				<td class="hidden ${borderClass} px-3 whitespace-nowrap text-gray-500 dark:text-gray-400 md:table-cell" style="height: 46px; vertical-align: middle;">${escapeHtml(clientName)}</td>
+				<td class="${borderClass} px-3 whitespace-nowrap text-gray-500 dark:text-gray-400" style="height: 46px; vertical-align: middle; max-width: 100px; width: 100px;">
+					<span class="${getLevelBadgeClass(event.area)}${!event.area ? ' na' : ''}">${escapeHtml(event.area || 'N/A')}</span>
+				</td>
+				<td class="${borderClass} px-3 whitespace-nowrap text-gray-500 dark:text-gray-400" style="height: 46px; vertical-align: middle; max-width: 120px; width: 120px;">
+					<span class="${getEventBadgeClass(event.event)}">${escapeHtml(event.event || 'N/A')}</span>
+				</td>
+				<td class="hidden ${borderClass} px-3 whitespace-nowrap text-gray-500 dark:text-gray-400 lg:table-cell" style="height: 46px; vertical-align: middle; max-width: 150px; width: 150px;">${toolName}</td>
+				<td class="${borderClass} px-3 whitespace-nowrap text-center" style="height: 46px; vertical-align: middle;">${statusIcon}</td>
+				<td class="hidden ${borderClass} px-3 whitespace-nowrap text-gray-500 dark:text-gray-400 xl:table-cell overflow-hidden text-ellipsis max-w-48" style="height: 46px; vertical-align: middle;" title="${escapedErrorMessage}">${escapedErrorMessage}</td>
+				<td class="${borderClass} px-3 text-center text-gray-500 dark:text-gray-400" style="height: 46px; vertical-align: middle;">
+					<button type="button" onclick="loadEventPayload(${event.id})" class="text-gray-500 hover:text-[#2195cf] dark:text-white dark:hover:text-[#2195cf] p-1 rounded" title="View payload">
+						<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+							<path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+						</svg>
+					</button>
+				</td>
+				<td class="${borderClass} pr-4 pl-3 text-right font-medium whitespace-nowrap sm:pr-8 lg:pr-8" style="height: 46px; vertical-align: middle; max-width: 60px; width: 60px;">
+					<button type="button" class="actions-btn hover:text-indigo-900 dark:hover:text-indigo-400" onclick="toggleActionsDropdown(event, ${event.id})" style="background: none; border: none; cursor: pointer; padding: 4px;">
+						<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+							<circle cx="8" cy="3" r="1.5"/>
+							<circle cx="8" cy="8" r="1.5"/>
+							<circle cx="8" cy="13" r="1.5"/>
+						</svg>
+					</button>
+					<div class="actions-dropdown actions-dropdown-left" id="dropdown-${event.id}">
+						<div class="actions-dropdown-item" onclick="copyEventPayload(${event.id})">
+							<span>Copy payload</span>
+						</div>
+						<div class="actions-dropdown-item delete" onclick="confirmDeleteEvent(${event.id})">
+							<span>Move to trash</span>
+						</div>
+					</div>
+				</td>
+			`;
+
+			// Expanded row
+			const expandedRow = document.createElement('tr');
+			expandedRow.className = 'logs-item-expanded';
+			expandedRow.id = `expanded-${event.id}`;
+			expandedRow.innerHTML = `
+				<td colspan="11" class="log-description-expanded px-3 py-4">
+					${createEventDetailsFormHTML(event)}
+				</td>
+			`;
+
+			rowElements.push(row);
+			rowElements.push(expandedRow);
+		});
+
+		// For non-append mode, we still need the HTML string
+		const rows = append ? null : rowElements.map(row => row.outerHTML).join('');
+
+		if (append) {
+			// Append rows directly as DOM elements
+			rowElements.forEach(row => {
+				tbody.appendChild(row);
+			});
+			// Add events to allLoadedEvents array
+			allLoadedEvents.push(...events);
+		} else {
+			// Create new table structure
+			logsTableScroll.innerHTML = `
+				<div>
+					<div class="flow-root">
+						<div class="-my-2">
+							<div class="inline-block min-w-full py-2 align-middle">
+								<table class="min-w-full border-separate border-spacing-0 bg-white dark:bg-gray-900" style="font-size: 13.5px !important; min-width: 100%;">
+									<thead class="bg-gray-50 dark:bg-gray-800/75">
+										<tr>
+											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 dark:bg-gray-900/75 py-3.5 pl-4 pr-2 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter">
+												<span class="sr-only">Expand</span>
+											</th>
+											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 dark:bg-gray-900/75 py-3.5 pr-3 pl-4 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter sm:pl-6" style="max-width: 120px; width: 120px;">Date</th>
+											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 dark:bg-gray-900/75 px-3 py-3.5 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter" style="max-width: 120px; width: 120px;">User</th>
+											<th scope="col" class="sticky top-0 z-10 hidden border-b border-gray-300 dark:border-white/15 dark:bg-gray-900/75 px-3 py-3.5 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter md:table-cell">Company</th>
+											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 dark:bg-gray-900/75 px-3 py-3.5 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter" style="max-width: 100px; width: 100px;">Area</th>
+											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 dark:bg-gray-900/75 px-3 py-3.5 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter" style="max-width: 120px; width: 120px;">Event</th>
+											<th scope="col" class="sticky top-0 z-10 hidden border-b border-gray-300 dark:border-white/15 dark:bg-gray-900/75 px-3 py-3.5 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter lg:table-cell" style="max-width: 150px; width: 150px;">Tool</th>
+											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 dark:bg-gray-900/75 px-3 py-3.5 text-center font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter">Status</th>
+											<th scope="col" class="sticky top-0 z-10 hidden border-b border-gray-300 dark:border-white/15 dark:bg-gray-900/75 px-3 py-3.5 text-left font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter xl:table-cell">Error</th>
+											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 dark:bg-gray-900/75 px-3 py-3.5 text-center font-semibold text-gray-900 dark:text-white backdrop-blur-sm backdrop-filter">Payload</th>
+											<th scope="col" class="sticky top-0 z-10 border-b border-gray-300 dark:border-white/15 dark:bg-gray-900/75 py-3.5 pr-4 pl-3 backdrop-blur-sm backdrop-filter sm:pr-6 lg:pr-8" style="max-width: 60px; width: 60px;">
+												<span class="sr-only">Actions</span>
+											</th>
+										</tr>
+									</thead>
+									<tbody>
+										${rows}
+									</tbody>
+								</table>
+							</div>
+						</div>
+					</div>
+				</div>
+			`;
+			// Store events in allLoadedEvents array
+			allLoadedEvents = [...events];
+			// Get the tbody for adding event listeners
+			tbody = logsTableScroll.querySelector('tbody');
+		}
+
+		// Add click handlers to newly added rows for expansion
+		if (tbody) {
+			const newRows = append
+				? Array.from(tbody.querySelectorAll('tr[data-event-id]')).slice(-events.length) // Get only the newly added main rows (not expanded rows)
+				: tbody.querySelectorAll('tr[data-event-id]');
+
+			newRows.forEach(row => {
+				// Check if event listener already exists
+				if (row.hasAttribute('data-listener-attached')) {
+					return;
+				}
+				row.setAttribute('data-listener-attached', 'true');
+				row.addEventListener('click', (evt) => {
+					// Don't expand if clicking on actions button or dropdown
+					if (evt.target.closest('.actions-btn') || evt.target.closest('.actions-dropdown') || evt.target.closest('.expand-btn')) {
+						return;
+					}
+					const eventId = row.getAttribute('data-event-id');
+					if (eventId) {
+						toggleRowExpand(Number.parseInt(eventId, 10));
+					}
+				});
+			});
+		}
+	}
+
+	// Infinite scroll handler for logs table
+	function shouldLoadMoreOnScroll() {
+		const logsTableScroll = document.getElementById('logsTableScroll');
+		if (!logsTableScroll) {
+			return false;
+		}
+
+		// Check if logsTableScroll has its own scroll (overflow-y: auto)
+		const hasOwnScroll = logsTableScroll.scrollHeight > logsTableScroll.clientHeight;
+
+		if (hasOwnScroll) {
+			// logsTableScroll has its own scroll container
+			const scrollTop = logsTableScroll.scrollTop;
+			const scrollHeight = logsTableScroll.scrollHeight;
+			const clientHeight = logsTableScroll.clientHeight;
+			const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
+			return distanceFromBottom < 300; // Load more when 300px from bottom
+		} 
+			// Use page scroll
+			const scrollTop = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+			const windowHeight = window.innerHeight || document.documentElement.clientHeight;
+			const documentHeight = Math.max(
+				document.body.scrollHeight,
+				document.body.offsetHeight,
+				document.documentElement.clientHeight,
+				document.documentElement.scrollHeight,
+				document.documentElement.offsetHeight
+			);
+
+			const distanceFromBottom = documentHeight - (scrollTop + windowHeight);
+			return distanceFromBottom < 300; // Load more when 300px from bottom
+		
 	}
 
 	function handleScroll() {
-		if (isLoadingMore || !hasMoreEvents) {
+		if (isLoadingMore) {
+			return;
+		}
+
+		if (!hasMoreEvents) {
 			return;
 		}
 
 		if (shouldLoadMoreOnScroll()) {
+			const logsTableScroll = document.getElementById('logsTableScroll');
+			const hasOwnScroll = logsTableScroll && logsTableScroll.scrollHeight > logsTableScroll.clientHeight;
+
 			loadEvents({append: true});
 		}
 	}
@@ -3890,39 +4094,48 @@ function safeShowToast(message, type = 'info') {
 	}
 
 	function setupInfiniteScroll() {
-		// Remove any existing scroll listeners to avoid duplicates
-		if (window._eventLogScrollHandler) {
-			const scrollContainer = document.getElementById('logsTableScroll');
-			if (scrollContainer) {
-				scrollContainer.removeEventListener('scroll', window._eventLogScrollHandler, {passive: true});
-			}
-			window.removeEventListener('scroll', window._eventLogScrollHandler, {passive: true});
+		const logsTableScroll = document.getElementById('logsTableScroll');
+		if (!logsTableScroll) {
+			console.error('[Event Log] logsTableScroll not found for infinite scroll setup');
+			return;
 		}
 
-		// Create new scroll handler
+		// Remove any existing scroll listeners to avoid duplicates
+		if (window._eventLogScrollHandler) {
+			window.removeEventListener('scroll', window._eventLogScrollHandler, {passive: true});
+			logsTableScroll.removeEventListener('scroll', window._eventLogScrollHandler, {passive: true});
+			clearTimeout(window._eventLogScrollTimeout);
+			window._eventLogScrollTimeout = null;
+		}
+
+		// Create new scroll handler with debouncing
 		window._eventLogScrollHandler = () => {
+			// Clear existing timeout
 			if (window._eventLogScrollTimeout) {
-				return;
+				clearTimeout(window._eventLogScrollTimeout);
 			}
+
+			// Set new timeout
 			window._eventLogScrollTimeout = setTimeout(() => {
 				handleScroll();
 				window._eventLogScrollTimeout = null;
-			}, 100);
+			}, 150);
 		};
 
-		const scrollContainer = document.getElementById('logsTableScroll');
-		if (scrollContainer) {
-			scrollContainer.addEventListener('scroll', window._eventLogScrollHandler, {passive: true});
+		// Check if logsTableScroll has its own scroll
+		const hasOwnScroll = logsTableScroll.scrollHeight > logsTableScroll.clientHeight;
+
+		if (hasOwnScroll) {
+			// Listen to logsTableScroll scroll
+			logsTableScroll.addEventListener('scroll', window._eventLogScrollHandler, {passive: true});
 		} else {
-			handleInitializationError('scroll container binding', new Error('Scroll container not found'));
+			// Listen to page scroll
+			window.addEventListener('scroll', window._eventLogScrollHandler, {passive: true});
 		}
 
-		// Also listen to page scroll to support layouts where the table container is not scrollable
-		window.addEventListener('scroll', window._eventLogScrollHandler, {passive: true});
+		// Also listen to wheel events for better detection
+		logsTableScroll.addEventListener('wheel', window._eventLogScrollHandler, {passive: true});
 	}
-
-	// Setup infinite scroll
-	setupInfiniteScroll();
 
 	// Function to clear all filters
 	function clearAllFilters() {
@@ -4062,21 +4275,16 @@ function safeShowToast(message, type = 'info') {
 	}
 
 	registerDropdownScrollClose(window);
-	registerDropdownScrollClose(document.getElementById('logsTableScroll'));
 	registerDropdownScrollClose(document.querySelector('.sessions-scrollable'));
 
 	// Keyboard navigation state
-	let keyboardNavigationMode = null; // 'sessions' or 'events'
+	let keyboardNavigationMode = null; // 'sessions'
 	let selectedSessionIndex = -1;
-	let selectedEventIndex = -1;
 
 	// Remove keyboard selection from all elements
 	function clearKeyboardSelection() {
 		document.querySelectorAll('.session-item.keyboard-selected').forEach(item => {
 			item.classList.remove('keyboard-selected');
-		});
-		document.querySelectorAll('.logs-table tbody tr.keyboard-selected').forEach(row => {
-			row.classList.remove('keyboard-selected');
 		});
 	}
 
@@ -4085,13 +4293,6 @@ function safeShowToast(message, type = 'info') {
 		const allSessionsItem = document.querySelector('.session-item[data-session="all"]');
 		const sessionItems = Array.from(document.querySelectorAll('#sessionList .session-item'));
 		return allSessionsItem ? [allSessionsItem, ...sessionItems] : sessionItems;
-	}
-
-	// Get all event rows (excluding expanded rows)
-	function getAllEventRows() {
-		return Array.from(document.querySelectorAll('#logsBody tr[data-event-id]')).filter(row => {
-			return !row.classList.contains('log-item-expanded');
-		});
 	}
 
 	// Navigate sessions with keyboard
@@ -4121,30 +4322,6 @@ function safeShowToast(message, type = 'info') {
 		}
 	}
 
-	// Navigate events with keyboard
-	function navigateEvents(direction) {
-		const events = getAllEventRows();
-		if (events.length === 0) {return;}
-
-		clearKeyboardSelection();
-		keyboardNavigationMode = 'events';
-
-		if (selectedEventIndex < 0) {
-			selectedEventIndex = 0;
-		} else {
-			if (direction === 'down') {
-				selectedEventIndex = Math.min(selectedEventIndex + 1, events.length - 1);
-			} else if (direction === 'up') {
-				selectedEventIndex = Math.max(selectedEventIndex - 1, 0);
-			}
-		}
-
-		const selectedRow = events[selectedEventIndex];
-		if (selectedRow) {
-			selectedRow.classList.add('keyboard-selected');
-			selectedRow.scrollIntoView({behavior: 'smooth', block: 'nearest'});
-		}
-	}
 
 	// Activate selected session
 	function activateSelectedSession() {
@@ -4155,17 +4332,6 @@ function safeShowToast(message, type = 'info') {
 		}
 	}
 
-	// Activate selected event (expand/collapse)
-	function activateSelectedEvent() {
-		const events = getAllEventRows();
-		if (selectedEventIndex >= 0 && selectedEventIndex < events.length) {
-			const selectedRow = events[selectedEventIndex];
-			const eventId = selectedRow.getAttribute('data-event-id');
-			if (eventId) {
-				toggleRowExpand(Number.parseInt(eventId, 10));
-			}
-		}
-	}
 
 	// Keyboard event handler
 	document.addEventListener('keydown', (e) => {
@@ -4208,8 +4374,6 @@ function safeShowToast(message, type = 'info') {
 			// Determine which list to navigate based on focus or current mode
 			if (keyboardNavigationMode === 'sessions' || (!keyboardNavigationMode && document.activeElement.closest('.sidebar'))) {
 				navigateSessions('down');
-			} else {
-				navigateEvents('down');
 			}
 			break;
 
@@ -4217,8 +4381,6 @@ function safeShowToast(message, type = 'info') {
 			e.preventDefault();
 			if (keyboardNavigationMode === 'sessions' || (!keyboardNavigationMode && document.activeElement.closest('.sidebar'))) {
 				navigateSessions('up');
-			} else {
-				navigateEvents('up');
 			}
 			break;
 
@@ -4226,8 +4388,6 @@ function safeShowToast(message, type = 'info') {
 			e.preventDefault();
 			if (keyboardNavigationMode === 'sessions') {
 				activateSelectedSession();
-			} else if (keyboardNavigationMode === 'events') {
-				activateSelectedEvent();
 			}
 			break;
 
@@ -4247,7 +4407,6 @@ function safeShowToast(message, type = 'info') {
 			clearKeyboardSelection();
 			keyboardNavigationMode = null;
 			selectedSessionIndex = -1;
-			selectedEventIndex = -1;
 		}
 	});
 
@@ -5776,18 +5935,5 @@ function safeShowToast(message, type = 'info') {
 	window.copyEventPayload = copyEventPayload;
 	window.confirmDeleteEvent = confirmDeleteEvent;
 
-	// Initialize resizable columns when DOM is ready
-	document.addEventListener('DOMContentLoaded', () => {
-		const logsTable = document.getElementById('logsTable');
-		if (logsTable && window.ResizableColumns) {
-
-			const resizableColumns = new window.ResizableColumns(logsTable, {
-				store: window.resizableColumnsStore,
-				minWidth: 48
-			});
-			// Store reference to prevent garbage collection
-			window.__logsTableResizableColumns = resizableColumns;
-		}
-	});
 
 } // end guard to avoid duplicate execution

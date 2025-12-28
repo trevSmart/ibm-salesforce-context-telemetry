@@ -3656,6 +3656,9 @@ async function ensureDenormalizedColumns() {
 			db.exec('CREATE INDEX IF NOT EXISTS idx_org_id_tool_name_created_at ON telemetry_events(org_id, tool_name, created_at)');
 			db.exec('CREATE INDEX IF NOT EXISTS idx_event ON telemetry_events(event)');
 			db.exec('CREATE INDEX IF NOT EXISTS idx_event_created_at ON telemetry_events(event, created_at)');
+			// Composite index for common query pattern: WHERE deleted_at IS NULL ORDER BY created_at DESC
+			// This significantly improves performance for pagination queries
+			db.exec('CREATE INDEX IF NOT EXISTS idx_deleted_at_created_at ON telemetry_events(deleted_at, created_at)');
 		} else if (dbType === 'postgresql') {
 			// PostgreSQL supports IF NOT EXISTS in ALTER TABLE
 			await db.query('ALTER TABLE IF EXISTS telemetry_events ADD COLUMN IF NOT EXISTS org_id TEXT');
@@ -3678,6 +3681,9 @@ async function ensureDenormalizedColumns() {
 			await db.query('CREATE INDEX IF NOT EXISTS idx_org_id_tool_name_created_at ON telemetry_events(org_id, tool_name, created_at)');
 			await db.query('CREATE INDEX IF NOT EXISTS idx_event ON telemetry_events(event)');
 			await db.query('CREATE INDEX IF NOT EXISTS idx_event_created_at ON telemetry_events(event, created_at)');
+			// Composite index for common query pattern: WHERE deleted_at IS NULL ORDER BY created_at DESC
+			// This significantly improves performance for pagination queries
+			await db.query('CREATE INDEX IF NOT EXISTS idx_deleted_at_created_at ON telemetry_events(deleted_at, created_at)');
 
 			// GIN index for JSONB queries (PostgreSQL only)
 			await db.query('CREATE INDEX IF NOT EXISTS idx_data_gin ON telemetry_events USING GIN (data)');
