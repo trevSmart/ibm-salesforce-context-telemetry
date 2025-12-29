@@ -1497,8 +1497,8 @@ function safeShowToast(message, type = 'info') {
 
 		const seriesData = buckets.map((count, index) => {
 			const ts = windowStart.getTime() + (index * slotMs);
-			// Use null for zero values so the line doesn't show
-			return [ts, count || null];
+			// Use 0 for zero values so the line is always visible
+			return [ts, count];
 		});
 
 		const maxBucketCount = buckets.length ? Math.max(...buckets) : 0;
@@ -1553,8 +1553,8 @@ function safeShowToast(message, type = 'info') {
 		sessionBuckets.forEach((buckets, sessionId) => {
 			const seriesData = buckets.map((count, index) => {
 				const ts = windowStart.getTime() + (index * slotMs);
-				// Use null for zero values so the line doesn't show
-				return [ts, count || null];
+				// Use 0 for zero values so the line is always visible
+				return [ts, count];
 			});
 			maxBucketCount = Math.max(maxBucketCount, ...buckets, maxBucketCount);
 			seriesList.push({
@@ -1772,14 +1772,26 @@ function safeShowToast(message, type = 'info') {
 			smooth: 0.55,
 			smoothMonotone: 'x', // prevent bezier overshoot while keeping curvature
 			showSymbol: false,
-			connectNulls: false, // Don't connect points when there are null values between them
-			lineStyle: {width: 3, color: hexToRgba('#53cf98', 0.5)}, // More transparent line
-			areaStyle: {
-				color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-					{offset: 0, color: 'rgba(133,230,185,0.45)'},
-					{offset: warmOffset, color: 'rgba(197,241,221,0.35)'},
-					{offset: 1, color: 'rgba(216,247,232,0.16)'}
-				])
+			connectNulls: true, // Connect valid points even if there are null values between them
+			lineStyle: function(params) {
+				const value = params.data;
+				return {
+					width: 3,
+					color: value === 0 ? 'transparent' : hexToRgba('#53cf98', 0.5)
+				};
+			},
+			areaStyle: function(params) {
+				const value = params.data;
+				if (value === 0) {
+					return { color: 'transparent' };
+				}
+				return {
+					color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+						{offset: 0, color: 'rgba(133,230,185,0.45)'},
+						{offset: warmOffset, color: 'rgba(197,241,221,0.35)'},
+						{offset: 1, color: 'rgba(216,247,232,0.16)'}
+					])
+				};
 			},
 			data: seriesData
 		};
@@ -1794,13 +1806,25 @@ function safeShowToast(message, type = 'info') {
 			smooth: 0.65,
 			smoothMonotone: 'x',
 			showSymbol: false,
-			connectNulls: false, // Don't connect points when there are null values between them
-			lineStyle: {width: 2.5, color: hexToRgba(color, 0.5)}, // More transparent line
-			areaStyle: {
-				color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-					{offset: 0, color: startColor},
-					{offset: 1, color: endColor}
-				])
+			connectNulls: true, // Connect valid points even if there are null values between them
+			lineStyle: function(params) {
+				const value = params.data;
+				return {
+					width: 2.5,
+					color: value === 0 ? 'transparent' : hexToRgba(color, 0.5)
+				};
+			},
+			areaStyle: function(params) {
+				const value = params.data;
+				if (value === 0) {
+					return { color: 'transparent' };
+				}
+				return {
+					color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+						{offset: 0, color: startColor},
+						{offset: 1, color: endColor}
+					])
+				};
 			},
 			data: seriesData
 		};
