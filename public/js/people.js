@@ -794,8 +794,25 @@ window.addEventListener('softNav:pageMounted', async (event) => {
 			// Reset scroll position to top after initial load
 			window.scrollTo({top: 0, behavior: 'auto'});
 		}
+
+		// Check for person ID in URL hash and show details if present
+		checkForPersonDetailInURL();
 	}
 });
+
+// Check URL hash for person detail request
+function checkForPersonDetailInURL() {
+	const hash = window.location.hash;
+	if (hash && hash.startsWith('#person-')) {
+		const personId = hash.replace('#person-', '');
+		if (personId && !isNaN(Number(personId))) {
+			// Small delay to ensure people are loaded
+			setTimeout(() => {
+				showPersonDetails(Number(personId));
+			}, 100);
+		}
+	}
+}
 
 
 // Legacy functions for backward compatibility

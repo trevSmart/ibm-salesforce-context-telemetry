@@ -63,6 +63,17 @@
 			shortcut: 'R'
 		},
 		{
+			id: 'action-maximize',
+			type: 'action',
+			title: 'Maximize',
+			description: 'Maximize main container and hide header',
+			icon: 'arrows-pointing-out',
+			action: () => {
+				toggleMaximize();
+			},
+			shortcut: 'M'
+		},
+		{
 			id: 'action-settings',
 			type: 'action',
 			title: 'Settings',
@@ -77,29 +88,57 @@
 		}
 	];
 
+	// Global search data
+	let teamsData = [];
+	let peopleData = [];
+	let isDataLoaded = false;
+
+	/**
+	 * Load teams and people data for global search
+	 */
+	async function loadGlobalSearchData() {
+		if (isDataLoaded) return;
+
+		try {
+			// Load teams data
+			const teamsResponse = await fetch('/api/teams');
+			if (teamsResponse.ok) {
+				const teamsResult = await teamsResponse.json();
+				teamsData = teamsResult.teams || [];
+			}
+
+			// Load people data
+			const peopleResponse = await fetch('/api/people');
+			if (peopleResponse.ok) {
+				const peopleResult = await peopleResponse.json();
+				peopleData = peopleResult.people || [];
+			}
+
+			isDataLoaded = true;
+		} catch (error) {
+			console.error('Error loading global search data:', error);
+			// Continue with empty arrays if loading fails
+		}
+	}
+
 	/**
 	 * Build command palette HTML
 	 */
 	function buildCommandPaletteHTML() {
 		return `
-      <div id="commandPaletteBackdrop" class="fixed inset-0 bg-gray-900/60 backdrop-blur-xs z-50 command-palette-backdrop-hidden">
-        <div class="fixed inset-0 w-screen overflow-y-auto p-4 focus:outline-none sm:p-6 md:p-20 flex items-center justify-center">
+      <div id="commandPaletteBackdrop" class="fixed inset-0 bg-gray-900/60 backdrop-blur-xs z-[10000] command-palette-backdrop-hidden">
+        <div class="fixed inset-0 w-screen overflow-y-auto p-4 focus:outline-none sm:p-6 md:p-20 flex items-center justify-center" style="font-size: 14.9px;">
           <div class="w-full mx-auto block max-w-2xl overflow-hidden rounded-xl bg-white/70 dark:bg-gray-800/70 shadow-2xl outline-1 outline-black/5 dark:outline-white/10 backdrop-blur-lg backdrop-filter command-palette-panel-hidden -mt-32 sm:-mt-36">
             <div class="grid grid-cols-1 border-b border-gray-500/10 dark:border-gray-700/50">
-              <input type="text" placeholder="Search commands..." class="col-start-1 row-start-1 h-12 w-full bg-transparent pr-4 pl-11 text-base text-gray-900 dark:text-white outline-hidden placeholder:text-gray-500 dark:placeholder:text-gray-400 sm:text-sm" id="commandPaletteInput" />
+              <input type="text" placeholder="Search commands, teams, people..." class="col-start-1 row-start-1 h-12 w-full bg-transparent pr-4 pl-11 text-base text-gray-900 dark:text-white outline-hidden placeholder:text-gray-500 dark:placeholder:text-gray-400 sm:text-sm" id="commandPaletteInput" />
               <svg viewBox="0 0 20 20" fill="currentColor" data-slot="icon" aria-hidden="true" class="pointer-events-none col-start-1 row-start-1 ml-4 size-5 self-center text-gray-900/40 dark:text-white/40">
                 <path d="M9 3.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11ZM2 9a7 7 0 1 1 12.452 4.391l3.328 3.329a.75.75 0 1 1-1.06 1.06l-3.329-3.328A7 7 0 0 1 2 9Z" clip-rule="evenodd" fill-rule="evenodd" />
               </svg>
             </div>
 
             <div class="block max-h-80 scroll-py-2 overflow-y-auto scrollbar-transparent" id="commandList">
-              <div class="block divide-y divide-gray-500/10 dark:divide-gray-700/50">
-                <div class="p-2">
-                  <h2 class="mt-4 mb-2 px-3 text-xs font-semibold text-gray-900 dark:text-white">Quick actions</h2>
-                  <div class="text-sm text-gray-700 dark:text-gray-300" id="commandItems">
-                    ${renderCommandItems(commands)}
-                  </div>
-                </div>
+              <div class="block divide-y divide-gray-500/10 dark:divide-gray-700/50" id="commandItems">
+                <!-- Results will be populated dynamically -->
               </div>
 
               <div class="hidden block px-6 py-14 text-center sm:px-14" id="noResults">
@@ -149,7 +188,8 @@
 			'cog-6-tooth': 'M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z',
 			'bell': 'M5.85 3.5a.75.75 0 0 0-1.117-1 9.719 9.719 0 0 0-2.348 4.876.75.75 0 0 0 1.479.248A8.219 8.219 0 0 1 5.85 3.5ZM19.267 2.5a.75.75 0 1 0-1.118 1 8.22 8.22 0 0 1 1.987 4.124.75.75 0 0 0 1.48-.248A9.72 9.72 0 0 0 19.267 2.5Z M12 4.25A3.75 3.75 0 0 0 8.25 8v3.75a.75.75 0 0 1-.22.53l-2.25 2.25a.75.75 0 0 1-1.06-1.06l1.72-1.72A.25.25 0 0 0 6.75 12V8a2.25 2.25 0 0 1 4.5 0v3.75a.75.75 0 0 1-.22.53l-2.25 2.25a.75.75 0 0 1-1.06-1.06l1.72-1.72A.25.25 0 0 0 9.25 12V8A3.75 3.75 0 0 0 12 4.25Z',
 			'moon': 'M17.293 13.293A8 8 0 0 1 6.707 2.707a8.001 8.001 0 1 0 10.586 10.586Z',
-			'arrow-right-on-rectangle': 'M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z'
+			'arrow-right-on-rectangle': 'M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z',
+			'arrows-pointing-out': 'M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15'
 		};
 		return icons[iconName] || icons['cog-6-tooth'];
 	}
@@ -250,8 +290,8 @@
 			}
 		}
 
-		// Additional check: look for VISIBLE elements with very high z-index that might be modals (exclude command palette)
-		const allElements = document.querySelectorAll('*:not(#commandPaletteBackdrop)');
+		// Additional check: look for VISIBLE elements with very high z-index that might be modals (exclude command palette and maximized container)
+		const allElements = document.querySelectorAll('*:not(#commandPaletteBackdrop):not(.main-container.maximized)');
 		for (const element of allElements) {
 			const zIndex = window.getComputedStyle(element).zIndex;
 			const isVisible = window.getComputedStyle(element).display !== 'none' &&
@@ -276,6 +316,11 @@
 		}
 
 		if (commandPaletteElement) {
+			// Load global search data in background
+			loadGlobalSearchData().catch(error => {
+				console.error('Error loading global search data:', error);
+			});
+
 			// Make element visible first
 			commandPaletteElement.style.display = 'block';
 			commandPaletteElement.style.visibility = 'visible';
@@ -310,7 +355,9 @@
 
 			// Reset search
 			searchInput.value = '';
-			filterCommands('');
+			filterCommands('').catch(error => {
+				console.error('Error filtering commands:', error);
+			});
 		}
 	}
 
@@ -435,7 +482,9 @@
 	function setupEventListeners() {
 		// Search input events
 		searchInput.addEventListener('input', (e) => {
-			filterCommands(e.target.value);
+			filterCommands(e.target.value).catch(error => {
+				console.error('Error filtering commands:', error);
+			});
 		});
 
 		searchInput.addEventListener('keydown', (e) => {
@@ -463,29 +512,79 @@
 			});
 		}
 
-		// Close on escape
+		// Close on escape or clear input
 		document.addEventListener('keydown', (e) => {
 			if (e.key === 'Escape' && isOpen) {
-				// Always close on ESC when palette is open
-				hideCommandPalette();
+				// If there's text in the input, clear it. Otherwise close the palette
+				if (searchInput && searchInput.value.trim()) {
+					searchInput.value = '';
+					filterCommands('');
+					e.preventDefault();
+				} else {
+					hideCommandPalette();
+				}
 			}
 		});
 	}
 
 	/**
-	 * Filter commands based on search query
+	 * Filter commands and global search results based on search query
 	 */
-	function filterCommands(query) {
+	async function filterCommands(query) {
+		// Load data if not already loaded
+		await loadGlobalSearchData();
+
+		const lowerQuery = query.toLowerCase();
+		const hasQuery = lowerQuery.trim().length > 0;
+
+		// Filter commands
 		const filteredCommands = commands.filter(command =>
-			command.title.toLowerCase().includes(query.toLowerCase()) ||
-			command.description.toLowerCase().includes(query.toLowerCase())
+			command.title.toLowerCase().includes(lowerQuery) ||
+			command.description.toLowerCase().includes(lowerQuery)
 		);
+
+		let filteredTeams = [];
+		let filteredPeople = [];
+
+		// Only show teams and people results when there's a search query
+		if (hasQuery) {
+			// Filter teams
+			filteredTeams = teamsData.filter(team =>
+				team.name.toLowerCase().includes(lowerQuery) ||
+				(team.company_name && team.company_name.toLowerCase().includes(lowerQuery))
+			).map(team => ({
+				id: `team-${team.id}`,
+				type: 'team',
+				title: team.name,
+				description: team.company_name ? `${team.company_name}` : 'Team',
+				icon: 'users',
+				action: () => navigateTo('/teams'),
+				data: team
+			}));
+
+			// Filter people
+			filteredPeople = peopleData.filter(person =>
+				person.name.toLowerCase().includes(lowerQuery) ||
+				(person.email && person.email.toLowerCase().includes(lowerQuery))
+			).map(person => ({
+				id: `person-${person.id}`,
+				type: 'person',
+				title: person.name,
+				description: person.email || 'Person',
+				icon: 'user-group',
+				action: () => navigateTo('/people'),
+				data: person
+			}));
+		}
+
+		// Combine all results
+		const allResults = [...filteredCommands, ...filteredTeams, ...filteredPeople];
 
 		const commandItemsContainer = commandList.querySelector('#commandItems');
 		const noResultsElement = commandList.querySelector('#noResults');
 
-		if (filteredCommands.length > 0) {
-			commandItemsContainer.innerHTML = renderCommandItems(filteredCommands);
+		if (allResults.length > 0) {
+			commandItemsContainer.innerHTML = renderCommandItems(allResults);
 			commandItemsContainer.style.display = 'block';
 			noResultsElement.hidden = true;
 		} else {
@@ -547,10 +646,42 @@
 	 * Execute command
 	 */
 	function executeCommand(commandId) {
+		// First check if it's a regular command
 		const command = commands.find(cmd => cmd.id === commandId);
 		if (command && command.action) {
 			command.action();
 			hideCommandPalette();
+			return;
+		}
+
+		// Check if it's a team result
+		if (commandId.startsWith('team-')) {
+			const teamId = commandId.replace('team-', '');
+			// Navigate to teams page and show team details
+			if (window.location.pathname === '/teams' && typeof window.viewTeamDetail === 'function') {
+				// Already on teams page, just show the detail
+				window.viewTeamDetail(teamId);
+			} else {
+				// Navigate to teams page with team ID parameter
+				window.location.href = `/teams#team-${teamId}`;
+			}
+			hideCommandPalette();
+			return;
+		}
+
+		// Check if it's a person result
+		if (commandId.startsWith('person-')) {
+			const personId = commandId.replace('person-', '');
+			// Navigate to people page and show person details
+			if (window.location.pathname === '/people' && typeof window.showPersonDetails === 'function') {
+				// Already on people page, just show the detail
+				window.showPersonDetails(personId);
+			} else {
+				// Navigate to people page with person ID parameter
+				window.location.href = `/people#person-${personId}`;
+			}
+			hideCommandPalette();
+			return;
 		}
 	}
 
@@ -564,6 +695,68 @@
 	/**
 	 * Action helpers
 	 */
+
+	/**
+	 * Toggle maximize mode
+	 */
+function toggleMaximize() {
+	const mainContainer = document.querySelector('.main-container');
+	const globalHeaderPlaceholder = document.getElementById('global-header-placeholder');
+	const body = document.body;
+
+	if (!mainContainer) return;
+
+	// Ensure loading state is removed
+	mainContainer.classList.remove('loading-maximize-state');
+
+		// Check if already maximized
+		const isMaximized = mainContainer.classList.contains('maximized');
+
+		if (isMaximized) {
+			// Restore normal view
+			mainContainer.classList.remove('maximized');
+			if (globalHeaderPlaceholder) {
+				globalHeaderPlaceholder.style.display = '';
+			}
+			body.classList.remove('maximized-body');
+
+			// Remove escape key listener
+			document.removeEventListener('keydown', handleMaximizeEscape);
+		} else {
+			// Maximize view
+			mainContainer.classList.add('maximized');
+			if (globalHeaderPlaceholder) {
+				globalHeaderPlaceholder.style.display = 'none';
+			}
+			body.classList.add('maximized-body');
+
+			// Add escape key listener to restore
+			document.addEventListener('keydown', handleMaximizeEscape);
+		}
+	}
+
+	/**
+	 * Handle escape key when in maximize mode
+	 */
+	function handleMaximizeEscape(e) {
+		if (e.key === 'Escape') {
+			const mainContainer = document.querySelector('.main-container');
+			if (mainContainer && mainContainer.classList.contains('maximized')) {
+				toggleMaximize();
+			}
+		}
+	}
+
+	/**
+	 * Initialize maximize state and remove loading class
+	 */
+	function initializeMaximizeState() {
+		const mainContainer = document.querySelector('.main-container');
+		if (mainContainer) {
+			// Remove loading state class to show container smoothly
+			mainContainer.classList.remove('loading-maximize-state');
+		}
+	}
 
 	/**
 	 * Check if command palette is currently visible
@@ -605,6 +798,29 @@
 			} catch (error) {
 				console.error('Error opening command palette:', error);
 			}
+		}
+	});
+
+	// Add loading class immediately to prevent flickering on initial page load
+	const mainContainer = document.querySelector('.main-container');
+	if (mainContainer && !mainContainer.classList.contains('maximized')) {
+		mainContainer.classList.add('loading-maximize-state');
+	}
+
+	// Initialize maximize state after DOM is loaded
+	if (document.readyState === 'loading') {
+		document.addEventListener('DOMContentLoaded', initializeMaximizeState);
+	} else {
+		// DOM already loaded
+		initializeMaximizeState();
+	}
+
+	// Listen for soft navigation to ensure maximize state works correctly
+	window.addEventListener('softNav:pageMounted', () => {
+		// Remove loading state when soft navigation completes
+		const mainContainer = document.querySelector('.main-container');
+		if (mainContainer) {
+			mainContainer.classList.remove('loading-maximize-state');
 		}
 	});
 

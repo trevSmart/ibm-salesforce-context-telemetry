@@ -141,7 +141,7 @@
             ${refreshBadge}
           </button>
           ${secondaryButtonHTML}
-          <div class="inline-flex rounded-md shadow-xs mr-2">
+          <div class="inline-flex rounded-md shadow-xs mr-2 button-group">
             <button type="button" class="relative inline-flex items-center rounded-l-md bg-[var(--button-bg)] px-2 py-2 text-gray-400 inset-ring-1 inset-ring-gray-300 hover:bg-gray-50 focus:z-10" style="padding-left: 10px; --radius-md: 99px;" data-action="open-settings" aria-label="Settings" data-tooltip="Settings" data-tooltip-position="top">
               <span class="sr-only">Settings</span>
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="var(--text-regular)" stroke-width="1.5" aria-hidden="true" class="size-[18px]">

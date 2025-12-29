@@ -1773,25 +1773,13 @@ function safeShowToast(message, type = 'info') {
 			smoothMonotone: 'x', // prevent bezier overshoot while keeping curvature
 			showSymbol: false,
 			connectNulls: true, // Connect valid points even if there are null values between them
-			lineStyle: function(params) {
-				const value = params.data;
-				return {
-					width: 3,
-					color: value === 0 ? 'transparent' : hexToRgba('#53cf98', 0.5)
-				};
-			},
-			areaStyle: function(params) {
-				const value = params.data;
-				if (value === 0) {
-					return { color: 'transparent' };
-				}
-				return {
-					color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-						{offset: 0, color: 'rgba(133,230,185,0.45)'},
-						{offset: warmOffset, color: 'rgba(197,241,221,0.35)'},
-						{offset: 1, color: 'rgba(216,247,232,0.16)'}
-					])
-				};
+			lineStyle: {width: 3, color: hexToRgba('#53cf98', 0.5)}, // More transparent line
+			areaStyle: {
+				color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+					{offset: 0, color: 'rgba(133,230,185,0.45)'},
+					{offset: warmOffset, color: 'rgba(197,241,221,0.35)'},
+					{offset: 1, color: 'rgba(216,247,232,0.16)'}
+				])
 			},
 			data: seriesData
 		};
@@ -1807,24 +1795,12 @@ function safeShowToast(message, type = 'info') {
 			smoothMonotone: 'x',
 			showSymbol: false,
 			connectNulls: true, // Connect valid points even if there are null values between them
-			lineStyle: function(params) {
-				const value = params.data;
-				return {
-					width: 2.5,
-					color: value === 0 ? 'transparent' : hexToRgba(color, 0.5)
-				};
-			},
-			areaStyle: function(params) {
-				const value = params.data;
-				if (value === 0) {
-					return { color: 'transparent' };
-				}
-				return {
-					color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-						{offset: 0, color: startColor},
-						{offset: 1, color: endColor}
-					])
-				};
+			lineStyle: {width: 2.5, color: hexToRgba(color, 0.5)}, // More transparent line
+			areaStyle: {
+				color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+					{offset: 0, color: startColor},
+					{offset: 1, color: endColor}
+				])
 			},
 			data: seriesData
 		};

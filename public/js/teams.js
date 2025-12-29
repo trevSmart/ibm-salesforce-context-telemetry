@@ -1615,6 +1615,9 @@ async function resumeTeamsPage() {
 window.pauseTeamsPage = pauseTeamsPage;
 window.resumeTeamsPage = resumeTeamsPage;
 
+// Expose team detail function for global access (used by command palette)
+window.showTeamDetail = viewTeamDetail;
+
 // Listen for soft navigation events
 window.addEventListener('softNav:pagePausing', (event) => {
 	if (event?.detail?.path === '/teams') {
@@ -1650,5 +1653,22 @@ window.addEventListener('softNav:pageMounted', async (event) => {
 				teamsContent.appendChild(listContent);
 			}
 		}
+
+		// Check for team ID in URL hash and show details if present
+		checkForTeamDetailInURL();
 	}
 });
+
+// Check URL hash for team detail request
+function checkForTeamDetailInURL() {
+	const hash = window.location.hash;
+	if (hash && hash.startsWith('#team-')) {
+		const teamId = hash.replace('#team-', '');
+		if (teamId && !isNaN(Number(teamId))) {
+			// Small delay to ensure teams are loaded
+			setTimeout(() => {
+				viewTeamDetail(Number(teamId));
+			}, 100);
+		}
+	}
+}

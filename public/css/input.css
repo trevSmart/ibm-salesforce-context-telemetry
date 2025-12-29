@@ -70,8 +70,35 @@
   }
 }
 
-/* Custom styles for level colors and other specific styling */
+/* Maximize functionality styles */
 @layer components {
+  .main-container.maximized {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    border-radius: 0 !important;
+    max-width: none !important;
+    max-height: none !important;
+    z-index: 9999 !important;
+  }
+
+  .maximized-body {
+    overflow: hidden !important;
+  }
+
+  /* Hide main container while loading maximize state to prevent flickering */
+  .main-container.loading-maximize-state {
+    opacity: 0 !important;
+    visibility: hidden !important;
+  }
+
+  /* Smooth transition for maximize state loading */
+  .main-container {
+    transition: opacity 0.1s ease-in-out, visibility 0.1s ease-in-out;
+  }
+
   :root {
     /* Light mode colors */
     --bg-primary: #ffffff;
@@ -548,6 +575,11 @@
     border: 1px solid #3f3f46;
   }
 
+  html.dark .button-group,
+  html.dark .button-group button {
+    background: #27272a;
+  }
+
   html.dark .top-nav-search-input::placeholder {
     color: #71717a;
   }
@@ -966,7 +998,7 @@
     grid-template-columns: repeat(30, 1fr);
     /* Three rows: top row (57%), middle row (43%), footer (min-content - fixed minimum height) */
     grid-template-rows: 57fr 43fr min-content;
-    gap: 24px;
+    gap: 18px;
     padding: 0;
     height: 100%;
     min-height: 0;

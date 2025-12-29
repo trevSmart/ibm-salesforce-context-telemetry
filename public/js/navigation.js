@@ -286,10 +286,15 @@
 				// Sync body class and title for page-specific styles (strip hydrating)
 				const nextBodyClasses = doc.body?.classList ? Array.from(doc.body.classList) : [];
 				const filteredBodyClasses = nextBodyClasses.filter((cls) => cls !== 'hydrating');
+				// Preserve the maximized-body class if it exists
+				const isBodyMaximized = document.body.classList.contains('maximized-body');
 				if (filteredBodyClasses.length > 0) {
 					document.body.className = filteredBodyClasses.join(' ');
 				} else if (document.body.classList.contains('hydrating')) {
 					document.body.classList.remove('hydrating');
+				}
+				if (isBodyMaximized) {
+					document.body.classList.add('maximized-body');
 				}
 				if (doc.title) {
 					document.title = doc.title;
@@ -299,7 +304,12 @@
 				const currentContainer = document.querySelector('.container, .main-container');
 				const nextContainer = doc.querySelector('.container, .main-container');
 				if (currentContainer && nextContainer) {
+					// Preserve the maximized class if it exists
+					const isMaximized = currentContainer.classList.contains('maximized');
 					currentContainer.className = nextContainer.className;
+					if (isMaximized) {
+						currentContainer.classList.add('maximized');
+					}
 				}
 			}
 

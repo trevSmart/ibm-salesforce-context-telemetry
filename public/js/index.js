@@ -2,7 +2,7 @@
 import {toggleTheme, initializeTheme} from './theme.js';
 
 // Dashboard constants
-const SESSION_START_SERIES_COLOR = '#2195cf';
+const SESSION_START_SERIES_COLOR = '#2195cfdd';
 const TOP_USERS_LOOKBACK_DAYS = 14;
 const TOP_USERS_LIMIT = 3;
 const TOP_TEAMS_LOOKBACK_DAYS = 30;
@@ -174,9 +174,9 @@ function formatUptime(seconds) {
 		return `${days}d ${hours}h ${minutes}m`;
 	} else if (hours > 0) {
 		return `${hours}h ${minutes}m`;
-	} 
+	}
 		return `${minutes}m`;
-	
+
 }
 
 async function loadHealthCheckData() {
@@ -1180,8 +1180,8 @@ async function loadChartData(days = currentDays) {
 		const axisPointerBg = isDark ? '#27272a' : '#ffffff';
 
 		const startSessionsColor = SESSION_START_SERIES_COLOR;
-		const toolEventsColor = '#8e81ea';
-		const errorEventsColor = '#ef4444';
+		const toolEventsColor = '#8e81eadd';
+		const errorEventsColor = '#ef4444dd';
 		const totalEventsColor = toolEventsColor;
 
 		const FUTURE_POINTS = 0;
@@ -1356,63 +1356,12 @@ async function loadChartData(days = currentDays) {
 
 			series = [
 				{
-					name: 'New Sessions',
-					type: 'bar',
-					barWidth: 2,
-					barGap: '2px',
-					data: startSessionsData,
-					itemStyle: {
-						color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-							{offset: 0, color: 'rgba(33, 149, 207, 0.16)'},
-							{offset: 1, color: startSessionsColor}
-						]),
-						borderRadius: [4, 4, 0, 0]
-					},
-					label: {
-						show: true,
-						position: 'top',
-						formatter: (params) => {
-							const value = Number(params.value);
-							if (!Number.isFinite(value)) {return '';}
-							if (value === 0) {return '{zero| }';}
-							return `{val|${value}}`;
-						},
-						rich: {
-							val: {
-								fontSize: BADGE_FONT,
-								color: '#ffffff',
-								backgroundColor: startSessionsColor,
-								padding: BADGE_PAD,
-								borderRadius: 999
-							},
-							zero: {
-								fontSize: 1,
-								lineHeight: 1,
-								height: 1,
-								color: 'transparent',
-								backgroundColor: startSessionsColor,
-								padding: [0, 3],
-								borderRadius: 1
-							}
-						},
-						distance: 1,
-						offset: [-9, -2]
-					},
-					emphasis: {
-						focus: 'series',
-						itemStyle: {opacity: 1}
-					},
-					blur: {
-						itemStyle: {opacity: BAR_BLUR_OPACITY},
-						label: {opacity: LABEL_BLUR_OPACITY}
-					}
-				},
-				{
 					name: 'Tool Calls',
 					type: 'bar',
 					barWidth: 2,
 					barGap: '2px',
 					data: toolEventsData,
+					z: 3,
 					itemStyle: {
 						color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
 							{offset: 0, color: 'rgba(142, 129, 234, 0.16)'},
@@ -1460,11 +1409,65 @@ async function loadChartData(days = currentDays) {
 					}
 				},
 				{
+					name: 'New Sessions',
+					type: 'bar',
+					barWidth: 2,
+					barGap: '2px',
+					data: startSessionsData,
+					z: 2,
+					itemStyle: {
+						color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+							{offset: 0, color: 'rgba(33, 149, 207, 0.16)'},
+							{offset: 1, color: startSessionsColor}
+						]),
+						borderRadius: [4, 4, 0, 0]
+					},
+					label: {
+						show: true,
+						position: 'top',
+						formatter: (params) => {
+							const value = Number(params.value);
+							if (!Number.isFinite(value)) {return '';}
+							if (value === 0) {return '{zero| }';}
+							return `{val|${value}}`;
+						},
+						rich: {
+							val: {
+								fontSize: BADGE_FONT,
+								color: '#ffffff',
+								backgroundColor: startSessionsColor,
+								padding: BADGE_PAD,
+								borderRadius: 999
+							},
+							zero: {
+								fontSize: 1,
+								lineHeight: 1,
+								height: 1,
+								color: 'transparent',
+								backgroundColor: startSessionsColor,
+								padding: [0, 3],
+								borderRadius: 1
+							}
+						},
+						distance: 1,
+						offset: [-9, -2]
+					},
+					emphasis: {
+						focus: 'series',
+						itemStyle: {opacity: 1}
+					},
+					blur: {
+						itemStyle: {opacity: BAR_BLUR_OPACITY},
+						label: {opacity: LABEL_BLUR_OPACITY}
+					}
+				},
+				{
 					name: 'Errors',
 					type: 'bar',
 					barWidth: 2,
 					barGap: '2px',
 					data: errorEventsData,
+					z: 1,
 					itemStyle: {
 						color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
 							{offset: 0, color: 'rgba(239, 68, 68, 0.16)'},
