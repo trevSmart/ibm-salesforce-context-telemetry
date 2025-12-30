@@ -1811,7 +1811,24 @@ async function loadChartData(days = currentDays) {
 				width: 'auto',
 				height: 'auto'
 			},
-			tooltip: {show: false},
+			tooltip: {
+				trigger: 'axis',
+				backgroundColor: 'rgba(15, 23, 42, 0.95)',
+				borderColor: 'rgba(148, 163, 184, 0.5)',
+				borderWidth: 1,
+				textStyle: {
+					color: '#f1f5f9',
+					fontFamily: 'Manrope',
+					fontSize: 12
+				},
+				axisPointer: {
+					type: 'cross',
+					lineStyle: {
+						color: 'rgba(148, 163, 184, 0.5)',
+						width: 1
+					}
+				}
+			},
 			legend: {show: false, data: legendData},
 
 			xAxis: [
