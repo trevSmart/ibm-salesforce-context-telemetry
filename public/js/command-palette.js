@@ -97,7 +97,7 @@
 	 * Load teams and people data for global search
 	 */
 	async function loadGlobalSearchData() {
-		if (isDataLoaded) return;
+		if (isDataLoaded) {return;}
 
 		try {
 			// Load teams data
@@ -681,7 +681,7 @@
 				window.location.href = `/people#person-${personId}`;
 			}
 			hideCommandPalette();
-			return;
+			
 		}
 	}
 
@@ -704,7 +704,7 @@ function toggleMaximize() {
 	const globalHeaderPlaceholder = document.getElementById('global-header-placeholder');
 	const body = document.body;
 
-	if (!mainContainer) return;
+	if (!mainContainer) {return;}
 
 	// Ensure loading state is removed
 	mainContainer.classList.remove('loading-maximize-state');

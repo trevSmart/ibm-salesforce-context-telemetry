@@ -164,7 +164,8 @@
 		}
 
 		.login-header {
-			margin-bottom: 32px;
+			padding-left: 4px;
+			margin-bottom: 28px;
 		}
 
 		.login-header h1 {
@@ -242,7 +243,7 @@
 	.login-input {
 		width: 100%;
 		padding: 10px 16px 10px 44px;
-		font-size: 16px;
+		font-size: 14px;
 		font-weight: 300;
 		letter-spacing: 0.2px;
 		border-radius: 22px;
@@ -303,8 +304,8 @@
 		}
 
 		.login-button {
-		width: 40px;
-		height: 40px;
+		width: 36px;
+		height: 36px;
 		border-radius: 50%;
 		border: 1px solid #e4e4e7;
 		background: #ffffff;
@@ -313,7 +314,7 @@
 		align-items: center;
 		justify-content: center;
 		cursor: pointer;
-		transition: background-color 0.15s ease, transform 0.12s ease, color 0.15s ease, box-shadow 0.15s ease;
+		transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
 		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 		padding: 0;
 		}
@@ -321,7 +322,6 @@
 		.login-button:hover {
 		background: #f4f4f5;
 		color: #18181b;
-		transform: scale(1.05);
 		box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12);
 		}
 
@@ -385,8 +385,8 @@
 			justify-content: space-between;
 			align-items: center;
 			margin-top: 8px;
-			padding-left: 12px;
-			padding-right: 27px;
+			padding-left: 10px;
+			padding-right: 10px;
 		}
 
 		.remember-me-group {
@@ -396,15 +396,15 @@
 		.remember-me-control {
 			display: flex;
 			align-items: center;
-			gap: 12px;
+			gap: 10px;
 		}
 
 		.remember-me-box {
 			position: relative;
 			display: grid;
 			place-items: center;
-			width: 18px;
-			height: 18px;
+			width: 17px;
+			height: 17px;
 		}
 
 		.remember-me-checkbox {
@@ -421,13 +421,13 @@
 
 		.remember-me-checkbox:checked,
 		.remember-me-checkbox:indeterminate {
-			background: #4f46e5;
-			border-color: #4f46e5;
+			background: #ffcd28;
+			border-color: #ffcd28;
 		}
 
 		.remember-me-checkbox:focus-visible {
-			box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.35);
-			border-color: #4f46e5;
+			box-shadow: 0 0 0 3px rgba(255, 205, 40, 0.35);
+			border-color: #ffcd28;
 		}
 
 		.remember-me-icon {
@@ -463,8 +463,8 @@
 
 		html.dark .remember-me-checkbox:checked,
 		html.dark .remember-me-checkbox:indeterminate {
-			background: #4f46e5;
-			border-color: #4f46e5;
+			background: #ffcd28;
+			border-color: #ffcd28;
 		}
 
 		html.dark .remember-me-text {
@@ -492,7 +492,7 @@
 		}
 
 		#loginForm {
-			padding-right: 8px;
+			padding-right: 16px;
 		}
 
 	</style>
@@ -560,6 +560,7 @@
 		const form = document.getElementById('loginForm');
 		const errorMessage = document.getElementById('errorMessage');
 		const loginButton = document.getElementById('loginButton');
+		const rememberMeCheckbox = document.getElementById('rememberMe');
 		const showError = (message) => {
 			if (typeof showToast === 'function') {
 				showToast(message, 'error');
@@ -580,6 +581,19 @@
 				errorMessage.classList.remove('show');
 			}
 		};
+
+		// Load remember me checkbox state from localStorage
+		const rememberMeState = localStorage.getItem('rememberMe');
+		if (rememberMeState === 'true' && rememberMeCheckbox) {
+			rememberMeCheckbox.checked = true;
+		}
+
+		// Save remember me checkbox state to localStorage when changed
+		if (rememberMeCheckbox) {
+			rememberMeCheckbox.addEventListener('change', () => {
+				localStorage.setItem('rememberMe', rememberMeCheckbox.checked);
+			});
+		}
 
 		// Check for error in URL parameters
 		const urlParams = new URLSearchParams(window.location.search);

@@ -567,7 +567,51 @@
 			}, 100);
 		};
 
+		// Update when maximize mode changes
+		const handleMaximizeChange = () => {
+			const navLinks = getNavLinks();
+			const activeLink = navLinks.find(link => link.classList.contains('active')) || navLinks[0];
+			if (activeLink) {
+				// Force immediate recalculation without animation delay
+				const position = getLinkPosition(activeLink);
+				if (position) {
+					currentLeft = position.left;
+					currentWidth = position.width;
+					targetLeft = position.left;
+					targetWidth = position.width;
+					animationStartLeft = position.left;
+					animationStartWidth = position.width;
+					updateAnimationElement();
+				}
+			}
+		};
+
 		window.addEventListener('resize', handleResize);
+
+		// Observe maximize mode changes
+		const mainContainer = document.querySelector('.main-container');
+		if (mainContainer) {
+			const maximizeObserver = new MutationObserver((mutations) => {
+				mutations.forEach((mutation) => {
+					if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+						// Check if maximized class was added or removed
+						const hasMaximized = mainContainer.classList.contains('maximized');
+						const hadMaximized = mutation.oldValue && mutation.oldValue.includes('maximized');
+
+						if (hasMaximized !== hadMaximized) {
+							// Maximize state changed, recalculate animation position
+							setTimeout(handleMaximizeChange, 50); // Small delay to ensure DOM has updated
+						}
+					}
+				});
+			});
+
+			maximizeObserver.observe(mainContainer, {
+				attributes: true,
+				attributeOldValue: true,
+				attributeFilter: ['class']
+			});
+		}
 
 		// Re-initialize if links are added/removed
 		const linksObserver = new MutationObserver(() => {

@@ -116,7 +116,7 @@ function escapeHtml(text) {
 
 /**
  * Sanitize CSS color values to prevent XSS
- * Only allows valid hex colors (#RGB or #RRGGBB format)
+ * Allows valid hex colors (#RGB or #RRGGBB format) and CSS color names
  * @param {string} color - Color value to sanitize
  * @returns {string|null} - Sanitized color or null if invalid
  */
@@ -124,11 +124,172 @@ function sanitizeCssColor(color) {
 	if (!color || typeof color !== 'string') {
 		return null;
 	}
-	// Only allow hex colors in format #RGB or #RRGGBB
+
+	const trimmedColor = color.trim();
+
+	// Allow hex colors in format #RGB or #RRGGBB
 	const hexColorPattern = /^#(?:[\dA-Fa-f]{3}|[\dA-Fa-f]{6})$/;
-	if (hexColorPattern.test(color.trim())) {
-		return color.trim();
+	if (hexColorPattern.test(trimmedColor)) {
+		return trimmedColor;
 	}
+
+	// Allow CSS color names (basic set for security)
+	const cssColorNames = new Set([
+		'aliceblue',
+'antiquewhite',
+'aqua',
+'aquamarine',
+'azure',
+'beige',
+'bisque',
+'black',
+'blanchedalmond',
+		'blue',
+'blueviolet',
+'brown',
+'burlywood',
+'cadetblue',
+'chartreuse',
+'chocolate',
+'coral',
+'cornflowerblue',
+		'cornsilk',
+'crimson',
+'cyan',
+'darkblue',
+'darkcyan',
+'darkgoldenrod',
+'darkgray',
+'darkgreen',
+'darkgrey',
+		'darkkhaki',
+'darkmagenta',
+'darkolivegreen',
+'darkorange',
+'darkorchid',
+'darkred',
+'darksalmon',
+		'darkseagreen',
+'darkslateblue',
+'darkslategray',
+'darkslategrey',
+'darkturquoise',
+'darkviolet',
+		'deeppink',
+'deepskyblue',
+'dimgray',
+'dimgrey',
+'dodgerblue',
+'firebrick',
+'floralwhite',
+'forestgreen',
+		'fuchsia',
+'gainsboro',
+'ghostwhite',
+'gold',
+'goldenrod',
+'gray',
+'grey',
+'green',
+'greenyellow',
+		'honeydew',
+'hotpink',
+'indianred',
+'indigo',
+'ivory',
+'khaki',
+'lavender',
+'lavenderblush',
+'lawngreen',
+		'lemonchiffon',
+'lightblue',
+'lightcoral',
+'lightcyan',
+'lightgoldenrodyellow',
+'lightgray',
+'lightgreen',
+		'lightgrey',
+'lightpink',
+'lightsalmon',
+'lightseagreen',
+'lightskyblue',
+'lightslategray',
+'lightslategrey',
+		'lightsteelblue',
+'lightyellow',
+'lime',
+'limegreen',
+'linen',
+'magenta',
+'maroon',
+'mediumaquamarine',
+		'mediumblue',
+'mediumorchid',
+'mediumpurple',
+'mediumseagreen',
+'mediumslateblue',
+'mediumspringgreen',
+		'mediumturquoise',
+'mediumvioletred',
+'midnightblue',
+'mintcream',
+'mistyrose',
+'moccasin',
+'navajowhite',
+		'navy',
+'oldlace',
+'olive',
+'olivedrab',
+'orange',
+'orangered',
+'orchid',
+'palegoldenrod',
+'palegreen',
+		'paleturquoise',
+'palevioletred',
+'papayawhip',
+'peachpuff',
+'peru',
+'pink',
+'plum',
+'powderblue',
+		'purple',
+'rebeccapurple',
+'red',
+'rosybrown',
+'royalblue',
+'saddlebrown',
+'salmon',
+'sandybrown',
+		'seagreen',
+'seashell',
+'sienna',
+'silver',
+'skyblue',
+'slateblue',
+'slategray',
+'slategrey',
+'snow',
+		'springgreen',
+'steelblue',
+'tan',
+'teal',
+'thistle',
+'tomato',
+'turquoise',
+'violet',
+'wheat',
+'white',
+		'whitesmoke',
+'yellow',
+'yellowgreen'
+	]);
+
+	// Check if it's a valid CSS color name (case insensitive)
+	if (cssColorNames.has(trimmedColor.toLowerCase())) {
+		return trimmedColor.toLowerCase();
+	}
+
 	return null;
 }
 
@@ -156,9 +317,7 @@ function showConfirmDialog({title, message, confirmText = 'Confirm', cancelText 
 					<div class="flex items-start">
 						<div class="mx-auto flex shrink-0 items-center justify-center rounded-full ${destructive ? (isDark ? 'bg-red-500/10' : 'bg-red-100') : (isDark ? 'bg-green-500/10' : 'bg-green-100')} sm:mx-0 sm:size-10" style="width: 3rem; height: 3rem;">
 							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="size-6 ${destructive ? (isDark ? 'text-red-400' : 'text-red-600') : (isDark ? 'text-green-400' : 'text-green-600')}">
-								${destructive ?
-									'<path d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" stroke-linecap="round" stroke-linejoin="round" />' :
-									'<path d="m4.5 12.75 6 6 9-13.5" stroke-linecap="round" stroke-linejoin="round" />'
+								${destructive ?'<path d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" stroke-linecap="round" stroke-linejoin="round" />' :'<path d="m4.5 12.75 6 6 9-13.5" stroke-linecap="round" stroke-linejoin="round" />'
 								}
 							</svg>
 						</div>
@@ -549,10 +708,10 @@ function renderTeamsList() {
 		const initials = team.name.split(' ').map(word => word[0]).join('').substring(0, 2).toUpperCase();
 
 		// Logo or avatar with cache busting for proper caching
-		const logoOrAvatar = team.has_logo? `<img src="/api/teams/${team.id}/logo?t=${teamsCacheBuster}" alt="${escapeHtml(team.name)} logo" class="size-12 object-contain" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-        <span class="card-avatar" style="display: none;">
+		const logoOrAvatar = team.has_logo? `<img src="/api/teams/${team.id}/logo?t=${teamsCacheBuster}" alt="${escapeHtml(team.name)} logo" class="size-12 team-logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+        <span class="card-avatar" style="display: none; background: ${team.color || '#6b7280'};">
           ${escapeHtml(initials)}
-        </span>`: `<span class="card-avatar">
+        </span>`: `<span class="card-avatar" style="background: ${team.color || '#6b7280'};">
           ${escapeHtml(initials)}
         </span>`;
 
@@ -636,12 +795,12 @@ async function renderTeamDetail(teamId) {
 	const initials = team.name.split(' ').map(word => word[0]).join('').substring(0, 2).toUpperCase();
 
 	// Logo or avatar with cache busting
-	const logoOrAvatar = team.has_logo ? `<img src="/api/teams/${team.id}/logo?t=${teamsCacheBuster}" alt="${escapeHtml(team.name)} logo" style="width: 32px; height: 32px; object-contain; margin-right: 8px; border-radius: 4px;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+	const logoOrAvatar = team.has_logo ? `<img src="/api/teams/${team.id}/logo?t=${teamsCacheBuster}" alt="${escapeHtml(team.name)} logo" style="width: 32px; height: 32px; margin-right: 8px;" class="team-logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
 		<span class="card-avatar" style="display: none; width: 32px; height: 32px; margin-right: 8px;">
 			${escapeHtml(initials)}
-		</span>` : (sanitizedTeamColor ? `<span style="display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 4px; background: ${sanitizedTeamColor}; margin-right: 8px; color: white; font-weight: 600; font-size: 14px;">
+		</span>` : `<span class="card-avatar" style="width: 32px; height: 32px; margin-right: 8px; background: ${sanitizedTeamColor || '#6b7280'};">
 			${escapeHtml(initials)}
-		</span>` : '');
+		</span>`;
 
 	contentContainer.querySelector('#teamDetailName').innerHTML = `<span class="text-gray-900 dark:text-white" style="display: flex; align-items: center;">${logoOrAvatar}${escapeHtml(team.name)}</span>`;
 
@@ -661,15 +820,19 @@ async function renderTeamDetail(teamId) {
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Color</label>
-              <input type="text" id="teamColorInput" value="${escapeHtml(team.color || '')}" placeholder="#2195cf"
-                     class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-gray-100">
+              <div class="input-color">
+                <button class="color-preview-btn" style="--preview-color: ${team.color || '#2195cf'}"></button>
+                <input type="text" id="teamColorInput" value="${escapeHtml(team.color || '')}" placeholder="#2195cf"
+                       class="p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-gray-100 coloris"
+                       data-coloris>
+              </div>
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Logo</label>
               <div class="space-y-2">
                 ${team.has_logo ? `
                   <div id="currentLogoContainer" class="bg-gray-50 dark:bg-gray-700/50 flex items-center gap-3 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600/50 transition-colors">
-                    <img src="/api/teams/${team.id}/logo?t=${teamsCacheBuster}" alt="Current logo" style="width: 48px; height: 48px; object-fit: contain; border-radius: 4px; background: transparent;">
+                    <img src="/api/teams/${team.id}/logo?t=${teamsCacheBuster}" alt="Current logo" class="team-logo-modal" style="width: 48px; height: 48px;">
                     <div style="flex: 1;">
                       <div style="font-size: 0.875rem; color: var(--text-secondary);">Click to change logo</div>
                     </div>
@@ -693,7 +856,7 @@ async function renderTeamDetail(teamId) {
                 <input type="file" id="teamLogoInput" accept="image/png,image/jpeg,image/jpg,image/webp" style="display: none;">
                 <div id="logoPreviewNew" style="display: none; margin-top: 8px;">
                   <div class="bg-gray-50 dark:bg-gray-700/50 flex items-center gap-3 p-3 border border-gray-300 dark:border-gray-600 rounded-md">
-                    <img id="logoPreviewImg" src="" alt="Logo preview" style="width: 48px; height: 48px; object-fit: contain; border-radius: 4px; background: transparent; border: 1px solid var(--border-color);">
+                    <img id="logoPreviewImg" src="" alt="Logo preview" class="team-logo-modal" style="width: 48px; height: 48px; border: 1px solid var(--border-color);">
                     <div style="flex: 1;">
                       <div style="font-size: 0.875rem; color: var(--text-secondary);">New logo selected</div>
                     </div>
@@ -748,13 +911,10 @@ async function renderTeamDetail(teamId) {
 	const orgsList = contentContainer.querySelector('#orgsList');
 	if (team.orgs.length > 0) {
 		orgsList.innerHTML = team.orgs.map(org => {
-			// Sanitize org color to prevent XSS
-			const sanitizedOrgColor = sanitizeCssColor(org.color);
-			const colorDot = sanitizedOrgColor ? `<span style="display: inline-block; width: 10px; height: 10px; border-radius: 999px; background: ${sanitizedOrgColor}; margin-right: 6px; border: 1px solid var(--border-color);"></span>` : '';
 			return `
         <div class="bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-md p-2.5 flex justify-between items-center">
           <div>
-            <div style="font-weight: 500;">${colorDot}${escapeHtml(org.alias || org.id)}</div>
+            <div style="font-weight: 500;">${escapeHtml(org.alias || org.id)}</div>
             <div class="text-gray-500 dark:text-gray-400 text-xs">${escapeHtml(org.id)}</div>
           </div>
           <button class="btn btn-compact btn-destructive" onclick="removeOrgFromTeam('${escapeHtml(org.id)}', ${teamId})">
@@ -856,15 +1016,19 @@ function showTeamFormModal(team = null) {
         </label>
         <label>
           <div style="margin-bottom: 4px; font-weight: 500;">Color</div>
-          <input type="text" id="teamColorInput" value="${team ? escapeHtml(team.color || '') : ''}" placeholder="#2195cf"
-                 class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-gray-100">
+          <div class="input-color">
+            <button class="color-preview-btn" style="--preview-color: ${team ? (team.color || '#2195cf') : '#2195cf'}"></button>
+            <input type="text" id="teamColorInput" value="${team ? escapeHtml(team.color || '') : ''}" placeholder="#2195cf"
+                   class="p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-gray-100 coloris"
+                   data-coloris>
+          </div>
         </label>
         <label>
           <div style="margin-bottom: 4px; font-weight: 500;">Logo</div>
           <div style="display: flex; flex-direction: column; gap: 8px;">
             ${logoPreviewUrl ? `
               <div id="currentLogoContainer" class="bg-gray-50 dark:bg-gray-700/50 flex items-center gap-3 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600/50 transition-colors">
-                <img id="logoPreview" src="${logoPreviewUrl}" alt="Current logo" style="width: 48px; height: 48px; object-fit: contain; border-radius: 4px; background: transparent;">
+                <img id="logoPreview" src="${logoPreviewUrl}" alt="Current logo" class="team-logo-modal" style="width: 48px; height: 48px;">
                 <div style="flex: 1;">
                   <div style="font-size: 0.875rem; color: var(--text-secondary);">Click to change logo</div>
                 </div>
@@ -888,7 +1052,7 @@ function showTeamFormModal(team = null) {
             <input type="file" id="teamLogoInput" accept="image/png,image/jpeg,image/jpg,image/webp" style="display: none;">
             <div id="logoPreviewNew" style="display: none; margin-top: 8px;">
               <div class="bg-gray-50 dark:bg-gray-700/50 flex items-center gap-3 p-3 border border-gray-300 dark:border-gray-600 rounded-md">
-                <img id="logoPreviewImg" src="" alt="Logo preview" style="width: 48px; height: 48px; object-fit: contain; border-radius: 4px; background: transparent; border: 1px solid var(--border-color);">
+                <img id="logoPreviewImg" src="" alt="Logo preview" class="team-logo-modal" style="width: 48px; height: 48px; border: 1px solid var(--border-color);">
                 <div style="flex: 1;">
                   <div style="font-size: 0.875rem; color: var(--text-secondary);">New logo selected</div>
                 </div>
@@ -990,7 +1154,7 @@ function showTeamFormModal(team = null) {
 					showToast('Logo file is too large. Maximum size is 500KB.', 'error');
 					// Clear input after a short delay to prevent re-triggering change event
 					setTimeout(() => {
-						if (logoInput) logoInput.value = '';
+						if (logoInput) {logoInput.value = '';}
 					}, 100);
 					return;
 				}
@@ -1001,7 +1165,7 @@ function showTeamFormModal(team = null) {
 					showToast('Invalid file type. Only PNG, JPEG, and WebP images are allowed.', 'error');
 					// Clear input after a short delay to prevent re-triggering change event
 					setTimeout(() => {
-						if (logoInput) logoInput.value = '';
+						if (logoInput) {logoInput.value = '';}
 					}, 100);
 					return;
 				}
@@ -1135,14 +1299,6 @@ async function showAddOrgModal(teamId) {
                style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); color: var(--text-primary);">
       </label>
     </div>
-    <div style="margin-bottom: 16px;">
-      <label>
-        <div style="margin-bottom: 4px; font-weight: 500;">Color (optional)</div>
-        <input type="text" id="newOrgColorInput" placeholder="#2195cf"
-               class="bg-gray-50 dark:bg-gray-700/50"
-               style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); color: var(--text-primary);">
-      </label>
-    </div>
     ${unassignedOrgs.length > 0 ? `
       <div style="margin-bottom: 16px;">
         <div style="margin-bottom: 8px; font-weight: 500;">Or select existing org:</div>
@@ -1222,7 +1378,6 @@ async function showAddOrgModal(teamId) {
 	document.getElementById('saveAddOrgBtn')?.addEventListener('click', async () => {
 		const orgId = document.getElementById('newOrgIdInput').value.trim();
 		const alias = document.getElementById('newOrgAliasInput').value.trim() || null;
-		const color = document.getElementById('newOrgColorInput').value.trim() || null;
 
 		if (!orgId) {
 			showToast('Org ID is required', 'error');
@@ -1230,7 +1385,7 @@ async function showAddOrgModal(teamId) {
 		}
 
 		try {
-			await upsertOrg(orgId, {alias, color, team_id: teamId});
+			await upsertOrg(orgId, {alias, team_id: teamId});
 			showToast('Org added successfully', 'success');
 			closeModal();
 			renderTeamDetail(teamId);
@@ -1609,6 +1764,60 @@ async function resumeTeamsPage() {
 	// Teams page doesn't have intervals to resume
 	// But we need to ensure event listeners are re-bound when returning from other pages
 	await loadTeams();
+}
+
+// Initialize Coloris color picker
+function initializeColoris() {
+	if (typeof Coloris !== 'undefined') {
+		Coloris({
+			el: '.coloris',
+			theme: 'pill',
+			themeMode: 'auto',
+			alpha: false,
+			swatches: [
+				'DarkSlateGray',
+				'#2a9d8f',
+				'#e9c46a',
+				'coral',
+				'rgb(231, 111, 81)',
+				'Crimson',
+				'#023e8a',
+				'#0077b6',
+				'hsl(194, 100%, 39%)',
+				'#00b4d8',
+				'#48cae4'
+			],
+			onInput: (color, inputEl) => {
+				console.log(`Color input: ${color}`);
+				updateColorPreview(color);
+			},
+			onChange: (color, inputEl) => {
+				console.log(`Color changed to: ${color}`);
+			}
+		});
+	}
+}
+
+// Update color preview when color changes
+function updateColorPreview(color) {
+	const activeInput = document.querySelector('.coloris[data-coloris-open]');
+	if (activeInput && activeInput.classList.contains('coloris')) {
+		// Update the preview button
+		const wrapper = activeInput.closest('.input-color');
+		if (wrapper) {
+			const previewBtn = wrapper.querySelector('.color-preview-btn');
+			if (previewBtn) {
+				previewBtn.style.setProperty('--preview-color', color);
+			}
+		}
+	}
+}
+
+// Initialize Coloris when page loads
+if (document.readyState === 'loading') {
+	document.addEventListener('DOMContentLoaded', initializeColoris);
+} else {
+	initializeColoris();
 }
 
 // Expose pause/resume hooks

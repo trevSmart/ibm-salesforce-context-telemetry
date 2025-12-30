@@ -121,8 +121,7 @@ async function init() {
 			updated_at TIMESTAMPTZ DEFAULT NOW(),
 			created_at TIMESTAMPTZ DEFAULT NOW(),
 			team_id INTEGER REFERENCES teams(id),
-			alias TEXT,
-			color TEXT
+			alias TEXT
 		);
 
 		CREATE TABLE IF NOT EXISTS settings (
@@ -2832,7 +2831,6 @@ async function getTeamById(teamId) {
 			orgs: orgsResult.rows.map(org => ({
 				id: org.server_id,
 				alias: org.alias || null,
-				color: org.color || null,
 				company_name: org.company_name || null,
 				team_id: org.team_id || null,
 				created_at: org.created_at,
@@ -3332,7 +3330,6 @@ async function getAllOrgsWithTeams() {
 				o.server_id,
 				o.company_name,
 				o.alias,
-				o.color,
 				o.team_id,
 				o.created_at,
 				o.updated_at,
@@ -3346,7 +3343,6 @@ async function getAllOrgsWithTeams() {
 		return result.rows.map(org => ({
 			id: org.server_id,
 			alias: org.alias || null,
-			color: org.color || null,
 			company_name: org.company_name || null,
 			team_id: org.team_id || null,
 			team_name: org.team_name || null,
@@ -3363,7 +3359,7 @@ async function getAllOrgsWithTeams() {
 /**
  * Create or update an org
  * @param {string} orgId - Org identifier (server_id)
- * @param {object} orgData - Object with alias, color, team_id, company_name
+ * @param {object} orgData - Object with alias, team_id, company_name
  * @returns {Promise<object>} Created or updated org object
  */
 async function upsertOrg(orgId, orgData = {}) {
@@ -3375,21 +3371,20 @@ async function upsertOrg(orgId, orgData = {}) {
 		throw new Error('Org ID is required');
 	}
 
-	const {alias, color, team_id, company_name} = orgData;
+	const {alias, team_id, company_name} = orgData;
 	const now = new Date().toISOString();
 
 	try {
 		const result = await db.query(`
-			INSERT INTO orgs (server_id, alias, color, team_id, company_name, created_at, updated_at)
-			VALUES ($1, $2, $3, $4, $5, $6, $7)
+			INSERT INTO orgs (server_id, alias, team_id, company_name, created_at, updated_at)
+			VALUES ($1, $2, $3, $4, $5, $6)
 			ON CONFLICT (server_id) DO UPDATE SET
 				alias = COALESCE(EXCLUDED.alias, orgs.alias),
-				color = COALESCE(EXCLUDED.color, orgs.color),
 				team_id = COALESCE(EXCLUDED.team_id, orgs.team_id),
 				company_name = COALESCE(EXCLUDED.company_name, orgs.company_name),
 				updated_at = EXCLUDED.updated_at
-			RETURNING server_id, alias, color, team_id, company_name, created_at, updated_at
-		`, [orgId, alias || null, color || null, team_id || null, company_name || null, now, now]);
+			RETURNING server_id, alias, team_id, company_name, created_at, updated_at
+		`, [orgId, alias || null, team_id || null, company_name || null, now, now]);
 
 		return result.rows[0];
 	} catch (error) {
@@ -3792,14 +3787,13 @@ async function importDatabase(importData) {
 					for (const org of importData.tables.orgs) {
 						try {
 							await client.query(`
-								INSERT INTO orgs (server_id, company_name, updated_at, created_at, alias, color, team_id)
-								VALUES ($1, $2, $3, $4, $5, $6, $7)
+								INSERT INTO orgs (server_id, company_name, updated_at, created_at, alias, team_id)
+								VALUES ($1, $2, $3, $4, $5, $6)
 								ON CONFLICT (server_id) DO UPDATE SET
 									company_name = EXCLUDED.company_name,
 									updated_at = EXCLUDED.updated_at,
 									created_at = EXCLUDED.created_at,
 									alias = EXCLUDED.alias,
-									color = EXCLUDED.color,
 									team_id = EXCLUDED.team_id
 							`, [
 								org.server_id,
@@ -3807,7 +3801,6 @@ async function importDatabase(importData) {
 								org.updated_at,
 								org.created_at,
 								org.alias || null,
-								org.color || null,
 								org.team_id || null
 							]);
 							results.imported++;

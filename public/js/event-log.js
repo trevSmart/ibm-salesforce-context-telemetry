@@ -32,6 +32,28 @@ function safeShowToast(message, type = 'info') {
 			.replace(/'/g, '&#039;');
 	}
 
+	function getUserInitials(name) {
+		if (!name) {
+			return '?';
+		}
+
+		const parts = name.trim().split(/\s+/).filter(Boolean);
+		if (parts.length === 0) {
+			return '?';
+		}
+
+		if (parts.length === 1) {
+			const firstWord = parts[0];
+			const initials = firstWord.slice(0, 2).toUpperCase();
+			return initials || '?';
+		}
+
+		const first = parts[0]?.charAt(0) || '';
+		const second = parts[1]?.charAt(0) || '';
+		const initials = `${first}${second}`.toUpperCase();
+		return initials || '?';
+	}
+
 	const detectElectronEnvironment = () => {
 		const userAgent = navigator?.userAgent?.toLowerCase() || '';
 		if (userAgent.includes(' electron/')) {
@@ -215,8 +237,8 @@ function safeShowToast(message, type = 'info') {
 	let teamEventCountsSource = 'server'; // 'server' uses aggregated counters, 'local' uses paged events
 	let selectedActivityDate = null; // null means use current day by default
 	let activeFilters = new Set(['tool', 'session', 'general']);
-	let selectedUserIds = new Set(); // Will be populated with all users when loaded - all selected by default
-	let allUserIds = new Set(); // Track all available user IDs
+	let selectedPersonIds = new Set(); // Will be populated with all people when loaded - all selected by default
+	let allPersonIds = new Set(); // Track all available person IDs
 	let selectedSessionsForDeletion = new Set(); // Track sessions selected for deletion
 	let selectionMode = false; // Track if selection mode is active
 	let lastSelectedSessionId = null; // Track last selected session for shift-click range selection
@@ -238,7 +260,7 @@ function safeShowToast(message, type = 'info') {
 	let sessionActivityChart = null;
 	let savedSessionActivityChartOption = null; // Store chart option when pausing for cache restoration
 	let lastSessionActivityEvents = [];
-	let activeTab = 'sessions'; // 'sessions' or 'users'
+	let activeTab = 'sessions'; // 'sessions' or 'people'
 	const SESSION_ACTIVITY_FETCH_LIMIT = 1000;
 	// State for hover preview functionality
 	let hoverPreviewState = null;
@@ -298,8 +320,8 @@ function safeShowToast(message, type = 'info') {
 		selectedSession = 'all';
 		selectedActivityDate = null;
 		activeFilters = new Set(['tool', 'session', 'general']);
-		selectedUserIds = new Set();
-		allUserIds = new Set();
+		selectedPersonIds = new Set();
+		allPersonIds = new Set();
 		selectedSessionsForDeletion = new Set();
 		selectionMode = false;
 		lastSelectedSessionId = null;
@@ -482,6 +504,11 @@ function safeShowToast(message, type = 'info') {
 	// Level filter management
 	function setupLevelFilters() {
 		document.querySelectorAll('.level-filter-btn').forEach(btn => {
+			// Skip if listeners are already initialized
+			if (btn.dataset.listenersInitialized === 'true') {
+				return;
+			}
+
 			const level = btn.dataset.level;
 
 			function updateButtonState() {
@@ -499,6 +526,9 @@ function safeShowToast(message, type = 'info') {
 				loadEvents();
 			});
 
+			// Mark as initialized
+			btn.dataset.listenersInitialized = 'true';
+
 			// Initialize button state
 			updateButtonState();
 		});
@@ -508,6 +538,11 @@ function safeShowToast(message, type = 'info') {
 		const resizer = document.getElementById('sidebarResizer');
 		const sidebar = document.querySelector('.sidebar');
 		if (!resizer || !sidebar) {
+			return;
+		}
+
+		// Skip if listeners are already initialized
+		if (resizer.dataset.listenersInitialized === 'true') {
 			return;
 		}
 
@@ -597,6 +632,9 @@ function safeShowToast(message, type = 'info') {
 			resizer.addEventListener('mousedown', startResize);
 			resizer.addEventListener('touchstart', startResize, {passive: false});
 		}
+
+		// Mark as initialized
+		resizer.dataset.listenersInitialized = 'true';
 	}
 
 	function setupHorizontalResizer() {
@@ -612,6 +650,11 @@ function safeShowToast(message, type = 'info') {
 			} else {
 				console.warn('Horizontal resizer: resizer or activityCard not found after DOM ready', {resizer, activityCard});
 			}
+			return;
+		}
+
+		// Skip if listeners are already initialized
+		if (resizer.dataset.listenersInitialized === 'true') {
 			return;
 		}
 
@@ -735,6 +778,9 @@ function safeShowToast(message, type = 'info') {
 			resizer.addEventListener('mousedown', startResize);
 			resizer.addEventListener('touchstart', startResize, {passive: false});
 		}
+
+		// Mark as initialized
+		resizer.dataset.listenersInitialized = 'true';
 	}
 
 	function initSessionActivityChart() {
@@ -1551,14 +1597,9 @@ function safeShowToast(message, type = 'info') {
 		let maxBucketCount = 0;
 
 		sessionBuckets.forEach((buckets, sessionId) => {
-			// Only include series that have at least one event (non-zero value)
-			const hasEvents = buckets.some(count => count > 0);
-			if (!hasEvents) {
-				return; // Skip series with no events
-			}
-
 			const seriesData = buckets.map((count, index) => {
 				const ts = windowStart.getTime() + (index * slotMs);
+				// Use 0 for zero values so the line is always visible
 				return [ts, count];
 			});
 			maxBucketCount = Math.max(maxBucketCount, ...buckets, maxBucketCount);
@@ -1936,23 +1977,23 @@ function safeShowToast(message, type = 'info') {
 				params.append('sessionId', sessionId);
 			}
 			// Apply user filters
-			// If users haven't been loaded yet (allUserIds.size === 0), don't filter (show all)
-			// If no users are selected after loading, send a special marker to return no stats
-			// If all users are selected, don't filter (show all)
-			// If some users are selected, filter by those users
-			if (allUserIds.size === 0) {
+			// If people haven't been loaded yet (allPersonIds.size === 0), don't filter (show all)
+			// If no people are selected after loading, send a special marker to return no stats
+			// If all people are selected, don't filter (show all)
+			// If some people are selected, filter by those people
+			if (allPersonIds.size === 0) {
 				// Users not loaded yet - don't filter (show all stats)
 				// Don't add any userId param
-			} else if (selectedUserIds.size === 0) {
-				// No users selected - send special marker to return no stats
+			} else if (selectedPersonIds.size === 0) {
+				// No people selected - send special marker to return no stats
 				params.append('userId', '__none__');
-			} else if (selectedUserIds.size > 0 && selectedUserIds.size < allUserIds.size) {
-				// Some users selected - filter by those users
-				Array.from(selectedUserIds).forEach(userId => {
+			} else if (selectedPersonIds.size > 0 && selectedPersonIds.size < allPersonIds.size) {
+				// Some people selected - filter by those people
+				Array.from(selectedPersonIds).forEach(userId => {
 					params.append('userId', userId);
 				});
 			}
-			// If all users are selected (selectedUserIds.size === allUserIds.size), don't add any userId param
+			// If all people are selected (selectedPersonIds.size === allPersonIds.size), don't add any userId param
 			const queryString = params.toString();
 
 			// Check if we have fresh cached event types data and no filters applied
@@ -1996,28 +2037,28 @@ function safeShowToast(message, type = 'info') {
 		try {
 			const params = new URLSearchParams();
 			// Apply user filters
-			// If users haven't been loaded yet (allUserIds.size === 0), don't filter (show all)
-			// If no users are selected after loading, send a special marker to return no sessions
-			// If all users are selected, don't filter (show all)
-			// If some users are selected, filter by those users
-			if (allUserIds.size === 0) {
+			// If people haven't been loaded yet (allPersonIds.size === 0), don't filter (show all)
+			// If no people are selected after loading, send a special marker to return no sessions
+			// If all people are selected, don't filter (show all)
+			// If some people are selected, filter by those people
+			if (allPersonIds.size === 0) {
 				// Users not loaded yet - don't filter (show all sessions)
 				// Don't add any userId param
-			} else if (selectedUserIds.size === 0) {
-				// No users selected - send special marker to return no sessions
+			} else if (selectedPersonIds.size === 0) {
+				// No people selected - send special marker to return no sessions
 				params.append('userId', '__none__');
-			} else if (selectedUserIds.size > 0 && selectedUserIds.size < allUserIds.size) {
-				// Some users selected - filter by those users
-				Array.from(selectedUserIds).forEach(userId => {
+			} else if (selectedPersonIds.size > 0 && selectedPersonIds.size < allPersonIds.size) {
+				// Some people selected - filter by those people
+				Array.from(selectedPersonIds).forEach(userId => {
 					params.append('userId', userId);
 				});
 			}
-			// If all users are selected (selectedUserIds.size === allUserIds.size), don't add any userId param
+			// If all people are selected (selectedPersonIds.size === allPersonIds.size), don't add any userId param
 
 			// Add limit for performance - load only recent sessions initially
 			params.append('limit', '50');
 
-			// Always include users without formal sessions
+			// Always include people without formal sessions
 			params.append('includeUsersWithoutSessions', 'true');
 
 			const queryString = params.toString();
@@ -2281,11 +2322,15 @@ function safeShowToast(message, type = 'info') {
 			return {html: dateHtml, text: dateStr};
 		}
 
+		// Get user initials for avatar
+		const initials = getUserInitials(userText);
+		const avatarHtml = `<span class="person-avatar" style="margin-right: 8px;">${escapeHtml(initials)}</span>`;
+
 		const userHtml = `<span class="session-user">${escapeHtml(userText)}</span>`;
-		return {html: `${userHtml} <span class="session-date">${escapeHtml(dateStr)}</span>`, text: `${userText} • ${dateStr}`};
+		return {html: `${avatarHtml}${userHtml} <span class="session-date">${escapeHtml(dateStr)}</span>`, text: `${userText} • ${dateStr}`};
 	}
 
-	async function loadUsersList() {
+	async function loadPeopleList() {
 		try {
 			const response = await fetch('/api/telemetry-users', {
 				credentials: 'include'
@@ -2300,25 +2345,25 @@ function safeShowToast(message, type = 'info') {
 				return;
 			}
 
-			const userList = document.getElementById('userList');
-			if (!userList) {
+			const peopleList = document.getElementById('peopleList');
+			if (!peopleList) {
 				// Element not found - this might be because the page isn't fully loaded yet
 				// Defer loading until DOM is ready
 				if (document.readyState === 'loading') {
 					window.addEventListener('DOMContentLoaded', () => {
-						requestAnimationFrame(() => loadUsersList());
+						requestAnimationFrame(() => loadPeopleList());
 					});
 				} else {
-					console.error('userList element not found after DOM ready');
+					console.error('peopleList element not found after DOM ready');
 				}
 				return;
 			}
 
 			// Clear the list
-			userList.innerHTML = '';
+			peopleList.innerHTML = '';
 
 			// Normalize API response to consistent objects { id, label, count, last_event }
-			const normalizedUsers = (Array.isArray(data) ? data : [])
+			const normalizedPeople = (Array.isArray(data) ? data : [])
 				.map(entry => {
 					if (entry && typeof entry === 'object') {
 						const rawId = typeof entry.id === 'string' ? entry.id : (typeof entry.user_id === 'string' ? entry.user_id : '');
@@ -2347,12 +2392,12 @@ function safeShowToast(message, type = 'info') {
 					return acc;
 				}, {seen: new Set(), values: []}).values;
 
-			if (normalizedUsers.length === 0) {
+			if (normalizedPeople.length === 0) {
 				return;
 			}
 
-			// Sort users by last activity (most recent first)
-			const usersWithStats = normalizedUsers.map(user => {
+			// Sort people by last activity (most recent first)
+			const peopleWithStats = normalizedPeople.map(user => {
 				return {
 					user_id: user.id,
 					label: user.label,
@@ -2361,7 +2406,7 @@ function safeShowToast(message, type = 'info') {
 					user_name: user.user_name || user.label
 				};
 			}).sort((a, b) => {
-				// Sort by last_event DESC, users without events go to the end
+				// Sort by last_event DESC, people without events go to the end
 				if (!a.last_event && !b.last_event) {return 0;}
 				if (!a.last_event) {return 1;}
 				if (!b.last_event) {return -1;}
@@ -2371,7 +2416,7 @@ function safeShowToast(message, type = 'info') {
 			});
 
 			// Add each user to the list
-			usersWithStats.forEach(user => {
+			peopleWithStats.forEach(user => {
 				const li = document.createElement('li');
 				li.className = 'session-item';
 				li.setAttribute('data-user', user.user_id);
@@ -2394,12 +2439,12 @@ function safeShowToast(message, type = 'info') {
 
 				li.addEventListener('click', (_e) => {
 					// Avoid flickering if clicking on the same user that's already selected
-					if (selectedUserIds.has(user.user_id) && selectedUserIds.size === 1) {
+					if (selectedPersonIds.has(user.user_id) && selectedPersonIds.size === 1) {
 						return;
 					}
 					// Select only this user
-					selectedUserIds.clear();
-					selectedUserIds.add(user.user_id);
+					selectedPersonIds.clear();
+					selectedPersonIds.add(user.user_id);
 					// Update UI to reflect selection
 					document.querySelectorAll('.session-item[data-user]').forEach(i => i.classList.remove('active'));
 					li.classList.add('active');
@@ -2410,7 +2455,7 @@ function safeShowToast(message, type = 'info') {
 					loadEventTypeStats(selectedSession);
 				});
 
-				userList.appendChild(li);
+				peopleList.appendChild(li);
 			});
 		} catch (error) {
 			console.error('Error loading users list:', error);
@@ -2534,13 +2579,12 @@ function safeShowToast(message, type = 'info') {
 				const mappingLabel = `${team.totalMappings} mapping${team.totalMappings === 1 ? '' : 's'}`;
 				const statusLabel = team.inactiveCount > 0? `${team.activeCount} active · ${team.inactiveCount} inactive`: `${team.activeCount} active`;
 				const eventCount = team.eventCount || 0;
+				const initials = team.teamName.split(' ').map(word => word[0]).join('').substring(0, 2).toUpperCase();
 
 				li.innerHTML = `
 				<div class="session-item-left">
-					<div style="width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; margin-right: 10px; color: ${color}; border-radius: 50%; background: #f3f3f3;">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false" style="width: 24px; height: 24px;">
-              <path d="m21 7.5-9-5.25L3 7.5m18 0-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" />
-            </svg>
+					<div style="width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; margin-right: 10px; color: white; border-radius: 7px; background: ${color}; font-weight: 600; font-size: 14px; aspect-ratio: 1;">
+            ${escapeHtml(initials)}
 					</div>
 					<div style="display: flex; flex-direction: column; gap: 2px;">
 						<span class="session-name text-sm" style="font-weight: 600;">${escapeHtml(team.teamName)}</span>
@@ -2633,11 +2677,11 @@ function safeShowToast(message, type = 'info') {
 
 		activeTab = tab;
 		const sessionsTab = document.getElementById('sessionsTab');
-		const usersTab = document.getElementById('usersTab');
+		const peopleTab = document.getElementById('peopleTab');
 		const teamsTab = document.getElementById('teamsTab');
 		const sessionsContainer = document.getElementById('sessionsContainer');
 		const sessionList = document.getElementById('sessionList');
-		const userList = document.getElementById('userList');
+		const peopleList = document.getElementById('peopleList');
 		const teamList = document.getElementById('teamList');
 
 		// Clear session selection and exit selection mode when switching tabs
@@ -2661,9 +2705,9 @@ function safeShowToast(message, type = 'info') {
 		}
 
 		// Update tab buttons
-		if (sessionsTab && usersTab && teamsTab) {
+		if (sessionsTab && peopleTab && teamsTab) {
 			sessionsTab.classList.toggle('active', tab === 'sessions');
-			usersTab.classList.toggle('active', tab === 'users');
+			peopleTab.classList.toggle('active', tab === 'people');
 			teamsTab.classList.toggle('active', tab === 'teams');
 		}
 
@@ -2677,8 +2721,8 @@ function safeShowToast(message, type = 'info') {
 		if (sessionList) {
 			sessionList.style.display = tab === 'sessions' ? 'block' : 'none';
 		}
-		if (userList) {
-			userList.style.display = tab === 'users' ? 'block' : 'none';
+		if (peopleList) {
+			peopleList.style.display = tab === 'people' ? 'block' : 'none';
 		}
 		if (teamList) {
 			teamList.style.display = tab === 'teams' ? 'block' : 'none';
@@ -2743,23 +2787,23 @@ function safeShowToast(message, type = 'info') {
 			}
 
 			// Apply user filters
-			// If users haven't been loaded yet (allUserIds.size === 0), don't filter (show all)
-			// If no users are selected after loading, send a special marker to return no events
-			// If all users are selected, don't filter (show all)
-			// If some users are selected, filter by those users
-			if (allUserIds.size === 0) {
+			// If people haven't been loaded yet (allPersonIds.size === 0), don't filter (show all)
+			// If no people are selected after loading, send a special marker to return no events
+			// If all people are selected, don't filter (show all)
+			// If some people are selected, filter by those people
+			if (allPersonIds.size === 0) {
 				// Users not loaded yet - don't filter (show all events)
 				// Don't add any userId param
-			} else if (selectedUserIds.size === 0) {
-				// No users selected - send special marker to return no events
+			} else if (selectedPersonIds.size === 0) {
+				// No people selected - send special marker to return no events
 				params.append('userId', '__none__');
-			} else if (selectedUserIds.size > 0 && selectedUserIds.size < allUserIds.size) {
-				// Some users selected - filter by those users
-				Array.from(selectedUserIds).forEach(userId => {
+			} else if (selectedPersonIds.size > 0 && selectedPersonIds.size < allPersonIds.size) {
+				// Some people selected - filter by those people
+				Array.from(selectedPersonIds).forEach(userId => {
 					params.append('userId', userId);
 				});
 			}
-			// If all users are selected (selectedUserIds.size === allUserIds.size), don't add any userId param
+			// If all people are selected (selectedPersonIds.size === allPersonIds.size), don't add any userId param
 
 			const response = await fetch(`/api/events?${params}`);
 			const validResponse = await handleApiResponse(response);
@@ -4243,16 +4287,16 @@ function safeShowToast(message, type = 'info') {
 			}
 		});
 
-		// Select all users
-		if (allUserIds.size > 0) {
-			selectedUserIds = new Set(allUserIds);
+		// Select all people
+		if (allPersonIds.size > 0) {
+			selectedPersonIds = new Set(allPersonIds);
 			// Update checkboxes in user filter dropdown
-			const dropdownContent = document.getElementById('userFilterDropdownContent');
+			const dropdownContent = document.getElementById('personFilterDropdownContent');
 			if (dropdownContent) {
-				dropdownContent.querySelectorAll('.user-filter-checkbox').forEach(checkbox => {
+				dropdownContent.querySelectorAll('.person-filter-checkbox').forEach(checkbox => {
 					const checkboxUserId = checkbox.getAttribute('data-user-id');
 					if (checkboxUserId) {
-						checkbox.checked = selectedUserIds.has(checkboxUserId);
+						checkbox.checked = selectedPersonIds.has(checkboxUserId);
 					}
 				});
 			}
@@ -5119,6 +5163,11 @@ function safeShowToast(message, type = 'info') {
 			return;
 		}
 
+		// Skip if listeners are already initialized
+		if (wrapper.dataset.listenersInitialized === 'true') {
+			return;
+		}
+
 		let hoverDepth = 0;
 		let closeTimeoutId = null;
 
@@ -5157,6 +5206,9 @@ function safeShowToast(message, type = 'info') {
 		wrapper.addEventListener('mouseleave', handleLeave);
 		legend.addEventListener('mouseenter', handleEnter);
 		legend.addEventListener('mouseleave', handleLeave);
+
+		// Mark as initialized
+		wrapper.dataset.listenersInitialized = 'true';
 	}
 
 	async function loadDatabaseSize() {
@@ -5211,9 +5263,9 @@ function safeShowToast(message, type = 'info') {
 	}
 
 	// User filter dropdown management
-	async function loadUsers() {
+	async function loadPeople() {
 		try {
-			// Check if we have fresh cached telemetry users data
+			// Check if we have fresh cached telemetry people data
 		let data;
 		if (window.isCacheFresh('telemetryUsers')) {
 			data = window.__globalDataCache.telemetryUsers;
@@ -5234,14 +5286,14 @@ function safeShowToast(message, type = 'info') {
 				return;
 			}
 
-			const optionsContainer = document.getElementById('userFilterOptions');
+			const optionsContainer = document.getElementById('personFilterOptions');
 			if (!optionsContainer) {return;}
 
 			// Clear existing options
 			optionsContainer.innerHTML = '';
 
 			// Normalize API response to consistent objects { id, label }
-			const normalizedUsers = (Array.isArray(data) ? data : [])
+			const normalizedPeople = (Array.isArray(data) ? data : [])
 				.map(entry => {
 					if (entry && typeof entry === 'object' && typeof entry.id === 'string') {
 						const trimmedId = entry.id.trim();
@@ -5266,31 +5318,31 @@ function safeShowToast(message, type = 'info') {
 					return acc;
 				}, {seen: new Set(), values: []}).values;
 
-			if (normalizedUsers.length === 0) {
-				allUserIds = new Set();
-				selectedUserIds.clear();
-				optionsContainer.innerHTML = '<div class="user-filter-empty">No users found</div>';
+			if (normalizedPeople.length === 0) {
+				allPersonIds = new Set();
+				selectedPersonIds.clear();
+				optionsContainer.innerHTML = '<div class="person-filter-empty">No people found</div>';
 				return;
 			}
 
-			const allIdsArray = normalizedUsers.map(user => user.id);
+			const allIdsArray = normalizedPeople.map(user => user.id);
 
-			// Update allUserIds and select all users by default if this is the first load
-			const previousSelection = new Set(selectedUserIds);
-			allUserIds = new Set(allIdsArray);
+			// Update allPersonIds and select all people by default if this is the first load
+			const previousSelection = new Set(selectedPersonIds);
+			allPersonIds = new Set(allIdsArray);
 			const isFirstLoad = previousSelection.size === 0;
 			if (isFirstLoad) {
-				// Select all users by default
-				selectedUserIds = new Set(allIdsArray);
+				// Select all people by default
+				selectedPersonIds = new Set(allIdsArray);
 			} else {
 				// Keep only IDs that still exist
-				selectedUserIds = new Set(
-					Array.from(previousSelection).filter(userId => allUserIds.has(userId))
+				selectedPersonIds = new Set(
+					Array.from(previousSelection).filter(userId => allPersonIds.has(userId))
 				);
 			}
 
 			// For autocomplete, we don't need Select All/Deselect All buttons
-			// Users can select individual users or use the input to filter
+			// Users can select individual people or use the input to filter
 
 			// Color palette for user indicators (matching chart colors)
 			const userColors = [
@@ -5307,7 +5359,7 @@ function safeShowToast(message, type = 'info') {
 			];
 
 			// Create el-option elements for each user
-			normalizedUsers.forEach((user, index) => {
+			normalizedPeople.forEach((user, index) => {
 				const userId = user.id;
 				const userLabel = user.label || userId;
 
@@ -5334,23 +5386,28 @@ function safeShowToast(message, type = 'info') {
 		}
 	}
 
-	function setupUserFilterLabel() {
-		const userFilterInput = document.getElementById('autocomplete');
-		if (!userFilterInput) {
+	function setupPersonFilterLabel() {
+		const personFilterInput = document.getElementById('autocomplete');
+		if (!personFilterInput) {
+			return;
+		}
+
+		// Skip if listeners are already initialized
+		if (personFilterInput.dataset.listenersInitialized === 'true') {
 			return;
 		}
 
 		const enforceUsersLabel = () => {
-			if (userFilterInput.value !== 'Users') {
-				userFilterInput.value = 'Users';
+			if (personFilterInput.value !== 'People') {
+				personFilterInput.value = 'People';
 			}
 		};
 
 		enforceUsersLabel();
-		userFilterInput.addEventListener('change', enforceUsersLabel);
-		userFilterInput.addEventListener('blur', enforceUsersLabel);
+		personFilterInput.addEventListener('change', enforceUsersLabel);
+		personFilterInput.addEventListener('blur', enforceUsersLabel);
 
-		const optionsContainer = document.getElementById('userFilterOptions');
+		const optionsContainer = document.getElementById('personFilterOptions');
 		if (optionsContainer) {
 			optionsContainer.addEventListener('click', (event) => {
 				if (event.target.closest('el-option')) {
@@ -5360,89 +5417,92 @@ function safeShowToast(message, type = 'info') {
 				}
 			});
 		}
+
+		// Mark as initialized
+		personFilterInput.dataset.listenersInitialized = 'true';
 	}
 
 	// Show user filter dropdown (used by both click and hover)
-	function showUserFilterDropdown() {
-		const dropdown = document.getElementById('userFilterDropdown');
-		const chevron = document.getElementById('userFilterChevron');
+	function showPersonFilterDropdown() {
+		const dropdown = document.getElementById('personFilterDropdown');
+		const chevron = document.getElementById('personFilterChevron');
 		if (!dropdown || !chevron) {return;}
 
 		const isVisible = !dropdown.classList.contains('hidden');
 		if (!isVisible) {
 			dropdown.classList.remove('hidden');
 			chevron.style.transform = 'rotate(180deg)';
-			// Load users if not already loaded
-			const optionsContainer = document.getElementById('userFilterOptions');
+			// Load people if not already loaded
+			const optionsContainer = document.getElementById('personFilterOptions');
 			if (optionsContainer && optionsContainer.children.length === 0) {
-				loadUsers();
+				loadPeople();
 			}
 		}
 	}
 
 	// Hide user filter dropdown
-	function hideUserFilterDropdown() {
-		const dropdown = document.getElementById('userFilterDropdown');
-		const chevron = document.getElementById('userFilterChevron');
+	function hidePersonFilterDropdown() {
+		const dropdown = document.getElementById('personFilterDropdown');
+		const chevron = document.getElementById('personFilterChevron');
 		if (!dropdown || !chevron) {return;}
 
 		dropdown.classList.add('hidden');
 		chevron.style.transform = 'rotate(0deg)';
 	}
 
-	window.toggleUserFilterDropdown = function(event) {
+	window.togglePersonFilterDropdown = function(event) {
 		event.stopPropagation();
-		const dropdown = document.getElementById('userFilterDropdown');
-		const chevron = document.getElementById('userFilterChevron');
+		const dropdown = document.getElementById('personFilterDropdown');
+		const chevron = document.getElementById('personFilterChevron');
 		if (!dropdown || !chevron) {return;}
 
 		const isVisible = !dropdown.classList.contains('hidden');
 		if (isVisible) {
-			hideUserFilterDropdown();
+			hidePersonFilterDropdown();
 		} else {
-			showUserFilterDropdown();
+			showPersonFilterDropdown();
 		}
 	};
 
 	// Close user filter dropdown when clicking outside
 	document.addEventListener('click', (event) => {
-		const dropdown = document.getElementById('userFilterDropdown');
-		const dropdownContainer = event.target.closest('.user-filter-dropdown-container');
+		const dropdown = document.getElementById('personFilterDropdown');
+		const dropdownContainer = event.target.closest('.person-filter-dropdown-container');
 
 		if (dropdown && !dropdown.classList.contains('hidden')) {
 			if (!dropdownContainer && !dropdown.contains(event.target)) {
-				hideUserFilterDropdown();
+				hidePersonFilterDropdown();
 			}
 		}
 	});
 
 	// Setup hover functionality for user filter dropdown
-	(function setupUserFilterDropdownHover() {
+	(function setupPersonFilterDropdownHover() {
 		const USER_FILTER_HIDE_DELAY_MS = 300;
-		let userFilterHideTimeout = null;
+		let personFilterHideTimeout = null;
 
-		const container = document.querySelector('.user-filter-dropdown-container');
+		const container = document.querySelector('.person-filter-dropdown-container');
 		if (!container) {
 			return;
 		}
 
-		const dropdown = document.getElementById('userFilterDropdown');
+		const dropdown = document.getElementById('personFilterDropdown');
 		if (!dropdown) {
 			return;
 		}
 
 		const cancelHide = () => {
-			if (userFilterHideTimeout) {
-				clearTimeout(userFilterHideTimeout);
-				userFilterHideTimeout = null;
+			if (personFilterHideTimeout) {
+				clearTimeout(personFilterHideTimeout);
+				personFilterHideTimeout = null;
 			}
 		};
 
 		const scheduleHide = () => {
 			cancelHide();
-			userFilterHideTimeout = setTimeout(() => {
-				hideUserFilterDropdown();
-				userFilterHideTimeout = null;
+			personFilterHideTimeout = setTimeout(() => {
+				hidePersonFilterDropdown();
+				personFilterHideTimeout = null;
 			}, USER_FILTER_HIDE_DELAY_MS);
 		};
 
@@ -5456,7 +5516,7 @@ function safeShowToast(message, type = 'info') {
 
 		const handleMouseEnter = () => {
 			cancelHide();
-			showUserFilterDropdown();
+			showPersonFilterDropdown();
 		};
 
 		const handleMouseLeave = (event) => {
@@ -5478,8 +5538,13 @@ function safeShowToast(message, type = 'info') {
 
 	function setupTabs() {
 		const sessionsTab = document.getElementById('sessionsTab');
-		const usersTab = document.getElementById('usersTab');
+		const peopleTab = document.getElementById('peopleTab');
 		const teamsTab = document.getElementById('teamsTab');
+
+		// Skip if listeners are already initialized
+		if (sessionsTab?.dataset.listenersInitialized === 'true') {
+			return;
+		}
 
 		if (sessionsTab) {
 			sessionsTab.addEventListener('click', () => {
@@ -5487,9 +5552,9 @@ function safeShowToast(message, type = 'info') {
 			});
 		}
 
-		if (usersTab) {
-			usersTab.addEventListener('click', () => {
-				switchTab('users');
+		if (peopleTab) {
+			peopleTab.addEventListener('click', () => {
+				switchTab('people');
 			});
 		}
 
@@ -5517,6 +5582,11 @@ function safeShowToast(message, type = 'info') {
 				updateTabIndicator();
 			}, 100);
 		});
+
+		// Mark as initialized
+		if (sessionsTab) {
+			sessionsTab.dataset.listenersInitialized = 'true';
+		}
 	}
 
 	function pauseEventLogPage() {
@@ -5525,6 +5595,11 @@ function safeShowToast(message, type = 'info') {
 			clearInterval(notificationRefreshIntervalId);
 			notificationRefreshIntervalId = null;
 		}
+
+		// Clean up initialization flags so listeners can be re-added when returning to page
+		document.querySelectorAll('[data-listeners-initialized]').forEach(el => {
+			delete el.dataset.listenersInitialized;
+		});
 		if (autoRefreshIntervalId) {
 			clearInterval(autoRefreshIntervalId);
 			autoRefreshIntervalId = null;
@@ -5629,7 +5704,7 @@ function safeShowToast(message, type = 'info') {
 		runSafeInitStep('horizontal resizer setup', setupHorizontalResizer);
 		runSafeInitStep('session legend hover', setupSessionLegendHover);
 		runSafeInitStep('tabs setup', setupTabs);
-		runSafeInitStep('user filter label', setupUserFilterLabel);
+		runSafeInitStep('user filter label', setupPersonFilterLabel);
 		runSafeAsyncInitStep('event type stats', () => loadEventTypeStats(selectedSession));
 		runSafeAsyncInitStep('sessions list', () => {
 			// Ensure DOM is ready before loading sessions
@@ -5640,19 +5715,19 @@ function safeShowToast(message, type = 'info') {
 			}
 		});
 		runSafeAsyncInitStep('events table', () => loadEvents());
-		// Lazy load database size and users list - they're not critical for initial render
+		// Lazy load database size and people list - they're not critical for initial render
 		runSafeAsyncInitStep('database size', () => {
 			// Delay database size load slightly to prioritize critical data
 			setTimeout(() => loadDatabaseSize(), 2000);
 		});
-		runSafeAsyncInitStep('users list', () => {
-			// Delay users list load slightly to prioritize critical data
+		runSafeAsyncInitStep('people list', () => {
+			// Delay people list load slightly to prioritize critical data
 			setTimeout(() => {
-				// Ensure DOM is ready before loading users list
+				// Ensure DOM is ready before loading people list
 				if (document.readyState === 'loading') {
-					window.addEventListener('DOMContentLoaded', () => loadUsersList());
+					window.addEventListener('DOMContentLoaded', () => loadPeopleList());
 				} else {
-					loadUsersList();
+					loadPeopleList();
 				}
 			}, 300);
 		});
@@ -5664,7 +5739,7 @@ function safeShowToast(message, type = 'info') {
 				loadTeamsList();
 			}
 		});
-		runSafeAsyncInitStep('users for filter', () => loadUsers());
+		runSafeAsyncInitStep('people for filter', () => loadPeople());
 		runSafeAsyncInitStep('auto refresh', () => updateAutoRefreshInterval());
 		runSafeInitStep('infinite scroll', () => setupInfiniteScroll());
 

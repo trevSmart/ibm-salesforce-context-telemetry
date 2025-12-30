@@ -43,7 +43,10 @@
     "npm": ">=9.0.0"
   },
   "dependencies": {
+    "@emotion/react": "^11.14.0",
     "@fortawesome/fontawesome-free": "^7.1.0",
+    "@mantine/core": "^8.3.10",
+    "@mantine/hooks": "^8.3.10",
     "@tailwindcss/cli": "^4.1.18",
     "@tailwindcss/postcss": "^4.1.18",
     "@tailwindplus/elements": "^1.0.21",

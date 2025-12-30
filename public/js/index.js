@@ -957,7 +957,7 @@ function renderTopUsers(users) {
 
 		return `
       <li class="top-users-item">
-        <span class="top-users-avatar">${escapeHtml(initial)}</span>
+        <span class="person-avatar">${escapeHtml(initial)}</span>
         <div class="top-users-info">
           <div class="top-users-name-row">
             <strong class="top-users-name" title="${escapeHtml(name)}">${escapeHtml(name)}</strong>
@@ -1013,19 +1013,18 @@ function renderTopTeams(teams) {
 		`.trim();
 		const badgeBackground = index === 0 ? '#dc2626' : SESSION_START_SERIES_COLOR;
 		const logoUrl = team.logoUrl || (team.teamId && team.hasLogo ? `/api/teams/${team.teamId}/logo` : '');
+		const initials = teamName.split(' ').map(word => word[0]).join('').substring(0, 2).toUpperCase();
 
 		const avatar = logoUrl? `
-        <span class="top-users-avatar top-users-avatar--team" style="padding: 0; background: transparent; border-radius: 0;">
-          <img src="${escapeHtml(logoUrl)}" alt="${escapeHtml(teamName)} logo" style="object-fit: contain;" onerror="this.style.display='none'; const fallback=this.nextElementSibling; if (fallback) { fallback.style.display='flex'; }">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false" style="width: 32px; height: 32px; color: ${team.color || badgeBackground}; display:none;">
-            <path d="m21 7.5-9-5.25L3 7.5m18 0-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" />
-          </svg>
+        <span class="top-users-avatar top-users-avatar--team" style="padding: 0; background: transparent; border-radius: 7px;">
+          <img src="${escapeHtml(logoUrl)}" alt="${escapeHtml(teamName)} logo" class="team-logo" style="width: 32px; height: 32px; aspect-ratio: 1;" onerror="this.style.display='none'; const fallback=this.nextElementSibling; if (fallback) { fallback.style.display='flex'; }">
+          <span class="top-users-avatar top-users-avatar--team" style="background: ${team.color || badgeBackground}; display:none; width: 32px; height: 32px; aspect-ratio: 1;">
+            ${escapeHtml(initials)}
+          </span>
         </span>
       `: `
-        <span class="top-users-avatar top-users-avatar--team">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false" style="width: 32px; height: 32px; color: ${team.color || badgeBackground};">
-            <path d="m21 7.5-9-5.25L3 7.5m18 0-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" />
-          </svg>
+        <span class="top-users-avatar top-users-avatar--team" style="background: ${team.color || badgeBackground};">
+          ${escapeHtml(initials)}
         </span>
       `;
 
@@ -1813,7 +1812,7 @@ async function loadChartData(days = currentDays) {
 			},
 			tooltip: {
 				trigger: 'axis',
-				backgroundColor: 'rgba(15, 23, 42, 0.95)',
+				backgroundColor: 'rgba(15, 23, 42, 0.86)',
 				borderColor: 'rgba(148, 163, 184, 0.5)',
 				borderWidth: 1,
 				textStyle: {
@@ -1821,23 +1820,49 @@ async function loadChartData(days = currentDays) {
 					fontFamily: 'Manrope',
 					fontSize: 12
 				},
-				formatter: (params) => {
-					// params is an array of data points for the current axis position
-					let result = '';
-					params.forEach((param, index) => {
-						const seriesName = param.seriesName || param.name || '';
-						const value = param.value;
-						if (index > 0) result += '<br/>';
-						result += `${seriesName}: ${value}`;
-					});
-					return result;
-				},
 				axisPointer: {
-					type: 'cross',
+					type: 'line',
 					lineStyle: {
 						color: 'rgba(148, 163, 184, 0.5)',
-						width: 1
+						width: 1,
+						opacity: 0
+					},
+					label: {show: false}
+				},
+				formatter: (params) => {
+					if (!Array.isArray(params) || params.length === 0) {
+						return '';
 					}
+					const filtered = params.filter((entry) => ![
+						'Trend',
+						'New Sessions Trend',
+						'Errors Trend'
+					].includes(entry.seriesName));
+					if (filtered.length === 0) {
+						return '';
+					}
+					const axisIndex = Number.isFinite(filtered[0]?.dataIndex) ? filtered[0].dataIndex : null;
+					let axisLabel = filtered[0]?.axisValueLabel ?? filtered[0]?.axisValue ?? '';
+					if (axisIndex !== null && _dates?.[axisIndex]) {
+						const dateObj = new Date(_dates[axisIndex]);
+						const weekdayFullLabels = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+						const fullWeekday = weekdayFullLabels[dateObj.getDay()] || '';
+						axisLabel = `${fullWeekday} ${dateObj.getDate()}`;
+					}
+					const seriesColors = {
+						'Tool Calls': toolEventsColor,
+						'New Sessions': startSessionsColor,
+						'Errors': errorEventsColor,
+						'Events': totalEventsColor
+					};
+					const rows = filtered.map((entry) => {
+						const rawValue = Array.isArray(entry.value) ? entry.value[1] : entry.value;
+						const value = Number.isFinite(rawValue) ? rawValue : (rawValue ?? '-');
+						const color = seriesColors[entry.seriesName] || '#94a3b8';
+						const marker = `<span style="display:inline-block;width:8px;height:8px;margin-right:6px;border-radius:50%;background:${color};opacity:1;vertical-align:middle;"></span>`;
+						return `<div style="margin: 2px 0;">${marker}${entry.seriesName} <span style="float:right;margin-left:12px;font-weight:600;">${value}</span></div>`;
+					}).join('');
+					return `<div style="margin-bottom: 6px; font-weight: 600;">${axisLabel}</div>${rows}`;
 				}
 			},
 			legend: {show: false, data: legendData},
@@ -1870,16 +1895,6 @@ async function loadChartData(days = currentDays) {
 				axisLabel: {show: false},
 				axisLine: {show: false},
 				axisTick: {show: false},
-				axisPointer: {
-					label: {
-						show: true,
-						backgroundColor: axisPointerBg,
-						color: textColor,
-						borderColor: gridColor,
-						borderWidth: 1,
-						padding: [4, 6]
-					}
-				},
 				splitLine: {
 					show: true,
 					lineStyle: {color: faintGridColor, width: 1}
