@@ -1481,15 +1481,14 @@ function safeShowToast(message, type = 'info') {
 			const sessionList = document.getElementById('sessionList');
 
 			if (!sessionList) {
-				// Element not found - this might be because the page isn't fully loaded yet
-				// Defer loading until DOM is ready
+				// Element not found - this might be because we're not on the logs page,
+				// or the page isn't fully loaded yet. Skip gracefully.
 				if (document.readyState === 'loading') {
 					window.addEventListener('DOMContentLoaded', () => {
 						requestAnimationFrame(() => loadSessions());
 					});
-				} else {
-					console.error('sessionList element not found after DOM ready');
 				}
+				// Don't log an error - this is expected on non-logs pages
 				return;
 			}
 
@@ -4936,11 +4935,14 @@ function safeShowToast(message, type = 'info') {
 		runSafeInitStep('table row delegation', setupTableRowDelegation); // Event delegation for table rows
 		runSafeAsyncInitStep('event type stats', () => loadEventTypeStats(selectedSession));
 		runSafeAsyncInitStep('sessions list', () => {
-			// Ensure DOM is ready before loading sessions
-			if (document.readyState === 'loading') {
-				window.addEventListener('DOMContentLoaded', () => loadSessions());
-			} else {
-				loadSessions();
+			// Only load sessions list if we're on the logs page and DOM is ready
+			const currentPath = window.location.pathname;
+			if (currentPath === '/logs' || currentPath === '/logs/') {
+				if (document.readyState === 'loading') {
+					window.addEventListener('DOMContentLoaded', () => loadSessions());
+				} else {
+					loadSessions();
+				}
 			}
 		});
 		runSafeAsyncInitStep('events table', () => loadEvents());
