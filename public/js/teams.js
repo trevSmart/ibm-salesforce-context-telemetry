@@ -822,10 +822,10 @@ async function renderTeamDetail(teamId) {
             <div>
               <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Color</label>
               <div class="input-color">
-                <button class="color-preview-btn" style="--preview-color: ${team.color || '#2195cf'}"></button>
-                <input type="text" id="teamColorInput" value="${escapeHtml(team.color || '')}" placeholder="#2195cf"
+                <button class="color-preview-btn" style="--preview-color: ${team.color || '#0077b6'}"></button>
+                <input type="text" id="teamColorInput" value="${escapeHtml(team.color || '')}" placeholder="#0077b6"
                        class="p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-gray-100 coloris"
-                       data-coloris>
+                       data-coloris autocomplete="off">
               </div>
             </div>
             <div>
@@ -949,6 +949,9 @@ async function renderTeamDetail(teamId) {
 		currentView = 'list';
 		const listContent = renderTeamsList();
 		await transitionTeamsContent(listContent);
+		// Update URL to reflect the list view
+		const newUrl = window.location.pathname;
+		window.history.pushState({view: 'list'}, '', newUrl);
 	});
 	contentContainer.querySelector('#deleteTeamBtn')?.addEventListener('click', () => showDeleteTeamConfirm(team));
 
@@ -1018,10 +1021,10 @@ function showTeamFormModal(team = null) {
         <label>
           <div style="margin-bottom: 4px; font-weight: 500;">Color</div>
           <div class="input-color">
-            <button class="color-preview-btn" style="--preview-color: ${team ? (team.color || '#2195cf') : '#2195cf'}"></button>
-            <input type="text" id="teamColorInput" value="${team ? escapeHtml(team.color || '') : ''}" placeholder="#2195cf"
+            <button class="color-preview-btn" style="--preview-color: ${team ? (team.color || '#0077b6') : '#0077b6'}"></button>
+            <input type="text" id="teamColorInput" value="${team ? escapeHtml(team.color || '') : '#0077b6'}" placeholder="#0077b6"
                    class="p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-gray-100 coloris"
-                   data-coloris>
+                   data-coloris autocomplete="off">
           </div>
         </label>
         <label>
@@ -1662,6 +1665,9 @@ const viewTeamDetail = async (teamId) => {
 	currentView = 'detail';
 	const detailContent = await renderTeamDetail(teamId);
 	await transitionTeamsContent(detailContent);
+	// Update URL to reflect the detail view
+	const newUrl = `${window.location.pathname}#team-${teamId}`;
+	window.history.pushState({view: 'detail', teamId}, '', newUrl);
 };
 window.viewTeamDetail = viewTeamDetail;
 
@@ -1776,6 +1782,7 @@ function initializeColoris() {
 	if (typeof Coloris !== 'undefined') {
 		Coloris({
 			el: '.coloris',
+			wrap: false, // Disable default wrapper with inline preview button
 			theme: 'pill',
 			themeMode: 'auto',
 			alpha: false,
@@ -1793,14 +1800,20 @@ function initializeColoris() {
 				'hsl(194, 100%, 39%)',
 				'#00b4d8',
 				'#48cae4'
-			],
-			onInput: (color, inputEl) => {
-				console.log(`Color input: ${color}`);
-				updateColorPreview(color, inputEl);
-			},
-			onChange: (color, inputEl) => {
-				console.log(`Color changed to: ${color}`);
-				updateColorPreview(color, inputEl);
+			]
+		});
+
+		// Add event listeners to update color preview when input changes
+		document.addEventListener('input', (e) => {
+			const target = e.target;
+			if (target && target.classList && target.classList.contains('coloris')) {
+				const wrapper = target.closest('.input-color');
+				if (wrapper) {
+					const previewBtn = wrapper.querySelector('.color-preview-btn');
+					if (previewBtn && target.value) {
+						previewBtn.style.setProperty('--preview-color', target.value);
+					}
+				}
 			}
 		});
 
@@ -1812,7 +1825,7 @@ function initializeColoris() {
 				const target = e.target;
 				const isColorisInput = target && target.classList && target.classList.contains('coloris');
 				const isInsidePicker = target && target.closest('.clr-picker');
-				
+
 				if (isColorisInput || isInsidePicker) {
 					// Prevent the Enter key from bubbling up to the form
 					e.preventDefault();
@@ -1821,27 +1834,6 @@ function initializeColoris() {
 				}
 			}
 		}, true); // Use capture phase
-	}
-}
-
-// Update color preview when color changes
-function updateColorPreview(color, inputEl = null) {
-	// Find the active input if not provided
-	const activeInput = inputEl || document.querySelector('.coloris[data-coloris-open]');
-	if (activeInput && activeInput.classList.contains('coloris')) {
-		// Update the preview button
-		const wrapper = activeInput.closest('.input-color');
-		if (wrapper) {
-			const previewBtn = wrapper.querySelector('.color-preview-btn');
-			if (previewBtn) {
-				previewBtn.style.setProperty('--preview-color', color);
-			}
-		}
-
-		// Update the input value if it's different (this ensures the input reflects picker selection)
-		if (activeInput.value !== color) {
-			activeInput.value = color;
-		}
 	}
 }
 
@@ -1913,3 +1905,27 @@ function checkForTeamDetailInURL() {
 		}
 	}
 }
+
+// Handle browser back/forward navigation
+window.addEventListener('popstate', async (_event) => {
+	// Only handle popstate when on teams page
+	if (window.location.pathname !== '/teams') {
+		return;
+	}
+
+	const hash = window.location.hash;
+	if (hash && hash.startsWith('#team-')) {
+		// Navigate to detail view
+		const teamId = hash.replace('#team-', '');
+		if (teamId && !Number.isNaN(Number(teamId))) {
+			currentView = 'detail';
+			const detailContent = await renderTeamDetail(Number(teamId));
+			await transitionTeamsContent(detailContent);
+		}
+	} else {
+		// Navigate to list view
+		currentView = 'list';
+		const listContent = renderTeamsList();
+		await transitionTeamsContent(listContent);
+	}
+});

@@ -325,6 +325,9 @@ async function renderPersonDetail(personId) {
 		_currentPersonId = null;
 		const listContent = renderPeopleList();
 		await transitionPeopleContent(listContent);
+		// Update URL to reflect the list view
+		const newUrl = window.location.pathname;
+		window.history.pushState({view: 'list'}, '', newUrl);
 	});
 	contentContainer.querySelector('#deletePersonBtn')?.addEventListener('click', () => {
 		console.log('Delete button clicked for person:', person);
@@ -357,6 +360,9 @@ window.viewPersonDetail = async (personId) => {
 	_currentPersonId = personId;
 	const detailContent = await renderPersonDetail(personId);
 	await transitionPeopleContent(detailContent);
+	// Update URL to reflect the detail view
+	const newUrl = `${window.location.pathname}#person-${personId}`;
+	window.history.pushState({view: 'detail', personId}, '', newUrl);
 };
 
 window.showCreatePersonModal = function() {
@@ -816,6 +822,32 @@ function checkForPersonDetailInURL() {
 		}
 	}
 }
+
+// Handle browser back/forward navigation
+window.addEventListener('popstate', async (_event) => {
+	// Only handle popstate when on people page
+	if (window.location.pathname !== '/people') {
+		return;
+	}
+
+	const hash = window.location.hash;
+	if (hash && hash.startsWith('#person-')) {
+		// Navigate to detail view
+		const personId = hash.replace('#person-', '');
+		if (personId && !Number.isNaN(Number(personId))) {
+			currentView = 'detail';
+			_currentPersonId = Number(personId);
+			const detailContent = await renderPersonDetail(Number(personId));
+			await transitionPeopleContent(detailContent);
+		}
+	} else {
+		// Navigate to list view
+		currentView = 'list';
+		_currentPersonId = null;
+		const listContent = renderPeopleList();
+		await transitionPeopleContent(listContent);
+	}
+});
 
 
 // Legacy functions for backward compatibility
