@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 
 /**
  * Script to enable pg_stat_statements extension
@@ -107,9 +106,7 @@ async function main() {
 
 	const pool = new Pool({
 		connectionString: dbUrl,
-		ssl: dbUrl.includes('sslmode=require') || dbUrl.includes('render.com')
-			? {rejectUnauthorized: false}
-			: (process.env.DATABASE_SSL === 'true' ? {rejectUnauthorized: false} : false)
+		ssl: dbUrl.includes('sslmode=require') || dbUrl.includes('render.com')? {rejectUnauthorized: false}: (process.env.DATABASE_SSL === 'true' ? {rejectUnauthorized: false} : false)
 	});
 
 	try {

@@ -2580,7 +2580,7 @@ app.get('/api/pg-stat-statements', auth.requireAuth, auth.requireRole('advanced'
 	}
 
 	try {
-		const top = parseInt(req.query.top) || 10;
+		const top = Number.parseInt(req.query.top) || 10;
 		const slowOnly = req.query.slow === 'true';
 		const pool = db.getPostgresPool();
 
@@ -2655,30 +2655,30 @@ app.get('/api/pg-stat-statements', auth.requireAuth, auth.requireRole('advanced'
 		// Calculate cache hit ratio
 		let cacheHitRatio = null;
 		if (stats.total_cache_hits && stats.total_cache_reads) {
-			const totalBlocks = parseInt(stats.total_cache_hits) + parseInt(stats.total_cache_reads);
+			const totalBlocks = Number.parseInt(stats.total_cache_hits) + Number.parseInt(stats.total_cache_reads);
 			if (totalBlocks > 0) {
-				cacheHitRatio = 100.0 * parseInt(stats.total_cache_hits) / totalBlocks;
+				cacheHitRatio = 100.0 * Number.parseInt(stats.total_cache_hits) / totalBlocks;
 			}
 		}
 
 		res.json({
 			status: 'ok',
 			summary: {
-				total_queries: parseInt(stats.total_queries || 0),
-				total_calls: parseInt(stats.total_calls || 0),
-				total_execution_time_ms: parseFloat(stats.total_time || 0),
-				average_mean_time_ms: parseFloat(stats.avg_mean_time || 0),
-				max_execution_time_ms: parseFloat(stats.max_time || 0),
+				total_queries: Number.parseInt(stats.total_queries || 0),
+				total_calls: Number.parseInt(stats.total_calls || 0),
+				total_execution_time_ms: Number.parseFloat(stats.total_time || 0),
+				average_mean_time_ms: Number.parseFloat(stats.avg_mean_time || 0),
+				max_execution_time_ms: Number.parseFloat(stats.max_time || 0),
 				cache_hit_ratio: cacheHitRatio
 			},
 			queries: queries.map(q => ({
 				query: q.query,
-				calls: parseInt(q.calls || 0),
-				total_exec_time_ms: parseFloat(q.total_exec_time || 0),
-				mean_exec_time_ms: parseFloat(q.mean_exec_time || 0),
-				max_exec_time_ms: parseFloat(q.max_exec_time || 0),
-				rows: parseInt(q.rows || 0),
-				cache_hit_ratio: q.cache_hit_ratio ? parseFloat(q.cache_hit_ratio) : null
+				calls: Number.parseInt(q.calls || 0),
+				total_exec_time_ms: Number.parseFloat(q.total_exec_time || 0),
+				mean_exec_time_ms: Number.parseFloat(q.mean_exec_time || 0),
+				max_exec_time_ms: Number.parseFloat(q.max_exec_time || 0),
+				rows: Number.parseInt(q.rows || 0),
+				cache_hit_ratio: q.cache_hit_ratio ? Number.parseFloat(q.cache_hit_ratio) : null
 			}))
 		});
 	} catch (error) {

@@ -221,7 +221,7 @@
 		const linksContainer = document.querySelector('.top-nav-links');
 		const animation = document.querySelector('.top-nav-animation');
 
-		if (!animation || !linksContainer) return;
+		if (!animation || !linksContainer) {return;}
 
 		// Physics state
 		let currentLeft = 0;
@@ -266,7 +266,7 @@
 
 		// Get target position for a link
 		const getLinkPosition = (link) => {
-			if (!link) return null;
+			if (!link) {return null;}
 			const linkRect = link.getBoundingClientRect();
 			const containerRect = linksContainer.getBoundingClientRect();
 			return {
@@ -276,7 +276,7 @@
 		};
 
 		const easeInOutCubic = (t) => {
-			if (t < 0.5) return 4 * t * t * t;
+			if (t < 0.5) {return 4 * t * t * t;}
 			return 1 - Math.pow(-2 * t + 2, 3) / 2;
 		};
 
@@ -346,10 +346,10 @@
 					updateAnimationElement();
 					handleAnimationComplete();
 					return;
-				} else {
+				} 
 					// Continue bouncing, apply lighter deceleration to maintain bounce effect
 					velocity *= (1 - currentDeceleration * 0.3); // Even slower deceleration during bounce
-				}
+				
 			} else {
 				// Normal movement logic
 				// Check if we need to change direction (opposite to current velocity)
@@ -418,7 +418,7 @@
 		// Set target and start moving
 		const moveToTarget = (link, slow = false) => {
 			const position = getLinkPosition(link);
-			if (!position) return;
+			if (!position) {return;}
 
 			targetLeft = position.left;
 			targetWidth = position.width;
@@ -488,7 +488,7 @@
 		// Set initial position
 		const setInitialPosition = () => {
 			const navLinks = getNavLinks();
-			if (navLinks.length === 0) return;
+			if (navLinks.length === 0) {return;}
 
 			const activeLink = navLinks.find(link => link.classList.contains('active')) || navLinks[0];
 			const position = getLinkPosition(activeLink);
@@ -518,7 +518,7 @@
 		const observeLinks = () => {
 			const navLinks = getNavLinks();
 			navLinks.forEach((link) => {
-				observer.observe(link, { attributes: true, attributeFilter: ['class'] });
+				observer.observe(link, {attributes: true, attributeFilter: ['class']});
 			});
 		};
 
@@ -597,7 +597,7 @@
 			observeLinks();
 		});
 
-		linksObserver.observe(linksContainer, { childList: true, subtree: true });
+		linksObserver.observe(linksContainer, {childList: true, subtree: true});
 	}
 
 
