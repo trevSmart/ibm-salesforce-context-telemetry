@@ -1986,7 +1986,6 @@
     display: inline-block;
     position: relative;
     width: 100%;
-    cursor: pointer;
   }
 
   .input-color .color-preview-btn {
@@ -2005,13 +2004,18 @@
     text-indent: -1000px;
     white-space: nowrap;
     overflow: hidden;
+    pointer-events: none;
     transition: background-color 0.2s ease;
   }
 
   .input-color .coloris {
     padding-left: 38px !important;
     width: 100%;
-    cursor: pointer;
+  }
+
+  /* Ensure Coloris picker appears above modals */
+  .clr-picker {
+    z-index: 10000 !important;
   }
 
   .top-users-info {
