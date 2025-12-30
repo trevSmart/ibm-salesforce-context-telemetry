@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 
 /**
  * Script to query and display pg_stat_statements statistics
@@ -27,17 +26,11 @@ function maskUrl(url) {
 }
 
 function formatTime(ms) {
-	if (ms < 1) return `${(ms * 1000).toFixed(2)} µs`;
-	if (ms < 1000) return `${ms.toFixed(2)} ms`;
+	if (ms < 1) {return `${(ms * 1000).toFixed(2)} µs`;}
+	if (ms < 1000) {return `${ms.toFixed(2)} ms`;}
 	return `${(ms / 1000).toFixed(2)} s`;
 }
 
-function formatBytes(bytes) {
-	if (bytes < 1024) return `${bytes} B`;
-	if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(2)} KB`;
-	if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
-	return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
-}
 
 async function checkExtension(pool) {
 	const result = await pool.query(`
@@ -107,10 +100,8 @@ function displayTable(queries, stats) {
 	console.log(`Max execution time: ${formatTime(stats.max_time || 0)}`);
 
 	if (stats.total_cache_hits && stats.total_cache_reads) {
-		const totalBlocks = parseInt(stats.total_cache_hits) + parseInt(stats.total_cache_reads);
-		const hitRatio = totalBlocks > 0
-			? (100.0 * parseInt(stats.total_cache_hits) / totalBlocks).toFixed(2)
-			: 0;
+		const totalBlocks = Number.parseInt(stats.total_cache_hits, 10) + Number.parseInt(stats.total_cache_reads, 10);
+		const hitRatio = totalBlocks > 0? (100.0 * Number.parseInt(stats.total_cache_hits, 10) / totalBlocks).toFixed(2): 0;
 		console.log(`Cache hit ratio: ${hitRatio}%`);
 	}
 	console.log('═'.repeat(80));
@@ -124,18 +115,18 @@ function displayTable(queries, stats) {
 	console.log('🔝 Top Queries by Total Execution Time');
 	console.log('═'.repeat(120));
 	console.log(
-		'Calls'.padEnd(10) +
+		`${'Calls'.padEnd(10) +
 		'Total Time'.padEnd(15) +
 		'Mean Time'.padEnd(15) +
 		'Max Time'.padEnd(15) +
 		'Rows'.padEnd(12) +
-		'Cache Hit'.padEnd(12) +
-		'Query Preview'
+		'Cache Hit'.padEnd(12)
+		}Query Preview`
 	);
 	console.log('─'.repeat(120));
 
-	queries.forEach((q, i) => {
-		const cacheHit = q.cache_hit_ratio ? `${parseFloat(q.cache_hit_ratio).toFixed(1)}%` : 'N/A';
+	queries.forEach((q, _i) => {
+		const cacheHit = q.cache_hit_ratio ? `${Number.parseFloat(q.cache_hit_ratio).toFixed(1)}%` : 'N/A';
 		console.log(
 			`${q.calls?.toLocaleString() || 0}`.padEnd(10) +
 			formatTime(q.total_exec_time || 0).padEnd(15) +
@@ -153,23 +144,21 @@ function displayTable(queries, stats) {
 function displayJSON(queries, stats) {
 	const output = {
 		summary: {
-			total_queries: parseInt(stats.total_queries || 0),
-			total_calls: parseInt(stats.total_calls || 0),
-			total_execution_time_ms: parseFloat(stats.total_time || 0),
-			average_mean_time_ms: parseFloat(stats.avg_mean_time || 0),
-			max_execution_time_ms: parseFloat(stats.max_time || 0),
-			cache_hit_ratio: stats.total_cache_hits && stats.total_cache_reads
-				? (100.0 * parseInt(stats.total_cache_hits) / (parseInt(stats.total_cache_hits) + parseInt(stats.total_cache_reads)))
-				: null
+			total_queries: Number.parseInt(stats.total_queries || 0, 10),
+			total_calls: Number.parseInt(stats.total_calls || 0, 10),
+			total_execution_time_ms: Number.parseFloat(stats.total_time || 0),
+			average_mean_time_ms: Number.parseFloat(stats.avg_mean_time || 0),
+			max_execution_time_ms: Number.parseFloat(stats.max_time || 0),
+			cache_hit_ratio: stats.total_cache_hits && stats.total_cache_reads? (100.0 * Number.parseInt(stats.total_cache_hits, 10) / (Number.parseInt(stats.total_cache_hits, 10) + Number.parseInt(stats.total_cache_reads, 10))): null
 		},
 		queries: queries.map(q => ({
 			query_preview: q.query_preview,
-			calls: parseInt(q.calls || 0),
-			total_exec_time_ms: parseFloat(q.total_exec_time || 0),
-			mean_exec_time_ms: parseFloat(q.mean_exec_time || 0),
-			max_exec_time_ms: parseFloat(q.max_exec_time || 0),
-			rows: parseInt(q.rows || 0),
-			cache_hit_ratio: q.cache_hit_ratio ? parseFloat(q.cache_hit_ratio) : null
+			calls: Number.parseInt(q.calls || 0, 10),
+			total_exec_time_ms: Number.parseFloat(q.total_exec_time || 0),
+			mean_exec_time_ms: Number.parseFloat(q.mean_exec_time || 0),
+			max_exec_time_ms: Number.parseFloat(q.max_exec_time || 0),
+			rows: Number.parseInt(q.rows || 0, 10),
+			cache_hit_ratio: q.cache_hit_ratio ? Number.parseFloat(q.cache_hit_ratio) : null
 		}))
 	};
 
@@ -184,11 +173,11 @@ async function main() {
 	const slowOnly = args.includes('--slow');
 
 	const env = envArg ? envArg.split('=')[1] : 'local';
-	const top = topArg ? parseInt(topArg.split('=')[1]) : 10;
+	const top = topArg ? Number.parseInt(topArg.split('=')[1], 10) : 10;
 	const format = formatArg ? formatArg.split('=')[1] : 'table';
 
 	// Safety check: prevent accidental execution in production
-	const isProduction = 
+	const isProduction =
 		process.env.ENVIRONMENT === 'production' ||
 		process.env.NODE_ENV === 'production' ||
 		(process.env.DATABASE_URL && (
@@ -231,9 +220,7 @@ async function main() {
 
 	const pool = new Pool({
 		connectionString: dbUrl,
-		ssl: dbUrl.includes('sslmode=require') || dbUrl.includes('render.com')
-			? {rejectUnauthorized: false}
-			: (process.env.DATABASE_SSL === 'true' ? {rejectUnauthorized: false} : false)
+		ssl: dbUrl.includes('sslmode=require') || dbUrl.includes('render.com')? {rejectUnauthorized: false}: (process.env.DATABASE_SSL === 'true' ? {rejectUnauthorized: false} : false)
 	});
 
 	try {

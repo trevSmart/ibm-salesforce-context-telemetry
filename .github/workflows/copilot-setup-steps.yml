@@ -32,13 +32,29 @@ jobs:
         run: npm ci
 
       - name: Set up PostgreSQL
-        uses: ankane/setup-postgres@v1
+        uses: ikalnytskyi/action-setup-postgres@v8
         with:
-          postgresql-version: "16"
+          username: postgres
+          password: postgres
+          database: telemetry_test
+          port: 5432
+          postgres-version: "16"
 
-      - name: Create database
+      - name: Wait for PostgreSQL
         run: |
-          psql -U postgres -c "CREATE DATABASE telemetry_test;" || true
+          # Wait for PostgreSQL to be ready
+          for i in {1..30}; do
+            if pg_isready -h localhost -p 5432 -U postgres; then
+              echo "PostgreSQL is ready"
+              break
+            fi
+            echo "Waiting for PostgreSQL... ($i/30)"
+            sleep 2
+          done
+          if ! pg_isready -h localhost -p 5432 -U postgres; then
+            echo "PostgreSQL failed to start"
+            exit 1
+          fi
 
       - name: Ensure admin user exists with administrator role
         env:
@@ -55,7 +71,7 @@ jobs:
           fi
 
           npm run create-user -- "$ADMIN_USERNAME" "$ADMIN_PASSWORD" administrator || {
-            echo "User may already exist; ensuring administrator role..."
+            echo "User may already exist, ensuring administrator role..."
             npm run update-admin-role -- "$ADMIN_USERNAME"
           }
 
@@ -64,4 +80,4 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/telemetry_test
           DATABASE_SSL: false
           ENVIRONMENT: dev
-        run: node src/scripts/generate-test-data.js
+        run: node src/scripts/generate-test-data.js --skip-http

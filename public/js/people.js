@@ -808,7 +808,7 @@ function checkForPersonDetailInURL() {
 	const hash = window.location.hash;
 	if (hash && hash.startsWith('#person-')) {
 		const personId = hash.replace('#person-', '');
-		if (personId && !isNaN(Number(personId))) {
+		if (personId && !Number.isNaN(Number(personId))) {
 			// Small delay to ensure people are loaded
 			timerRegistry.setTimeout('people.showDetails', () => {
 				showPersonDetails(Number(personId));
@@ -1155,8 +1155,8 @@ function refreshPeople(event) {
 
 // Pause/resume functions for soft navigation
 function pausePeoplePage() {
-	// People page doesn't have intervals, but we can clear any pending timeouts if needed
-	// Currently no cleanup needed
+	// Clear all timers (just in case any timeouts/intervals were added)
+	timerRegistry.clearAll();
 }
 
 async function resumePeoplePage() {

@@ -5,9 +5,10 @@
  */
 
 // Load environment variables from .env file
-require('dotenv').config();
+import dotenv from 'dotenv';
+dotenv.config();
 
-const db = require('../storage/database');
+import {init, getUserByUsername, updateUserRole, close} from '../storage/database.js';
 
 async function updateAdminRole() {
 	const username = process.argv[2] || 'admin';
@@ -15,11 +16,11 @@ async function updateAdminRole() {
 
 	try {
 		// Initialize database
-		await db.init();
+		await init();
 		console.log('Database initialized');
 
 		// Check if user exists
-		const existingUser = await db.getUserByUsername(username);
+		const existingUser = await getUserByUsername(username);
 		if (!existingUser) {
 			console.error(`❌ User "${username}" does not exist`);
 			console.error(`   Create the user first with: npm run create-user ${username} <password> administrator`);
@@ -27,11 +28,11 @@ async function updateAdminRole() {
 		}
 
 		// Update user role to administrator
-		const updated = await db.updateUserRole(username, normalizedRole);
+		const updated = await updateUserRole(username, normalizedRole);
 
 		if (updated) {
 			// Get updated user
-			const user = await db.getUserByUsername(username);
+			const user = await getUserByUsername(username);
 			console.log('\n✅ User role updated successfully:');
 			console.log(`   Username: ${user.username}`);
 			console.log(`   ID: ${user.id}`);
@@ -43,7 +44,7 @@ async function updateAdminRole() {
 		}
 
 		// Close database connection
-		await db.close();
+		await close();
 	} catch (error) {
 		console.error('Error updating admin role:', error);
 		process.exit(1);

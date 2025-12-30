@@ -155,6 +155,11 @@ curl -X POST http://localhost:3100/telemetry \
 - **DOM Manipulation**: Direct DOM APIs, no jQuery
 - **Event Listeners**: Avoid adding listeners in render functions; use inline `onclick` or add once on page load
 - **Modal Animations**: Use `requestAnimationFrame` for adding `.visible` class to enable CSS transitions
+- **Soft Navigation**: Application uses client-side navigation via `navigation.js`. See [AGENTS.md - Soft Navigation Architecture](../AGENTS.md#soft-navigation-architecture) for the complete contract. Key points:
+  - Pages must listen to `softNav:pagePausing` and `softNav:pageMounted` events
+  - Clean up resources (timers, listeners, charts) in pause handlers
+  - Use `timerRegistry` for timer management (from `utils/timerRegistry.js`)
+  - Never add page-specific logic to `navigation.js`
 
 ### Database Conventions
 

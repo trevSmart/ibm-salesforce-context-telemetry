@@ -179,23 +179,6 @@ function createEventDetailsFormHTML(event) {
 		`;
 	};
 
-	const _createTextareaHTML = (id, name, label, value, placeholder = '') => {
-		return `
-			<div class="rounded-md bg-white dark:bg-white/5 px-3 pt-2.5 pb-1.5 outline-1 -outline-offset-1 outline-gray-300 dark:outline-gray-700 focus-within:relative focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-indigo-600 dark:focus-within:outline-indigo-500">
-				<label for="${id}" class="block text-xs font-medium text-gray-900 dark:text-white">${label}</label>
-				<textarea
-					id="${id}"
-					name="${name}"
-					placeholder="${placeholder}"
-					aria-label="${label}"
-					readonly
-					rows="8"
-					class="block w-full text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none resize-y"
-					style="font-size: 13.5px;"
-				>${formatValue(value).replace(/</g, '&lt;').replace(/>/g, '&gt;')}</textarea>
-			</div>
-		`;
-	};
 
 	let formHTML = '<div style="max-width: 700px; margin: 0 auto; padding-left: 30px; padding-right: 30px;">';
 
@@ -719,12 +702,52 @@ function setupInfiniteScroll() {
 	testContent.addEventListener('wheel', window._testPageScrollHandler, {passive: true});
 }
 
+// Pause/resume functions for soft navigation
+function pauseTestPage() {
+	// Clear all timers (scroll debounce, etc.)
+	timerRegistry.clearAll();
+
+	// Remove scroll event listeners
+	if (window._testPageScrollHandler) {
+		window.removeEventListener('scroll', window._testPageScrollHandler);
+		const testContent = document.getElementById('testContent');
+		if (testContent) {
+			testContent.removeEventListener('scroll', window._testPageScrollHandler);
+			testContent.removeEventListener('wheel', window._testPageScrollHandler);
+		}
+		// Clear the handler reference
+		window._testPageScrollHandler = null;
+	}
+}
+
+async function resumeTestPage() {
+	// Re-initialize page when returning from cache
+	await loadEvents();
+	setupInfiniteScroll();
+}
+
+// Expose pause/resume hooks for soft navigation
+window.pauseTestPage = pauseTestPage;
+window.resumeTestPage = resumeTestPage;
+
 // Listen for soft navigation events
-window.addEventListener('softNav:pageMounted', (event) => {
+window.addEventListener('softNav:pagePausing', (event) => {
+	if (event?.detail?.path === '/test') {
+		pauseTestPage();
+	}
+});
+
+window.addEventListener('softNav:pageMounted', async (event) => {
 	if (event.detail.path === '/test') {
-		// Re-initialize if needed
-		loadEvents();
-		setupInfiniteScroll();
+		const fromCache = event?.detail?.fromCache === true;
+		if (fromCache) {
+			// Page was restored from cache - resume
+			await resumeTestPage();
+		} else {
+			// Fresh page load - full initialization
+			await loadEvents();
+			setupInfiniteScroll();
+		}
 	}
 });
 

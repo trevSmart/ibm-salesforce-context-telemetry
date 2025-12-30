@@ -159,7 +159,7 @@ class TimerRegistry {
 const timerRegistry = new TimerRegistry();
 
 // Export for ES modules
-export { timerRegistry };
+export {timerRegistry};
 
 // Also make available globally for non-module scripts
 if (typeof window !== 'undefined') {

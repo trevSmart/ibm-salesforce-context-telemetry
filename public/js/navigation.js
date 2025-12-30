@@ -34,6 +34,24 @@
 	);
 
 	let isNavigating = false;
+	let currentPath = window.location.pathname; // Source of truth for current page path
+
+	/**
+	 * Dispatch pagePausing event to notify the current page to cleanup resources
+	 * @param {string} path - The path of the page that is being paused
+	 */
+	function dispatchPagePausing(path) {
+		window.dispatchEvent(new CustomEvent('softNav:pagePausing', {detail: {path}}));
+	}
+
+	/**
+	 * Dispatch pageMounted event to notify the new page to initialize
+	 * @param {string} path - The path of the page that was mounted
+	 * @param {boolean} fromCache - Whether the page was restored from cache
+	 */
+	function dispatchPageMounted(path, fromCache = false) {
+		window.dispatchEvent(new CustomEvent('softNav:pageMounted', {detail: {path, fromCache}}));
+	}
 
 	function getPath(href) {
 		try {
@@ -217,9 +235,11 @@
 
 	async function softNavigate(targetPath, {replace = false} = {}) {
 		if (isNavigating) {
-			return;
+			// Cancel any ongoing transition to prevent race conditions
+			timerRegistry.clearTimeout('navigation.transition');
+			isNavigating = false;
 		}
-		if (window.location.pathname === targetPath && !replace) {
+		if (currentPath === targetPath && !replace) {
 			return;
 		}
 		if (!SUPPORTED_PATHS.includes(targetPath)) {
@@ -237,14 +257,14 @@
 		const containerParent = container.parentNode;
 
 		try {
-			const currentPath = window.location.pathname;
+			const oldPath = currentPath;
 
 			// Notify current page to pause intervals/listeners before caching
-			window.dispatchEvent(new CustomEvent('softNav:pagePausing', {detail: {path: currentPath}}));
+			dispatchPagePausing(oldPath);
 
 			// Cache the current container before removing it
-			if (currentPath && SUPPORTED_PATHS.includes(currentPath)) {
-				containerCache.set(currentPath, container.cloneNode(true));
+			if (oldPath && SUPPORTED_PATHS.includes(oldPath)) {
+				containerCache.set(oldPath, container.cloneNode(true));
 			}
 
 			let nextContent;
@@ -379,8 +399,11 @@
 			nextContent.style.paddingLeft = '';
 			nextContent.style.pointerEvents = '';
 
+			// Update currentPath to new path
+			currentPath = targetPath;
+
 			// Notify pages that a soft navigation completed so they can resume
-			window.dispatchEvent(new CustomEvent('softNav:pageMounted', {detail: {path: targetPath, fromCache: Boolean(cachedContainer)}}));
+			dispatchPageMounted(targetPath, Boolean(cachedContainer));
 
 			if (replace) {
 				window.history.replaceState({softNav: true}, '', targetPath);
@@ -410,10 +433,13 @@
 
 	function initNav() {
 		primeInitialCache();
+		currentPath = window.location.pathname; // Initialize current path
 		document.addEventListener('click', handleSoftNavClick);
-		window.history.replaceState({softNav: true}, '', window.location.pathname);
+		window.history.replaceState({softNav: true}, '', currentPath);
 		window.addEventListener('popstate', () => {
-			softNavigate(window.location.pathname, {replace: true});
+			// popstate updates window.location.pathname, so we need to use it directly
+			const targetPath = window.location.pathname;
+			softNavigate(targetPath, {replace: true});
 		});
 	}
 

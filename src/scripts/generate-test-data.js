@@ -12,9 +12,11 @@
  * - Activity mainly during office hours (9-18h, Mon-Fri)
  * - Very low activity on weekends (5% vs 60% on weekdays)
  *
- * IMPORTANT: This script sends events via HTTP to the /telemetry endpoint (realistic mode).
- * Make sure the telemetry server is running before executing this script.
+ * By default, this script sends events via HTTP to the /telemetry endpoint (realistic mode).
+ * Make sure the telemetry server is running before executing this script, unless using --skip-http flag.
  * The server should be accessible at http://localhost:3100 (or the PORT specified in .env).
+ *
+ * Usage: node src/scripts/generate-test-data.js [--disable-env-check] [--skip-http] [YYYY-MM-DD] [true|false]
  */
 
 import 'dotenv/config';
@@ -431,7 +433,7 @@ async function sendEventsToEndpoint(events, endpointUrl) {
 /**
  * Generate all test data
  */
-async function generateTestData(targetDay, shouldDeleteExisting) {
+async function generateTestData(targetDay, shouldDeleteExisting, skipHttpFlag = false) {
 	if (shouldDeleteExisting) {
 		console.log('🗑️  Deleting all existing data...');
 		const deletedCount = await db.deleteAllEvents();
@@ -516,6 +518,12 @@ async function generateTestData(targetDay, shouldDeleteExisting) {
 
 	console.log(`   Generated ${allEvents.length} events`);
 	console.log(`   Generated ${totalSessions} sessions\n`);
+
+	// Check if we should skip HTTP sending
+	if (skipHttpFlag) {
+		console.log('🚫 Skipping HTTP event sending (--skip-http flag provided)\n');
+		return;
+	}
 
 	// Determine telemetry endpoint URL
 	const port = process.env.PORT || 3100;
@@ -669,17 +677,21 @@ async function generateTestData(targetDay, shouldDeleteExisting) {
 		} else if (!environment || environment.trim() === '') {
 			if (!hasDisableEnvCheckFlag) {
 				console.error('❌ ENVIRONMENT variable not set. Use --disable-env-check flag to bypass this check in development.');
-				console.error('   Usage: node src/scripts/generate-test-data.js [--disable-env-check] [YYYY-MM-DD] [true|false]');
+				console.error('   Usage: node src/scripts/generate-test-data.js [--disable-env-check] [--skip-http] [YYYY-MM-DD] [true|false]');
 				console.error('   Examples:');
 				console.error('     ENVIRONMENT=dev node src/scripts/generate-test-data.js');
 				console.error('     node src/scripts/generate-test-data.js --disable-env-check true');
 				console.error('     node src/scripts/generate-test-data.js 2025-12-01 false');
+				console.error('     node src/scripts/generate-test-data.js --skip-http 2025-12-01 true');
 				process.exit(1);
 			}
 		}
 
-		// Parse arguments, filtering out flags
-		const args = process.argv.slice(2).filter(arg => !arg.startsWith('--'));
+	// Check for skip-http flag
+	const skipHttpFlag = process.argv.includes('--skip-http');
+
+	// Parse arguments, filtering out flags
+	const args = process.argv.slice(2).filter(arg => !arg.startsWith('--'));
 
 		const dayArg = args[0];
 		const deleteArg = args[1];
@@ -706,7 +718,7 @@ async function generateTestData(targetDay, shouldDeleteExisting) {
 		console.log(`🧹 Delete existing data before insert: ${shouldDeleteExisting ? 'YES' : 'NO'}`);
 
 		await db.init();
-		await generateTestData(targetDay, shouldDeleteExisting);
+		await generateTestData(targetDay, shouldDeleteExisting, skipHttpFlag);
 		await db.close();
 		process.exit(0);
 	} catch (error) {

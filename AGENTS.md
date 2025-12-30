@@ -54,6 +54,222 @@ The UI is built with Tailwind CSS with a layer of customizations.
 - #### People (`/people`)
     People management interface for grouping usernames from different organizations under single physical persons. Shows a form to add new people and a list of existing people with their associated usernames. Content is loaded by `people.js`, refreshed via the top refresh button.
 
+### Soft Navigation Architecture
+
+The application implements **soft navigation** (also known as client-side navigation) to provide a faster, smoother user experience by avoiding full page reloads when navigating between pages. This is implemented via `public/js/navigation.js` and follows a clear contract between the navigation system and individual pages.
+
+#### Navigation System Responsibilities (`navigation.js`)
+
+The navigation system handles all generic navigation concerns and MUST remain agnostic to page-specific functionality:
+
+**Core Responsibilities:**
+- **Navigation interception**: Captures clicks on navigation links via event delegation
+- **History management**: Manages `history.pushState` and `popstate` events
+- **HTML fetching and caching**: Loads and caches full page HTML to optimize subsequent visits
+- **DOM container caching**: Preserves page container nodes to restore pages from cache instantly
+- **DOM swapping**: Replaces page content with crossfade transitions
+- **Lifecycle event emission**: Broadcasts generic lifecycle events that pages can listen to
+
+**Lifecycle Events Emitted:**
+
+1. **`softNav:pagePausing`** - Dispatched when navigating away from the current page
+   - Event detail: `{path: '/current-path'}` (the path being left)
+   - Fired BEFORE the current page container is cached
+   - Pages should pause/cleanup their resources when receiving this event
+
+2. **`softNav:pageMounted`** - Dispatched when a page has been mounted and is visible
+   - Event detail: `{path: '/target-path', fromCache: boolean}` 
+   - `fromCache: true` means the page was restored from cache (container was preserved)
+   - `fromCache: false` means the page was freshly loaded/rendered
+   - Pages should initialize/resume when receiving this event
+
+**What navigation.js MUST NOT contain:**
+- Page-specific logic (charts, data loading, timers, UI widgets)
+- Business logic for any specific page
+- Direct manipulation of page content beyond container swapping
+- Page-specific resource management
+
+**Exception:** The notification toggle fallback (lines 125-181) provides basic functionality when page scripts aren't loaded. This is acceptable as it's part of the shared UI shell, not page-specific business logic.
+
+#### Page Script Responsibilities
+
+Each page script (e.g., `index.js`, `event-log.js`, `teams.js`, `people.js`) is responsible for managing its own lifecycle by listening to soft navigation events.
+
+**Required Pattern:**
+
+```javascript
+// Listen for page pausing (user navigating away)
+window.addEventListener('softNav:pagePausing', (event) => {
+  if (event?.detail?.path === '/your-route') {
+    pauseYourPage();
+  }
+});
+
+// Listen for page mounting (page becoming visible)
+window.addEventListener('softNav:pageMounted', async (event) => {
+  if (event?.detail?.path === '/your-route') {
+    const fromCache = event?.detail?.fromCache === true;
+    if (fromCache) {
+      // Page restored from cache - resume existing state
+      await resumeYourPage();
+    } else {
+      // Fresh page load - full initialization
+      initializeYourPage({resetState: true});
+    }
+  }
+});
+```
+
+**Resources to Manage:**
+
+Pages must properly manage these resources in their pause/cleanup logic:
+
+- **Event listeners** - Remove to prevent duplicate handlers
+- **Timers and intervals** - Clear using `timerRegistry.clearInterval()`, `timerRegistry.clearTimeout()`
+- **Charts (ECharts)** - Call `.dispose()` on chart instances when pausing
+- **Observers** - Disconnect `ResizeObserver`, `MutationObserver`, `IntersectionObserver`
+- **Fetch requests** - Cancel in-flight requests if applicable
+- **Animation frames** - Cancel pending `requestAnimationFrame` callbacks
+- **WebSocket connections** - Close or pause subscriptions
+
+**Timer Management:**
+
+The application uses a global `timerRegistry` (from `utils/timer-registry.js`) for safe timer management:
+
+```javascript
+// Setting timers
+timerRegistry.setTimeout('uniqueId', callback, delay);
+timerRegistry.setInterval('uniqueId', callback, interval);
+
+// Clearing timers
+timerRegistry.clearTimeout('uniqueId');
+timerRegistry.clearInterval('uniqueId');
+
+// Clear all timers for a page
+timerRegistry.clearAll(); // Clears everything (use carefully)
+```
+
+Using the timer registry ensures timers can be properly cleared even if the page is cached or removed from the DOM.
+
+**Implementation Examples:**
+
+See these files for reference implementations:
+
+- **`public/js/index.js`** - Dashboard page with pause/resume and chart cleanup
+- **`public/js/event-log.js`** - Complex page with multiple charts, timers, and data loading
+- **`public/js/teams.js`** - Simpler page with state reset on navigation
+- **`public/js/people.js`** - Similar to teams with view state management
+- **`public/js/tool-usage-chart.js`** - Standalone component with cleanup logic
+
+#### Benefits of This Architecture
+
+- **Predictable lifecycle** - Clear mount/pause events make page behavior easier to understand
+- **No duplicate resources** - Proper cleanup prevents listeners, timers, and charts from accumulating
+- **Smaller navigation.js** - Generic navigation code stays stable and maintainable
+- **Fewer regressions** - New pages follow the same pattern, reducing bugs
+- **Better performance** - Page caching and instant restoration improve perceived speed
+- **Isolation** - Pages don't interfere with each other's lifecycle
+
+#### Adding New Pages
+
+When creating a new page with soft navigation support:
+
+1. **Add route to `SUPPORTED_PATHS`** in `navigation.js` (line 4)
+2. **Add page scripts to `PAGE_SCRIPTS`** object in `navigation.js` (line 12-18)
+3. **Implement lifecycle listeners** in your page script following the pattern above
+4. **Create pause function** that cleans up all resources (listeners, timers, charts)
+5. **Create resume function** that re-initializes when returning from cache
+6. **Test navigation** - Navigate away and back multiple times to verify no resource leaks
+
+#### Common Pitfalls to Avoid
+
+❌ **Adding page-specific logic to navigation.js** - Keep it generic
+❌ **Forgetting to check path in event listeners** - Always verify `event.detail.path` matches your route
+❌ **Not clearing timers** - Use `timerRegistry` and clear in pause function  
+❌ **Not disposing charts** - Call `.dispose()` on ECharts instances
+❌ **Adding listeners in render functions** - Use inline `onclick` or add listeners once on mount
+❌ **Not handling fromCache flag** - Distinguish between fresh load and cache restoration
+
+#### Pause vs Cleanup Semantics
+
+**What "pause" means in this architecture:**
+
+When a page receives `softNav:pagePausing`, it should perform **complete cleanup**, not just "pause":
+
+- ✅ **Clear all timers** - `timerRegistry.clearAll()` to stop all intervals and timeouts
+- ✅ **Remove all event listeners** - Especially scroll, resize, click handlers added dynamically
+- ✅ **Dispose all charts** - Call `.dispose()` on ECharts instances to free memory
+- ✅ **Disconnect all observers** - ResizeObserver, MutationObserver, IntersectionObserver
+- ✅ **Cancel in-flight requests** - If using AbortController, cancel pending fetches
+- ✅ **Clear handler references** - Set global handler variables to null
+
+**Why complete cleanup is required:**
+
+The page DOM may be cached and restored later, but all JavaScript resources must be cleaned up to prevent:
+- Memory leaks from accumulated listeners
+- Multiple chart instances rendering to the same container
+- Timers running in the background for pages that aren't visible
+- Event handlers firing multiple times on subsequent visits
+
+**Resume pattern:**
+
+When a page is restored from cache (`fromCache: true`), it should:
+- Re-bind any necessary event listeners
+- Restart timers if needed
+- Reinitialize charts (don't assume they still exist)
+- Refresh data if needed
+
+#### Acceptance Testing
+
+Before considering the soft navigation refactor complete, perform this manual test:
+
+**Test Procedure:**
+
+1. **Load the dashboard** (`/`)
+   - Verify initial load works correctly
+   - Note any timers, charts, or intervals running
+
+2. **Navigate to logs** (`/logs`)
+   - Click the navigation link
+   - Verify smooth transition
+   - Check console for errors
+   - Verify page functionality
+
+3. **Navigate back to dashboard**
+   - Click the navigation link
+   - Verify smooth transition
+   - Check that dashboard reinitializes correctly
+
+4. **Repeat 5 times** - Navigate between pages
+   - Dashboard → Logs → Teams → People → Dashboard
+   - Each transition should be smooth
+   - No console errors
+   - No duplicate behavior
+
+5. **Test browser back/forward** - Use browser buttons
+   - Click back 5 times
+   - Click forward 5 times
+   - Verify same smooth behavior as clicking links
+
+6. **Verify no resource leaks:**
+   - Open browser DevTools
+   - Check Performance/Memory tabs
+   - Navigate multiple times
+   - Memory should not continuously grow
+   - No accumulating event listeners
+   - Charts should not multiply
+
+**Expected Results:**
+
+✅ **No double fetches** - Each page loads data only once per visit  
+✅ **No double renders** - UI updates once, not multiple times  
+✅ **No duplicate handlers** - Clicking a button performs action once  
+✅ **Charts work correctly** - No accumulation, resize works properly  
+✅ **Timers behave correctly** - Auto-refresh and intervals work as expected  
+✅ **Smooth transitions** - Crossfade animation works every time  
+✅ **Back/forward work** - Browser navigation behaves same as clicking links
+
+**Debug tip:** Add temporary console.log in mount/pause functions to count invocations during testing.
 
 ## Data Model and Nomenclature
 

@@ -42,7 +42,7 @@ async function main() {
 						AND pi2.indexname != pi1.indexname
 						AND (
 							-- Check if the index is covered by a composite index
-							pi2.indexdef LIKE '%' || substring(pi1.indexdef from '\(([^)]+)\)') || '%'
+							pi2.indexdef LIKE '%' || substring(pi1.indexdef from '(([^)]+))') || '%'
 							OR
 							-- Check if it's a unique constraint covering a simple index
 							EXISTS (

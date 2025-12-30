@@ -222,7 +222,7 @@ async function main() {
 					try {
 						// Extract schema and index name
 						const parts = indexName.split('.');
-						const indexNameOnly = parts.length > 1 ? parts[parts.length - 1] : indexName;
+						const indexNameOnly = parts.length > 1 ? parts.at(-1) : indexName;
 
 						await dbInstance.query(`DROP INDEX IF EXISTS ${indexNameOnly}`);
 						console.log(`   ✓ Dropped: ${indexName}`);

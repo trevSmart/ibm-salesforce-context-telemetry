@@ -6,16 +6,9 @@ import {
 	renderSessionActivityChart,
 	cleanupSessionActivityChart,
 	hideChart as hideSessionActivityCard,
-	showChart as showSessionActivityCard,
 	navigateToPreviousDay,
 	navigateToNextDay,
-	updateDateNavigationButtons,
 	setSelectedActivityDate,
-	getSelectedActivityDate,
-	formatChartTimeLabel,
-	formatHumanDate,
-	getRelativeDateLabel,
-	renderSessionActivityLegend,
 	resizeChart as resizeSessionActivityChart
 } from './session-activity-chart.js';
 
@@ -250,7 +243,6 @@ function safeShowToast(message, type = 'info') {
 	let orgToTeamMap = new Map(); // org identifier -> team key
 	let teamEventCounts = new Map(); // team key -> event count in current view
 	let teamEventCountsSource = 'server'; // 'server' uses aggregated counters, 'local' uses paged events
-	let selectedActivityDate = null; // null means use current day by default
 	let activeFilters = new Set(['tool', 'session', 'general']);
 	let selectedPersonIds = new Set(); // Will be populated with all people when loaded - all selected by default
 	let allPersonIds = new Set(); // Track all available person IDs
@@ -273,8 +265,13 @@ function safeShowToast(message, type = 'info') {
 	let activeTab = 'sessions'; // 'sessions' or 'people'
 	const SESSION_ACTIVITY_FETCH_LIMIT = 1000;
 	// State for hover preview functionality
-	let hoverPreviewState = null;
 	let isHoverPreviewActive = false;
+
+	// Event listener references for cleanup
+	let sessionListDelegationHandler = null;
+	let peopleListDelegationHandler = null;
+	let teamsListDelegationHandler = null;
+	let tableRowDelegationHandler = null;
 
 	function revealEventLogShell() {
 		const body = document.body;
@@ -313,7 +310,6 @@ function safeShowToast(message, type = 'info') {
 		isLoadingMore = false;
 		allLoadedEvents = [];
 		selectedSession = 'all';
-		selectedActivityDate = null;
 		activeFilters = new Set(['tool', 'session', 'general']);
 		selectedPersonIds = new Set();
 		allPersonIds = new Set();
@@ -333,7 +329,6 @@ function safeShowToast(message, type = 'info') {
 		cleanupSessionActivityChart();
 		lastSessionActivityEvents = [];
 		activeTab = 'sessions';
-		hoverPreviewState = null;
 		isHoverPreviewActive = false;
 	}
 
@@ -778,149 +773,9 @@ function safeShowToast(message, type = 'info') {
 	}
 
 	// Save current chart state for hover preview restoration
-	function saveChartState() {
-		// If already in hover preview, we want to save the original state, not the preview state
-		// So we use the saved state's sessionId if available, otherwise use current selectedSession
-		if (isHoverPreviewActive && hoverPreviewState) {
-			// Already saved the original state, don't overwrite it
-			return;
-		}
-		hoverPreviewState = {
-			sessionId: selectedSession,
-			activityDate: selectedActivityDate ? new Date(selectedActivityDate) : null,
-			events: lastSessionActivityEvents.slice()
-		};
-	}
 
-	// Restore chart state from hover preview
-	function _restoreChartState() {
-		// Clear any pending hover timeout
-		timerRegistry.clearTimeout('eventLog.hover');
-
-		if (!hoverPreviewState || !isHoverPreviewActive) {
-			return;
-		}
-		const savedState = hoverPreviewState;
-		hoverPreviewState = null;
-		isHoverPreviewActive = false;
-
-		// Restore the selected session
-		selectedSession = savedState.sessionId;
-
-		// Restore the selected activity date
-		selectedActivityDate = savedState.activityDate ? new Date(savedState.activityDate) : null;
-
-		// Restore the visual state of session buttons
-		document.querySelectorAll('.session-item').forEach(i => i.classList.remove('active'));
-		document.querySelectorAll('[data-session="all"]').forEach(i => i.classList.remove('active'));
-
-		if (savedState.sessionId === 'all') {
-			// Restore "All Sessions" as active
-			document.querySelectorAll('[data-session="all"]').forEach(item => {
-				item.classList.add('active');
-			});
-		} else {
-			// Restore the specific session as active
-			const sessionItem = document.querySelector(`.session-item[data-session="${savedState.sessionId}"]`);
-			if (sessionItem) {
-				sessionItem.classList.add('active');
-			}
-		}
-
-		// Restore the chart with saved state
-		if (savedState.events && savedState.events.length > 0) {
-			lastSessionActivityEvents = savedState.events.slice();
-			renderSessionActivityChart(savedState.events, {
-				sessionId: savedState.sessionId,
-				activityDate: savedState.activityDate,
-				sessionDisplayMap
-			});
-		} else {
-			// If no saved events, reload the chart for the saved session
-			updateSessionActivityChart({sessionId: savedState.sessionId});
-		}
-	}
 
 	// Handle hover preview for session buttons
-	async function _handleSessionHover(sessionId, sessionData = null) {
-		// Don't preview if already selected and not in hover preview
-		if (selectedSession === sessionId && !isHoverPreviewActive) {
-			return;
-		}
-
-		// Clear any existing hover timeout
-		timerRegistry.clearTimeout('eventLog.hover');
-
-		// Save current state if not already in hover preview
-		if (!isHoverPreviewActive) {
-			saveChartState();
-		}
-
-		// Extract the session date from sessionData
-		let sessionDate = null;
-		if (sessionData) {
-			const sessionDay = sessionData.last_event || sessionData.first_event || null;
-			if (sessionDay) {
-				const parsedDate = new Date(sessionDay);
-				if (!Number.isNaN(parsedDate.getTime())) {
-					sessionDate = parsedDate;
-				}
-			}
-		}
-
-		// Delay the chart update by 150ms
-		timerRegistry.setTimeout('eventLog.hover', async () => {
-			isHoverPreviewActive = true;
-
-			// Update chart to show hovered session with smooth transition
-			if (sessionId === 'all') {
-				try {
-					const allEvents = await fetchAllSessionsActivityEvents();
-					if (allEvents.length > 0) {
-						renderSessionActivityChart(allEvents, {
-							sessionId: 'all',
-							activityDate: sessionDate,
-							enableTransition: true,
-							sessionDisplayMap
-						});
-					}
-				} catch (error) {
-					console.error('Error loading hover preview for all sessions:', error);
-				}
-			} else {
-				try {
-					const params = new URLSearchParams({
-						sessionId: sessionId,
-						orderBy: 'created_at',
-						order: 'ASC',
-						limit: SESSION_ACTIVITY_FETCH_LIMIT.toString()
-					});
-					const response = await fetch(`/api/events?${params}`);
-					const validResponse = await handleApiResponse(response);
-					if (validResponse) {
-						const data = await validResponse.json();
-						if (data.events && data.events.length > 0) {
-							// If no session date from sessionData, extract from first event
-							if (!sessionDate && data.events.length > 0) {
-								const firstEventDate = new Date(data.events[0].timestamp);
-								if (!Number.isNaN(firstEventDate.getTime())) {
-									sessionDate = firstEventDate;
-								}
-							}
-							renderSessionActivityChart(data.events, {
-								sessionId: sessionId,
-								activityDate: sessionDate,
-								enableTransition: true,
-								sessionDisplayMap
-							});
-						}
-					}
-				} catch (error) {
-					console.error('Error loading hover preview for session:', error);
-				}
-			}
-		}, 150);
-	}
 
 	async function updateSessionActivityChart(options = {}) {
 		const eventsOverride = Array.isArray(options.events) ? options.events : null;
@@ -1032,9 +887,6 @@ function safeShowToast(message, type = 'info') {
 	}
 
 	// Helper functions
-	function padNumber(value) {
-		return String(value).padStart(2, '0');
-	}
 
 	function showGlobalError(message) {
 		const formattedMessage = typeof message === 'string'? message: (message?.message || 'Unexpected error');
@@ -1176,6 +1028,251 @@ function safeShowToast(message, type = 'info') {
 		}
 	}
 
+	/**
+	 * Setup event delegation for session list
+	 * This adds ONE listener to the parent instead of many to children
+	 */
+	function setupSessionListDelegation() {
+		const sessionList = document.getElementById('sessionList');
+		if (!sessionList) {
+			return;
+		}
+
+		// Remove old listener if it exists
+		if (sessionListDelegationHandler) {
+			sessionList.removeEventListener('click', sessionListDelegationHandler);
+		}
+
+		// Create delegation handler
+		sessionListDelegationHandler = (e) => {
+			const sessionItem = e.target.closest('.session-item');
+			if (!sessionItem) {
+				return;
+			}
+
+			const sessionId = sessionItem.getAttribute('data-session');
+			if (!sessionId) {
+				return;
+			}
+
+			// Handle checkbox clicks
+			if (e.target.closest('.session-checkbox')) {
+				e.stopPropagation();
+				toggleSessionSelection(sessionId, e);
+				return;
+			}
+
+			// Handle actions button clicks
+			if (e.target.closest('.actions-btn')) {
+				e.stopPropagation();
+				toggleSessionActionsDropdown(e, sessionId);
+				return;
+			}
+
+			// Handle delete button clicks
+			if (e.target.closest('.actions-dropdown-item.delete')) {
+				e.stopPropagation();
+				confirmDeleteSession(sessionId);
+				return;
+			}
+
+			// Handle session item clicks (don't activate if clicking on actions or checkbox)
+			if (e.target.closest('.session-item-actions') || e.target.closest('.session-checkbox')) {
+				return;
+			}
+
+			// Cancel hover preview when clicking
+			if (isHoverPreviewActive) {
+				isHoverPreviewActive = false;
+			}
+
+			// If in selection mode, toggle selection for deletion instead of viewing
+			if (selectionMode) {
+				toggleSessionSelection(sessionId, e);
+				return;
+			}
+
+			// If Ctrl/Cmd is pressed and not in selection mode, enter selection mode and select this session
+			if ((e.ctrlKey || e.metaKey) && !selectionMode) {
+				toggleSelectionMode();
+				// Small delay to ensure selection mode is active
+				setTimeout(() => {
+					toggleSessionSelection(sessionId, e);
+				}, 0);
+				return;
+			}
+
+			// Avoid flickering if clicking on the same session that's already selected
+			if (selectedSession === sessionId && sessionItem.classList.contains('active')) {
+				return;
+			}
+
+			document.querySelectorAll('.session-item').forEach(i => i.classList.remove('active'));
+			sessionItem.classList.add('active');
+			selectedSession = sessionId;
+
+			// Find session data to get dates
+			const session = Array.from(document.querySelectorAll('.session-item'))
+				.find(el => el.getAttribute('data-session') === sessionId);
+			const sessionDay = session?.dataset?.lastEvent || session?.dataset?.firstEvent || null;
+			const parsedSessionDate = sessionDay ? new Date(sessionDay) : null;
+
+			// Always default to DESC order (newest first)
+			sortOrder = 'DESC';
+
+			// Update sort icon
+			const sortIconEl = document.getElementById('sortIcon');
+			if (sortIconEl) {
+				if (sortOrder === 'DESC') {
+					sortIconEl.src = '/resources/sort-desc';
+					sortIconEl.alt = 'Sort descending';
+				} else {
+					sortIconEl.src = '/resources/sort-asc';
+					sortIconEl.alt = 'Sort ascending';
+				}
+			}
+
+			currentOffset = 0;
+			loadEvents();
+			loadEventTypeStats(selectedSession);
+		};
+
+		// Add the delegation listener
+		sessionList.addEventListener('click', sessionListDelegationHandler);
+	}
+
+	/**
+	 * Setup event delegation for people list
+	 */
+	function setupPeopleListDelegation() {
+		const peopleList = document.getElementById('peopleList');
+		if (!peopleList) {
+			return;
+		}
+
+		// Remove old listener if it exists
+		if (peopleListDelegationHandler) {
+			peopleList.removeEventListener('click', peopleListDelegationHandler);
+		}
+
+		// Create delegation handler
+		peopleListDelegationHandler = (e) => {
+			const userItem = e.target.closest('.session-item[data-user]');
+			if (!userItem) {
+				return;
+			}
+
+			const userId = userItem.getAttribute('data-user');
+			if (!userId) {
+				return;
+			}
+
+			// Avoid flickering if clicking on the same user that's already selected
+			if (selectedPersonIds.has(userId) && selectedPersonIds.size === 1) {
+				return;
+			}
+
+			// Select only this user
+			selectedPersonIds.clear();
+			selectedPersonIds.add(userId);
+
+			// Update UI to reflect selection
+			document.querySelectorAll('.session-item[data-user]').forEach(i => i.classList.remove('active'));
+			userItem.classList.add('active');
+
+			// Switch to sessions tab and reload
+			switchTab('sessions');
+			loadSessions();
+			loadEvents();
+			loadEventTypeStats(selectedSession);
+		};
+
+		// Add the delegation listener
+		peopleList.addEventListener('click', peopleListDelegationHandler);
+	}
+
+	/**
+	 * Setup event delegation for teams list
+	 */
+	function setupTeamsListDelegation() {
+		const teamList = document.getElementById('teamList');
+		if (!teamList) {
+			return;
+		}
+
+		// Remove old listener if it exists
+		if (teamsListDelegationHandler) {
+			teamList.removeEventListener('click', teamsListDelegationHandler);
+		}
+
+		// Create delegation handler
+		teamsListDelegationHandler = (e) => {
+			const teamItem = e.target.closest('.session-item[data-team-key]');
+			if (!teamItem) {
+				return;
+			}
+
+			const teamKey = teamItem.dataset.teamKey;
+			if (!teamKey) {
+				return;
+			}
+
+			const isSelectingSame = selectedTeamKey === teamKey;
+			selectedTeamKey = isSelectingSame ? null : teamKey;
+
+			document.querySelectorAll('#teamList .session-item').forEach((item) => {
+				item.classList.toggle('active', item.dataset.teamKey === selectedTeamKey);
+			});
+
+			switchTab('teams');
+			currentOffset = 0;
+			loadEvents();
+			loadEventTypeStats(selectedSession);
+		};
+
+		// Add the delegation listener
+		teamList.addEventListener('click', teamsListDelegationHandler);
+	}
+
+	/**
+	 * Setup event delegation for table rows
+	 */
+	function setupTableRowDelegation() {
+		const logsTableScroll = document.getElementById('logsTableScroll');
+		if (!logsTableScroll) {
+			return;
+		}
+
+		// Remove old listener if it exists
+		if (tableRowDelegationHandler) {
+			logsTableScroll.removeEventListener('click', tableRowDelegationHandler);
+		}
+
+		// Create delegation handler for table rows
+		tableRowDelegationHandler = (evt) => {
+			// Find the closest tr with data-event-id
+			const row = evt.target.closest('tr[data-event-id]');
+			if (!row) {
+				return;
+			}
+
+			// Don't expand if clicking on actions button, dropdown, or expand button
+			if (evt.target.closest('.actions-btn') ||
+			    evt.target.closest('.actions-dropdown') ||
+			    evt.target.closest('.expand-btn')) {
+				return;
+			}
+
+			const eventId = row.getAttribute('data-event-id');
+			if (eventId) {
+				toggleRowExpand(Number.parseInt(eventId, 10));
+			}
+		};
+
+		// Add the delegation listener
+		logsTableScroll.addEventListener('click', tableRowDelegationHandler);
+	}
+
 	async function loadSessions() {
 		try {
 			const params = new URLSearchParams();
@@ -1228,15 +1325,14 @@ function safeShowToast(message, type = 'info') {
 			const sessionList = document.getElementById('sessionList');
 
 			if (!sessionList) {
-				// Element not found - this might be because the page isn't fully loaded yet
-				// Defer loading until DOM is ready
+				// Element not found - this might be because we're not on the logs page,
+				// or the page isn't fully loaded yet. Skip gracefully.
 				if (document.readyState === 'loading') {
 					window.addEventListener('DOMContentLoaded', () => {
 						requestAnimationFrame(() => loadSessions());
 					});
-				} else {
-					console.error('sessionList element not found after DOM ready');
 				}
+				// Don't log an error - this is expected on non-logs pages
 				return;
 			}
 
@@ -1301,84 +1397,15 @@ function safeShowToast(message, type = 'info') {
 						</div>
 					`;
 
-					// Add event listeners for checkbox and actions (safer than inline onclick with XSS protection)
-					const checkbox = li.querySelector('.session-checkbox');
-					if (checkbox) {
-						checkbox.addEventListener('click', (event) => {
-							event.stopPropagation();
-							toggleSessionSelection(session.session_id, event);
-						});
+					// Store session date information in dataset for delegation handler
+					if (session.last_event) {
+						li.dataset.lastEvent = session.last_event;
+					}
+					if (session.first_event) {
+						li.dataset.firstEvent = session.first_event;
 					}
 
-					const actionsBtn = li.querySelector('.actions-btn');
-					if (actionsBtn) {
-						actionsBtn.addEventListener('click', (event) => {
-							event.stopPropagation();
-							toggleSessionActionsDropdown(event, session.session_id);
-						});
-					}
-
-					const deleteBtn = li.querySelector('.actions-dropdown-item.delete');
-					if (deleteBtn) {
-						deleteBtn.addEventListener('click', (event) => {
-							event.stopPropagation();
-							confirmDeleteSession(session.session_id);
-						});
-					}
-
-					li.addEventListener('click', (e) => {
-						// Don't activate session if clicking on actions button or checkbox
-						if (e.target.closest('.session-item-actions') || e.target.closest('.session-checkbox')) {
-							return;
-						}
-						// Cancel hover preview when clicking
-						if (isHoverPreviewActive) {
-							hoverPreviewState = null;
-							isHoverPreviewActive = false;
-						}
-						// If in selection mode, toggle selection for deletion instead of viewing
-						if (selectionMode) {
-							toggleSessionSelection(session.session_id, e);
-							return;
-						}
-						// If Ctrl/Cmd is pressed and not in selection mode, enter selection mode and select this session
-						if ((e.ctrlKey || e.metaKey) && !selectionMode) {
-							toggleSelectionMode();
-							// Small delay to ensure selection mode is active
-							setTimeout(() => {
-								toggleSessionSelection(session.session_id, e);
-							}, 0);
-							return;
-						}
-						// Avoid flickering if clicking on the same session that's already selected
-						if (selectedSession === session.session_id && li.classList.contains('active')) {
-							return;
-						}
-						document.querySelectorAll('.session-item').forEach(i => i.classList.remove('active'));
-						li.classList.add('active');
-						selectedSession = session.session_id;
-						// Pin activity chart to this session's day (prefer last event, fall back to first)
-						const sessionDay = session.last_event || session.first_event || null;
-						const parsedSessionDate = sessionDay ? new Date(sessionDay) : null;
-						selectedActivityDate = parsedSessionDate && !Number.isNaN(parsedSessionDate.getTime())? parsedSessionDate: null;
-						// Always default to DESC order (newest first)
-						sortOrder = 'DESC';
-						// Update sort icon
-						const sortIconEl = document.getElementById('sortIcon');
-						if (sortIconEl) {
-							if (sortOrder === 'DESC') {
-								sortIconEl.src = '/resources/sort-desc';
-								sortIconEl.alt = 'Sort descending';
-							} else {
-								sortIconEl.src = '/resources/sort-asc';
-								sortIconEl.alt = 'Sort ascending';
-							}
-						}
-						currentOffset = 0;
-						loadEvents();
-						loadEventTypeStats(selectedSession);
-					});
-
+					// NO MORE INDIVIDUAL LISTENERS! Event delegation handles all clicks
 					sessionList.appendChild(li);
 				});
 
@@ -1490,15 +1517,14 @@ function safeShowToast(message, type = 'info') {
 
 			const peopleList = document.getElementById('peopleList');
 			if (!peopleList) {
-				// Element not found - this might be because the page isn't fully loaded yet
-				// Defer loading until DOM is ready
+				// Element not found - this might be because we're not on the logs page,
+				// or the page isn't fully loaded yet. Skip gracefully.
 				if (document.readyState === 'loading') {
 					window.addEventListener('DOMContentLoaded', () => {
 						requestAnimationFrame(() => loadPeopleList());
 					});
-				} else {
-					console.error('peopleList element not found after DOM ready');
 				}
+				// Don't log an error - this is expected on non-logs pages
 				return;
 			}
 
@@ -1580,24 +1606,7 @@ function safeShowToast(message, type = 'info') {
 					</div>
 				`;
 
-				li.addEventListener('click', (_e) => {
-					// Avoid flickering if clicking on the same user that's already selected
-					if (selectedPersonIds.has(user.user_id) && selectedPersonIds.size === 1) {
-						return;
-					}
-					// Select only this user
-					selectedPersonIds.clear();
-					selectedPersonIds.add(user.user_id);
-					// Update UI to reflect selection
-					document.querySelectorAll('.session-item[data-user]').forEach(i => i.classList.remove('active'));
-					li.classList.add('active');
-					// Switch to sessions tab and reload
-					switchTab('sessions');
-					loadSessions();
-					loadEvents();
-					loadEventTypeStats(selectedSession);
-				});
-
+				// NO MORE INDIVIDUAL LISTENERS! Event delegation handles all clicks
 				peopleList.appendChild(li);
 			});
 		} catch (error) {
@@ -1741,17 +1750,7 @@ function safeShowToast(message, type = 'info') {
 				</div>
 			`;
 
-				li.addEventListener('click', () => {
-					const isSelectingSame = selectedTeamKey === team.key;
-					selectedTeamKey = isSelectingSame ? null : team.key;
-					document.querySelectorAll('#teamList .session-item').forEach((item) => {
-						item.classList.toggle('active', item.dataset.teamKey === selectedTeamKey);
-					});
-					switchTab('teams');
-					currentOffset = 0;
-					loadEvents();
-				});
-
+				// NO MORE INDIVIDUAL LISTENERS! Event delegation handles all clicks
 				teamList.appendChild(li);
 			});
 			// Refresh counts in case events already loaded
@@ -2186,284 +2185,6 @@ function safeShowToast(message, type = 'info') {
 	}
 
 
-	function _createEventDetailsForm(event) {
-		// event.data now contains the original payload exactly as received
-		const payload = event.data || {};
-
-		// Helper function to format value for display
-		const formatValue = (value) => {
-			if (value === null || value === undefined) {
-				return '';
-			}
-			if (typeof value === 'object') {
-				return JSON.stringify(value, null, 2);
-			}
-			return String(value);
-		};
-
-		// Helper function to create input field with label
-		const createInput = (id, name, label, value, placeholder = '', type = 'text', roundedClasses = '') => {
-			const container = document.createElement('div');
-			container.className = `bg-white dark:bg-white/5 px-3 pt-2.5 pb-1.5 outline-1 -outline-offset-1 outline-gray-300 dark:outline-gray-700 focus-within:relative focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-indigo-600 dark:focus-within:outline-indigo-500 ${roundedClasses}`.trim();
-
-			const labelEl = document.createElement('label');
-			labelEl.for = id;
-			labelEl.className = 'block text-xs font-medium text-gray-900 dark:text-white';
-			labelEl.textContent = label;
-			container.appendChild(labelEl);
-
-			const input = document.createElement('input');
-			input.id = id;
-			input.name = name;
-			input.type = type;
-			input.value = formatValue(value);
-			input.placeholder = placeholder;
-			input.setAttribute('aria-label', label);
-			input.readOnly = true;
-			input.className = 'block w-full text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none'.trim();
-			input.style.fontSize = '13.5px';
-			container.appendChild(input);
-
-			return container;
-		};
-
-		// Helper function to create textarea field with label
-		const createTextarea = (id, name, label, value, placeholder = '') => {
-			const container = document.createElement('div');
-			container.className = 'rounded-md bg-white dark:bg-white/5 px-3 pt-2.5 pb-1.5 outline-1 -outline-offset-1 outline-gray-300 dark:outline-gray-700 focus-within:relative focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-indigo-600 dark:focus-within:outline-indigo-500';
-
-			const labelEl = document.createElement('label');
-			labelEl.for = id;
-			labelEl.className = 'block text-xs font-medium text-gray-900 dark:text-white';
-			labelEl.textContent = label;
-			container.appendChild(labelEl);
-
-			const textarea = document.createElement('textarea');
-			textarea.id = id;
-			textarea.name = name;
-			textarea.value = formatValue(value);
-			textarea.placeholder = placeholder;
-			textarea.setAttribute('aria-label', label);
-			textarea.readOnly = true;
-			textarea.rows = 8;
-			textarea.className = 'block w-full text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none resize-y';
-			textarea.style.fontSize = '13.5px';
-			container.appendChild(textarea);
-
-			return container;
-		};
-
-		// Create form container
-		const formContainer = document.createElement('div');
-		formContainer.style.paddingLeft = '30px';
-		formContainer.style.paddingRight = '30px';
-
-		// Event Information fieldset
-		const eventFieldset = document.createElement('fieldset');
-		const eventLegend = document.createElement('legend');
-		eventLegend.className = 'block text-sm/6 font-medium text-gray-900 dark:text-white';
-		eventLegend.textContent = 'Event Information';
-		eventFieldset.appendChild(eventLegend);
-
-		const eventContainer = document.createElement('div');
-		eventContainer.className = 'mt-2 -space-y-px';
-
-		// Event type (full width, top)
-		const eventTypeInput = createInput(
-			`event-type-${event.id}`,
-			'event-type',
-			'Event Type',
-			payload.event,
-			'Event type',
-			'text',
-			'rounded-t-md'
-		);
-		eventContainer.appendChild(eventTypeInput);
-
-		// Server ID and Version row
-		const hasServerId = payload.serverId !== undefined;
-		const hasVersion = payload.version !== undefined;
-
-		// Timestamp (full width)
-		const timestampRounded = (!hasServerId && !hasVersion) ? 'rounded-b-md' : '';
-		const timestampInput = createInput(
-			`event-timestamp-${event.id}`,
-			'timestamp',
-			'Timestamp',
-			payload.timestamp,
-			'Timestamp',
-			'text',
-			timestampRounded
-		);
-		eventContainer.appendChild(timestampInput);
-
-		if (hasServerId && hasVersion) {
-			// Both fields: side by side using grid for this row only
-			const sideBySideContainer = document.createElement('div');
-			sideBySideContainer.className = 'grid grid-cols-2 gap-0';
-
-			const serverIdInput = createInput(
-				`event-serverId-${event.id}`,
-				'serverId',
-				'Server ID',
-				payload.serverId,
-				'Server ID',
-				'text',
-				'rounded-bl-md'
-			);
-			serverIdInput.style.marginRight = '-1px';
-			sideBySideContainer.appendChild(serverIdInput);
-
-			const versionInput = createInput(
-				`event-version-${event.id}`,
-				'version',
-				'Version',
-				payload.version,
-				'Version',
-				'text',
-				'rounded-br-md'
-			);
-			sideBySideContainer.appendChild(versionInput);
-
-			eventContainer.appendChild(sideBySideContainer);
-		} else if (hasServerId) {
-			// Only Server ID: full width
-			const serverIdInput = createInput(
-				`event-serverId-${event.id}`,
-				'serverId',
-				'Server ID',
-				payload.serverId,
-				'Server ID',
-				'text',
-				'rounded-b-md'
-			);
-			eventContainer.appendChild(serverIdInput);
-		} else if (hasVersion) {
-			// Only Version: full width
-			const versionInput = createInput(
-				`event-version-${event.id}`,
-				'version',
-				'Version',
-				payload.version,
-				'Version',
-				'text',
-				'rounded-b-md'
-			);
-			eventContainer.appendChild(versionInput);
-		}
-
-		eventFieldset.appendChild(eventContainer);
-		formContainer.appendChild(eventFieldset);
-
-		// Session Information fieldset
-		const hasSessionId = payload.sessionId !== undefined;
-		const hasUserId = payload.userId !== undefined;
-
-		if (hasSessionId || hasUserId) {
-			const sessionFieldset = document.createElement('fieldset');
-			sessionFieldset.className = 'mt-6';
-			const sessionLegend = document.createElement('legend');
-			sessionLegend.className = 'block text-sm/6 font-medium text-gray-900 dark:text-white';
-			sessionLegend.textContent = 'Session Information';
-			sessionFieldset.appendChild(sessionLegend);
-
-			const sessionContainer = document.createElement('div');
-			sessionContainer.className = 'mt-2 -space-y-px';
-
-			if (hasSessionId && hasUserId) {
-				// Both fields: side by side using grid for this row only
-				const sideBySideContainer = document.createElement('div');
-				sideBySideContainer.className = 'grid grid-cols-2 gap-0';
-
-				const sessionIdInput = createInput(
-					`event-sessionId-${event.id}`,
-					'sessionId',
-					'Session ID',
-					payload.sessionId,
-					'Session ID',
-					'text',
-					'rounded-md'
-				);
-				sessionIdInput.style.marginRight = '-1px';
-				sideBySideContainer.appendChild(sessionIdInput);
-
-				const userIdInput = createInput(
-					`event-userId-${event.id}`,
-					'userId',
-					'User ID',
-					payload.userId,
-					'User ID',
-					'text',
-					'rounded-md'
-				);
-				sideBySideContainer.appendChild(userIdInput);
-
-				sessionContainer.appendChild(sideBySideContainer);
-			} else if (hasSessionId) {
-				// Only Session ID: full width
-				const sessionIdInput = createInput(
-					`event-sessionId-${event.id}`,
-					'sessionId',
-					'Session ID',
-					payload.sessionId,
-					'Session ID',
-					'text',
-					'rounded-md'
-				);
-				sessionContainer.appendChild(sessionIdInput);
-			} else if (hasUserId) {
-				// Only User ID: full width
-				const userIdInput = createInput(
-					`event-userId-${event.id}`,
-					'userId',
-					'User ID',
-					payload.userId,
-					'User ID',
-					'text',
-					'rounded-md'
-				);
-				sessionContainer.appendChild(userIdInput);
-			}
-
-			sessionFieldset.appendChild(sessionContainer);
-			formContainer.appendChild(sessionFieldset);
-		}
-
-		// Data fieldset (if data exists and is not empty)
-		if (payload.data && Object.keys(payload.data).length > 0) {
-			const dataFieldset = document.createElement('fieldset');
-			dataFieldset.className = 'mt-6';
-			const dataLegend = document.createElement('legend');
-			dataLegend.className = 'block text-sm/6 font-medium text-gray-900 dark:text-white';
-			dataLegend.textContent = 'Event Data';
-			dataFieldset.appendChild(dataLegend);
-
-			const dataContainer = document.createElement('div');
-			dataContainer.className = 'mt-2 -space-y-px';
-			const dataTextarea = createTextarea(
-				`event-data-${event.id}`,
-				'data',
-				'Event Data',
-				payload.data,
-				'Event data (JSON)'
-			);
-			dataContainer.appendChild(dataTextarea);
-			dataFieldset.appendChild(dataContainer);
-			formContainer.appendChild(dataFieldset);
-		}
-
-		return formContainer;
-	}
-
-	function _formatDescription(event) {
-		// If event doesn't have data field (payload not loaded), return special marker
-		if (!Object.hasOwn(event, 'data')) {
-			return '__VIEW_PAYLOAD_BUTTON__';
-		}
-
-		// event.data now contains the original payload exactly as received
-		return JSON.stringify(event.data);
-	}
 
 
 	function toggleRowExpand(eventId) {
@@ -2554,23 +2275,6 @@ function safeShowToast(message, type = 'info') {
 			`;
 		};
 
-		const _createTextareaHTML = (id, name, label, value, placeholder = '') => {
-			return `
-				<div class="rounded-md bg-white dark:bg-white/5 px-3 pt-2.5 pb-1.5 outline-1 -outline-offset-1 outline-gray-300 dark:outline-gray-700 focus-within:relative focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-indigo-600 dark:focus-within:outline-indigo-500">
-					<label for="${id}" class="block text-xs font-medium text-gray-900 dark:text-white">${label}</label>
-					<textarea
-						id="${id}"
-						name="${name}"
-						placeholder="${placeholder}"
-						aria-label="${label}"
-						readonly
-						rows="8"
-						class="block w-full text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none resize-y"
-						style="font-size: 13.5px;"
-					>${formatValue(value).replace(/</g, '&lt;').replace(/>/g, '&gt;')}</textarea>
-				</div>
-			`;
-		};
 
 		let formHTML = '<div style="max-width: 700px; margin: 0 auto; padding-left: 30px; padding-right: 30px;">';
 
@@ -2881,6 +2585,7 @@ function safeShowToast(message, type = 'info') {
 			if (window.ResizableColumns) {
 				const table = logsTableScroll.querySelector('table[data-resizable-columns-id]');
 				if (table) {
+					// eslint-disable-next-line no-new
 					new ResizableColumns(table, {
 						store: window.resizableColumnsStore,
 						maxWidth: 200,
@@ -2901,28 +2606,7 @@ function safeShowToast(message, type = 'info') {
 			}
 		}
 
-		// Add click handlers to newly added rows for expansion
-		if (tbody) {
-			const newRows = append ? Array.from(tbody.querySelectorAll('tr[data-event-id]')).slice(-events.length) : tbody.querySelectorAll('tr[data-event-id]'); // Get only the newly added main rows (not expanded rows)
-
-			newRows.forEach(row => {
-				// Check if event listener already exists
-				if (row.hasAttribute('data-listener-attached')) {
-					return;
-				}
-				row.setAttribute('data-listener-attached', 'true');
-				row.addEventListener('click', (evt) => {
-					// Don't expand if clicking on actions button or dropdown
-					if (evt.target.closest('.actions-btn') || evt.target.closest('.actions-dropdown') || evt.target.closest('.expand-btn')) {
-						return;
-					}
-					const eventId = row.getAttribute('data-event-id');
-					if (eventId) {
-						toggleRowExpand(Number.parseInt(eventId, 10));
-					}
-				});
-			});
-		}
+		// NO MORE INDIVIDUAL ROW LISTENERS! Event delegation handles all table row clicks
 	}
 
 	// Infinite scroll handler for logs table
@@ -3446,7 +3130,6 @@ function safeShowToast(message, type = 'info') {
 		item.addEventListener('click', () => {
 			// Cancel hover preview when clicking
 			if (isHoverPreviewActive) {
-				hoverPreviewState = null;
 				isHoverPreviewActive = false;
 			}
 			// Avoid flickering if clicking on "All Sessions" when it's already selected
@@ -3456,7 +3139,6 @@ function safeShowToast(message, type = 'info') {
 			document.querySelectorAll('.session-item').forEach(i => i.classList.remove('active'));
 			item.classList.add('active');
 			selectedSession = 'all';
-			selectedActivityDate = null; // Reset to default when selecting all sessions
 			sortOrder = 'DESC';
 			sortOrder = 'DESC';
 			const sortIconEl = document.getElementById('sortIcon');
@@ -3519,7 +3201,6 @@ function safeShowToast(message, type = 'info') {
 	// Keyboard navigation state
 	let keyboardNavigationMode = null; // 'sessions'
 	let selectedSessionIndex = -1;
-	let selectedEventIndex = -1;
 
 	// Remove keyboard selection from all elements
 	function clearKeyboardSelection() {
@@ -3635,7 +3316,6 @@ function safeShowToast(message, type = 'info') {
 			clearKeyboardSelection();
 			keyboardNavigationMode = null;
 			selectedSessionIndex = -1;
-			selectedEventIndex = -1;
 			break;
 		}
 	});
@@ -4185,7 +3865,6 @@ function safeShowToast(message, type = 'info') {
 			// If we were viewing this session, switch to "all"
 			if (selectedSession === sessionId) {
 				selectedSession = 'all';
-				selectedActivityDate = null; // Reset to default when selecting all sessions
 				document.querySelectorAll('.session-item').forEach(i => i.classList.remove('active'));
 				const allSessionsItem = document.querySelector('[data-session="all"]');
 				if (allSessionsItem) {
@@ -4248,7 +3927,6 @@ function safeShowToast(message, type = 'info') {
 			// If we were viewing one of the deleted sessions, switch to "all"
 			if (sessionsToDelete.includes(selectedSession)) {
 				selectedSession = 'all';
-				selectedActivityDate = null;
 				document.querySelectorAll('.session-item').forEach(i => i.classList.remove('active'));
 				const allSessionsItem = document.querySelector('[data-session="all"]');
 				if (allSessionsItem) {
@@ -4713,11 +4391,36 @@ function safeShowToast(message, type = 'info') {
 		// Pause all intervals when leaving the page
 		timerRegistry.clearAll();
 
+		// Remove event delegation listeners
+		const sessionList = document.getElementById('sessionList');
+		if (sessionList && sessionListDelegationHandler) {
+			sessionList.removeEventListener('click', sessionListDelegationHandler);
+			sessionListDelegationHandler = null;
+		}
+
+		const peopleList = document.getElementById('peopleList');
+		if (peopleList && peopleListDelegationHandler) {
+			peopleList.removeEventListener('click', peopleListDelegationHandler);
+			peopleListDelegationHandler = null;
+		}
+
+		const teamList = document.getElementById('teamList');
+		if (teamList && teamsListDelegationHandler) {
+			teamList.removeEventListener('click', teamsListDelegationHandler);
+			teamsListDelegationHandler = null;
+		}
+
+		const logsTableScroll = document.getElementById('logsTableScroll');
+		if (logsTableScroll && tableRowDelegationHandler) {
+			logsTableScroll.removeEventListener('click', tableRowDelegationHandler);
+			tableRowDelegationHandler = null;
+		}
+
 		// Clean up initialization flags so listeners can be re-added when returning to page
 		document.querySelectorAll('[data-listeners-initialized]').forEach(el => {
 			delete el.dataset.listenersInitialized;
 		});
-		
+
 		// Clean up session activity chart
 		cleanupSessionActivityChart();
 	}
@@ -4748,7 +4451,7 @@ function safeShowToast(message, type = 'info') {
 				}
 			}, 1000);
 		}
-		
+
 		// Re-mount the chart if we have events to display
 		if (lastSessionActivityEvents.length > 0) {
 			await mountSessionActivityChart();
@@ -4770,13 +4473,20 @@ function safeShowToast(message, type = 'info') {
 		runSafeInitStep('session legend hover', setupSessionLegendHover);
 		runSafeInitStep('tabs setup', setupTabs);
 		runSafeInitStep('user filter label', setupPersonFilterLabel);
+		runSafeInitStep('session list delegation', setupSessionListDelegation); // Event delegation for sessions
+		runSafeInitStep('people list delegation', setupPeopleListDelegation); // Event delegation for people
+		runSafeInitStep('teams list delegation', setupTeamsListDelegation); // Event delegation for teams
+		runSafeInitStep('table row delegation', setupTableRowDelegation); // Event delegation for table rows
 		runSafeAsyncInitStep('event type stats', () => loadEventTypeStats(selectedSession));
 		runSafeAsyncInitStep('sessions list', () => {
-			// Ensure DOM is ready before loading sessions
-			if (document.readyState === 'loading') {
-				window.addEventListener('DOMContentLoaded', () => loadSessions());
-			} else {
-				loadSessions();
+			// Only load sessions list if we're on the logs page and DOM is ready
+			const currentPath = window.location.pathname;
+			if (currentPath === '/logs' || currentPath === '/logs/') {
+				if (document.readyState === 'loading') {
+					window.addEventListener('DOMContentLoaded', () => loadSessions());
+				} else {
+					loadSessions();
+				}
 			}
 		});
 		runSafeAsyncInitStep('events table', () => loadEvents());
@@ -4788,11 +4498,14 @@ function safeShowToast(message, type = 'info') {
 		runSafeAsyncInitStep('people list', () => {
 			// Delay people list load slightly to prioritize critical data
 			setTimeout(() => {
-				// Ensure DOM is ready before loading people list
-				if (document.readyState === 'loading') {
-					window.addEventListener('DOMContentLoaded', () => loadPeopleList());
-				} else {
-					loadPeopleList();
+				// Only load people list if we're on the logs page and DOM is ready
+				const currentPath = window.location.pathname;
+				if (currentPath === '/logs' || currentPath === '/logs/') {
+					if (document.readyState === 'loading') {
+						window.addEventListener('DOMContentLoaded', () => loadPeopleList());
+					} else {
+						loadPeopleList();
+					}
 				}
 			}, 300);
 		});
@@ -5191,7 +4904,6 @@ function safeShowToast(message, type = 'info') {
 	// Wrapper functions for day navigation that handle re-rendering the chart
 	function handleNavigateToPreviousDay() {
 		navigateToPreviousDay((newDate) => {
-			selectedActivityDate = newDate;
 			setSelectedActivityDate(newDate);
 			// Re-render chart with the new date
 			if (lastSessionActivityEvents.length > 0) {
@@ -5206,7 +4918,6 @@ function safeShowToast(message, type = 'info') {
 
 	function handleNavigateToNextDay() {
 		navigateToNextDay((newDate) => {
-			selectedActivityDate = newDate;
 			setSelectedActivityDate(newDate);
 			// Re-render chart with the new date
 			if (lastSessionActivityEvents.length > 0) {

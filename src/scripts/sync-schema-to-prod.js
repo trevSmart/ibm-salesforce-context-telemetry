@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 
 /**
  * Helper script to sync database schema from local to production using pgsync
