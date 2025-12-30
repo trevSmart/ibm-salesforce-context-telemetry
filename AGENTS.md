@@ -190,6 +190,87 @@ When creating a new page with soft navigation support:
 ❌ **Adding listeners in render functions** - Use inline `onclick` or add listeners once on mount
 ❌ **Not handling fromCache flag** - Distinguish between fresh load and cache restoration
 
+#### Pause vs Cleanup Semantics
+
+**What "pause" means in this architecture:**
+
+When a page receives `softNav:pagePausing`, it should perform **complete cleanup**, not just "pause":
+
+- ✅ **Clear all timers** - `timerRegistry.clearAll()` to stop all intervals and timeouts
+- ✅ **Remove all event listeners** - Especially scroll, resize, click handlers added dynamically
+- ✅ **Dispose all charts** - Call `.dispose()` on ECharts instances to free memory
+- ✅ **Disconnect all observers** - ResizeObserver, MutationObserver, IntersectionObserver
+- ✅ **Cancel in-flight requests** - If using AbortController, cancel pending fetches
+- ✅ **Clear handler references** - Set global handler variables to null
+
+**Why complete cleanup is required:**
+
+The page DOM may be cached and restored later, but all JavaScript resources must be cleaned up to prevent:
+- Memory leaks from accumulated listeners
+- Multiple chart instances rendering to the same container
+- Timers running in the background for pages that aren't visible
+- Event handlers firing multiple times on subsequent visits
+
+**Resume pattern:**
+
+When a page is restored from cache (`fromCache: true`), it should:
+- Re-bind any necessary event listeners
+- Restart timers if needed
+- Reinitialize charts (don't assume they still exist)
+- Refresh data if needed
+
+#### Acceptance Testing
+
+Before considering the soft navigation refactor complete, perform this manual test:
+
+**Test Procedure:**
+
+1. **Load the dashboard** (`/`)
+   - Verify initial load works correctly
+   - Note any timers, charts, or intervals running
+
+2. **Navigate to logs** (`/logs`)
+   - Click the navigation link
+   - Verify smooth transition
+   - Check console for errors
+   - Verify page functionality
+
+3. **Navigate back to dashboard**
+   - Click the navigation link
+   - Verify smooth transition
+   - Check that dashboard reinitializes correctly
+
+4. **Repeat 5 times** - Navigate between pages
+   - Dashboard → Logs → Teams → People → Dashboard
+   - Each transition should be smooth
+   - No console errors
+   - No duplicate behavior
+
+5. **Test browser back/forward** - Use browser buttons
+   - Click back 5 times
+   - Click forward 5 times
+   - Verify same smooth behavior as clicking links
+
+6. **Verify no resource leaks:**
+   - Open browser DevTools
+   - Check Performance/Memory tabs
+   - Navigate multiple times
+   - Memory should not continuously grow
+   - No accumulating event listeners
+   - Charts should not multiply
+
+**Expected Results:**
+
+✅ **No double fetches** - Each page loads data only once per visit  
+✅ **No double renders** - UI updates once, not multiple times  
+✅ **No duplicate handlers** - Clicking a button performs action once  
+✅ **Charts work correctly** - No accumulation, resize works properly  
+✅ **Timers behave correctly** - Auto-refresh and intervals work as expected  
+✅ **Smooth transitions** - Crossfade animation works every time  
+✅ **Back/forward work** - Browser navigation behaves same as clicking links
+
+**Debug tip:** Add temporary console.log in mount/pause functions to count invocations during testing.
+
 ## Data Model and Nomenclature
 
 ### User Types Clarification
