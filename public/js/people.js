@@ -808,7 +808,7 @@ function checkForPersonDetailInURL() {
 	const hash = window.location.hash;
 	if (hash && hash.startsWith('#person-')) {
 		const personId = hash.replace('#person-', '');
-		if (personId && !isNaN(Number(personId))) {
+		if (personId && !Number.isNaN(Number(personId))) {
 			// Small delay to ensure people are loaded
 			timerRegistry.setTimeout('people.showDetails', () => {
 				showPersonDetails(Number(personId));

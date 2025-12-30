@@ -106,8 +106,8 @@ function displayTable(queries, stats) {
 	console.log(`Max execution time: ${formatTime(stats.max_time || 0)}`);
 
 	if (stats.total_cache_hits && stats.total_cache_reads) {
-		const totalBlocks = Number.parseInt(stats.total_cache_hits) + Number.parseInt(stats.total_cache_reads);
-		const hitRatio = totalBlocks > 0? (100.0 * Number.parseInt(stats.total_cache_hits) / totalBlocks).toFixed(2): 0;
+		const totalBlocks = Number.parseInt(stats.total_cache_hits, 10) + Number.parseInt(stats.total_cache_reads, 10);
+		const hitRatio = totalBlocks > 0? (100.0 * Number.parseInt(stats.total_cache_hits, 10) / totalBlocks).toFixed(2): 0;
 		console.log(`Cache hit ratio: ${hitRatio}%`);
 	}
 	console.log('═'.repeat(80));
@@ -126,7 +126,7 @@ function displayTable(queries, stats) {
 		'Mean Time'.padEnd(15) +
 		'Max Time'.padEnd(15) +
 		'Rows'.padEnd(12) +
-		'Cache Hit'.padEnd(12) 
+		'Cache Hit'.padEnd(12)
 		}Query Preview`
 	);
 	console.log('─'.repeat(120));
@@ -150,16 +150,16 @@ function displayTable(queries, stats) {
 function displayJSON(queries, stats) {
 	const output = {
 		summary: {
-			total_queries: Number.parseInt(stats.total_queries || 0),
-			total_calls: Number.parseInt(stats.total_calls || 0),
+			total_queries: Number.parseInt(stats.total_queries || 0, 10),
+			total_calls: Number.parseInt(stats.total_calls || 0, 10),
 			total_execution_time_ms: Number.parseFloat(stats.total_time || 0),
 			average_mean_time_ms: Number.parseFloat(stats.avg_mean_time || 0),
 			max_execution_time_ms: Number.parseFloat(stats.max_time || 0),
-			cache_hit_ratio: stats.total_cache_hits && stats.total_cache_reads? (100.0 * Number.parseInt(stats.total_cache_hits) / (Number.parseInt(stats.total_cache_hits) + Number.parseInt(stats.total_cache_reads))): null
+			cache_hit_ratio: stats.total_cache_hits && stats.total_cache_reads? (100.0 * Number.parseInt(stats.total_cache_hits, 10) / (Number.parseInt(stats.total_cache_hits, 10) + Number.parseInt(stats.total_cache_reads, 10))): null
 		},
 		queries: queries.map(q => ({
 			query_preview: q.query_preview,
-			calls: Number.parseInt(q.calls || 0),
+			calls: Number.parseInt(q.calls || 0, 10),
 			total_exec_time_ms: Number.parseFloat(q.total_exec_time || 0),
 			mean_exec_time_ms: Number.parseFloat(q.mean_exec_time || 0),
 			max_exec_time_ms: Number.parseFloat(q.max_exec_time || 0),
@@ -183,7 +183,7 @@ async function main() {
 	const format = formatArg ? formatArg.split('=')[1] : 'table';
 
 	// Safety check: prevent accidental execution in production
-	const isProduction = 
+	const isProduction =
 		process.env.ENVIRONMENT === 'production' ||
 		process.env.NODE_ENV === 'production' ||
 		(process.env.DATABASE_URL && (

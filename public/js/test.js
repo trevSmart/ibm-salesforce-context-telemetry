@@ -179,23 +179,6 @@ function createEventDetailsFormHTML(event) {
 		`;
 	};
 
-	const _createTextareaHTML = (id, name, label, value, placeholder = '') => {
-		return `
-			<div class="rounded-md bg-white dark:bg-white/5 px-3 pt-2.5 pb-1.5 outline-1 -outline-offset-1 outline-gray-300 dark:outline-gray-700 focus-within:relative focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-indigo-600 dark:focus-within:outline-indigo-500">
-				<label for="${id}" class="block text-xs font-medium text-gray-900 dark:text-white">${label}</label>
-				<textarea
-					id="${id}"
-					name="${name}"
-					placeholder="${placeholder}"
-					aria-label="${label}"
-					readonly
-					rows="8"
-					class="block w-full text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none resize-y"
-					style="font-size: 13.5px;"
-				>${formatValue(value).replace(/</g, '&lt;').replace(/>/g, '&gt;')}</textarea>
-			</div>
-		`;
-	};
 
 	let formHTML = '<div style="max-width: 700px; margin: 0 auto; padding-left: 30px; padding-right: 30px;">';
 

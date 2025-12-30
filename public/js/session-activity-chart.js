@@ -208,7 +208,7 @@ function buildSessionActivitySeries(events, useCurrentDay = false, customDate = 
 	return {seriesData, windowStart, windowEnd, referenceDate, officeStart, officeEnd, maxBucketCount};
 }
 
-function buildMultiSessionActivitySeries(events, useCurrentDay = false, customDate = null, sessionDisplayMap = new Map()) {
+function buildMultiSessionActivitySeries(events, useCurrentDay = false, customDate = null, _sessionDisplayMap = new Map()) {
 	// Use custom date if provided, otherwise use current day if useCurrentDay is true, otherwise use the first event's day
 	let referenceDate;
 	if (customDate) {
@@ -312,7 +312,7 @@ function formatSessionLabel(sessionId, sessionDisplayMap = new Map()) {
 	if (!sessionId) {
 		return 'Unknown session';
 	}
-	const storedLabel = sessionDisplayMap.get(sessionId);
+	const storedLabel = _sessionDisplayMap.get(sessionId);
 	if (storedLabel) {
 		return storedLabel;
 	}
@@ -613,7 +613,7 @@ export async function renderSessionActivityChart(events, options = {}) {
 		}
 	};
 
-	const finalizeChartRender = (triggeredByFallback = false) => {
+	const finalizeChartRender = (_triggeredByFallback = false) => {
 		if (finishedHandled) {
 			return;
 		}

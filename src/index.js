@@ -2580,7 +2580,7 @@ app.get('/api/pg-stat-statements', auth.requireAuth, auth.requireRole('advanced'
 	}
 
 	try {
-		const top = Number.parseInt(req.query.top) || 10;
+		const top = Number.parseInt(req.query.top, 10) || 10;
 		const slowOnly = req.query.slow === 'true';
 		const pool = db.getPostgresPool();
 
@@ -2655,17 +2655,17 @@ app.get('/api/pg-stat-statements', auth.requireAuth, auth.requireRole('advanced'
 		// Calculate cache hit ratio
 		let cacheHitRatio = null;
 		if (stats.total_cache_hits && stats.total_cache_reads) {
-			const totalBlocks = Number.parseInt(stats.total_cache_hits) + Number.parseInt(stats.total_cache_reads);
+			const totalBlocks = Number.parseInt(stats.total_cache_hits, 10) + Number.parseInt(stats.total_cache_reads, 10);
 			if (totalBlocks > 0) {
-				cacheHitRatio = 100.0 * Number.parseInt(stats.total_cache_hits) / totalBlocks;
+				cacheHitRatio = 100.0 * Number.parseInt(stats.total_cache_hits, 10) / totalBlocks;
 			}
 		}
 
 		res.json({
 			status: 'ok',
 			summary: {
-				total_queries: Number.parseInt(stats.total_queries || 0),
-				total_calls: Number.parseInt(stats.total_calls || 0),
+				total_queries: Number.parseInt(stats.total_queries || 0, 10),
+				total_calls: Number.parseInt(stats.total_calls || 0, 10),
 				total_execution_time_ms: Number.parseFloat(stats.total_time || 0),
 				average_mean_time_ms: Number.parseFloat(stats.avg_mean_time || 0),
 				max_execution_time_ms: Number.parseFloat(stats.max_time || 0),
@@ -2673,11 +2673,11 @@ app.get('/api/pg-stat-statements', auth.requireAuth, auth.requireRole('advanced'
 			},
 			queries: queries.map(q => ({
 				query: q.query,
-				calls: Number.parseInt(q.calls || 0),
+				calls: Number.parseInt(q.calls || 0, 10),
 				total_exec_time_ms: Number.parseFloat(q.total_exec_time || 0),
 				mean_exec_time_ms: Number.parseFloat(q.mean_exec_time || 0),
 				max_exec_time_ms: Number.parseFloat(q.max_exec_time || 0),
-				rows: Number.parseInt(q.rows || 0),
+				rows: Number.parseInt(q.rows || 0, 10),
 				cache_hit_ratio: q.cache_hit_ratio ? Number.parseFloat(q.cache_hit_ratio) : null
 			}))
 		});

@@ -229,7 +229,6 @@
 		let targetLeft = 0;
 		let targetWidth = 0;
 		let velocity = 0; // pixels per frame
-		let animationFrameId = null;
 		let isAnimating = false;
 		let isBouncing = false; // whether we're in a bounce state
 		let isSlowReturn = false; // whether we're in slow return mode (returning to active link)
@@ -250,7 +249,6 @@
 		const DELAY_BEFORE_MOVE = 40 / SPEED_MULTIPLIER; // ms delay before starting movement
 		const DELAY_BEFORE_RETURN_TO_ACTIVE = 300 / SPEED_MULTIPLIER; // ms delay before returning to active link when leaving container
 		const BOUNCE_DAMPING = 0.3; // how much velocity is preserved on bounce (reduced to half for less overshoot)
-		const BOUNCE_THRESHOLD = 20; // distance threshold to trigger bounce (allow more overshoot)
 		const BOUNCE_MULTIPLIER = 0.65; // multiply bounce effect based on speed (reduced to half)
 		const BRAKING_DISTANCE = 16; // distance from target where we start braking/decelerating (later braking)
 
@@ -403,7 +401,7 @@
 			updateAnimationElement();
 
 			if (isAnimating) {
-				animationFrameId = requestAnimationFrame(animate);
+				requestAnimationFrame(animate);
 			}
 		};
 
@@ -411,7 +409,7 @@
 		const startAnimation = () => {
 			if (!isAnimating) {
 				isAnimating = true;
-				animationFrameId = requestAnimationFrame(animate);
+				requestAnimationFrame(animate);
 			}
 		};
 
