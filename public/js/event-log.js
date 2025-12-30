@@ -278,6 +278,8 @@ function safeShowToast(message, type = 'info') {
 
 	// Event listener references for cleanup
 	let sessionListDelegationHandler = null;
+	let peopleListDelegationHandler = null;
+	let teamsListDelegationHandler = null;
 
 	function revealEventLogShell() {
 		const body = document.body;
@@ -1294,6 +1296,99 @@ function safeShowToast(message, type = 'info') {
 		sessionList.addEventListener('click', sessionListDelegationHandler);
 	}
 
+	/**
+	 * Setup event delegation for people list
+	 */
+	function setupPeopleListDelegation() {
+		const peopleList = document.getElementById('peopleList');
+		if (!peopleList) {
+			return;
+		}
+
+		// Remove old listener if it exists
+		if (peopleListDelegationHandler) {
+			peopleList.removeEventListener('click', peopleListDelegationHandler);
+		}
+
+		// Create delegation handler
+		peopleListDelegationHandler = (e) => {
+			const userItem = e.target.closest('.session-item[data-user]');
+			if (!userItem) {
+				return;
+			}
+
+			const userId = userItem.getAttribute('data-user');
+			if (!userId) {
+				return;
+			}
+
+			// Avoid flickering if clicking on the same user that's already selected
+			if (selectedPersonIds.has(userId) && selectedPersonIds.size === 1) {
+				return;
+			}
+
+			// Select only this user
+			selectedPersonIds.clear();
+			selectedPersonIds.add(userId);
+
+			// Update UI to reflect selection
+			document.querySelectorAll('.session-item[data-user]').forEach(i => i.classList.remove('active'));
+			userItem.classList.add('active');
+
+			// Switch to sessions tab and reload
+			switchTab('sessions');
+			loadSessions();
+			loadEvents();
+			loadEventTypeStats(selectedSession);
+		};
+
+		// Add the delegation listener
+		peopleList.addEventListener('click', peopleListDelegationHandler);
+	}
+
+	/**
+	 * Setup event delegation for teams list
+	 */
+	function setupTeamsListDelegation() {
+		const teamList = document.getElementById('teamList');
+		if (!teamList) {
+			return;
+		}
+
+		// Remove old listener if it exists
+		if (teamsListDelegationHandler) {
+			teamList.removeEventListener('click', teamsListDelegationHandler);
+		}
+
+		// Create delegation handler
+		teamsListDelegationHandler = (e) => {
+			const teamItem = e.target.closest('.session-item[data-team-key]');
+			if (!teamItem) {
+				return;
+			}
+
+			const teamKey = teamItem.dataset.teamKey;
+			if (!teamKey) {
+				return;
+			}
+
+			const isSelectingSame = selectedTeamKey === teamKey;
+			selectedTeamKey = isSelectingSame ? null : teamKey;
+
+			document.querySelectorAll('#teamList .session-item').forEach((item) => {
+				item.classList.toggle('active', item.dataset.teamKey === selectedTeamKey);
+			});
+
+			switchTab('teams');
+			currentOffset = 0;
+			loadEvents();
+			loadEventTypeStats(selectedSession);
+		};
+
+		// Add the delegation listener
+		teamList.addEventListener('click', teamsListDelegationHandler);
+	}
+
 	async function loadSessions() {
 		try {
 			const params = new URLSearchParams();
@@ -1629,24 +1724,7 @@ function safeShowToast(message, type = 'info') {
 					</div>
 				`;
 
-				li.addEventListener('click', (_e) => {
-					// Avoid flickering if clicking on the same user that's already selected
-					if (selectedPersonIds.has(user.user_id) && selectedPersonIds.size === 1) {
-						return;
-					}
-					// Select only this user
-					selectedPersonIds.clear();
-					selectedPersonIds.add(user.user_id);
-					// Update UI to reflect selection
-					document.querySelectorAll('.session-item[data-user]').forEach(i => i.classList.remove('active'));
-					li.classList.add('active');
-					// Switch to sessions tab and reload
-					switchTab('sessions');
-					loadSessions();
-					loadEvents();
-					loadEventTypeStats(selectedSession);
-				});
-
+				// NO MORE INDIVIDUAL LISTENERS! Event delegation handles all clicks
 				peopleList.appendChild(li);
 			});
 		} catch (error) {
@@ -1790,17 +1868,7 @@ function safeShowToast(message, type = 'info') {
 				</div>
 			`;
 
-				li.addEventListener('click', () => {
-					const isSelectingSame = selectedTeamKey === team.key;
-					selectedTeamKey = isSelectingSame ? null : team.key;
-					document.querySelectorAll('#teamList .session-item').forEach((item) => {
-						item.classList.toggle('active', item.dataset.teamKey === selectedTeamKey);
-					});
-					switchTab('teams');
-					currentOffset = 0;
-					loadEvents();
-				});
-
+				// NO MORE INDIVIDUAL LISTENERS! Event delegation handles all clicks
 				teamList.appendChild(li);
 			});
 			// Refresh counts in case events already loaded
@@ -4769,6 +4837,18 @@ function safeShowToast(message, type = 'info') {
 			sessionListDelegationHandler = null;
 		}
 
+		const peopleList = document.getElementById('peopleList');
+		if (peopleList && peopleListDelegationHandler) {
+			peopleList.removeEventListener('click', peopleListDelegationHandler);
+			peopleListDelegationHandler = null;
+		}
+
+		const teamList = document.getElementById('teamList');
+		if (teamList && teamsListDelegationHandler) {
+			teamList.removeEventListener('click', teamsListDelegationHandler);
+			teamsListDelegationHandler = null;
+		}
+
 		// Clean up initialization flags so listeners can be re-added when returning to page
 		document.querySelectorAll('[data-listeners-initialized]').forEach(el => {
 			delete el.dataset.listenersInitialized;
@@ -4827,6 +4907,8 @@ function safeShowToast(message, type = 'info') {
 		runSafeInitStep('tabs setup', setupTabs);
 		runSafeInitStep('user filter label', setupPersonFilterLabel);
 		runSafeInitStep('session list delegation', setupSessionListDelegation); // Event delegation for sessions
+		runSafeInitStep('people list delegation', setupPeopleListDelegation); // Event delegation for people
+		runSafeInitStep('teams list delegation', setupTeamsListDelegation); // Event delegation for teams
 		runSafeAsyncInitStep('event type stats', () => loadEventTypeStats(selectedSession));
 		runSafeAsyncInitStep('sessions list', () => {
 			// Ensure DOM is ready before loading sessions
