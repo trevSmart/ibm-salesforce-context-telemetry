@@ -6,7 +6,7 @@
   font-family: 'ManropeVariable';
   font-style: normal;
   font-weight: 100 900;
-  font-display: block;
+  font-display: swap;
   src: url('/fonts/Manrope/Manrope-VariableFont_wght.ttf') format('truetype-variations');
 }
 
@@ -14,7 +14,7 @@
   font-family: 'Manrope';
   font-style: normal;
   font-weight: 100 900;
-  font-display: block;
+  font-display: swap;
   src: url('/fonts/Manrope/Manrope-VariableFont_wght.ttf') format('truetype-variations');
 }
 
@@ -6401,4 +6401,13 @@ html.dark table[data-resizable-columns-id] thead th[data-resizable-column-id]:ho
 html.dark .column-resize-preview {
   background: rgba(96, 165, 250, 0.9);
   box-shadow: 0 0 6px rgba(96, 165, 250, 0.6);
+}
+
+#personDetailName span.person-avatar {
+  max-height: 48px;
+}
+
+.people-list-container {
+  height: 100%;
+  overflow-y: auto;
 }
