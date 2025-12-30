@@ -35,10 +35,19 @@ jobs:
         uses: ankane/setup-postgres@v1
         with:
           postgresql-version: "16"
+        env:
+          POSTGRES_PASSWORD: postgres
 
       - name: Create database
+        env:
+          PGPASSWORD: postgres
         run: |
-          psql -U postgres -c "CREATE DATABASE telemetry_test;" || true
+          # Wait for PostgreSQL to be ready
+          until pg_isready -h localhost -p 5432 -U postgres; do
+            echo "Waiting for PostgreSQL..."
+            sleep 1
+          done
+          psql -U postgres -h localhost -p 5432 -c "CREATE DATABASE telemetry_test;" || true
 
       - name: Ensure admin user exists with administrator role
         env:
