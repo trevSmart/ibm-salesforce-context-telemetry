@@ -1,6 +1,14 @@
 // @ts-nocheck
 // Lightweight client-side navigation to avoid repainting shared chrome
 (() => {
+	window.getEventLogChartRevealState = ({isInitialChartLoad = false, eventDetail} = {}) => {
+		const shouldReveal = Boolean(isInitialChartLoad) || eventDetail?.isInitialLoad === true;
+		return {
+			shouldReveal,
+			nextIsInitialChartLoad: shouldReveal ? false : Boolean(isInitialChartLoad)
+		};
+	};
+
 	const SUPPORTED_PATHS = ['/', '/logs', '/teams', '/people', '/test'];
 	const SOFT_NAV_SELECTOR = [
 		'a.top-nav-link',
@@ -45,13 +53,31 @@
 	}
 
 	/**
-	 * Dispatch pageCached event after the page has been cached but before fade out starts
-	 * This allows pages to make invisible changes that won't be seen by the user
+	 * Dispatch pageCached event after the container has been cloned for caching.
+	 * Listeners can update the cached container without affecting the live DOM.
 	 * @param {string} path - The path of the page that was cached
+	 * @param {HTMLElement|null} cachedContainer - Detached clone used for caching
 	 */
-	function dispatchPageCached(path) {
-		window.dispatchEvent(new CustomEvent('softNav:pageCached', {detail: {path}}));
+	function dispatchPageCached(path, cachedContainer = null) {
+		window.dispatchEvent(new CustomEvent('softNav:pageCached', {detail: {path, cachedContainer}}));
 	}
+
+	function replaceCachedContent({cachedContainer, contentId, nextContent}) {
+		if (!cachedContainer || !contentId || !nextContent) {
+			return false;
+		}
+
+		const target = cachedContainer.querySelector?.(`#${contentId}`);
+		if (!target) {
+			return false;
+		}
+
+		target.innerHTML = '';
+		target.appendChild(nextContent);
+		return true;
+	}
+
+	window.replaceCachedContent = replaceCachedContent;
 
 	/**
 	 * Dispatch pageMounted event to notify the new page to initialize
@@ -271,14 +297,17 @@
 			// Notify current page to pause intervals/listeners before caching
 			dispatchPagePausing(oldPath);
 
-			// Notify that page is about to be cached - allows pages to make invisible changes
-			// These changes will be included in the cache (e.g., switching from detail to list view)
-			dispatchPageCached(oldPath);
+			// Clone container for caching before notifying listeners.
+			// Listeners can mutate the clone without changing what the user sees.
+			const cachedOutgoingContainer = oldPath && SUPPORTED_PATHS.includes(oldPath)
+				? container.cloneNode(true)
+				: null;
 
-			// Cache the current container AFTER pageCached event
-			// This ensures any changes made in pageCached listeners are included in the cache
-			if (oldPath && SUPPORTED_PATHS.includes(oldPath)) {
-				containerCache.set(oldPath, container.cloneNode(true));
+			// Notify that page has been cloned for caching (for invisible updates)
+			dispatchPageCached(oldPath, cachedOutgoingContainer);
+
+			if (cachedOutgoingContainer) {
+				containerCache.set(oldPath, cachedOutgoingContainer);
 			}
 
 			let nextContent;

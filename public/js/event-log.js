@@ -4523,8 +4523,12 @@ function safeShowToast(message, type = 'info') {
 
 		// Listen for chart rendering completion
 		window.addEventListener('chartRenderComplete', (event) => {
-			const {isInitialLoad} = event.detail;
-			if (isInitialLoad) {
+			const revealState = window.getEventLogChartRevealState({
+				isInitialChartLoad,
+				eventDetail: event?.detail
+			});
+			isInitialChartLoad = revealState.nextIsInitialChartLoad;
+			if (revealState.shouldReveal) {
 				// Show the page once initial chart render is complete
 				revealEventLogShell();
 			}

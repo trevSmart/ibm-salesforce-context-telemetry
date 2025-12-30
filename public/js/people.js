@@ -770,22 +770,25 @@ window.addEventListener('softNav:pagePausing', (event) => {
 // Listen for page cached event to switch to list view invisibly
 window.addEventListener('softNav:pageCached', (event) => {
 	if (event?.detail?.path === '/people') {
-		// If we're in detail view, switch to list view AFTER caching but BEFORE fade out
-		// This happens invisibly because the page is already cached and the fade hasn't started yet
-		if (currentView === 'detail') {
-			currentView = 'list';
-			_currentPersonId = null;
+		const cachedContainer = event?.detail?.cachedContainer;
+		const replaceCachedContent = window.replaceCachedContent;
+
+		// If we're in detail view, switch the cached container to list view
+		// without touching the live DOM (keeps detail visible during fade out).
+		if (currentView === 'detail' && cachedContainer && typeof replaceCachedContent === 'function') {
 			const listContent = renderPeopleList();
-			const peopleContent = document.getElementById('peopleContent');
-			if (peopleContent && listContent) {
-				// Replace content immediately without transition
-				peopleContent.innerHTML = '';
-				peopleContent.appendChild(listContent);
+			if (listContent) {
+				replaceCachedContent({
+					cachedContainer,
+					contentId: 'peopleContent',
+					nextContent: listContent
+				});
 			}
-			// Clear the hash from URL
-			if (window.location.hash) {
-				window.history.replaceState(null, '', window.location.pathname);
-			}
+		}
+
+		// Clear the hash from URL so back/forward lands on the list view.
+		if (window.location.hash) {
+			window.history.replaceState(null, '', window.location.pathname);
 		}
 
 		// Reset state when leaving people page
