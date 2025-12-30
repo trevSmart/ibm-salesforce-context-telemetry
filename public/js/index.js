@@ -1821,6 +1821,17 @@ async function loadChartData(days = currentDays) {
 					fontFamily: 'Manrope',
 					fontSize: 12
 				},
+				formatter: (params) => {
+					// params is an array of data points for the current axis position
+					let result = '';
+					params.forEach((param, index) => {
+						const seriesName = param.seriesName || param.name || '';
+						const value = param.value;
+						if (index > 0) result += '<br/>';
+						result += `${seriesName}: ${value}`;
+					});
+					return result;
+				},
 				axisPointer: {
 					type: 'cross',
 					lineStyle: {
