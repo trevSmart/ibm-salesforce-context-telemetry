@@ -352,7 +352,7 @@ function showConfirmDialog({title, message, confirmText = 'Confirm', cancelText 
 		const cleanup = () => {
 			// Add fade out animation
 			backdrop.style.opacity = '0';
-			setTimeout(() => {
+			timerRegistry.setTimeout('modal.fadeOut', () => {
 				container.remove();
 			}, 200);
 		};
@@ -1076,8 +1076,11 @@ function showTeamFormModal(team = null) {
 	backdrop.appendChild(modal);
 	document.body.appendChild(backdrop);
 
+	// Re-initialize Coloris for the new color picker inputs
+	initializeColoris();
+
 	// Focus name input once modal is in the DOM
-	setTimeout(() => {
+	timerRegistry.setTimeout('modal.focusInput', () => {
 		document.getElementById('teamNameInput')?.focus();
 	}, 0);
 
@@ -1096,7 +1099,7 @@ function showTeamFormModal(team = null) {
 		backdrop.classList.remove('visible');
 		backdrop.classList.add('hiding');
 		// Fallback in case transitionend does not fire
-		setTimeout(() => {
+		timerRegistry.setTimeout('modal.transitionFallback', () => {
 			if (document.body.contains(backdrop)) {
 				backdrop.removeEventListener('transitionend', handleTransitionEnd);
 				backdrop.remove();
@@ -1154,7 +1157,7 @@ function showTeamFormModal(team = null) {
 				if (file.size > 500 * 1024) {
 					showToast('Logo file is too large. Maximum size is 500KB.', 'error');
 					// Clear input after a short delay to prevent re-triggering change event
-					setTimeout(() => {
+					timerRegistry.setTimeout('logo.clearSizeError', () => {
 						if (logoInput) {logoInput.value = '';}
 					}, 100);
 					return;
@@ -1165,7 +1168,7 @@ function showTeamFormModal(team = null) {
 				if (!allowedTypes.includes(file.type)) {
 					showToast('Invalid file type. Only PNG, JPEG, and WebP images are allowed.', 'error');
 					// Clear input after a short delay to prevent re-triggering change event
-					setTimeout(() => {
+					timerRegistry.setTimeout('logo.clearTypeError', () => {
 						if (logoInput) {logoInput.value = '';}
 					}, 100);
 					return;
@@ -1691,7 +1694,7 @@ window.refreshTeams = async function refreshTeams(event) {
 			icon.classList.add('rotating-finish');
 
 			// Remove the finish class after animation completes
-			setTimeout(() => {
+			timerRegistry.setTimeout('refreshIcon.finishAnimation', () => {
 				icon.classList.remove('rotating-finish');
 			}, REFRESH_ICON_ANIMATION_DURATION_MS);
 		}
@@ -1717,7 +1720,7 @@ async function init() {
 		if (!container) {
 			console.error('teamsContent container not found');
 			// Try again after a short delay in case DOM isn't ready
-			setTimeout(() => {
+			timerRegistry.setTimeout('teams.domRetry', () => {
 				const retryContainer = document.getElementById('teamsContent');
 				if (retryContainer) {
 					loadTeams().then(() => renderTeamsList());
@@ -1876,7 +1879,7 @@ function checkForTeamDetailInURL() {
 		const teamId = hash.replace('#team-', '');
 		if (teamId && !isNaN(Number(teamId))) {
 			// Small delay to ensure teams are loaded
-			setTimeout(() => {
+			timerRegistry.setTimeout('teams.viewDetailDelay', () => {
 				viewTeamDetail(Number(teamId));
 			}, 100);
 		}
