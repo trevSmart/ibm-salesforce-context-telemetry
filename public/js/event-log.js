@@ -1,6 +1,7 @@
 // @ts-nocheck
 import {toggleTheme, applyTheme} from './theme.js';
 import {timerRegistry} from './utils/timerRegistry.js';
+import {awaitECharts, safeInit, bindWindowResize} from './echarts-core.js';
 
 // Prevent double execution when soft navigation re-injects the script
 if (window.__EVENT_LOG_LOADED__) {
@@ -253,6 +254,7 @@ function safeShowToast(message, type = 'info') {
 	const knownSessionIds = new Set();
 	const sessionDisplayMap = new Map();
 	let sessionActivityChart = null;
+	let sessionActivityUnbindResize = null; // Store unbind function for resize handler
 	let savedSessionActivityChartOption = null; // Store chart option when pausing for cache restoration
 	let lastSessionActivityEvents = [];
 	let activeTab = 'sessions'; // 'sessions' or 'people'
@@ -303,7 +305,6 @@ function safeShowToast(message, type = 'info') {
 	let isResizingActivity = false;
 	let activityResizeStartY = 0;
 	let activityResizeStartHeight = 0;
-	let pendingChartRender = null; // Stores events/options when ECharts isn't ready yet
 
 	function resetEventLogState() {
 		currentOffset = 0;
@@ -334,6 +335,10 @@ function safeShowToast(message, type = 'info') {
 				sessionActivityChart.dispose();
 			}
 			sessionActivityChart = null;
+		}
+		if (sessionActivityUnbindResize) {
+			sessionActivityUnbindResize();
+			sessionActivityUnbindResize = null;
 		}
 		savedSessionActivityChartOption = null;
 		lastSessionActivityEvents = [];
@@ -765,7 +770,7 @@ function safeShowToast(message, type = 'info') {
 		resizer.dataset.listenersInitialized = 'true';
 	}
 
-	function initSessionActivityChart() {
+	async function initSessionActivityChart() {
 		if (sessionActivityChart) {
 			return sessionActivityChart;
 		}
@@ -776,46 +781,24 @@ function safeShowToast(message, type = 'info') {
 			});
 			return null;
 		}
+		
 		// Wait for ECharts to load if not available yet
-		if (typeof echarts === 'undefined') {
-			logChartTrace('initSessionActivityChart: echarts not ready, waiting for echartsLoaded event');
-			window.addEventListener('echartsLoaded', function onEChartsLoaded() {
-				window.removeEventListener('echartsLoaded', onEChartsLoaded);
-				const chart = initSessionActivityChart();
-				if (pendingChartRender && chart) {
-					const payload = pendingChartRender;
-					pendingChartRender = null;
-					logChartTrace('initSessionActivityChart: retrying pending render after echarts load', {
-						pendingEventCount: payload.events.length,
-						targetSession: payload.options?.sessionId
-					});
-					renderSessionActivityChart(payload.events, payload.options || {});
-				}
-			}, {once: true});
+		await awaitECharts();
+		
+		// Safe initialization with cleanup
+		sessionActivityChart = safeInit(chartEl);
+		if (!sessionActivityChart) {
 			return null;
 		}
-		sessionActivityChart = echarts.init(chartEl);
+		
 		logChartTrace('initSessionActivityChart: chart initialized', {
 			chartElementReady: Boolean(chartEl),
 			existingInstance: Boolean(sessionActivityChart)
 		});
-		if (pendingChartRender) {
-			const payload = pendingChartRender;
-			pendingChartRender = null;
-			logChartTrace('initSessionActivityChart: applying pending render immediately after init', {
-				pendingEventCount: payload.events.length,
-				targetSession: payload.options?.sessionId
-			});
-			renderSessionActivityChart(payload.events, payload.options || {});
-		}
-		window.addEventListener('resize', () => {
-			if (sessionActivityChart) {
-				const chartEl = document.getElementById('sessionActivityChart');
-				if (chartEl) {
-					sessionActivityChart.resize();
-				}
-			}
-		});
+		
+		// Bind resize handler with cleanup function
+		sessionActivityUnbindResize = bindWindowResize(sessionActivityChart, {chartName: 'session activity'});
+		
 		return sessionActivityChart;
 	}
 
@@ -1121,7 +1104,7 @@ function safeShowToast(message, type = 'info') {
 		}
 	}
 
-	function renderSessionActivityChart(events, options = {}) {
+	async function renderSessionActivityChart(events, options = {}) {
 		if (!Array.isArray(events) || events.length === 0) {
 			logChartTrace('renderSessionActivityChart: no events to render', {
 				targetSession: options.sessionId || selectedSession
@@ -1135,16 +1118,11 @@ function safeShowToast(message, type = 'info') {
 			return;
 		}
 
-		const chartInstance = initSessionActivityChart();
+		const chartInstance = await initSessionActivityChart();
 		if (!chartInstance) {
-			// If this is the initial load and chart can't be initialized, show the page anyway
-			const targetSession = options.sessionId || selectedSession;
-			pendingChartRender = {
-				events: events.slice(),
-				options: {...options, sessionId: targetSession}
-			};
-			logChartTrace('renderSessionActivityChart: chart instance unavailable, storing pending render', {
-				targetSession,
+			// If chart can't be initialized, show the page anyway
+			logChartTrace('renderSessionActivityChart: chart instance unavailable', {
+				targetSession: options.sessionId || selectedSession,
 				eventCount: events.length
 			});
 			if (isInitialChartLoad) {
@@ -5560,6 +5538,11 @@ function safeShowToast(message, type = 'info') {
 			}
 			sessionActivityChart = null;
 		}
+		// Unbind resize handler
+		if (sessionActivityUnbindResize) {
+			sessionActivityUnbindResize();
+			sessionActivityUnbindResize = null;
+		}
 	}
 
 	async function resumeEventLogPage() {
@@ -5593,30 +5576,20 @@ function safeShowToast(message, type = 'info') {
 			const chartEl = document.getElementById('sessionActivityChart');
 			if (chartEl) {
 				// Wait for ECharts to load if not available yet
-				if (typeof echarts === 'undefined') {
-					await new Promise((resolve) => {
-						if (typeof echarts !== 'undefined') {
-							resolve();
-						} else {
-							window.addEventListener('echartsLoaded', resolve, {once: true});
-						}
-					});
-				}
+				await awaitECharts();
+				
 				// Initialize new chart instance
-				sessionActivityChart = echarts.init(chartEl);
-				window.addEventListener('resize', () => {
-					if (sessionActivityChart) {
-						const chartEl = document.getElementById('sessionActivityChart');
-						if (chartEl) {
-							sessionActivityChart.resize();
-						}
-					}
-				});
-				// Restore the saved option (notMerge: true to replace entirely)
-				sessionActivityChart.setOption(savedSessionActivityChartOption, true);
-				sessionActivityChart.resize();
-				// Clear saved option after restoration
-				savedSessionActivityChartOption = null;
+				sessionActivityChart = safeInit(chartEl);
+				if (sessionActivityChart) {
+					// Bind resize handler with cleanup function
+					sessionActivityUnbindResize = bindWindowResize(sessionActivityChart, {chartName: 'session activity'});
+					
+					// Restore the saved option (notMerge: true to replace entirely)
+					sessionActivityChart.setOption(savedSessionActivityChartOption, true);
+					sessionActivityChart.resize();
+					// Clear saved option after restoration
+					savedSessionActivityChartOption = null;
+				}
 			}
 		}
 	}
