@@ -589,7 +589,7 @@ async function deleteTeam(teamId) {
 			try {
 				const data = await response.json();
 				errorMessage = data.message || errorMessage;
-			} catch (e) {
+			} catch (_e) {
 				// If we can't parse JSON, use the status text
 				errorMessage = response.statusText || errorMessage;
 			}
@@ -1658,11 +1658,12 @@ async function handleRemoveLogo(_teamId) {
 }
 
 // Global functions for onclick handlers
-window.viewTeamDetail = async (teamId) => {
+const viewTeamDetail = async (teamId) => {
 	currentView = 'detail';
 	const detailContent = await renderTeamDetail(teamId);
 	await transitionTeamsContent(detailContent);
 };
+window.viewTeamDetail = viewTeamDetail;
 
 window.showCreateTeamModal = showCreateTeamModal;
 window.showAddOrgModalForTeam = showAddOrgModal;
@@ -1904,7 +1905,7 @@ function checkForTeamDetailInURL() {
 	const hash = window.location.hash;
 	if (hash && hash.startsWith('#team-')) {
 		const teamId = hash.replace('#team-', '');
-		if (teamId && !isNaN(Number(teamId))) {
+		if (teamId && !Number.isNaN(Number(teamId))) {
 			// Small delay to ensure teams are loaded
 			timerRegistry.setTimeout('teams.viewDetailDelay', () => {
 				viewTeamDetail(Number(teamId));

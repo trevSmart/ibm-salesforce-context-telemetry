@@ -344,10 +344,10 @@
 					updateAnimationElement();
 					handleAnimationComplete();
 					return;
-				} 
+				}
 					// Continue bouncing, apply lighter deceleration to maintain bounce effect
 					velocity *= (1 - currentDeceleration * 0.3); // Even slower deceleration during bounce
-				
+
 			} else {
 				// Normal movement logic
 				// Check if we need to change direction (opposite to current velocity)

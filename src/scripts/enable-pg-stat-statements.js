@@ -51,12 +51,8 @@ async function checkSharedPreloadLibraries(pool) {
 }
 
 async function enableExtension(pool) {
-	try {
-		await pool.query('CREATE EXTENSION IF NOT EXISTS pg_stat_statements;');
-		return true;
-	} catch (error) {
-		throw error;
-	}
+	await pool.query('CREATE EXTENSION IF NOT EXISTS pg_stat_statements;');
+	return true;
 }
 
 async function main() {
@@ -65,7 +61,7 @@ async function main() {
 	const env = envArg ? envArg.split('=')[1] : 'local';
 
 	// Safety check: prevent enabling in production
-	const isProduction = 
+	const isProduction =
 		process.env.ENVIRONMENT === 'production' ||
 		process.env.NODE_ENV === 'production' ||
 		(process.env.DATABASE_URL && (

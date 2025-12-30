@@ -31,12 +31,6 @@ function formatTime(ms) {
 	return `${(ms / 1000).toFixed(2)} s`;
 }
 
-function formatBytes(bytes) {
-	if (bytes < 1024) {return `${bytes} B`;}
-	if (bytes < 1024 * 1024) {return `${(bytes / 1024).toFixed(2)} KB`;}
-	if (bytes < 1024 * 1024 * 1024) {return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;}
-	return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
-}
 
 async function checkExtension(pool) {
 	const result = await pool.query(`
@@ -131,7 +125,7 @@ function displayTable(queries, stats) {
 	);
 	console.log('─'.repeat(120));
 
-	queries.forEach((q, i) => {
+	queries.forEach((q, _i) => {
 		const cacheHit = q.cache_hit_ratio ? `${Number.parseFloat(q.cache_hit_ratio).toFixed(1)}%` : 'N/A';
 		console.log(
 			`${q.calls?.toLocaleString() || 0}`.padEnd(10) +
@@ -163,7 +157,7 @@ function displayJSON(queries, stats) {
 			total_exec_time_ms: Number.parseFloat(q.total_exec_time || 0),
 			mean_exec_time_ms: Number.parseFloat(q.mean_exec_time || 0),
 			max_exec_time_ms: Number.parseFloat(q.max_exec_time || 0),
-			rows: Number.parseInt(q.rows || 0),
+			rows: Number.parseInt(q.rows || 0, 10),
 			cache_hit_ratio: q.cache_hit_ratio ? Number.parseFloat(q.cache_hit_ratio) : null
 		}))
 	};
@@ -179,7 +173,7 @@ async function main() {
 	const slowOnly = args.includes('--slow');
 
 	const env = envArg ? envArg.split('=')[1] : 'local';
-	const top = topArg ? Number.parseInt(topArg.split('=')[1]) : 10;
+	const top = topArg ? Number.parseInt(topArg.split('=')[1], 10) : 10;
 	const format = formatArg ? formatArg.split('=')[1] : 'table';
 
 	// Safety check: prevent accidental execution in production

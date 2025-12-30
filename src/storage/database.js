@@ -4,15 +4,8 @@
  * Uses PostgreSQL for all environments (local development and production).
  */
 
-import fs from 'node:fs';
-import path from 'node:path';
 import crypto from 'node:crypto';
-import {fileURLToPath} from 'node:url';
-import {dirname} from 'node:path';
 import {TelemetryEvent} from './telemetry-event.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 
 // Database configuration constants
 const DEFAULT_MAX_DB_SIZE = 1024 * 1024 * 1024; // 1 GB in bytes
@@ -310,7 +303,7 @@ async function ensurePgStatStatements() {
 	// Only enable for local development (not production on Render)
 	// Production on Render typically doesn't allow enabling extensions
 	// Multiple checks to ensure we're truly in local development:
-	const isProduction = 
+	const isProduction =
 		process.env.ENVIRONMENT === 'production' ||
 		process.env.NODE_ENV === 'production' ||
 		(process.env.DATABASE_URL && (
@@ -325,8 +318,8 @@ async function ensurePgStatStatements() {
 	}
 
 	// Additional safety check: only enable if explicitly local
-	const isLocal = process.env.DATABASE_URL && 
-		(process.env.DATABASE_URL.includes('localhost') || 
+	const isLocal = process.env.DATABASE_URL &&
+		(process.env.DATABASE_URL.includes('localhost') ||
 		 process.env.DATABASE_URL.includes('127.0.0.1'));
 
 	if (!isLocal) {
@@ -1816,8 +1809,6 @@ async function getToolUsageStats(days = 30) {
 			.sort((a, b) => (b.successful + b.errors) - (a.successful + a.errors))
 			.slice(0, 6);
 	}
-
-	return [];
 }
 
 /**
@@ -2002,7 +1993,6 @@ async function updateEventData(id, data) {
 	try {
 		const result = await db.query('UPDATE telemetry_events SET data = $1 WHERE id = $2', [data, id]);
 		return result.rowCount > 0;
-		return false;
 	} catch (error) {
 		console.error('Error updating event data:', error);
 		return false;
@@ -2095,7 +2085,6 @@ async function getTopUsersLastDays(limit = 50, days = 3) {
 
 	const safeLimit = Math.min(Math.max(1, Number.isFinite(limit) ? Math.floor(limit) : 50), 500);
 	const safeDays = Math.min(Math.max(1, Number.isFinite(days) ? Math.floor(days) : 3), 365);
-	const lookbackModifier = `-${safeDays} days`;
 	const results = [];
 
 	const aggregated = await db.query(
@@ -2160,7 +2149,6 @@ async function getTopTeamsLastDays(orgTeamMappings = [], limit = 50, days = 3) {
 
 	const safeLimit = Math.min(Math.max(1, Number.isFinite(limit) ? Math.floor(limit) : 50), 500);
 	const safeDays = Math.min(Math.max(1, Number.isFinite(days) ? Math.floor(days) : 3), 365);
-	const lookbackModifier = `-${safeDays} days`;
 
 	const normalizeOrgId = (orgId) => String(orgId || '').trim().toLowerCase();
 	const normalizeTeamKey = (teamName) => String(teamName || '').trim().toLowerCase();
@@ -3528,7 +3516,6 @@ async function validateRememberToken(token) {
 	}
 
 	const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
-	const now = new Date().toISOString();
 
 	try {
 		const result = await db.query(

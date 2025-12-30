@@ -312,7 +312,7 @@ function formatSessionLabel(sessionId, sessionDisplayMap = new Map()) {
 	if (!sessionId) {
 		return 'Unknown session';
 	}
-	const storedLabel = _sessionDisplayMap.get(sessionId);
+	const storedLabel = sessionDisplayMap.get(sessionId);
 	if (storedLabel) {
 		return storedLabel;
 	}
@@ -493,7 +493,7 @@ export async function mountSessionActivityChart() {
 export async function renderSessionActivityChart(events, options = {}) {
 	const sessionDisplayMap = options.sessionDisplayMap || new Map();
 	const selectedSession = options.sessionId || 'all';
-	
+
 	if (!Array.isArray(events) || events.length === 0) {
 		hideChart();
 		return;
