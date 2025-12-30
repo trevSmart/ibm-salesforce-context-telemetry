@@ -1634,15 +1634,14 @@ function safeShowToast(message, type = 'info') {
 
 			const peopleList = document.getElementById('peopleList');
 			if (!peopleList) {
-				// Element not found - this might be because the page isn't fully loaded yet
-				// Defer loading until DOM is ready
+				// Element not found - this might be because we're not on the logs page,
+				// or the page isn't fully loaded yet. Skip gracefully.
 				if (document.readyState === 'loading') {
 					window.addEventListener('DOMContentLoaded', () => {
 						requestAnimationFrame(() => loadPeopleList());
 					});
-				} else {
-					console.error('peopleList element not found after DOM ready');
 				}
+				// Don't log an error - this is expected on non-logs pages
 				return;
 			}
 
@@ -4927,11 +4926,14 @@ function safeShowToast(message, type = 'info') {
 		runSafeAsyncInitStep('people list', () => {
 			// Delay people list load slightly to prioritize critical data
 			setTimeout(() => {
-				// Ensure DOM is ready before loading people list
-				if (document.readyState === 'loading') {
-					window.addEventListener('DOMContentLoaded', () => loadPeopleList());
-				} else {
-					loadPeopleList();
+				// Only load people list if we're on the logs page and DOM is ready
+				const currentPath = window.location.pathname;
+				if (currentPath === '/logs' || currentPath === '/logs/') {
+					if (document.readyState === 'loading') {
+						window.addEventListener('DOMContentLoaded', () => loadPeopleList());
+					} else {
+						loadPeopleList();
+					}
 				}
 			}, 300);
 		});
