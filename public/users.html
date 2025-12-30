@@ -35,11 +35,13 @@
 <body class="user-page cursor-default">
 	<div class="container main-container">
 		<div id="global-header-placeholder"></div>
-		<script src="/js/command-palette.js"></script>
-		<script src="/js/header.js"></script>
+		<script src="/js/command-palette.js" defer></script>
+		<script src="/js/header.js" defer></script>
 		<script>
-			// Initialize header for users page
-			initGlobalHeader();
+			// Initialize header for users page after scripts are parsed
+			window.addEventListener('DOMContentLoaded', () => {
+				initGlobalHeader();
+			});
 		</script>
 		<div class="container-content">
 			<div class="users-header" style="display: flex; align-items: flex-end; justify-content: space-between; gap: 16px;">
