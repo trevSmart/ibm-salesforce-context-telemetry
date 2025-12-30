@@ -1,16 +1,17 @@
 // @ts-nocheck
 // Tool usage chart renderer
 import {timerRegistry} from './utils/timerRegistry.js';
+import {awaitECharts, safeInit, bindWindowResize, getChartTheme} from './echarts-core.js';
 
 const TOOL_USAGE_MAX_TOOLS = 6;
 const TOOL_USAGE_DEFAULT_DAYS = 30;
 let toolUsageChartInstance = null;
-let toolUsageResizeHandler = null; // Store resize handler to clean up properly
+let toolUsageUnbindResize = null; // Store unbind function to clean up properly
 let toolUsageChartInitialized = false;
 
 // Global cache is now handled by global-cache.js
 
-function cleanupToolUsageChart() {
+export function cleanupToolUsageChart() {
 	if (toolUsageChartInstance) {
 		try {
 			toolUsageChartInstance.dispose();
@@ -19,84 +20,50 @@ function cleanupToolUsageChart() {
 		}
 		toolUsageChartInstance = null;
 	}
-	if (toolUsageResizeHandler) {
+	if (toolUsageUnbindResize) {
 		try {
-			window.removeEventListener('resize', toolUsageResizeHandler);
+			toolUsageUnbindResize();
 		} catch (error) {
-			console.warn('Error removing tool usage resize handler:', error);
+			console.warn('Error unbinding tool usage resize handler:', error);
 		}
-		toolUsageResizeHandler = null;
+		toolUsageUnbindResize = null;
 	}
 	toolUsageChartInitialized = false;
 }
 
 function getToolUsageChartTheme() {
-	const isDark = document.documentElement.classList.contains('dark');
+	const theme = getChartTheme();
 	return {
-		text: isDark ? '#e4e4e7' : '#18181b',
-		muted: isDark ? '#a1a1aa' : '#6b7280',
-		grid: isDark ? '#2f3340' : '#e5e7eb',
-		axis: isDark ? '#52525b' : '#d1d5db',
-		success: '#14becb',
-		error: '#dc2626',
-		bg: 'transparent'
+		text: theme.text,
+		muted: theme.muted,
+		grid: theme.grid,
+		axis: theme.axis,
+		success: theme.success,
+		error: theme.error,
+		bg: theme.bg
 	};
 }
 
-function initToolUsageChart() {
+export async function mountToolUsageChart() {
 	if (toolUsageChartInstance) {
 		return toolUsageChartInstance;
 	}
 	const el = document.getElementById('toolUsageChart');
 	if (!el) {return null;}
 
-	if (typeof echarts === 'undefined') {
-		window.addEventListener('echartsLoaded', () => {
-			initToolUsageChart();
-		}, {once: true});
+	// Wait for ECharts if not loaded
+	await awaitECharts();
+
+	// Safe initialization with cleanup
+	toolUsageChartInstance = safeInit(el);
+	if (!toolUsageChartInstance) {
 		return null;
 	}
 
-	// Clear any existing content and dispose any existing chart on this element
-	el.innerHTML = '';
-	try {
-		// Try to dispose any existing chart on this element
-		if (typeof echarts.getInstanceByDom === 'function') {
-			const existingChart = echarts.getInstanceByDom(el);
-			if (existingChart && existingChart !== toolUsageChartInstance) {
-				existingChart.dispose();
-			}
-		}
-	} catch (error) {
-		console.warn('Error disposing existing chart on tool usage element:', error);
-	}
-
-	try {
-		toolUsageChartInstance = echarts.init(el);
-	toolUsageResizeHandler = () => {
-		try {
-			if (toolUsageChartInstance && typeof toolUsageChartInstance.resize === 'function') {
-				toolUsageChartInstance.resize();
-			}
-		} catch (error) {
-			console.warn('Error resizing tool usage chart:', error);
-			// If resize fails, remove the handler to prevent further errors
-			try {
-				window.removeEventListener('resize', toolUsageResizeHandler);
-				toolUsageResizeHandler = null;
-			} catch (removeError) {
-				console.warn('Error removing tool usage resize handler:', removeError);
-			}
-		}
-	};
-		window.addEventListener('resize', toolUsageResizeHandler);
-		return toolUsageChartInstance;
-	} catch (error) {
-		console.error('Error initializing tool usage chart:', error);
-		// Clear the element on initialization failure
-		el.innerHTML = '';
-		return null;
-	}
+	// Bind resize handler with cleanup function
+	toolUsageUnbindResize = bindWindowResize(toolUsageChartInstance, {chartName: 'tool usage'});
+	
+	return toolUsageChartInstance;
 }
 
 function renderToolUsageEmpty(message = 'No tool usage recorded yet.') {
@@ -112,13 +79,13 @@ function setToolUsageLoading(isLoading) {
 	card.setAttribute('data-loading', isLoading ? 'true' : 'false');
 }
 
-function renderToolUsageChart(tools, _days) {
+export function renderToolUsageChart(tools, _days) {
 	// Clean up any existing chart first
 	cleanupToolUsageChart();
 
 	// Small delay to ensure cleanup is complete
-	timerRegistry.setTimeout('toolUsageChart.render', () => {
-		const chart = initToolUsageChart();
+	timerRegistry.setTimeout('toolUsageChart.render', async () => {
+		const chart = await mountToolUsageChart();
 		if (!chart) {return;}
 
 		if (tools.length === 0) {
@@ -229,6 +196,15 @@ function renderToolUsageChart(tools, _days) {
 	}, 10);
 }
 
+export function refreshToolUsageTheme() {
+	if (!toolUsageChartInstance || !toolUsageChartInitialized) {
+		return;
+	}
+	// Re-render the chart with updated theme
+	cleanupToolUsageChart();
+	loadToolUsageChart();
+}
+
 async function loadToolUsageChart(days = TOOL_USAGE_DEFAULT_DAYS) {
 	// Check if we have valid cached data for the same days parameter
 	const cacheKey = `toolUsageStats_${days}`;
@@ -247,7 +223,7 @@ async function loadToolUsageChart(days = TOOL_USAGE_DEFAULT_DAYS) {
 		timerRegistry.setTimeout('toolUsageChart.load', resolve, 10);
 	});
 
-	const chart = initToolUsageChart();
+	const chart = await mountToolUsageChart();
 	if (!chart) {return;}
 
 	setToolUsageLoading(true);
@@ -280,26 +256,27 @@ async function loadToolUsageChart(days = TOOL_USAGE_DEFAULT_DAYS) {
 }
 
 // Kick off once the dashboard loads
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
 	// Wait for echarts to be ready
-	if (typeof echarts === 'undefined') {
-		window.addEventListener('echartsLoaded', () => loadToolUsageChart(), {once: true});
-	} else {
-		loadToolUsageChart();
-	}
+	await awaitECharts();
+	loadToolUsageChart();
 });
 
 // Also listen for soft navigation back to dashboard
-window.addEventListener('softNav:pageMounted', (event) => {
+window.addEventListener('softNav:pageMounted', async (event) => {
 	if (event.detail.path === '/') {
 		// Clean up existing chart and reload
 		cleanupToolUsageChart();
 		// Wait for echarts to be ready
-		if (typeof echarts === 'undefined') {
-			window.addEventListener('echartsLoaded', () => loadToolUsageChart(), {once: true});
-		} else {
-			loadToolUsageChart();
-		}
+		await awaitECharts();
+		loadToolUsageChart();
+	}
+});
+
+// Listen for soft navigation pausing to cleanup
+window.addEventListener('softNav:pagePausing', (event) => {
+	if (event.detail.path === '/') {
+		cleanupToolUsageChart();
 	}
 });
 
@@ -308,8 +285,7 @@ const observer = new MutationObserver((mutations) => {
 	if (!toolUsageChartInitialized || !toolUsageChartInstance) {return;}
 	for (const mutation of mutations) {
 		if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
-			cleanupToolUsageChart();
-			loadToolUsageChart();
+			refreshToolUsageTheme();
 			break;
 		}
 	}
