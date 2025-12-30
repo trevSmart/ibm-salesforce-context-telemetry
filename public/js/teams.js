@@ -1793,7 +1793,7 @@ function initializeColoris() {
 			],
 			onInput: (color, inputEl) => {
 				console.log(`Color input: ${color}`);
-				updateColorPreview(color);
+				updateColorPreview(color, inputEl);
 			},
 			onChange: (color, inputEl) => {
 				console.log(`Color changed to: ${color}`);
@@ -1803,8 +1803,9 @@ function initializeColoris() {
 }
 
 // Update color preview when color changes
-function updateColorPreview(color) {
-	const activeInput = document.querySelector('.coloris[data-coloris-open]');
+function updateColorPreview(color, inputEl = null) {
+	// Find the active input if not provided
+	const activeInput = inputEl || document.querySelector('.coloris[data-coloris-open]');
 	if (activeInput && activeInput.classList.contains('coloris')) {
 		// Update the preview button
 		const wrapper = activeInput.closest('.input-color');
@@ -1814,6 +1815,9 @@ function updateColorPreview(color) {
 				previewBtn.style.setProperty('--preview-color', color);
 			}
 		}
+
+		// Trigger input event on the input field to update Coloris thumbnail
+		activeInput.dispatchEvent(new Event('input', { bubbles: true }));
 	}
 }
 
