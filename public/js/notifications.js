@@ -2,6 +2,8 @@
  * Shared notification (toast) system.
  * Injects a live region once and reuses it for every message.
  */
+import {timerRegistry} from './utils/timerRegistry.js';
+
 const NOTIFICATION_DEFAULT_DURATION_MS = 4500;
 
 const NOTIFICATION_ICONS = {
@@ -220,7 +222,7 @@ function renderToast(title, type, description) {
 		panel.classList.add('ct-leaving');
 		const cleanup = () => panel.remove();
 		panel.addEventListener('transitionend', cleanup, {once: true});
-		setTimeout(cleanup, 350);
+		timerRegistry.setTimeout('notification.cleanup', cleanup, 350);
 	};
 
 	const closeButton = panel.querySelector('.ct-toast-close');
@@ -240,7 +242,7 @@ export function showToast(title, type = 'info', description) {
 	const {remove} = renderToast(resolvedTitle, type, resolvedDescription);
 
 	if (duration > 0) {
-		setTimeout(remove, duration);
+		timerRegistry.setTimeout('notification.autoDismiss', remove, duration);
 	}
 
 	return {dismiss: remove};

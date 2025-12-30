@@ -1,5 +1,7 @@
 // @ts-nocheck
 // Command palette functionality for global header search
+import {timerRegistry} from './utils/timerRegistry.js';
+
 (function initCommandPalette() {
 	let commandPaletteElement = null;
 	let searchInput = null;
@@ -398,7 +400,7 @@
 			}
 
 			// Fallback: if transition doesn't complete within reasonable time, hide anyway
-			setTimeout(() => {
+			timerRegistry.setTimeout('commandPalette.hideFallback', () => {
 				if (commandPaletteElement && commandPaletteElement.style.display !== 'none') {
 					commandPaletteElement.style.display = 'none';
 					document.body.style.overflow = '';
@@ -413,7 +415,7 @@
 			if (headerSearchInput) {
 				window.__commandPaletteIgnoreNextFocus = true;
 				headerSearchInput.focus();
-				setTimeout(() => {
+				timerRegistry.setTimeout('commandPalette.focusReset', () => {
 					window.__commandPaletteIgnoreNextFocus = false;
 				}, 0);
 			}
