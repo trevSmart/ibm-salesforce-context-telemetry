@@ -1,5 +1,7 @@
 // @ts-nocheck
 // Custom tooltip component - reusable across the application
+import {timerRegistry} from './utils/timerRegistry.js';
+
 (function initCustomTooltip() {
 	'use strict';
 
@@ -11,8 +13,6 @@
 		constructor() {
 			this.tooltip = null;
 			this.currentTarget = null;
-			this.hideTimeout = null;
-			this.showTimeout = null;
 			this.init();
 		}
 
@@ -93,18 +93,13 @@
 			}
 
 			// Clear any pending hide timeout
-			if (this.hideTimeout) {
-				clearTimeout(this.hideTimeout);
-				this.hideTimeout = null;
-			}
+			timerRegistry.clearTimeout('tooltip.hide');
 
 			// Clear any pending show timeout
-			if (this.showTimeout) {
-				clearTimeout(this.showTimeout);
-			}
+			timerRegistry.clearTimeout('tooltip.show');
 
 			// Small delay before showing tooltip for better UX
-			this.showTimeout = setTimeout(() => {
+			timerRegistry.setTimeout('tooltip.show', () => {
 				this.currentTarget = element;
 				this.tooltip.textContent = text;
 				this.tooltip.setAttribute('aria-hidden', 'false');
@@ -127,17 +122,14 @@
 		 */
 		hide() {
 			// Clear any pending show timeout
-			if (this.showTimeout) {
-				clearTimeout(this.showTimeout);
-				this.showTimeout = null;
-			}
+			timerRegistry.clearTimeout('tooltip.show');
 
 			// Small delay before hiding to allow moving mouse to tooltip
-			this.hideTimeout = setTimeout(() => {
+			timerRegistry.setTimeout('tooltip.hide', () => {
 				if (this.tooltip) {
 					this.tooltip.classList.remove('visible');
 					// Set visibility hidden after transition completes
-					setTimeout(() => {
+					timerRegistry.setTimeout('tooltip.ariaHidden', () => {
 						if (this.tooltip && !this.tooltip.classList.contains('visible')) {
 							this.tooltip.setAttribute('aria-hidden', 'true');
 						}
@@ -354,19 +346,16 @@
 			tooltipInstance = new CustomTooltip();
 
 			// Update position on scroll and resize
-			let scrollTimeout;
-			let resizeTimeout;
-
 			window.addEventListener('scroll', () => {
-				clearTimeout(scrollTimeout);
-				scrollTimeout = setTimeout(() => {
+				timerRegistry.clearTimeout('tooltip.scroll');
+				timerRegistry.setTimeout('tooltip.scroll', () => {
 					tooltipInstance.updatePosition();
 				}, 10);
 			}, {passive: true});
 
 			window.addEventListener('resize', () => {
-				clearTimeout(resizeTimeout);
-				resizeTimeout = setTimeout(() => {
+				timerRegistry.clearTimeout('tooltip.resize');
+				timerRegistry.setTimeout('tooltip.resize', () => {
 					tooltipInstance.updatePosition();
 				}, 10);
 			});

@@ -1,5 +1,7 @@
 // @ts-nocheck
 // Global header component - single source of truth for the navigation header
+import {timerRegistry} from './utils/timerRegistry.js';
+
 (function initGlobalHeader() {
 	/**
 	 * Dynamic refresh dispatcher - calls the appropriate refresh function based on current page
@@ -431,9 +433,6 @@
 			startAnimation();
 		};
 
-		// Timeout for moving to hovered link
-		let hoverMoveTimeout = null;
-
 		// Add hover listeners to all links
 		const addHoverListeners = () => {
 			const navLinks = getNavLinks();
@@ -449,61 +448,43 @@
 		const handleLinkHover = (event) => {
 			const link = event.currentTarget;
 
-			if (hoverMoveTimeout) {
-				clearTimeout(hoverMoveTimeout);
-			}
+			timerRegistry.clearTimeout('header.hoverMove');
 
 			if (deferHoverUntilIdle && isAnimating) {
 				pendingHoverLink = link;
 				return;
 			}
 
-			hoverMoveTimeout = setTimeout(() => {
+			timerRegistry.setTimeout('header.hoverMove', () => {
 				moveToTarget(link);
-				hoverMoveTimeout = null;
 			}, DELAY_BEFORE_MOVE);
 		};
 
 		// Handle mouse leave from link
 		const handleLinkLeave = () => {
-			if (hoverMoveTimeout) {
-				clearTimeout(hoverMoveTimeout);
-				hoverMoveTimeout = null;
-			}
+			timerRegistry.clearTimeout('header.hoverMove');
 		};
-
-		// Timeout for returning to active link
-		let returnToActiveTimeout = null;
 
 		// Handle mouse leave from container
 		const handleContainerLeave = () => {
 			isPointerInside = false;
 			deferHoverUntilIdle = isAnimating;
-			if (returnToActiveTimeout) {
-				clearTimeout(returnToActiveTimeout);
-			}
+			timerRegistry.clearTimeout('header.returnToActive');
 
-			returnToActiveTimeout = setTimeout(() => {
+			timerRegistry.setTimeout('header.returnToActive', () => {
 				const navLinks = getNavLinks();
 				const activeLink = navLinks.find(link => link.classList.contains('active'));
 				if (activeLink) {
 					moveToTarget(activeLink, true); // Use slow return mode for gentle return
 				}
-				returnToActiveTimeout = null;
 			}, DELAY_BEFORE_RETURN_TO_ACTIVE);
 		};
 
 		// Handle mouse enter to container
 		const handleContainerEnter = () => {
 			isPointerInside = true;
-			if (returnToActiveTimeout) {
-				clearTimeout(returnToActiveTimeout);
-				returnToActiveTimeout = null;
-			}
-			if (hoverMoveTimeout) {
-				clearTimeout(hoverMoveTimeout);
-				hoverMoveTimeout = null;
-			}
+			timerRegistry.clearTimeout('header.returnToActive');
+			timerRegistry.clearTimeout('header.hoverMove');
 		};
 
 		// Set initial position
@@ -555,10 +536,9 @@
 		});
 
 		// Update on window resize
-		let resizeTimeout;
 		const handleResize = () => {
-			clearTimeout(resizeTimeout);
-			resizeTimeout = setTimeout(() => {
+			timerRegistry.clearTimeout('header.resize');
+			timerRegistry.setTimeout('header.resize', () => {
 				const navLinks = getNavLinks();
 				const activeLink = navLinks.find(link => link.classList.contains('active')) || navLinks[0];
 				if (activeLink) {
