@@ -719,12 +719,52 @@ function setupInfiniteScroll() {
 	testContent.addEventListener('wheel', window._testPageScrollHandler, {passive: true});
 }
 
+// Pause/resume functions for soft navigation
+function pauseTestPage() {
+	// Clear all timers (scroll debounce, etc.)
+	timerRegistry.clearAll();
+
+	// Remove scroll event listeners
+	if (window._testPageScrollHandler) {
+		window.removeEventListener('scroll', window._testPageScrollHandler);
+		const testContent = document.getElementById('testContent');
+		if (testContent) {
+			testContent.removeEventListener('scroll', window._testPageScrollHandler);
+			testContent.removeEventListener('wheel', window._testPageScrollHandler);
+		}
+		// Clear the handler reference
+		window._testPageScrollHandler = null;
+	}
+}
+
+async function resumeTestPage() {
+	// Re-initialize page when returning from cache
+	await loadEvents();
+	setupInfiniteScroll();
+}
+
+// Expose pause/resume hooks for soft navigation
+window.pauseTestPage = pauseTestPage;
+window.resumeTestPage = resumeTestPage;
+
 // Listen for soft navigation events
-window.addEventListener('softNav:pageMounted', (event) => {
+window.addEventListener('softNav:pagePausing', (event) => {
+	if (event?.detail?.path === '/test') {
+		pauseTestPage();
+	}
+});
+
+window.addEventListener('softNav:pageMounted', async (event) => {
 	if (event.detail.path === '/test') {
-		// Re-initialize if needed
-		loadEvents();
-		setupInfiniteScroll();
+		const fromCache = event?.detail?.fromCache === true;
+		if (fromCache) {
+			// Page was restored from cache - resume
+			await resumeTestPage();
+		} else {
+			// Fresh page load - full initialization
+			await loadEvents();
+			setupInfiniteScroll();
+		}
 	}
 });
 

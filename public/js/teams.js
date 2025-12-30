@@ -1760,8 +1760,8 @@ if (document.readyState === 'loading') {
 
 // Pause/resume functions for soft navigation
 function pauseTeamsPage() {
-	// Teams page doesn't have intervals, but we can clear any pending timeouts if needed
-	// Currently no cleanup needed
+	// Clear all timers (just in case any timeouts/intervals were added)
+	timerRegistry.clearAll();
 }
 
 async function resumeTeamsPage() {
