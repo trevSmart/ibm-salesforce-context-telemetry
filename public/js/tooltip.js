@@ -1,7 +1,5 @@
 // @ts-nocheck
 // Custom tooltip component - reusable across the application
-import {timerRegistry} from './utils/timerRegistry.js';
-
 (function initCustomTooltip() {
 	'use strict';
 

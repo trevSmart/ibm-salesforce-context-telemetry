@@ -12,7 +12,11 @@
  * - Testable and mockable
  * 
  * @example
+ * // As ES module:
  * import { timerRegistry } from './utils/timerRegistry.js';
+ * 
+ * // As global script:
+ * const { timerRegistry } = window;
  * 
  * // Register a timer
  * timerRegistry.setInterval('autoRefresh', () => fetchData(), 5000);
@@ -151,5 +155,13 @@ class TimerRegistry {
 	}
 }
 
-// Export singleton instance
-export const timerRegistry = new TimerRegistry();
+// Create singleton instance
+const timerRegistry = new TimerRegistry();
+
+// Export for ES modules
+export { timerRegistry };
+
+// Also make available globally for non-module scripts
+if (typeof window !== 'undefined') {
+	window.timerRegistry = timerRegistry;
+}

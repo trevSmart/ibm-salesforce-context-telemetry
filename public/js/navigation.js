@@ -1,7 +1,5 @@
 // @ts-nocheck
 // Lightweight client-side navigation to avoid repainting shared chrome
-import {timerRegistry} from './utils/timerRegistry.js';
-
 (() => {
 	const SUPPORTED_PATHS = ['/', '/logs', '/teams', '/people', '/test'];
 	const SOFT_NAV_SELECTOR = [
