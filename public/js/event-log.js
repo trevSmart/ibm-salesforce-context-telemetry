@@ -276,6 +276,9 @@ function safeShowToast(message, type = 'info') {
 	let hoverPreviewState = null;
 	let isHoverPreviewActive = false;
 
+	// Event listener references for cleanup
+	let sessionListDelegationHandler = null;
+
 	function revealEventLogShell() {
 		const body = document.body;
 		if (body.classList.contains('hydrating')) {
@@ -1176,6 +1179,121 @@ function safeShowToast(message, type = 'info') {
 		}
 	}
 
+	/**
+	 * Setup event delegation for session list
+	 * This adds ONE listener to the parent instead of many to children
+	 */
+	function setupSessionListDelegation() {
+		const sessionList = document.getElementById('sessionList');
+		if (!sessionList) {
+			return;
+		}
+
+		// Remove old listener if it exists
+		if (sessionListDelegationHandler) {
+			sessionList.removeEventListener('click', sessionListDelegationHandler);
+		}
+
+		// Create delegation handler
+		sessionListDelegationHandler = (e) => {
+			const sessionItem = e.target.closest('.session-item');
+			if (!sessionItem) {
+				return;
+			}
+
+			const sessionId = sessionItem.getAttribute('data-session');
+			if (!sessionId) {
+				return;
+			}
+
+			// Handle checkbox clicks
+			if (e.target.closest('.session-checkbox')) {
+				e.stopPropagation();
+				toggleSessionSelection(sessionId, e);
+				return;
+			}
+
+			// Handle actions button clicks
+			if (e.target.closest('.actions-btn')) {
+				e.stopPropagation();
+				toggleSessionActionsDropdown(e, sessionId);
+				return;
+			}
+
+			// Handle delete button clicks
+			if (e.target.closest('.actions-dropdown-item.delete')) {
+				e.stopPropagation();
+				confirmDeleteSession(sessionId);
+				return;
+			}
+
+			// Handle session item clicks (don't activate if clicking on actions or checkbox)
+			if (e.target.closest('.session-item-actions') || e.target.closest('.session-checkbox')) {
+				return;
+			}
+
+			// Cancel hover preview when clicking
+			if (isHoverPreviewActive) {
+				hoverPreviewState = null;
+				isHoverPreviewActive = false;
+			}
+
+			// If in selection mode, toggle selection for deletion instead of viewing
+			if (selectionMode) {
+				toggleSessionSelection(sessionId, e);
+				return;
+			}
+
+			// If Ctrl/Cmd is pressed and not in selection mode, enter selection mode and select this session
+			if ((e.ctrlKey || e.metaKey) && !selectionMode) {
+				toggleSelectionMode();
+				// Small delay to ensure selection mode is active
+				setTimeout(() => {
+					toggleSessionSelection(sessionId, e);
+				}, 0);
+				return;
+			}
+
+			// Avoid flickering if clicking on the same session that's already selected
+			if (selectedSession === sessionId && sessionItem.classList.contains('active')) {
+				return;
+			}
+
+			document.querySelectorAll('.session-item').forEach(i => i.classList.remove('active'));
+			sessionItem.classList.add('active');
+			selectedSession = sessionId;
+
+			// Find session data to get dates
+			const session = Array.from(document.querySelectorAll('.session-item'))
+				.find(el => el.getAttribute('data-session') === sessionId);
+			const sessionDay = session?.dataset?.lastEvent || session?.dataset?.firstEvent || null;
+			const parsedSessionDate = sessionDay ? new Date(sessionDay) : null;
+			selectedActivityDate = parsedSessionDate && !Number.isNaN(parsedSessionDate.getTime()) ? parsedSessionDate : null;
+
+			// Always default to DESC order (newest first)
+			sortOrder = 'DESC';
+
+			// Update sort icon
+			const sortIconEl = document.getElementById('sortIcon');
+			if (sortIconEl) {
+				if (sortOrder === 'DESC') {
+					sortIconEl.src = '/resources/sort-desc';
+					sortIconEl.alt = 'Sort descending';
+				} else {
+					sortIconEl.src = '/resources/sort-asc';
+					sortIconEl.alt = 'Sort ascending';
+				}
+			}
+
+			currentOffset = 0;
+			loadEvents();
+			loadEventTypeStats(selectedSession);
+		};
+
+		// Add the delegation listener
+		sessionList.addEventListener('click', sessionListDelegationHandler);
+	}
+
 	async function loadSessions() {
 		try {
 			const params = new URLSearchParams();
@@ -1301,84 +1419,15 @@ function safeShowToast(message, type = 'info') {
 						</div>
 					`;
 
-					// Add event listeners for checkbox and actions (safer than inline onclick with XSS protection)
-					const checkbox = li.querySelector('.session-checkbox');
-					if (checkbox) {
-						checkbox.addEventListener('click', (event) => {
-							event.stopPropagation();
-							toggleSessionSelection(session.session_id, event);
-						});
+					// Store session date information in dataset for delegation handler
+					if (session.last_event) {
+						li.dataset.lastEvent = session.last_event;
+					}
+					if (session.first_event) {
+						li.dataset.firstEvent = session.first_event;
 					}
 
-					const actionsBtn = li.querySelector('.actions-btn');
-					if (actionsBtn) {
-						actionsBtn.addEventListener('click', (event) => {
-							event.stopPropagation();
-							toggleSessionActionsDropdown(event, session.session_id);
-						});
-					}
-
-					const deleteBtn = li.querySelector('.actions-dropdown-item.delete');
-					if (deleteBtn) {
-						deleteBtn.addEventListener('click', (event) => {
-							event.stopPropagation();
-							confirmDeleteSession(session.session_id);
-						});
-					}
-
-					li.addEventListener('click', (e) => {
-						// Don't activate session if clicking on actions button or checkbox
-						if (e.target.closest('.session-item-actions') || e.target.closest('.session-checkbox')) {
-							return;
-						}
-						// Cancel hover preview when clicking
-						if (isHoverPreviewActive) {
-							hoverPreviewState = null;
-							isHoverPreviewActive = false;
-						}
-						// If in selection mode, toggle selection for deletion instead of viewing
-						if (selectionMode) {
-							toggleSessionSelection(session.session_id, e);
-							return;
-						}
-						// If Ctrl/Cmd is pressed and not in selection mode, enter selection mode and select this session
-						if ((e.ctrlKey || e.metaKey) && !selectionMode) {
-							toggleSelectionMode();
-							// Small delay to ensure selection mode is active
-							setTimeout(() => {
-								toggleSessionSelection(session.session_id, e);
-							}, 0);
-							return;
-						}
-						// Avoid flickering if clicking on the same session that's already selected
-						if (selectedSession === session.session_id && li.classList.contains('active')) {
-							return;
-						}
-						document.querySelectorAll('.session-item').forEach(i => i.classList.remove('active'));
-						li.classList.add('active');
-						selectedSession = session.session_id;
-						// Pin activity chart to this session's day (prefer last event, fall back to first)
-						const sessionDay = session.last_event || session.first_event || null;
-						const parsedSessionDate = sessionDay ? new Date(sessionDay) : null;
-						selectedActivityDate = parsedSessionDate && !Number.isNaN(parsedSessionDate.getTime())? parsedSessionDate: null;
-						// Always default to DESC order (newest first)
-						sortOrder = 'DESC';
-						// Update sort icon
-						const sortIconEl = document.getElementById('sortIcon');
-						if (sortIconEl) {
-							if (sortOrder === 'DESC') {
-								sortIconEl.src = '/resources/sort-desc';
-								sortIconEl.alt = 'Sort descending';
-							} else {
-								sortIconEl.src = '/resources/sort-asc';
-								sortIconEl.alt = 'Sort ascending';
-							}
-						}
-						currentOffset = 0;
-						loadEvents();
-						loadEventTypeStats(selectedSession);
-					});
-
+					// NO MORE INDIVIDUAL LISTENERS! Event delegation handles all clicks
 					sessionList.appendChild(li);
 				});
 
@@ -4713,6 +4762,13 @@ function safeShowToast(message, type = 'info') {
 		// Pause all intervals when leaving the page
 		timerRegistry.clearAll();
 
+		// Remove event delegation listeners
+		const sessionList = document.getElementById('sessionList');
+		if (sessionList && sessionListDelegationHandler) {
+			sessionList.removeEventListener('click', sessionListDelegationHandler);
+			sessionListDelegationHandler = null;
+		}
+
 		// Clean up initialization flags so listeners can be re-added when returning to page
 		document.querySelectorAll('[data-listeners-initialized]').forEach(el => {
 			delete el.dataset.listenersInitialized;
@@ -4770,6 +4826,7 @@ function safeShowToast(message, type = 'info') {
 		runSafeInitStep('session legend hover', setupSessionLegendHover);
 		runSafeInitStep('tabs setup', setupTabs);
 		runSafeInitStep('user filter label', setupPersonFilterLabel);
+		runSafeInitStep('session list delegation', setupSessionListDelegation); // Event delegation for sessions
 		runSafeAsyncInitStep('event type stats', () => loadEventTypeStats(selectedSession));
 		runSafeAsyncInitStep('sessions list', () => {
 			// Ensure DOM is ready before loading sessions
