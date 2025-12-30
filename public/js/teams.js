@@ -65,7 +65,7 @@ async function transitionTeamsContent(newContent) {
 	newContent.style.pointerEvents = 'auto';
 
 	// Wait for transition to complete
-	await new Promise((resolve) => setTimeout(resolve, TEAMS_TRANSITION_DURATION_MS));
+	await new Promise((resolve) => { timerRegistry.setTimeout("teams.transition", resolve, TEAMS_TRANSITION_DURATION_MS); });
 
 	// Remove old content and reset positioning on new content
 	currentContent.remove();
