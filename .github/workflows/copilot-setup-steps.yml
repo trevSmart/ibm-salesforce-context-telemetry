@@ -32,22 +32,29 @@ jobs:
         run: npm ci
 
       - name: Set up PostgreSQL
-        uses: ankane/setup-postgres@v1
+        uses: ikalnytskyi/action-setup-postgres@v8
         with:
-          postgres-version: "16"
+          username: postgres
+          password: postgres
           database: telemetry_test
-          user: postgres
-        env:
-          POSTGRES_PASSWORD: postgres
+          port: 5432
+          postgres-version: "16"
 
       - name: Wait for PostgreSQL
         run: |
           # Wait for PostgreSQL to be ready
-          until pg_isready -h localhost -p 5432 -U postgres; do
-            echo "Waiting for PostgreSQL..."
-            sleep 1
+          for i in {1..30}; do
+            if pg_isready -h localhost -p 5432 -U postgres; then
+              echo "PostgreSQL is ready"
+              break
+            fi
+            echo "Waiting for PostgreSQL... ($i/30)"
+            sleep 2
           done
-          echo "PostgreSQL is ready"
+          if ! pg_isready -h localhost -p 5432 -U postgres; then
+            echo "PostgreSQL failed to start"
+            exit 1
+          fi
 
       - name: Ensure admin user exists with administrator role
         env:
