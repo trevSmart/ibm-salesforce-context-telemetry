@@ -1778,6 +1778,8 @@ function initializeColoris() {
 			theme: 'pill',
 			themeMode: 'auto',
 			alpha: false,
+			focusInput: false, // Allow manual typing/pasting in input field
+			selectInput: false, // Don't auto-select text on focus
 			swatches: [
 				'DarkSlateGray',
 				'#2a9d8f',
@@ -1797,8 +1799,27 @@ function initializeColoris() {
 			},
 			onChange: (color, inputEl) => {
 				console.log(`Color changed to: ${color}`);
+				updateColorPreview(color, inputEl);
 			}
 		});
+
+		// Prevent Enter key in color inputs and Coloris picker from submitting forms
+		// Use capture phase to intercept before the event reaches the form
+		document.addEventListener('keydown', (e) => {
+			if (e.key === 'Enter') {
+				// Check if the event originated from a coloris input or the picker itself
+				const target = e.target;
+				const isColorisInput = target && target.classList && target.classList.contains('coloris');
+				const isInsidePicker = target && target.closest('.clr-picker');
+				
+				if (isColorisInput || isInsidePicker) {
+					// Prevent the Enter key from bubbling up to the form
+					e.preventDefault();
+					e.stopPropagation();
+					e.stopImmediatePropagation();
+				}
+			}
+		}, true); // Use capture phase
 	}
 }
 
@@ -1816,8 +1837,10 @@ function updateColorPreview(color, inputEl = null) {
 			}
 		}
 
-		// Trigger input event on the input field to update Coloris thumbnail
-		activeInput.dispatchEvent(new Event('input', { bubbles: true }));
+		// Update the input value if it's different (this ensures the input reflects picker selection)
+		if (activeInput.value !== color) {
+			activeInput.value = color;
+		}
 	}
 }
 
