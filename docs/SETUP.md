@@ -1,170 +1,215 @@
-# Guia de Configuració del Servidor de Telemetria
+# Telemetry Server Setup Guide
 
-Aquesta guia t'explica pas a pas com muntar i desplegar el servidor de telemetria.
+This guide explains step by step how to set up and deploy the telemetry server.
 
-## 📋 Requisits Previs
+## 📋 Prerequisites
 
-Abans de començar, assegura't de tenir instal·lat:
+Before starting, make sure you have installed:
 
-- **Node.js** (versió 18 o superior)
-  - Comprova si el tens: `node --version`
-  - Si no el tens, descarrega'l de: https://nodejs.org/
+- **Node.js** (version 18 or higher)
+  - Check if you have it: `node --version`
+  - If not, download from: https://nodejs.org/
 
-- **npm** (normalment ve amb Node.js)
-  - Comprova si el tens: `npm --version`
+- **npm** (usually comes with Node.js)
+  - Check if you have it: `npm --version`
 
-## 🚀 Pas 1: Instal·lar les Dependències
+- **PostgreSQL** (required for all installations)
+  - For local development: Install PostgreSQL on your system
+  - For production: Use a service like Render PostgreSQL
 
-Obre una terminal a la carpeta del projecte i executa:
+## 🚀 Step 1: Install Dependencies
+
+Open a terminal in the project folder and run:
 
 ```bash
 npm install
 ```
 
-Això instal·larà totes les llibreries necessàries (express, cors, etc.) a la carpeta `node_modules/`.
+This will install all necessary libraries (express, cors, etc.) in the `node_modules/` folder.
 
-## 🧪 Pas 2: Provar el Servidor Localment
+## 🧪 Step 2: Test the Server Locally
 
-### Executar el servidor
+### Run the server
 
 ```bash
 npm start
 ```
 
-Hauries de veure un missatge com:
+You should see a message like:
 ```
 Telemetry server listening on port 3100
 ```
 
-### Provar que funciona
+### Test that it works
 
-Obre una altra terminal i prova els endpoints:
+Open another terminal and test the endpoints:
 
-**1. Provar l'endpoint principal:**
+**1. Test the main endpoint:**
 ```bash
 curl http://localhost:3100/
 ```
 
-Hauries de veure: `MCP Telemetry server is running ✅`
+You should see: `MCP Telemetry server is running ✅`
 
-**2. Provar l'endpoint de health:**
+**2. Test the health endpoint:**
 ```bash
 curl http://localhost:3100/health
 ```
 
-Hauries de veure: `ok`
+You should see: `ok`
 
-**3. Provar l'endpoint de telemetria (POST):**
+**3. Test the telemetry endpoint (POST):**
 ```bash
 curl -X POST http://localhost:3100/telemetry \
   -H "Content-Type: application/json" \
   -d '{"event":"test","timestamp":"2024-01-15T10:30:00.000Z"}'
 ```
 
-Hauries de veure: `{"status":"ok"}`
+You should see: `{"status":"ok"}`
 
-I a la terminal on corre el servidor, hauries de veure el log:
+The event will be stored in the PostgreSQL database.
+
+### Stop the server
+
+Press `Ctrl + C` in the terminal where the server is running to stop it.
+
+## 🌐 Step 3: Configure the Database
+
+The server requires PostgreSQL to function.
+
+### For local development:
+
+**macOS (with Homebrew):**
+```bash
+brew install postgresql@16
+brew services start postgresql@16
+createdb telemetry_local
 ```
-Telemetry event: {"event":"test","timestamp":"2024-01-15T10:30:00.000Z"}
+
+**Configure environment variables:**
+Create a `.env` file:
+```bash
+DATABASE_URL=postgresql://localhost:5432/telemetry_local
+DATABASE_SSL=false
 ```
 
-### Aturar el servidor
+### For production (Render):
 
-Prem `Ctrl + C` a la terminal on corre el servidor per aturar-lo.
+**📖 Complete guide**: See [RENDER_DEPLOYMENT.md](./RENDER_DEPLOYMENT.md) for detailed instructions on configuring PostgreSQL on Render.
 
-## 🌐 Pas 3: Desplegar a Render
+### Quick summary:
 
-Render és un servei gratuït (amb limitacions) per desplegar aplicacions web.
-
-**📖 Guia completa**: Consulta [RENDER_DEPLOYMENT.md](./RENDER_DEPLOYMENT.md) per instruccions detallades sobre com configurar PostgreSQL a Render.
-
-### Resum ràpid:
-
-1. **Crear base de dades PostgreSQL** a Render
-2. **Configurar variables d'entorn**:
-   - `DATABASE_URL=<Internal Database URL de Render>` (o preferiblement `DATABASE_INTERNAL_URL`)
+1. **Create PostgreSQL database** on Render
+2. **Configure environment variables**:
+   - `DATABASE_URL=<Internal Database URL from Render>` (or preferably `DATABASE_INTERNAL_URL`)
    - `DATABASE_SSL=true`
-3. **Desplegar** el servei web
+3. **Deploy** the web service
 
-Veure [RENDER_DEPLOYMENT.md](./RENDER_DEPLOYMENT.md) per passos detallats.
+## 🔧 Advanced Configuration
 
-## 🔧 Configuració Avançada
+### Environment Variables
 
-### Canviar el port localment
+Create a `.env` file to configure the server:
 
-Si vols executar el servidor en un port diferent:
+```bash
+# Server port (optional, defaults to 3100)
+PORT=3100
+
+# PostgreSQL database (required)
+DATABASE_URL=postgresql://localhost:5432/telemetry_local
+DATABASE_SSL=false
+
+# For production on Render:
+# DATABASE_URL=<Render PostgreSQL URL>
+# DATABASE_SSL=true
+# DATABASE_INTERNAL_URL=<Render internal PostgreSQL URL>
+```
+
+### Change the port locally
+
+If you want to run the server on a different port:
 
 ```bash
 PORT=8080 npm start
 ```
 
-O crea un fitxer `.env`:
-```
-PORT=8080
-```
+### Run in background
 
-### Executar en segon pla (background)
-
-Si vols que el servidor segueixi corrent després de tancar la terminal:
+If you want the server to keep running after closing the terminal:
 
 **macOS/Linux:**
 ```bash
 nohup npm start &
 ```
 
-O usa `pm2` per gestionar el procés:
+Or use `pm2` to manage the process:
 ```bash
 npm install -g pm2
-pm2 start index.js
-pm2 list  # Veure processos actius
-pm2 stop index.js  # Aturar
+pm2 start npm -- run start
+pm2 list  # See active processes
+pm2 stop 0  # Stop
 ```
 
-## 🐛 Solucionar Problemes
+## 🐛 Troubleshooting
 
 ### Error: "Port already in use"
 
-Si el port 3100 està ocupat:
+If port 3100 is occupied:
 
-1. Troba quin procés l'està usant:
+1. Find which process is using it:
    ```bash
    lsof -i :3100
    ```
-2. Mata el procés o canvia el port:
+2. Kill the process or change the port:
    ```bash
    PORT=3001 npm start
    ```
 
 ### Error: "Cannot find module"
 
-Assegura't d'haver executat `npm install` abans de `npm start`.
+Make sure you have run `npm install` before `npm start`.
 
-### El servidor no respon
+### Server not responding
 
-1. Comprova que el servidor està corrent (hauries de veure el missatge de "listening")
-2. Comprova que no hi ha errors a la terminal
-3. Prova de reiniciar el servidor
+1. Check that the server is running (you should see the "listening" message)
+2. Check that there are no errors in the terminal
+3. Verify that PostgreSQL is running and accessible
+4. Check the database environment variables
+5. Try restarting the server
 
-## 📝 Següents Passos
+### Database connection error
 
-Un cop el servidor estigui funcionant:
+If you see PostgreSQL-related errors:
 
-1. **Connectar el servidor MCP**: Configura l'IBM Salesforce Context MCP server per enviar telemetria a aquesta URL
-2. **Afegir base de dades**: Quan necessitis guardar les dades, pots afegir PostgreSQL o MongoDB
-3. **Millorar el logging**: Afegir millors logs i monitoring
-4. **Afegir autenticació**: Si necessites seguretat, afegeix autenticació API
+1. Make sure PostgreSQL is installed and running
+2. Check that the database exists: `createdb telemetry_local`
+3. Verify credentials in the `.env` file
+4. For production, make sure `DATABASE_SSL=true`
 
-## 💡 Consells
+## 📝 Next Steps
 
-- **Desenvolupament local**: Sempre prova localment abans de desplegar
-- **Logs**: Revisa els logs a Render per veure què passa
-- **Versions**: Assegura't que la versió de Node.js a Render sigui compatible
-- **Free tier**: El pla gratuït de Render pot "dormir" després d'inactivitat. El primer cop pot trigar uns segons a "despertar"
+Once the server is running:
 
-## 🆘 Necessites Ajuda?
+1. **Connect the MCP server**: Configure the IBM Salesforce Context MCP server to send telemetry to this URL
+2. **Create users**: Use the scripts to create user accounts with different roles
+3. **Explore the dashboard**: Access the web dashboard to view telemetry data
+4. **Configure exports**: Use the export endpoint to get data in JSONL format
 
-Si tens problemes:
-1. Revisa els logs del servidor
-2. Comprova que totes les dependències estan instal·lades
-3. Assegura't que el port no està ocupat
-4. Verifica que la URL de Render és correcta
+## 💡 Tips
+
+- **Local development**: Always test locally before deploying
+- **Database**: PostgreSQL is required - configure it correctly before starting
+- **Authentication**: Create at least one administrator user to access the dashboard
+- **Logs**: Check the logs on Render to see what's happening
+- **Versions**: Make sure the Node.js version on Render is compatible
+- **Free tier**: The free plan on Render may "sleep" after inactivity. The first time may take a few seconds to "wake up"
+
+## 🆘 Need Help?
+
+If you have problems:
+1. Check the server logs
+2. Make sure PostgreSQL is running and accessible
+3. Verify the environment variables in the `.env` file
+4. Make sure all dependencies are installed (`npm install`)
+5. Make sure the port is not occupied
+6. For Render: verify that the database URL is correct
