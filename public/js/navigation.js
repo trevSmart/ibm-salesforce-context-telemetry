@@ -358,7 +358,9 @@
 			nextContent.style.pointerEvents = 'auto';
 
 			// Wait for transition to complete
-			await new Promise((resolve) => setTimeout(resolve, TRANSITION_DURATION_MS));
+			await new Promise((resolve) => {
+				timerRegistry.setTimeout('navigation.transition', resolve, TRANSITION_DURATION_MS);
+			});
 
 			// Remove old content and reset positioning on new content
 			container.remove();

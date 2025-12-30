@@ -24,6 +24,7 @@ export default [
 				echarts: 'readonly',
 				showToast: 'readonly',
 				ResizableColumns: 'readonly',
+				timerRegistry: 'readonly',
 			},
 		},
 		rules: {

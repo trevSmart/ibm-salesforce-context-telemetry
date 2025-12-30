@@ -1,5 +1,6 @@
 // @ts-nocheck
 // Tool usage chart renderer
+import {timerRegistry} from './utils/timerRegistry.js';
 
 const TOOL_USAGE_MAX_TOOLS = 6;
 const TOOL_USAGE_DEFAULT_DAYS = 30;
@@ -116,7 +117,7 @@ function renderToolUsageChart(tools, _days) {
 	cleanupToolUsageChart();
 
 	// Small delay to ensure cleanup is complete
-	setTimeout(() => {
+	timerRegistry.setTimeout('toolUsageChart.render', () => {
 		const chart = initToolUsageChart();
 		if (!chart) {return;}
 
@@ -242,7 +243,9 @@ async function loadToolUsageChart(days = TOOL_USAGE_DEFAULT_DAYS) {
 	cleanupToolUsageChart();
 
 	// Small delay to ensure cleanup is complete
-	await new Promise(resolve => setTimeout(resolve, 10));
+	await new Promise(resolve => {
+		timerRegistry.setTimeout('toolUsageChart.load', resolve, 10);
+	});
 
 	const chart = initToolUsageChart();
 	if (!chart) {return;}

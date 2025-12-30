@@ -398,7 +398,7 @@
 			}
 
 			// Fallback: if transition doesn't complete within reasonable time, hide anyway
-			setTimeout(() => {
+			timerRegistry.setTimeout('commandPalette.hideFallback', () => {
 				if (commandPaletteElement && commandPaletteElement.style.display !== 'none') {
 					commandPaletteElement.style.display = 'none';
 					document.body.style.overflow = '';
@@ -413,7 +413,7 @@
 			if (headerSearchInput) {
 				window.__commandPaletteIgnoreNextFocus = true;
 				headerSearchInput.focus();
-				setTimeout(() => {
+				timerRegistry.setTimeout('commandPalette.focusReset', () => {
 					window.__commandPaletteIgnoreNextFocus = false;
 				}, 0);
 			}

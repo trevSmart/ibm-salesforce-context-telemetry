@@ -1,5 +1,6 @@
 // Shared rendering helpers for the user dropdown.
 // Keeping the template centralized guarantees every page gets the same blueprint styling.
+import {timerRegistry} from './utils/timerRegistry.js';
 
 (function initUserMenu() {
 	function buildUserMenuTemplate() {
@@ -72,7 +73,6 @@
 // User menu behavior - consolidated from index.js, event-log.js, and teams.js
 (function initUserMenuBehavior() {
 	const USER_MENU_HIDE_DELAY_MS = 300;
-	let userMenuHideTimeout = null;
 	let cleanupHoverHandlers = null;
 	const supportsNativePopover = typeof HTMLElement !== 'undefined' &&
     (typeof HTMLElement.prototype.showPopover === 'function' || typeof HTMLElement.prototype.togglePopover === 'function');
@@ -121,10 +121,7 @@
 	}
 
 	function hideUserMenu() {
-		if (userMenuHideTimeout) {
-			clearTimeout(userMenuHideTimeout);
-			userMenuHideTimeout = null;
-		}
+		timerRegistry.clearTimeout('userMenu.hide');
 
 		const userMenu = document.getElementById('userMenu');
 		if (!userMenu) {
@@ -239,15 +236,12 @@
 		}
 
 		const cancelHide = () => {
-			if (userMenuHideTimeout) {
-				clearTimeout(userMenuHideTimeout);
-				userMenuHideTimeout = null;
-			}
+			timerRegistry.clearTimeout('userMenu.hide');
 		};
 
 		const scheduleHide = () => {
 			cancelHide();
-			userMenuHideTimeout = setTimeout(() => {
+			timerRegistry.setTimeout('userMenu.hide', () => {
 				hideUserMenu();
 			}, USER_MENU_HIDE_DELAY_MS);
 		};

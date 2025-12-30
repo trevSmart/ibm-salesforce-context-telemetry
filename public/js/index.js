@@ -1,5 +1,6 @@
 // @ts-nocheck
 import {toggleTheme, initializeTheme} from './theme.js';
+import {timerRegistry} from './utils/timerRegistry.js';
 
 // Dashboard constants
 const SESSION_START_SERIES_COLOR = '#2195cfdd';
@@ -11,7 +12,6 @@ const SERVER_VERSION_LABEL = 'v1.0.0';
 const REFRESH_ICON_ANIMATION_DURATION_MS = 700;
 const DEFAULT_DASHBOARD_TIME_RANGE_DAYS = 30;
 let serverStatsLastFetchTime = null;
-let serverStatsUpdateIntervalId = null;
 let currentDays = DEFAULT_DASHBOARD_TIME_RANGE_DAYS;
 
 // Chart configuration
@@ -78,10 +78,7 @@ function updateServerStatsLastUpdatedText() {
 }
 
 function startServerStatsInterval() {
-	if (serverStatsUpdateIntervalId) {
-		clearInterval(serverStatsUpdateIntervalId);
-	}
-	serverStatsUpdateIntervalId = setInterval(updateServerStatsLastUpdatedText, 60000);
+	timerRegistry.setInterval('dashboard.serverStatsUpdate', updateServerStatsLastUpdatedText, 60000);
 }
 
 function setServerStatsLoadTime(durationMs) {
@@ -106,10 +103,7 @@ function setServerStatsVersion() {
 
 function resetServerStatsUi() {
 	serverStatsLastFetchTime = null;
-	if (serverStatsUpdateIntervalId) {
-		clearInterval(serverStatsUpdateIntervalId);
-		serverStatsUpdateIntervalId = null;
-	}
+	timerRegistry.clearInterval('dashboard.serverStatsUpdate');
 	updateServerStatsLastUpdatedText();
 	setServerStatsLoadTime(null);
 	const dbSizeElement = document.getElementById('serverStatsDbSize');
@@ -122,7 +116,7 @@ function resetServerStatsUi() {
 function recordServerStatsFetch(durationMs) {
 	serverStatsLastFetchTime = Date.now();
 	updateServerStatsLastUpdatedText();
-	if (!serverStatsUpdateIntervalId) {
+	if (!timerRegistry.has('dashboard.serverStatsUpdate')) {
 		startServerStatsInterval();
 	}
 	if (Number.isFinite(durationMs)) {
@@ -1973,10 +1967,7 @@ Object.assign(window, {
 
 // Pause/resume functions for soft navigation
 function pauseDashboardPage() {
-	if (serverStatsUpdateIntervalId) {
-		clearInterval(serverStatsUpdateIntervalId);
-		serverStatsUpdateIntervalId = null;
-	}
+	timerRegistry.clearAll();
 	if (chartResizeObserver) {
 		chartResizeObserver.disconnect();
 		chartResizeObserver = null;
@@ -2017,7 +2008,7 @@ function pauseDashboardPage() {
 
 async function resumeDashboardPage() {
 	// Restart server stats interval if it was running
-	if (!serverStatsUpdateIntervalId && serverStatsLastFetchTime) {
+	if (!timerRegistry.has('dashboard.serverStatsUpdate') && serverStatsLastFetchTime) {
 		startServerStatsInterval();
 	}
 	// Restore chart from saved option if available

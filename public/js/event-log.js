@@ -1,5 +1,6 @@
 // @ts-nocheck
 import {toggleTheme, applyTheme} from './theme.js';
+import {timerRegistry} from './utils/timerRegistry.js';
 
 // Prevent double execution when soft navigation re-injects the script
 if (window.__EVENT_LOG_LOADED__) {
@@ -217,10 +218,7 @@ function safeShowToast(message, type = 'info') {
 
 	// Start interval to update "Last updated" text every minute
 	function startLastUpdatedInterval() {
-		if (lastUpdatedIntervalId) {
-			clearInterval(lastUpdatedIntervalId);
-		}
-		lastUpdatedIntervalId = setInterval(() => {
+		timerRegistry.setInterval('eventLog.lastUpdated', () => {
 			updateLastUpdatedText();
 		}, 60000); // Update every minute
 	}
@@ -246,15 +244,12 @@ function safeShowToast(message, type = 'info') {
 	let sortOrder = 'DESC';
 	let startTime = performance.now();
 	let notificationModeEnabled = false;
-	let notificationRefreshIntervalId = null;
-	let autoRefreshIntervalId = null;
 	let autoRefreshEnabledState = false;
 	const autoRefreshIntervalMinutes = '';
 	let isRefreshInProgress = false;
 	let lastKnownEventTimestamp = null;
 	let lastFetchTime = null; // Track when events were last fetched
 	let isInitialChartLoad = true; // Track if this is the initial chart load
-	let lastUpdatedIntervalId = null; // Interval to update "Last updated" text
 	const knownSessionIds = new Set();
 	const sessionDisplayMap = new Map();
 	let sessionActivityChart = null;
@@ -265,7 +260,6 @@ function safeShowToast(message, type = 'info') {
 	// State for hover preview functionality
 	let hoverPreviewState = null;
 	let isHoverPreviewActive = false;
-	let hoverTimeoutId = null;
 
 	function revealEventLogShell() {
 		const body = document.body;
@@ -329,21 +323,10 @@ function safeShowToast(message, type = 'info') {
 		sortOrder = 'DESC';
 		startTime = performance.now();
 		notificationModeEnabled = false;
-		if (notificationRefreshIntervalId) {
-			clearInterval(notificationRefreshIntervalId);
-			notificationRefreshIntervalId = null;
-		}
-		if (autoRefreshIntervalId) {
-			clearInterval(autoRefreshIntervalId);
-			autoRefreshIntervalId = null;
-		}
+		timerRegistry.clearAll();
 		lastKnownEventTimestamp = null;
 		lastFetchTime = null;
 		isInitialChartLoad = true;
-		if (lastUpdatedIntervalId) {
-			clearInterval(lastUpdatedIntervalId);
-			lastUpdatedIntervalId = null;
-		}
 		knownSessionIds.clear();
 		sessionDisplayMap.clear();
 		if (sessionActivityChart) {
@@ -357,7 +340,6 @@ function safeShowToast(message, type = 'info') {
 		activeTab = 'sessions';
 		hoverPreviewState = null;
 		isHoverPreviewActive = false;
-		hoverTimeoutId = null;
 	}
 
 	function initTheme() {
@@ -933,10 +915,7 @@ function safeShowToast(message, type = 'info') {
 	// Restore chart state from hover preview
 	function _restoreChartState() {
 		// Clear any pending hover timeout
-		if (hoverTimeoutId !== null) {
-			clearTimeout(hoverTimeoutId);
-			hoverTimeoutId = null;
-		}
+		timerRegistry.clearTimeout('eventLog.hover');
 
 		if (!hoverPreviewState || !isHoverPreviewActive) {
 			return;
@@ -985,10 +964,7 @@ function safeShowToast(message, type = 'info') {
 		}
 
 		// Clear any existing hover timeout
-		if (hoverTimeoutId !== null) {
-			clearTimeout(hoverTimeoutId);
-			hoverTimeoutId = null;
-		}
+		timerRegistry.clearTimeout('eventLog.hover');
 
 		// Save current state if not already in hover preview
 		if (!isHoverPreviewActive) {
@@ -1008,7 +984,7 @@ function safeShowToast(message, type = 'info') {
 		}
 
 		// Delay the chart update by 150ms
-		hoverTimeoutId = setTimeout(async () => {
+		timerRegistry.setTimeout('eventLog.hover', async () => {
 			isHoverPreviewActive = true;
 
 			// Update chart to show hovered session with smooth transition
@@ -1048,8 +1024,6 @@ function safeShowToast(message, type = 'info') {
 					console.error('Error loading hover preview for session:', error);
 				}
 			}
-
-			hoverTimeoutId = null;
 		}, 150);
 	}
 
@@ -1293,7 +1267,6 @@ function safeShowToast(message, type = 'info') {
 		};
 
 		let finishedHandled = false;
-		let chartRenderFallbackTimeoutId = null;
 
 		const ensureChartVisible = () => {
 			const chartEl = document.getElementById('sessionActivityChart');
@@ -1307,10 +1280,7 @@ function safeShowToast(message, type = 'info') {
 				return;
 			}
 			finishedHandled = true;
-			if (chartRenderFallbackTimeoutId) {
-				clearTimeout(chartRenderFallbackTimeoutId);
-				chartRenderFallbackTimeoutId = null;
-			}
+			timerRegistry.clearTimeout('eventLog.chartRenderFallback');
 			// Remove the listener after it fires once
 			chartInstance.off('finished', onChartFinished);
 			ensureChartVisible();
@@ -1350,7 +1320,7 @@ function safeShowToast(message, type = 'info') {
 		chartInstance.on('finished', onChartFinished);
 
 		// Fallback: ensure the chart becomes visible even if 'finished' doesn't fire
-		chartRenderFallbackTimeoutId = setTimeout(() => finalizeChartRender(true), 800);
+		timerRegistry.setTimeout('eventLog.chartRenderFallback', () => finalizeChartRender(true), 800);
 
 		chartInstance.setOption({
 			...animationConfig,
@@ -2813,7 +2783,7 @@ function safeShowToast(message, type = 'info') {
 			// Update last fetch time when fetch is successful
 			lastFetchTime = Date.now();
 			updateLastUpdatedText();
-			if (!lastUpdatedIntervalId) {
+			if (!timerRegistry.has('eventLog.lastUpdated')) {
 				startLastUpdatedInterval();
 			}
 
@@ -3972,10 +3942,7 @@ function safeShowToast(message, type = 'info') {
 	}
 
 	function clearNotificationInterval() {
-		if (notificationRefreshIntervalId) {
-			clearInterval(notificationRefreshIntervalId);
-			notificationRefreshIntervalId = null;
-		}
+		timerRegistry.clearInterval('eventLog.notificationRefresh');
 	}
 
 	function updateAutoRefreshInterval() {
@@ -3989,7 +3956,7 @@ function safeShowToast(message, type = 'info') {
 
 		if (enabled && intervalMinutes && intervalMinutes !== '') {
 			const intervalMs = Number.parseInt(intervalMinutes, 10) * 60 * 1000;
-			autoRefreshIntervalId = setInterval(() => {
+			timerRegistry.setInterval('eventLog.autoRefresh', () => {
 				refreshLogs();
 			}, intervalMs);
 		}
@@ -4025,10 +3992,7 @@ function safeShowToast(message, type = 'info') {
 	}
 
 	function clearAutoRefreshInterval() {
-		if (autoRefreshIntervalId) {
-			clearInterval(autoRefreshIntervalId);
-			autoRefreshIntervalId = null;
-		}
+		timerRegistry.clearInterval('eventLog.autoRefresh');
 	}
 
 	function handleNotificationState(events, _triggeredByNotification) {
@@ -4133,7 +4097,6 @@ function safeShowToast(message, type = 'info') {
 	}
 
 	// Search with debounce
-	let searchDebounceTimer;
 	let searchInputBound = false;
 
 	function bindSearchInput() {
@@ -4147,8 +4110,8 @@ function safeShowToast(message, type = 'info') {
 		}
 
 		searchInputEl.addEventListener('input', (e) => {
-			clearTimeout(searchDebounceTimer);
-			searchDebounceTimer = setTimeout(() => {
+			timerRegistry.clearTimeout('eventLog.searchDebounce');
+			timerRegistry.setTimeout('eventLog.searchDebounce', () => {
 				searchQuery = e.target.value;
 				currentOffset = 0;
 				loadEvents();
@@ -4234,21 +4197,17 @@ function safeShowToast(message, type = 'info') {
 		if (window._eventLogScrollHandler) {
 			window.removeEventListener('scroll', window._eventLogScrollHandler, {passive: true});
 			logsTableScroll.removeEventListener('scroll', window._eventLogScrollHandler, {passive: true});
-			clearTimeout(window._eventLogScrollTimeout);
-			window._eventLogScrollTimeout = null;
+			timerRegistry.clearTimeout('eventLog.scroll');
 		}
 
 		// Create new scroll handler with debouncing
 		window._eventLogScrollHandler = () => {
 			// Clear existing timeout
-			if (window._eventLogScrollTimeout) {
-				clearTimeout(window._eventLogScrollTimeout);
-			}
+			timerRegistry.clearTimeout('eventLog.scroll');
 
 			// Set new timeout
-			window._eventLogScrollTimeout = setTimeout(() => {
+			timerRegistry.setTimeout('eventLog.scroll', () => {
 				handleScroll();
-				window._eventLogScrollTimeout = null;
 			}, 150);
 		};
 
@@ -5169,21 +5128,15 @@ function safeShowToast(message, type = 'info') {
 		}
 
 		let hoverDepth = 0;
-		let closeTimeoutId = null;
 
 		const openLegend = () => {
-			if (closeTimeoutId) {
-				clearTimeout(closeTimeoutId);
-				closeTimeoutId = null;
-			}
+			timerRegistry.clearTimeout('eventLog.legendClose');
 			wrapper.classList.add('is-open');
 		};
 
 		const scheduleClose = () => {
-			if (closeTimeoutId) {
-				clearTimeout(closeTimeoutId);
-			}
-			closeTimeoutId = setTimeout(() => {
+			timerRegistry.clearTimeout('eventLog.legendClose');
+			timerRegistry.setTimeout('eventLog.legendClose', () => {
 				if (hoverDepth <= 0) {
 					wrapper.classList.remove('is-open');
 				}
@@ -5479,7 +5432,6 @@ function safeShowToast(message, type = 'info') {
 	// Setup hover functionality for user filter dropdown
 	(function setupPersonFilterDropdownHover() {
 		const USER_FILTER_HIDE_DELAY_MS = 300;
-		let personFilterHideTimeout = null;
 
 		const container = document.querySelector('.person-filter-dropdown-container');
 		if (!container) {
@@ -5492,17 +5444,13 @@ function safeShowToast(message, type = 'info') {
 		}
 
 		const cancelHide = () => {
-			if (personFilterHideTimeout) {
-				clearTimeout(personFilterHideTimeout);
-				personFilterHideTimeout = null;
-			}
+			timerRegistry.clearTimeout('eventLog.personFilterHide');
 		};
 
 		const scheduleHide = () => {
 			cancelHide();
-			personFilterHideTimeout = setTimeout(() => {
+			timerRegistry.setTimeout('eventLog.personFilterHide', () => {
 				hidePersonFilterDropdown();
-				personFilterHideTimeout = null;
 			}, USER_FILTER_HIDE_DELAY_MS);
 		};
 
@@ -5575,10 +5523,9 @@ function safeShowToast(message, type = 'info') {
 		});
 
 		// Update indicator on window resize
-		let resizeTimeout;
 		window.addEventListener('resize', () => {
-			clearTimeout(resizeTimeout);
-			resizeTimeout = setTimeout(() => {
+			timerRegistry.clearTimeout('eventLog.tabResize');
+			timerRegistry.setTimeout('eventLog.tabResize', () => {
 				updateTabIndicator();
 			}, 100);
 		});
@@ -5591,32 +5538,12 @@ function safeShowToast(message, type = 'info') {
 
 	function pauseEventLogPage() {
 		// Pause all intervals when leaving the page
-		if (notificationRefreshIntervalId) {
-			clearInterval(notificationRefreshIntervalId);
-			notificationRefreshIntervalId = null;
-		}
+		timerRegistry.clearAll();
 
 		// Clean up initialization flags so listeners can be re-added when returning to page
 		document.querySelectorAll('[data-listeners-initialized]').forEach(el => {
 			delete el.dataset.listenersInitialized;
 		});
-		if (autoRefreshIntervalId) {
-			clearInterval(autoRefreshIntervalId);
-			autoRefreshIntervalId = null;
-		}
-		if (lastUpdatedIntervalId) {
-			clearInterval(lastUpdatedIntervalId);
-			lastUpdatedIntervalId = null;
-		}
-		if (hoverTimeoutId) {
-			clearTimeout(hoverTimeoutId);
-			hoverTimeoutId = null;
-		}
-		// Clear scroll timeout for infinite scroll
-		if (window._eventLogScrollTimeout) {
-			clearTimeout(window._eventLogScrollTimeout);
-			window._eventLogScrollTimeout = null;
-		}
 		// Save chart option before disposing to restore it later
 		if (sessionActivityChart && typeof sessionActivityChart.getOption === 'function') {
 			try {
@@ -5639,7 +5566,7 @@ function safeShowToast(message, type = 'info') {
 		// Resume intervals if they were active before pausing
 		// Note: We don't re-fetch data here since the UI is preserved
 		// Only restart intervals that should be running
-		if (autoRefreshEnabledState && !autoRefreshIntervalId) {
+		if (autoRefreshEnabledState && !timerRegistry.has('eventLog.autoRefresh')) {
 			updateAutoRefreshInterval();
 		}
 
@@ -5647,8 +5574,8 @@ function safeShowToast(message, type = 'info') {
 		await loadSessions();
 		// Restart last updated interval if it was running
 		const lastUpdatedEl = document.querySelector('.last-updated-text');
-		if (lastUpdatedEl && !lastUpdatedIntervalId) {
-			lastUpdatedIntervalId = setInterval(() => {
+		if (lastUpdatedEl && !timerRegistry.has('eventLog.lastUpdated')) {
+			timerRegistry.setInterval('eventLog.lastUpdated', () => {
 				if (lastFetchTime) {
 					const elapsed = Date.now() - lastFetchTime;
 					const minutes = Math.floor(elapsed / 60000);

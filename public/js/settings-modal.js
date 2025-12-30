@@ -5,6 +5,7 @@
  */
 
 import {showToast} from './notifications.js';
+import {timerRegistry} from './utils/timerRegistry.js';
 
 /* Custom styles for settings modal */
 const settingsModalStyles = `

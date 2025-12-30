@@ -1,6 +1,7 @@
 // @ts-nocheck
 // Teams management page
 import {showToast} from './notifications.js';
+import {timerRegistry} from './utils/timerRegistry.js';
 
 const REFRESH_ICON_ANIMATION_DURATION_MS = 700;
 // Transition duration in milliseconds (matches navigation.js)
@@ -64,7 +65,7 @@ async function transitionTeamsContent(newContent) {
 	newContent.style.pointerEvents = 'auto';
 
 	// Wait for transition to complete
-	await new Promise((resolve) => setTimeout(resolve, TEAMS_TRANSITION_DURATION_MS));
+	await new Promise((resolve) => { timerRegistry.setTimeout("teams.transition", resolve, TEAMS_TRANSITION_DURATION_MS); });
 
 	// Remove old content and reset positioning on new content
 	currentContent.remove();

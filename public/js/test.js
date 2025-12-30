@@ -1,5 +1,6 @@
 // @ts-nocheck
 // Test page functionality
+import {timerRegistry} from './utils/timerRegistry.js';
 
 const REFRESH_ICON_ANIMATION_DURATION_MS = 700;
 
@@ -687,21 +688,17 @@ function setupInfiniteScroll() {
 	if (window._testPageScrollHandler) {
 		window.removeEventListener('scroll', window._testPageScrollHandler, {passive: true});
 		testContent.removeEventListener('scroll', window._testPageScrollHandler, {passive: true});
-		clearTimeout(window._testPageScrollTimeout);
-		window._testPageScrollTimeout = null;
+		timerRegistry.clearTimeout('test.scroll');
 	}
 
 	// Create new scroll handler with debouncing
 	window._testPageScrollHandler = () => {
 		// Clear existing timeout
-		if (window._testPageScrollTimeout) {
-			clearTimeout(window._testPageScrollTimeout);
-		}
+		timerRegistry.clearTimeout('test.scroll');
 
 		// Set new timeout
-		window._testPageScrollTimeout = setTimeout(() => {
+		timerRegistry.setTimeout('test.scroll', () => {
 			handleScroll();
-			window._testPageScrollTimeout = null;
 		}, 150);
 	};
 
