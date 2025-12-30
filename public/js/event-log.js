@@ -280,6 +280,7 @@ function safeShowToast(message, type = 'info') {
 	let sessionListDelegationHandler = null;
 	let peopleListDelegationHandler = null;
 	let teamsListDelegationHandler = null;
+	let tableRowDelegationHandler = null;
 
 	function revealEventLogShell() {
 		const body = document.body;
@@ -1387,6 +1388,45 @@ function safeShowToast(message, type = 'info') {
 
 		// Add the delegation listener
 		teamList.addEventListener('click', teamsListDelegationHandler);
+	}
+
+	/**
+	 * Setup event delegation for table rows
+	 */
+	function setupTableRowDelegation() {
+		const logsTableScroll = document.getElementById('logsTableScroll');
+		if (!logsTableScroll) {
+			return;
+		}
+
+		// Remove old listener if it exists
+		if (tableRowDelegationHandler) {
+			logsTableScroll.removeEventListener('click', tableRowDelegationHandler);
+		}
+
+		// Create delegation handler for table rows
+		tableRowDelegationHandler = (evt) => {
+			// Find the closest tr with data-event-id
+			const row = evt.target.closest('tr[data-event-id]');
+			if (!row) {
+				return;
+			}
+
+			// Don't expand if clicking on actions button, dropdown, or expand button
+			if (evt.target.closest('.actions-btn') || 
+			    evt.target.closest('.actions-dropdown') || 
+			    evt.target.closest('.expand-btn')) {
+				return;
+			}
+
+			const eventId = row.getAttribute('data-event-id');
+			if (eventId) {
+				toggleRowExpand(Number.parseInt(eventId, 10));
+			}
+		};
+
+		// Add the delegation listener
+		logsTableScroll.addEventListener('click', tableRowDelegationHandler);
 	}
 
 	async function loadSessions() {
@@ -3017,28 +3057,7 @@ function safeShowToast(message, type = 'info') {
 			}
 		}
 
-		// Add click handlers to newly added rows for expansion
-		if (tbody) {
-			const newRows = append ? Array.from(tbody.querySelectorAll('tr[data-event-id]')).slice(-events.length) : tbody.querySelectorAll('tr[data-event-id]'); // Get only the newly added main rows (not expanded rows)
-
-			newRows.forEach(row => {
-				// Check if event listener already exists
-				if (row.hasAttribute('data-listener-attached')) {
-					return;
-				}
-				row.setAttribute('data-listener-attached', 'true');
-				row.addEventListener('click', (evt) => {
-					// Don't expand if clicking on actions button or dropdown
-					if (evt.target.closest('.actions-btn') || evt.target.closest('.actions-dropdown') || evt.target.closest('.expand-btn')) {
-						return;
-					}
-					const eventId = row.getAttribute('data-event-id');
-					if (eventId) {
-						toggleRowExpand(Number.parseInt(eventId, 10));
-					}
-				});
-			});
-		}
+		// NO MORE INDIVIDUAL ROW LISTENERS! Event delegation handles all table row clicks
 	}
 
 	// Infinite scroll handler for logs table
@@ -4848,6 +4867,12 @@ function safeShowToast(message, type = 'info') {
 			teamsListDelegationHandler = null;
 		}
 
+		const logsTableScroll = document.getElementById('logsTableScroll');
+		if (logsTableScroll && tableRowDelegationHandler) {
+			logsTableScroll.removeEventListener('click', tableRowDelegationHandler);
+			tableRowDelegationHandler = null;
+		}
+
 		// Clean up initialization flags so listeners can be re-added when returning to page
 		document.querySelectorAll('[data-listeners-initialized]').forEach(el => {
 			delete el.dataset.listenersInitialized;
@@ -4908,6 +4933,7 @@ function safeShowToast(message, type = 'info') {
 		runSafeInitStep('session list delegation', setupSessionListDelegation); // Event delegation for sessions
 		runSafeInitStep('people list delegation', setupPeopleListDelegation); // Event delegation for people
 		runSafeInitStep('teams list delegation', setupTeamsListDelegation); // Event delegation for teams
+		runSafeInitStep('table row delegation', setupTableRowDelegation); // Event delegation for table rows
 		runSafeAsyncInitStep('event type stats', () => loadEventTypeStats(selectedSession));
 		runSafeAsyncInitStep('sessions list', () => {
 			// Ensure DOM is ready before loading sessions
