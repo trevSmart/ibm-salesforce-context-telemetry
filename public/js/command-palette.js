@@ -1,7 +1,5 @@
 // @ts-nocheck
 // Command palette functionality for global header search
-import {timerRegistry} from './utils/timerRegistry.js';
-
 (function initCommandPalette() {
 	let commandPaletteElement = null;
 	let searchInput = null;

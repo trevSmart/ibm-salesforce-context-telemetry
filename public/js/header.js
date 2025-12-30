@@ -1,7 +1,5 @@
 // @ts-nocheck
 // Global header component - single source of truth for the navigation header
-import {timerRegistry} from './utils/timerRegistry.js';
-
 (function initGlobalHeader() {
 	/**
 	 * Dynamic refresh dispatcher - calls the appropriate refresh function based on current page
