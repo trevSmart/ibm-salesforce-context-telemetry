@@ -243,9 +243,13 @@ async function initializeDashboardPage({resetState = false} = {}) {
 		} catch (error) {
 			console.warn('Error disposing chart:', error);
 		}
-		if (chartResizeHandler) {
-			window.removeEventListener('resize', chartResizeHandler);
-			chartResizeHandler = null;
+		if (chartUnbindResize) {
+			try {
+				chartUnbindResize();
+			} catch (error) {
+				console.warn('Error unbinding chart resize handler:', error);
+			}
+			chartUnbindResize = null;
 		}
 		if (chartResizeObserver) {
 			try {
