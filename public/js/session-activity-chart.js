@@ -813,3 +813,16 @@ export function refreshTheme() {
 		sessionId: 'all' // Default to all sessions for theme refresh
 	});
 }
+
+export function resizeChart() {
+	if (sessionActivityChart) {
+		try {
+			const chartEl = document.getElementById('sessionActivityChart');
+			if (chartEl) {
+				sessionActivityChart.resize();
+			}
+		} catch (error) {
+			console.warn('Error resizing session activity chart:', error);
+		}
+	}
+}

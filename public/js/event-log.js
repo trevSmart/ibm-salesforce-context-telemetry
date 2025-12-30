@@ -15,7 +15,8 @@ import {
 	formatChartTimeLabel,
 	formatHumanDate,
 	getRelativeDateLabel,
-	renderSessionActivityLegend
+	renderSessionActivityLegend,
+	resizeChart as resizeSessionActivityChart
 } from './session-activity-chart.js';
 
 // Prevent double execution when soft navigation re-injects the script
@@ -268,7 +269,7 @@ function safeShowToast(message, type = 'info') {
 	let isInitialChartLoad = true; // Track if this is the initial chart load
 	const knownSessionIds = new Set();
 	const sessionDisplayMap = new Map();
-	let savedSessionActivityChartOption = null; // Store chart option when pausing for cache restoration
+	let lastSessionActivityEvents = []; // Track last events for hover preview and resume
 	let activeTab = 'sessions'; // 'sessions' or 'people'
 	const SESSION_ACTIVITY_FETCH_LIMIT = 1000;
 	// State for hover preview functionality
@@ -329,17 +330,7 @@ function safeShowToast(message, type = 'info') {
 		isInitialChartLoad = true;
 		knownSessionIds.clear();
 		sessionDisplayMap.clear();
-		if (sessionActivityChart) {
-			if (typeof sessionActivityChart.dispose === 'function') {
-				sessionActivityChart.dispose();
-			}
-			sessionActivityChart = null;
-		}
-		if (sessionActivityUnbindResize) {
-			sessionActivityUnbindResize();
-			sessionActivityUnbindResize = null;
-		}
-		savedSessionActivityChartOption = null;
+		cleanupSessionActivityChart();
 		lastSessionActivityEvents = [];
 		activeTab = 'sessions';
 		hoverPreviewState = null;
@@ -663,12 +654,7 @@ function safeShowToast(message, type = 'info') {
 			let newHeight = activityResizeStartHeight + delta;
 			newHeight = Math.max(190, Math.min(600, newHeight));
 			activityCard.style.height = `${newHeight}px`;
-			if (sessionActivityChart) {
-				const chartEl = document.getElementById('sessionActivityChart');
-				if (chartEl) {
-					sessionActivityChart.resize();
-				}
-			}
+			resizeSessionActivityChart();
 		};
 
 		if (window.PointerEvent) {
@@ -692,14 +678,9 @@ function safeShowToast(message, type = 'info') {
 						/* ignore */
 					}
 				}
-				if (sessionActivityChart) {
-					setTimeout(() => {
-						const chartEl = document.getElementById('sessionActivityChart');
-						if (chartEl) {
-							sessionActivityChart.resize();
-						}
-					}, 0);
-				}
+				setTimeout(() => {
+					resizeSessionActivityChart();
+				}, 0);
 			};
 			const startResize = (event) => {
 				isResizingActivity = true;
@@ -739,14 +720,9 @@ function safeShowToast(message, type = 'info') {
 				document.removeEventListener('touchmove', onTouchMove);
 				document.removeEventListener('touchend', stopResize);
 				document.removeEventListener('touchcancel', stopResize);
-				if (sessionActivityChart) {
-					setTimeout(() => {
-						const chartEl = document.getElementById('sessionActivityChart');
-						if (chartEl) {
-							sessionActivityChart.resize();
-						}
-					}, 0);
-				}
+				setTimeout(() => {
+					resizeSessionActivityChart();
+				}, 0);
 			};
 			const startResize = (event) => {
 				const point = event.touches ? event.touches[0] : event;
@@ -853,7 +829,12 @@ function safeShowToast(message, type = 'info') {
 
 		// Restore the chart with saved state
 		if (savedState.events && savedState.events.length > 0) {
-			renderSessionActivityChart(savedState.events, {sessionId: savedState.sessionId, activityDate: savedState.activityDate});
+			lastSessionActivityEvents = savedState.events.slice();
+			renderSessionActivityChart(savedState.events, {
+				sessionId: savedState.sessionId,
+				activityDate: savedState.activityDate,
+				sessionDisplayMap
+			});
 		} else {
 			// If no saved events, reload the chart for the saved session
 			updateSessionActivityChart({sessionId: savedState.sessionId});
@@ -896,7 +877,12 @@ function safeShowToast(message, type = 'info') {
 				try {
 					const allEvents = await fetchAllSessionsActivityEvents();
 					if (allEvents.length > 0) {
-						renderSessionActivityChart(allEvents, {sessionId: 'all', activityDate: sessionDate, enableTransition: true});
+						renderSessionActivityChart(allEvents, {
+							sessionId: 'all',
+							activityDate: sessionDate,
+							enableTransition: true,
+							sessionDisplayMap
+						});
 					}
 				} catch (error) {
 					console.error('Error loading hover preview for all sessions:', error);
@@ -921,7 +907,12 @@ function safeShowToast(message, type = 'info') {
 									sessionDate = firstEventDate;
 								}
 							}
-							renderSessionActivityChart(data.events, {sessionId: sessionId, activityDate: sessionDate, enableTransition: true});
+							renderSessionActivityChart(data.events, {
+								sessionId: sessionId,
+								activityDate: sessionDate,
+								enableTransition: true,
+								sessionDisplayMap
+							});
 						}
 					}
 				} catch (error) {
@@ -942,7 +933,8 @@ function safeShowToast(message, type = 'info') {
 
 		if (eventsOverride && eventsOverride.length > 0) {
 			logChartTrace('updateSessionActivityChart: using provided events', {count: eventsOverride.length, targetSession});
-			renderSessionActivityChart(eventsOverride, {sessionId: targetSession});
+			lastSessionActivityEvents = eventsOverride.slice();
+			renderSessionActivityChart(eventsOverride, {sessionId: targetSession, sessionDisplayMap});
 			return;
 		}
 
@@ -954,6 +946,7 @@ function safeShowToast(message, type = 'info') {
 				});
 				if (allEvents.length === 0) {
 					hideSessionActivityCard();
+					lastSessionActivityEvents = [];
 					// If this is the initial load and there are no events, show the page anyway
 					if (isInitialChartLoad) {
 						isInitialChartLoad = false;
@@ -961,7 +954,8 @@ function safeShowToast(message, type = 'info') {
 					}
 					return;
 				}
-				renderSessionActivityChart(allEvents, {sessionId: 'all'});
+				lastSessionActivityEvents = allEvents.slice();
+				renderSessionActivityChart(allEvents, {sessionId: 'all', sessionDisplayMap});
 			} catch (error) {
 				handleInitializationError('all sessions activity chart', error);
 				hideSessionActivityCard();
@@ -1002,6 +996,7 @@ function safeShowToast(message, type = 'info') {
 			});
 			if (!data.events || data.events.length === 0) {
 				hideSessionActivityCard();
+				lastSessionActivityEvents = [];
 				// If this is the initial load and there are no events, show the page anyway
 				if (isInitialChartLoad) {
 					isInitialChartLoad = false;
@@ -1009,7 +1004,8 @@ function safeShowToast(message, type = 'info') {
 				}
 				return;
 			}
-			renderSessionActivityChart(data.events, {sessionId: targetSession});
+			lastSessionActivityEvents = data.events.slice();
+			renderSessionActivityChart(data.events, {sessionId: targetSession, sessionDisplayMap});
 		} catch (error) {
 			console.error('Error loading session activity chart:', error);
 			logChartTrace('updateSessionActivityChart: error', {
@@ -1027,11 +1023,94 @@ function safeShowToast(message, type = 'info') {
 
 	function refreshSessionActivityTheme() {
 		// Chart theme refresh is now handled by the session-activity-chart module
-		// We just need to trigger it via the module's refresh function if needed
-		const lastEvents = []; // This will be handled by the chart module state
-		if (lastEvents.length > 0) {
-			renderSessionActivityChart(lastEvents, {sessionDisplayMap});
+		if (lastSessionActivityEvents.length > 0) {
+			renderSessionActivityChart(lastSessionActivityEvents, {
+				sessionId: selectedSession,
+				sessionDisplayMap
+			});
 		}
+	}
+
+	// Helper functions
+	function padNumber(value) {
+		return String(value).padStart(2, '0');
+	}
+
+	function showGlobalError(message) {
+		const formattedMessage = typeof message === 'string'? message: (message?.message || 'Unexpected error');
+		if (formattedMessage) {
+			safeShowToast(formattedMessage, 'error');
+		}
+	}
+
+	function handleInitializationError(context, error) {
+		const details = error?.message || error || 'Unknown error';
+		console.error(`Initialization error (${context}):`, error);
+		logChartTrace('handleInitializationError', {
+			context,
+			message: details,
+			online: navigator.onLine
+		});
+		showGlobalError(`Initialization error (${context}): ${details}`);
+	}
+
+	function runSafeInitStep(label, fn) {
+		try {
+			if (typeof fn === 'function') {
+				fn();
+			}
+		} catch (error) {
+			handleInitializationError(label, error);
+		}
+	}
+
+	function runSafeAsyncInitStep(label, fn) {
+		try {
+			const result = typeof fn === 'function' ? fn() : null;
+			if (result && typeof result.catch === 'function') {
+				result.catch(error => handleInitializationError(label, error));
+			}
+		} catch (error) {
+			handleInitializationError(label, error);
+		}
+	}
+
+	function formatSessionDisplay(session) {
+		const fallbackId = session?.session_id || 'Unknown session';
+		const fallbackShort = fallbackId.length > 12 ? `${fallbackId.substring(0, 12)}...` : fallbackId;
+		const fallbackHtml = `<span class="session-date">${escapeHtml(fallbackShort)}</span>`;
+
+		if (!session || !session.first_event) {
+			return {html: fallbackHtml, text: fallbackShort};
+		}
+
+		const parsedDate = new Date(session.first_event);
+		if (Number.isNaN(parsedDate.getTime())) {
+			return {html: fallbackHtml, text: fallbackShort};
+		}
+
+		const day = parsedDate.getDate();
+		const monthNames = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+		const month = monthNames[parsedDate.getMonth()];
+		const hours = parsedDate.getHours();
+		const minutes = String(parsedDate.getMinutes()).padStart(2, '0');
+		const dateStr = `${day} ${month} ${hours}:${minutes}`;
+		const dateHtml = `<span class="session-date">${escapeHtml(dateStr)}</span>`;
+
+		let userText = '';
+		if (session.user_name) {
+			userText = session.user_name;
+		} else if (session.user_id) {
+			userText = session.user_id;
+		}
+
+		if (!userText) {
+			return {html: dateHtml, text: dateStr};
+		}
+
+		const separatorHtml = '<span class="session-separator"><i class="fa-solid fa-circle"></i></span>';
+		const userHtml = `<span class="session-user">${escapeHtml(userText)}</span>`;
+		return {html: `${dateHtml}${separatorHtml}${userHtml}`, text: `${dateStr} • ${userText}`};
 	}
 
 	async function loadEventTypeStats(sessionId = null) {
@@ -4638,27 +4717,9 @@ function safeShowToast(message, type = 'info') {
 		document.querySelectorAll('[data-listeners-initialized]').forEach(el => {
 			delete el.dataset.listenersInitialized;
 		});
-		// Save chart option before disposing to restore it later
-		if (sessionActivityChart && typeof sessionActivityChart.getOption === 'function') {
-			try {
-				savedSessionActivityChartOption = sessionActivityChart.getOption();
-			} catch (error) {
-				console.warn('Failed to save session activity chart option:', error);
-				savedSessionActivityChartOption = null;
-			}
-		}
-		// Dispose chart when leaving page to avoid stale references
-		if (sessionActivityChart) {
-			if (typeof sessionActivityChart.dispose === 'function') {
-				sessionActivityChart.dispose();
-			}
-			sessionActivityChart = null;
-		}
-		// Unbind resize handler
-		if (sessionActivityUnbindResize) {
-			sessionActivityUnbindResize();
-			sessionActivityUnbindResize = null;
-		}
+		
+		// Clean up session activity chart
+		cleanupSessionActivityChart();
 	}
 
 	async function resumeEventLogPage() {
@@ -4687,26 +4748,14 @@ function safeShowToast(message, type = 'info') {
 				}
 			}, 1000);
 		}
-		// Restore session activity chart from saved option if available
-		if (savedSessionActivityChartOption && sessionActivityChart === null) {
-			const chartEl = document.getElementById('sessionActivityChart');
-			if (chartEl) {
-				// Wait for ECharts to load if not available yet
-				await awaitECharts();
-				
-				// Initialize new chart instance
-				sessionActivityChart = safeInit(chartEl);
-				if (sessionActivityChart) {
-					// Bind resize handler with cleanup function
-					sessionActivityUnbindResize = bindWindowResize(sessionActivityChart, {chartName: 'session activity'});
-					
-					// Restore the saved option (notMerge: true to replace entirely)
-					sessionActivityChart.setOption(savedSessionActivityChartOption, true);
-					sessionActivityChart.resize();
-					// Clear saved option after restoration
-					savedSessionActivityChartOption = null;
-				}
-			}
+		
+		// Re-mount the chart if we have events to display
+		if (lastSessionActivityEvents.length > 0) {
+			await mountSessionActivityChart();
+			renderSessionActivityChart(lastSessionActivityEvents, {
+				sessionId: selectedSession,
+				sessionDisplayMap
+			});
 		}
 	}
 
