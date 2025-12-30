@@ -45,6 +45,15 @@
 	}
 
 	/**
+	 * Dispatch pageCached event after the page has been cached but before fade out starts
+	 * This allows pages to make invisible changes that won't be seen by the user
+	 * @param {string} path - The path of the page that was cached
+	 */
+	function dispatchPageCached(path) {
+		window.dispatchEvent(new CustomEvent('softNav:pageCached', {detail: {path}}));
+	}
+
+	/**
 	 * Dispatch pageMounted event to notify the new page to initialize
 	 * @param {string} path - The path of the page that was mounted
 	 * @param {boolean} fromCache - Whether the page was restored from cache
@@ -262,7 +271,12 @@
 			// Notify current page to pause intervals/listeners before caching
 			dispatchPagePausing(oldPath);
 
-			// Cache the current container before removing it
+			// Notify that page is about to be cached - allows pages to make invisible changes
+			// These changes will be included in the cache (e.g., switching from detail to list view)
+			dispatchPageCached(oldPath);
+
+			// Cache the current container AFTER pageCached event
+			// This ensures any changes made in pageCached listeners are included in the cache
 			if (oldPath && SUPPORTED_PATHS.includes(oldPath)) {
 				containerCache.set(oldPath, container.cloneNode(true));
 			}
@@ -439,7 +453,11 @@
 		window.addEventListener('popstate', () => {
 			// popstate updates window.location.pathname, so we need to use it directly
 			const targetPath = window.location.pathname;
-			softNavigate(targetPath, {replace: true});
+			// Only do soft navigation if the pathname actually changed (not just the hash)
+			if (targetPath !== currentPath) {
+				softNavigate(targetPath, {replace: true});
+			}
+			// If only the hash changed, let the page-specific popstate handlers deal with it
 		});
 	}
 

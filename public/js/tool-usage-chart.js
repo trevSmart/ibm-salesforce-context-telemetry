@@ -8,10 +8,21 @@ const TOOL_USAGE_DEFAULT_DAYS = 30;
 let toolUsageChartInstance = null;
 let toolUsageUnbindResize = null; // Store unbind function to clean up properly
 let toolUsageChartInitialized = false;
+let savedToolUsageOption = null; // Store chart option when pausing for cache restoration
 
 // Global cache is now handled by global-cache.js
 
 export function cleanupToolUsageChart() {
+	// Save chart option before disposing to restore it later
+	if (toolUsageChartInstance && typeof toolUsageChartInstance.getOption === 'function') {
+		try {
+			savedToolUsageOption = toolUsageChartInstance.getOption();
+		} catch (error) {
+			console.warn('Failed to save tool usage chart option:', error);
+			savedToolUsageOption = null;
+		}
+	}
+
 	if (toolUsageChartInstance) {
 		try {
 			toolUsageChartInstance.dispose();
@@ -265,11 +276,29 @@ window.addEventListener('DOMContentLoaded', async () => {
 // Also listen for soft navigation back to dashboard
 window.addEventListener('softNav:pageMounted', async (event) => {
 	if (event.detail.path === '/') {
-		// Clean up existing chart and reload
-		cleanupToolUsageChart();
-		// Wait for echarts to be ready
-		await awaitECharts();
-		loadToolUsageChart();
+		const fromCache = event?.detail?.fromCache === true;
+
+		if (fromCache && savedToolUsageOption && toolUsageChartInstance === null) {
+			// Page was restored from cache - restore chart from saved option
+			const chartEl = document.getElementById('toolUsageChart');
+			if (chartEl) {
+				await awaitECharts();
+				toolUsageChartInstance = safeInit(chartEl);
+				if (toolUsageChartInstance) {
+					toolUsageUnbindResize = bindWindowResize(toolUsageChartInstance, {chartName: 'tool usage'});
+					// Restore the saved option
+					toolUsageChartInstance.setOption(savedToolUsageOption, true);
+					toolUsageChartInstance.resize();
+					toolUsageChartInitialized = true;
+					// Clear saved option after restoration
+					savedToolUsageOption = null;
+				}
+			}
+		} else if (!fromCache || toolUsageChartInstance === null) {
+			// New page load or no saved option - load chart data normally
+			await awaitECharts();
+			loadToolUsageChart();
+		}
 	}
 });
 

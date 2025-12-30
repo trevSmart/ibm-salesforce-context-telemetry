@@ -946,12 +946,9 @@ async function renderTeamDetail(teamId) {
 
 	// Event listeners
 	contentContainer.querySelector('#backToTeamsBtn')?.addEventListener('click', async () => {
-		currentView = 'list';
-		const listContent = renderTeamsList();
-		await transitionTeamsContent(listContent);
-		// Update URL to reflect the list view
-		const newUrl = window.location.pathname;
-		window.history.pushState({view: 'list'}, '', newUrl);
+		// Use history.back() to navigate through browser history instead of pushState
+		// This allows forward/back buttons to work correctly
+		window.history.back();
 	});
 	contentContainer.querySelector('#deleteTeamBtn')?.addEventListener('click', () => showDeleteTeamConfirm(team));
 
@@ -1855,6 +1852,29 @@ window.showTeamDetail = viewTeamDetail;
 window.addEventListener('softNav:pagePausing', (event) => {
 	if (event?.detail?.path === '/teams') {
 		pauseTeamsPage();
+	}
+});
+
+// Listen for page cached event to switch to list view invisibly
+window.addEventListener('softNav:pageCached', (event) => {
+	if (event?.detail?.path === '/teams') {
+		// If we're in detail view, switch to list view AFTER caching but BEFORE fade out
+		// This happens invisibly because the page is already cached and the fade hasn't started yet
+		if (currentView === 'detail') {
+			currentView = 'list';
+			const listContent = renderTeamsList();
+			const teamsContent = document.getElementById('teamsContent');
+			if (teamsContent && listContent) {
+				// Replace content immediately without transition
+				teamsContent.innerHTML = '';
+				teamsContent.appendChild(listContent);
+			}
+			// Clear the hash from URL
+			if (window.location.hash) {
+				window.history.replaceState(null, '', window.location.pathname);
+			}
+		}
+
 		// Reset state when leaving teams page
 		currentView = 'list';
 	}
@@ -1863,28 +1883,18 @@ window.addEventListener('softNav:pagePausing', (event) => {
 // Handle soft navigation
 window.addEventListener('softNav:pageMounted', async (event) => {
 	if (event.detail.path === '/teams') {
-		const fromCache = event?.detail?.fromCache === true;
 		// Always reset to list view when entering teams page
 		currentView = 'list';
 
-		if (fromCache) {
-			// Page was restored from cache - always show list view
-			await loadTeams();
-			const listContent = renderTeamsList();
-			const teamsContent = document.getElementById('teamsContent');
-			if (teamsContent && listContent) {
-				await transitionTeamsContent(listContent);
-			}
-		} else {
-			// New page load - full initialization
-			await loadTeams();
-			const listContent = renderTeamsList();
-			const teamsContent = document.getElementById('teamsContent');
-			if (teamsContent && listContent) {
-				// Clear any existing content (like loading message)
-				teamsContent.innerHTML = '';
-				teamsContent.appendChild(listContent);
-			}
+		// Load teams data
+		await loadTeams();
+		const listContent = renderTeamsList();
+		const teamsContent = document.getElementById('teamsContent');
+
+		if (teamsContent && listContent) {
+			// Replace content without transition (navigation.js already handles the page-level fade)
+			teamsContent.innerHTML = '';
+			teamsContent.appendChild(listContent);
 		}
 
 		// Check for team ID in URL hash and show details if present

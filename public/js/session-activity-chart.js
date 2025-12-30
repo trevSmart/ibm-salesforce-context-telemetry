@@ -828,3 +828,29 @@ export function resizeChart() {
 		}
 	}
 }
+
+// Listen for soft navigation pausing to cleanup
+window.addEventListener('softNav:pagePausing', (event) => {
+	// This chart is only used on the event-log page
+	if (event?.detail?.path === '/event-log') {
+		cleanupSessionActivityChart();
+	}
+});
+
+// Listen for soft navigation mounted to re-mount chart
+window.addEventListener('softNav:pageMounted', async (event) => {
+	// This chart is only used on the event-log page
+	if (event?.detail?.path === '/event-log') {
+		const fromCache = event?.detail?.fromCache === true;
+		if (fromCache) {
+			// Re-mount chart when page is restored from cache
+			await mountSessionActivityChart();
+			// If there were previous events, re-render them
+			if (lastSessionActivityEvents.length > 0) {
+				await renderSessionActivityChart(lastSessionActivityEvents, {
+					sessionId: 'all'
+				});
+			}
+		}
+	}
+});

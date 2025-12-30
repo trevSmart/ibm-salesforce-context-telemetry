@@ -321,13 +321,9 @@ async function renderPersonDetail(personId) {
 
 	// Event listeners
 	contentContainer.querySelector('#backToPeopleBtn')?.addEventListener('click', async () => {
-		currentView = 'list';
-		_currentPersonId = null;
-		const listContent = renderPeopleList();
-		await transitionPeopleContent(listContent);
-		// Update URL to reflect the list view
-		const newUrl = window.location.pathname;
-		window.history.pushState({view: 'list'}, '', newUrl);
+		// Use history.back() to navigate through browser history instead of pushState
+		// This allows forward/back buttons to work correctly
+		window.history.back();
 	});
 	contentContainer.querySelector('#deletePersonBtn')?.addEventListener('click', () => {
 		console.log('Delete button clicked for person:', person);
@@ -768,6 +764,30 @@ if (document.readyState === 'loading') {
 window.addEventListener('softNav:pagePausing', (event) => {
 	if (event?.detail?.path === '/people') {
 		pausePeoplePage();
+	}
+});
+
+// Listen for page cached event to switch to list view invisibly
+window.addEventListener('softNav:pageCached', (event) => {
+	if (event?.detail?.path === '/people') {
+		// If we're in detail view, switch to list view AFTER caching but BEFORE fade out
+		// This happens invisibly because the page is already cached and the fade hasn't started yet
+		if (currentView === 'detail') {
+			currentView = 'list';
+			_currentPersonId = null;
+			const listContent = renderPeopleList();
+			const peopleContent = document.getElementById('peopleContent');
+			if (peopleContent && listContent) {
+				// Replace content immediately without transition
+				peopleContent.innerHTML = '';
+				peopleContent.appendChild(listContent);
+			}
+			// Clear the hash from URL
+			if (window.location.hash) {
+				window.history.replaceState(null, '', window.location.pathname);
+			}
+		}
+
 		// Reset state when leaving people page
 		currentView = 'list';
 		_currentPersonId = null;
@@ -777,29 +797,19 @@ window.addEventListener('softNav:pagePausing', (event) => {
 // Handle soft navigation
 window.addEventListener('softNav:pageMounted', async (event) => {
 	if (event.detail.path === '/people') {
-		const fromCache = event?.detail?.fromCache === true;
 		// Always reset to list view when entering people page
 		currentView = 'list';
 		_currentPersonId = null;
 
-		if (fromCache) {
-			// Page was restored from cache - always show list view
-			await loadPeople();
-			const listContent = renderPeopleList();
-			const peopleContent = document.getElementById('peopleContent');
-			if (peopleContent && listContent) {
-				await transitionPeopleContent(listContent);
-			}
-		} else {
-			// New page load - full initialization
-			await loadPeople();
-			const listContent = renderPeopleList();
-			const peopleContent = document.getElementById('peopleContent');
-			if (peopleContent && listContent) {
-				// Clear any existing content (like loading message)
-				peopleContent.innerHTML = '';
-				peopleContent.appendChild(listContent);
-			}
+		// Load people data
+		await loadPeople();
+		const listContent = renderPeopleList();
+		const peopleContent = document.getElementById('peopleContent');
+
+		if (peopleContent && listContent) {
+			// Replace content without transition (navigation.js already handles the page-level fade)
+			peopleContent.innerHTML = '';
+			peopleContent.appendChild(listContent);
 			// Reset scroll position to top after initial load
 			window.scrollTo({top: 0, behavior: 'auto'});
 		}
