@@ -539,8 +539,10 @@ export async function renderSessionActivityChart(events, options = {}) {
 		maxBucketCount = multiSeries.maxBucketCount;
 		multiSeriesEntries = multiSeries.seriesList;
 	} else {
-		const useCurrentDay = true;
-		const dateToUse = overrideDate || selectedActivityDate || new Date();
+		// For single session view, use the session's actual date unless override is provided
+		// This ensures we show data from when the session actually occurred
+		const useCurrentDay = false; // Changed from true to show session's actual date
+		const dateToUse = overrideDate || selectedActivityDate; // Don't default to new Date()
 		const singleSeries = buildSessionActivitySeries(events, useCurrentDay, dateToUse);
 		({
 			seriesData,

@@ -5188,10 +5188,41 @@ function safeShowToast(message, type = 'info') {
 		}
 	}
 
+	// Wrapper functions for day navigation that handle re-rendering the chart
+	function handleNavigateToPreviousDay() {
+		navigateToPreviousDay((newDate) => {
+			selectedActivityDate = newDate;
+			setSelectedActivityDate(newDate);
+			// Re-render chart with the new date
+			if (lastSessionActivityEvents.length > 0) {
+				renderSessionActivityChart(lastSessionActivityEvents, {
+					sessionId: selectedSession,
+					sessionDisplayMap,
+					activityDate: newDate
+				});
+			}
+		});
+	}
+
+	function handleNavigateToNextDay() {
+		navigateToNextDay((newDate) => {
+			selectedActivityDate = newDate;
+			setSelectedActivityDate(newDate);
+			// Re-render chart with the new date
+			if (lastSessionActivityEvents.length > 0) {
+				renderSessionActivityChart(lastSessionActivityEvents, {
+					sessionId: selectedSession,
+					sessionDisplayMap,
+					activityDate: newDate
+				});
+			}
+		});
+	}
+
 	window.confirmDeleteSelectedSessions = confirmDeleteSelectedSessions;
 	window.toggleMobileSidebar = toggleMobileSidebar;
-	window.navigateToPreviousDay = navigateToPreviousDay;
-	window.navigateToNextDay = navigateToNextDay;
+	window.navigateToPreviousDay = handleNavigateToPreviousDay;
+	window.navigateToNextDay = handleNavigateToNextDay;
 	window.scrollToEvent = scrollToEvent;
 	window.loadEventPayload = loadEventPayload;
 	window.closePayloadModal = closePayloadModal;
