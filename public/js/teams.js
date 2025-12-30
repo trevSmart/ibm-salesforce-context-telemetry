@@ -1,6 +1,7 @@
 // @ts-nocheck
 // Teams management page
 import {showToast} from './notifications.js';
+import {timerRegistry} from './utils/timerRegistry.js';
 
 const REFRESH_ICON_ANIMATION_DURATION_MS = 700;
 // Transition duration in milliseconds (matches navigation.js)

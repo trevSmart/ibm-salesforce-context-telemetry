@@ -1,4 +1,5 @@
 // @ts-nocheck
+import {timerRegistry} from './utils/timerRegistry.js';
 // People management page
 import {showToast} from './notifications.js';
 
@@ -183,7 +184,9 @@ async function transitionPeopleContent(newContent) {
 	newContent.style.pointerEvents = 'auto';
 
 	// Wait for transition to complete
-	await new Promise((resolve) => setTimeout(resolve, PEOPLE_TRANSITION_DURATION_MS));
+	await new Promise((resolve) => {
+		timerRegistry.setTimeout('people.transition', resolve, PEOPLE_TRANSITION_DURATION_MS);
+	});
 
 	// Remove old content and reset positioning on new content
 	currentContent.remove();
@@ -446,7 +449,7 @@ function showPersonFormModal(person = null) {
 		backdrop.classList.remove('visible');
 		backdrop.classList.add('hiding');
 		// Fallback in case transitionend does not fire
-		setTimeout(() => {
+		timerRegistry.setTimeout('people.editFormClose', () => {
 			if (document.body.contains(backdrop)) {
 				backdrop.removeEventListener('transitionend', handleTransitionEnd);
 				backdrop.remove();
@@ -807,7 +810,7 @@ function checkForPersonDetailInURL() {
 		const personId = hash.replace('#person-', '');
 		if (personId && !isNaN(Number(personId))) {
 			// Small delay to ensure people are loaded
-			setTimeout(() => {
+			timerRegistry.setTimeout('people.showDetails', () => {
 				showPersonDetails(Number(personId));
 			}, 100);
 		}
@@ -943,7 +946,7 @@ async function showAddUsernameModalForPerson(personId) {
 		backdrop.classList.remove('visible');
 		backdrop.classList.add('hiding');
 		// Fallback in case transitionend does not fire
-		setTimeout(() => {
+		timerRegistry.setTimeout('people.addUsernameModalClose', () => {
 			if (document.body.contains(backdrop)) {
 				backdrop.removeEventListener('transitionend', handleTransitionEnd);
 				backdrop.remove();
@@ -1143,7 +1146,7 @@ function refreshPeople(event) {
 			icon.classList.add('rotating-finish');
 
 			// Remove the finish class after animation completes
-			setTimeout(() => {
+			timerRegistry.setTimeout('people.refreshAnimation', () => {
 				icon.classList.remove('rotating-finish');
 			}, REFRESH_ICON_ANIMATION_DURATION_MS);
 		}
