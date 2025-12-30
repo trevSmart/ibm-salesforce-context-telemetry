@@ -1217,6 +1217,14 @@ function showTeamFormModal(team = null) {
 		});
 	}
 
+	// Prevent Enter key from submitting the form when color input is focused
+	document.getElementById('teamColorInput')?.addEventListener('keydown', (e) => {
+		if (e.key === 'Enter') {
+			e.preventDefault();
+			e.stopPropagation();
+		}
+	});
+
 	document.getElementById('teamForm')?.addEventListener('submit', async (e) => {
 		e.preventDefault();
 		const name = document.getElementById('teamNameInput').value.trim();
