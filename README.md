@@ -17,19 +17,13 @@ npm start
 # Test the server
 curl http://localhost:3100/
 
-# Create a user in the database
-npm run create-user admin my-password
-
-# Generate password hash
-npm run generate-password-hash "my-password"
-
 # Launch the event log desktop viewer
 npm run start:electron
 ```
 
 ## Overview
 
-This telemetry server receives telemetry events from IBM Salesforce Context MCP server instances and processes them for analytics and monitoring purposes. The server is designed to be lightweight, scalable, and privacy-conscious.
+This telemetry server receives telemetry events from IBM Salesforce Context MCP server instances and provides a web dashboard for viewing and analyzing usage data. The server includes user management, team analytics, and data export capabilities.
 
 ## Project Structure
 
@@ -52,22 +46,21 @@ This telemetry server receives telemetry events from IBM Salesforce Context MCP 
 
 ## Features
 
-* **Telemetry Collection**: Receives telemetry events via REST API
-* **Web Dashboard**: Beautiful web interface to view and analyze telemetry data
-* **Database Storage**: Stores events in PostgreSQL (local development and production)
-* **Multi-User Authentication**: Support for multiple users with database-backed authentication
-* **Standard Log Format**: Export logs in JSON Lines (JSONL) format - the industry standard
-* **Third-Party Integration**: Compatible with ELK Stack, Splunk, Datadog, Grafana Loki, BigQuery, and more
-* **Health Monitoring**: Provides health check endpoints for monitoring
-* **Scalable Architecture**: Built with Express.js for easy deployment
-* **Privacy-First**: Designed with data privacy and security in mind
+* **Web Dashboard**: View and analyze telemetry data through an intuitive web interface
+* **Multi-User Support**: Role-based authentication with administrator, advanced, and basic user levels
+* **People Management**: Group multiple usernames from different organizations under single individuals
+* **Team Analytics**: Analyze usage patterns by teams and organizations
+* **Data Export**: Export telemetry data in industry-standard JSON Lines (JSONL) format
+* **Third-Party Integration**: Compatible with ELK Stack, Splunk, Datadog, and other log analysis tools
+* **Desktop Viewer**: Electron-based desktop application for offline monitoring
+* **Health Monitoring**: Built-in health checks and system monitoring
 
 ## Deployment
 
-The server is currently deployed on Render at:
+The server is deployed on Render at:
 **https://ibm-salesforce-context-telemetry.onrender.com**
 
-Visit the URL in your browser to access the **Telemetry Dashboard** and view all collected events.
+Visit the URL in your browser to access the telemetry dashboard and view collected events.
 
 ## Desktop event log viewer
 
@@ -373,18 +366,8 @@ Update a user's password (requires authentication).
 
 ### Prerequisites
 
-- **PostgreSQL**: Required for all environments. Install PostgreSQL locally for development:
-  - macOS: `brew install postgresql@16 && brew services start postgresql@16`
-  - Linux: Use your distribution's package manager
-  - Windows: Download from [postgresql.org](https://www.postgresql.org/download/windows/)
-
-  Then create a local database:
-  ```bash
-  createdb telemetry_local
-  ```
-
-* Node.js v18 or newer
-* npm or yarn
+- Node.js v18 or newer
+- PostgreSQL (see [docs/SETUP.md](./docs/SETUP.md) for installation instructions)
 
 ### Installation
 
@@ -398,97 +381,30 @@ npm install
 npm start
 ```
 
-The server will start on port 3100 by default, or the port specified in the `PORT` environment variable.
+The server will start on port 3100 by default.
 
-### Environment Variables
+### Configuration
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `PORT` | Server port | `3100` |
-| `DATABASE_URL` | PostgreSQL connection string (external URL - used when DATABASE_INTERNAL_URL is not set) | Required |
-| `DATABASE_INTERNAL_URL` | Internal PostgreSQL connection string (preferred for Render.com services in same region) | Optional |
-| `DATABASE_SSL` | Enable SSL for PostgreSQL (`true`/`false`). Note: SSL is automatically disabled when using DATABASE_INTERNAL_URL | `false` (local), `true` (production) |
-| `ADMIN_USERNAME` | Admin username (for single-user auth) | `admin` |
-| `ADMIN_PASSWORD` | Admin password in plain text (will be hashed) | - |
-| `ADMIN_PASSWORD_HASH` | Admin password as bcrypt hash (recommended) | - |
-| `SESSION_SECRET` | Secret key for session management (auto-generated if not set) | - |
-| `REMEMBER_TOKEN_DAYS` | Number of days remember me tokens are valid | `30` |
-| `REMEMBER_COOKIE_NAME` | Cookie name for remember me token | `remember_token` |
+Create a `.env` file from `.env.example`:
 
-**Note**: For multi-user authentication, create users in the database using the API or scripts. Environment variables are used as a fallback for backward compatibility.
-
-**Note**: PostgreSQL is required. For local development, install PostgreSQL and create a database:
 ```bash
-# macOS
-brew install postgresql@16
-brew services start postgresql@16
-createdb telemetry_local
-
-# Then set in .env:
-DATABASE_URL=postgresql://localhost:5432/telemetry_local
-DATABASE_SSL=false
+cp .env.example .env
 ```
+
+Key settings:
+- `DATABASE_URL`: PostgreSQL connection string
+- `DATABASE_SSL`: Set to `false` for local development
+- `PORT`: Server port (optional, defaults to 3100)
 
 ## Architecture
 
-The server stores telemetry events and user data in a database:
-
-* **PostgreSQL** - Required for all environments (local development and production)
-* **PostgreSQL** - Production-ready database for high-volume deployments
-
-The database automatically creates two tables:
-* `telemetry_events` - Stores all telemetry event data
-* `users` - Stores user authentication credentials (for multi-user support)
-
-See the database documentation in [`docs/`](./docs/) for complete configuration and setup instructions.
+The server uses PostgreSQL to store telemetry events and user data. The database includes tables for events, users, people management, and configuration settings.
 
 ## Authentication
 
-The server supports two authentication methods:
+The server supports multi-user authentication with role-based permissions:
 
-### Single User (Environment Variables)
-
-Configure authentication using environment variables:
-
-```bash
-ADMIN_USERNAME=admin
-ADMIN_PASSWORD=your-secure-password
-```
-
-Or use a password hash (more secure):
-
-```bash
-# Generate hash locally
-npm run generate-password-hash "your-password"
-
-# Add to environment
-ADMIN_USERNAME=admin
-ADMIN_PASSWORD_HASH=$2b$10$...
-```
-
-### Multiple Users (Database)
-
-For production deployments with multiple users, create users in the database:
-
-**Via Script:**
-```bash
-npm run create-user admin secure-password administrator
-npm run create-user user1 password1
-# Optional third argument sets the role (basic|advanced|administrator). Default is basic.
-npm run create-user analyst password123 advanced
-```
-
-**Via API (after initial login):**
-```bash
-# First login with environment variables, then create users via API
-curl -X POST http://localhost:3100/api/users \
-  -H "Content-Type: application/json" \
-  -d '{"username": "newuser", "password": "secure-password"}'
-```
-
-### Permission Levels
-
-User accounts can operate with three permission levels:
+### User Roles
 
 | Role          | Access                                                                     |
 |---------------|----------------------------------------------------------------------------|
@@ -496,24 +412,22 @@ User accounts can operate with three permission levels:
 | advanced      | Full access to the event log, export/delete operations                    |
 | administrator | Full access to the event log, export/delete operations, and user management |
 
-**Default role:** When creating a user without specifying a role, the default is `basic`.
+### Creating Users
 
-When creating a user (via script or API), pass `"role": "advanced"` or `"role": "administrator"` to grant additional permissions. You can also change existing users with:
+Create users using the provided scripts:
 
 ```bash
-curl -X PUT http://localhost:3100/api/users/alice/role \
-  -H "Content-Type: application/json" \
-  -d '{"role": "administrator"}'
+# Create administrator user
+npm run create-user admin secure-password administrator
+
+# Create advanced user
+npm run create-user analyst password123 advanced
+
+# Create basic user (default role)
+npm run create-user viewer password456
 ```
 
-**Note:** The admin user (from environment variables) automatically has the `administrator` role.
-
-**Authentication Priority:**
-1. Database users are checked first
-2. Falls back to environment variables if no database users exist
-3. Maintains backward compatibility with existing deployments
-
-See [docs/RENDER_DEPLOYMENT.md](./docs/RENDER_DEPLOYMENT.md) for deployment-specific authentication setup.
+Users can also be created through the web interface by administrators.
 
 Future enhancements may include:
 
@@ -531,15 +445,6 @@ This telemetry server is designed with privacy in mind:
 * Data retention policies should be implemented based on requirements
 * Users should be informed about telemetry collection
 
-## Contributing
-
-Contributions are welcome! Please ensure that:
-
-* Code follows the existing style and patterns
-* Privacy considerations are maintained
-* Tests are added for new features
-* Documentation is updated as needed
-
 ## Documentation
 
 Complete documentation is available in the [`docs/`](./docs/) directory, including:
@@ -549,7 +454,6 @@ Complete documentation is available in the [`docs/`](./docs/) directory, includi
 - Integration instructions
 - Database configuration
 - Performance optimizations
-- [Database schema synchronization with pgsync](./docs/PGSYNC.md) - Apply schema changes to production without full deploy
 
 ## API Specification
 
@@ -557,8 +461,6 @@ The complete API specification is available in multiple formats:
 
 - **OpenAPI/Swagger**: [`api/api-spec.yaml`](./api/api-spec.yaml)
 - **JSON Schema**: [`api/telemetry-schema.json`](./api/telemetry-schema.json)
-
-You can view the OpenAPI spec in [Swagger Editor](https://editor.swagger.io/).
 
 ## Integration
 

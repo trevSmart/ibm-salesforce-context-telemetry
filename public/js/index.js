@@ -1,6 +1,7 @@
 // @ts-nocheck
 import {toggleTheme, initializeTheme} from './theme.js';
 import {timerRegistry} from './utils/timerRegistry.js';
+import {awaitECharts, safeInit, bindWindowResize} from './echarts-core.js';
 
 // Dashboard constants
 const SESSION_START_SERIES_COLOR = '#2195cfdd';
@@ -16,7 +17,7 @@ let currentDays = DEFAULT_DASHBOARD_TIME_RANGE_DAYS;
 
 // Chart configuration
 let chart = null;
-let chartResizeHandler = null; // Store resize handler to clean up properly
+let chartUnbindResize = null; // Store unbind function to clean up resize handler
 let isInitialChartLoad = true; // Track if this is the initial chart load
 let savedChartOption = null; // Store chart option when pausing for cache restoration
 let chartResizeObserver = null;
@@ -242,9 +243,13 @@ async function initializeDashboardPage({resetState = false} = {}) {
 		} catch (error) {
 			console.warn('Error disposing chart:', error);
 		}
-		if (chartResizeHandler) {
-			window.removeEventListener('resize', chartResizeHandler);
-			chartResizeHandler = null;
+		if (chartUnbindResize) {
+			try {
+				chartUnbindResize();
+			} catch (error) {
+				console.warn('Error unbinding chart resize handler:', error);
+			}
+			chartUnbindResize = null;
 		}
 		if (chartResizeObserver) {
 			try {
@@ -797,7 +802,7 @@ function attachChartResizeObserver(chartEl) {
 	chartResizeObserver.observe(chartEl);
 }
 
-function initChart() {
+async function initChart() {
 	if (chart) {
 		return chart;
 	}
@@ -805,56 +810,20 @@ function initChart() {
 	if (!chartEl) {
 		return null;
 	}
+	
 	// Wait for ECharts to load if not available yet
-	if (typeof echarts === 'undefined') {
-		window.addEventListener('echartsLoaded', function onEChartsLoaded() {
-			window.removeEventListener('echartsLoaded', onEChartsLoaded);
-			initChart();
-		}, {once: true});
+	await awaitECharts();
+
+	// Safe initialization with cleanup
+	chart = safeInit(chartEl);
+	if (!chart) {
 		return null;
 	}
 
-	// Clear any existing content and dispose any existing chart on this element
-	chartEl.innerHTML = '';
-	try {
-		// Try to dispose any existing chart on this element
-		if (typeof echarts.getInstanceByDom === 'function') {
-			const existingChart = echarts.getInstanceByDom(chartEl);
-			if (existingChart && existingChart !== chart) {
-				existingChart.dispose();
-			}
-		}
-	} catch (error) {
-		console.warn('Error disposing existing chart on element:', error);
-	}
-
-	try {
-		chart = echarts.init(chartEl);
-	chartResizeHandler = () => {
-		try {
-			if (chart && typeof chart.resize === 'function') {
-				chart.resize();
-			}
-		} catch (error) {
-			console.warn('Error resizing chart:', error);
-			// If resize fails, remove the handler to prevent further errors
-			try {
-				window.removeEventListener('resize', chartResizeHandler);
-				chartResizeHandler = null;
-			} catch (removeError) {
-				console.warn('Error removing chart resize handler:', removeError);
-			}
-		}
-	};
-		window.addEventListener('resize', chartResizeHandler);
-		attachChartResizeObserver(chartEl);
-		return chart;
-	} catch (error) {
-		console.error('Error initializing chart:', error);
-		// Clear the element on initialization failure
-		chartEl.innerHTML = '';
-		return null;
-	}
+	// Bind resize handler with cleanup function
+	chartUnbindResize = bindWindowResize(chart, {chartName: 'events per day'});
+	attachChartResizeObserver(chartEl);
+	return chart;
 }
 
 function updateChartLegendOverlay(legendItems) {
@@ -1156,9 +1125,8 @@ async function loadChartData(days = currentDays) {
 			revealDashboardShell();
 		}
 
-		chartInstance = initChart();
+		chartInstance = await initChart();
 		if (!chartInstance) {
-			window.addEventListener('echartsLoaded', () => loadChartData(days), {once: true});
 			return;
 		}
 
@@ -1990,9 +1958,13 @@ function pauseDashboardPage() {
 		} catch (error) {
 			console.warn('Error disposing chart:', error);
 		}
-		if (chartResizeHandler) {
-			window.removeEventListener('resize', chartResizeHandler);
-			chartResizeHandler = null;
+		if (chartUnbindResize) {
+			try {
+				chartUnbindResize();
+			} catch (error) {
+				console.warn('Error unbinding chart resize handler:', error);
+			}
+			chartUnbindResize = null;
 		}
 		if (chartResizeObserver) {
 			try {
@@ -2016,26 +1988,20 @@ async function resumeDashboardPage() {
 		const chartEl = document.getElementById('eventsChart');
 		if (chartEl) {
 			// Wait for ECharts to load if not available yet
-			if (typeof echarts === 'undefined') {
-				await new Promise((resolve) => {
-					if (typeof echarts !== 'undefined') {
-						resolve();
-					} else {
-						window.addEventListener('echartsLoaded', resolve, {once: true});
-					}
-				});
-			}
+			await awaitECharts();
+			
 			// Initialize new chart instance
-			chart = echarts.init(chartEl);
-			window.addEventListener('resize', () => {
-				chart?.resize();
-			});
-			attachChartResizeObserver(chartEl);
-			// Restore the saved option (notMerge: true to replace entirely)
-			chart.setOption(savedChartOption, true);
-			chart.resize();
-			// Clear saved option after restoration
-			savedChartOption = null;
+			chart = safeInit(chartEl);
+			if (chart) {
+				// Bind resize handler with cleanup function
+				chartUnbindResize = bindWindowResize(chart, {chartName: 'events per day'});
+				attachChartResizeObserver(chartEl);
+				// Restore the saved option (notMerge: true to replace entirely)
+				chart.setOption(savedChartOption, true);
+				chart.resize();
+				// Clear saved option after restoration
+				savedChartOption = null;
+			}
 
 			// Always refresh top users and teams data when returning to dashboard
 			try {

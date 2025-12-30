@@ -54,7 +54,7 @@ The IBM Salesforce Context Telemetry Server is a Node.js/Express backend service
 ## Key Technologies
 
 - **Backend**: Node.js, Express.js (v5)
-- **Database**: SQLite (development), PostgreSQL (production)
+- **Database**: PostgreSQL
 - **Frontend**: Vanilla JavaScript, Tailwind CSS v4
 - **Desktop**: Electron
 - **Build Tools**: Tailwind CLI, ESLint, TypeScript (for type checking)
@@ -158,20 +158,20 @@ curl -X POST http://localhost:3100/telemetry \
 
 ### Database Conventions
 
-- **PostgreSQL**: Required for all environments (local development and production)
+- **PostgreSQL**: Required for all environments
 - **Connection**: Managed by `src/storage/database.js`
 - **Environment Config**:
   - `DATABASE_URL`: PostgreSQL connection string (external URL - used when DATABASE_INTERNAL_URL is not set)
   - `DATABASE_INTERNAL_URL`: Internal PostgreSQL connection string (preferred for Render.com services in same region)
   - `DATABASE_SSL`: Enable SSL for PostgreSQL (`true`/`false`). Note: SSL is automatically disabled when using DATABASE_INTERNAL_URL
   - Complete schema with all tables and migrations
-  - Single user `copilot` / `copilot` (role: god - full access)
-  - Test telemetry data (sessions, tool calls, events) for testing and development
-- **Base Template Database**: A clean base template database (`src/data/database-base-template.db`) is available for production deployments. It contains:
-  - Complete schema (all tables and migrations)
-  - Single user `god` / `god` (role: god - full access)
-  - No test data
-- **Copilot User Auto-Creation**: If `COPILOT_USERNAME` and `COPILOT_PASSWORD` environment variables are set, a user will be automatically created on database initialization with the `god` role (highest level of access). This is useful for GitHub Copilot environments.
+- **Database Tables**:
+  - `telemetry_events`: Raw telemetry events
+  - `system_users`: System authentication accounts
+  - `people`: Physical persons for telemetry grouping
+  - `person_usernames`: Username-to-person relationships
+  - `orgs`: Organization/company information
+  - `settings`: Application configuration
 
 ### Authentication and Security
 

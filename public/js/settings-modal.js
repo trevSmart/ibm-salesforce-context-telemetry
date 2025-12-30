@@ -640,7 +640,7 @@ async function openSettingsModal() {
 			backdrop.remove();
 		};
 		backdrop.addEventListener('transitionend', handleTransitionEnd);
-		setTimeout(() => {
+		timerRegistry.setTimeout('settingsModal.transitionFallback', () => {
 			if (document.body.contains(backdrop)) {
 				backdrop.removeEventListener('transitionend', handleTransitionEnd);
 				backdrop.remove();
@@ -1387,12 +1387,12 @@ async function openSettingsModal() {
 						console.warn('Import errors:', result.errors);
 					}
 
-					setTimeout(() => {
+					timerRegistry.setTimeout('settingsModal.hideProgress', () => {
 						progressContainer.style.display = 'none';
 						progressBar.style.width = '0%';
 					}, 2000);
 
-					setTimeout(() => {
+					timerRegistry.setTimeout('settingsModal.reloadPage', () => {
 						window.location.reload();
 					}, 2500);
 				} catch (error) {

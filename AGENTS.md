@@ -12,9 +12,9 @@ The *IBM Salesforce Context Telemetry Server* is a backend service that collects
 
 ## UI
 
-La UI està construïda amb Tailwind CSS amb una capa lleugera de personalitzacions pròpies.
+The UI is built with Tailwind CSS with a layer of customizations.
 
-### Elements comuns a totes les pàgines:
+### Common elements across all pages:
 
 #### Top header
 - Logo and site title: "TELEMETRY"
@@ -52,7 +52,7 @@ La UI està construïda amb Tailwind CSS amb una capa lleugera de personalitzaci
     Same top navigation as dashboard, breadcrumb back link, and Teams header. Content is loaded by `teams.js`, refreshed via the top refresh button; notifications toggle and user menu remain available.
 
 - #### People (`/people`)
-    People management interface for grouping usernames from different organizations under single physical persons. Shows a form to add new people and a list of existing people with their associated usernames. Content is loaded by `people.js`, refreshed via the top refresh button. The old `/users` URL redirects to `/people` for backward compatibility.
+    People management interface for grouping usernames from different organizations under single physical persons. Shows a form to add new people and a list of existing people with their associated usernames. Content is loaded by `people.js`, refreshed via the top refresh button.
 
 
 ## Data Model and Nomenclature
@@ -68,13 +68,13 @@ This distinction allows grouping telemetry data by actual people rather than by 
 
 ## Key Endpoints
 
--### Telemetry Collection
+### Telemetry Collection
 
 **POST `/telemetry`**
 - Receives telemetry events from MCP server instances
 - Accepts JSON payloads with event data
+- Stores events in PostgreSQL database
 - Returns `{ "status": "ok" }` on successful receipt
-- Currently logs events to console; future implementations may store data
 
 ### Health Monitoring
 
@@ -87,6 +87,50 @@ This distinction allows grouping telemetry data by actual people rather than by 
 **GET `/`**
 - Root endpoint showing server status
 - Returns confirmation message when server is running
+
+### Authentication
+
+**POST `/login`**
+- Authenticates users and creates sessions
+- Supports database-backed multi-user authentication
+- Accepts `{ "username": "user", "password": "pass" }`
+
+**GET `/api/auth/status`**
+- Checks current authentication status
+- Returns user information if authenticated
+
+**POST `/logout`**
+- Ends the current session
+
+### Analytics and Data Export
+
+**GET `/api/events`**
+- Retrieves telemetry events with pagination and filtering
+- Supports filtering by date, event type, server ID, etc.
+- Requires authentication
+
+**GET `/api/export/logs`**
+- Exports telemetry events in JSON Lines (JSONL) format
+- Compatible with ELK Stack, Splunk, Datadog, and other log analysis tools
+- Supports date range and event type filtering
+
+**GET `/api/stats`**
+- Returns telemetry statistics and aggregations
+- Supports date filtering and grouping options
+
+### User Management
+
+**GET `/api/users`**
+- Lists all system users
+- Requires administrator role
+
+**POST `/api/users`**
+- Creates new system users with roles
+- Requires administrator role
+
+**DELETE `/api/users/:username`**
+- Deletes system users
+- Requires administrator role
 
 ### People Management (User Grouping)
 
@@ -128,7 +172,7 @@ NEVER RESTART THE SERVER AFTER CHANGES. IT HAS AUTO-RELOADING FEATURE.
 
 ### Data Storage and Environment Configuration
 
-The project uses PostgreSQL for all environments (local development and production):
+The project uses PostgreSQL for all environments:
 
 | Environment | Location / Connection | Notes |
 |-------------|-----------------------|-------|
@@ -201,27 +245,7 @@ The server is designed to run on platforms like Render, Heroku, or any Node.js h
 - Ensure the service can handle concurrent requests
 - Configure appropriate resource limits based on expected telemetry volume
 - Set up monitoring and logging for both system health and data ingestion
-- Database migrations run automatically on startup for new features
-
-## Recent Features
-
-### People Management System (v1.0)
-- **Physical Person Tracking**: Group multiple usernames from different organizations under single people
-- **Enhanced Analytics**: View telemetry data grouped by actual users instead of technical accounts
-- **User Management UI**: Dedicated interface for managing people and their username associations
-- **Database Relations**: New `people` and `person_usernames` tables with proper foreign keys
-
-## Future Enhancements
-
-Potential improvements to consider:
-
-- Real-time analytics dashboard with live updates
-- Advanced data aggregation and automated reporting
-- Enhanced anonymization and privacy-preserving techniques
-- Support for additional telemetry formats beyond current JSON schema
-- Webhook notifications for specific events or thresholds
-- Advanced rate limiting and request throttling
-- Multi-factor authentication for admin accounts
+- Database migrations run automatically on startup
 
 <skills_system priority="1">
 
