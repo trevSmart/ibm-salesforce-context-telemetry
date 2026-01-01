@@ -1193,8 +1193,6 @@ async function getEvents(options = {}) {
 			safeOrderBy = 'e.id';
 		} else if (orderBy === 'server_id') {
 			safeOrderBy = 'e.server_id';
-		} else {
-			safeOrderBy = orderBy;
 		}
 	}
 	let safeOrder = 'DESC';
