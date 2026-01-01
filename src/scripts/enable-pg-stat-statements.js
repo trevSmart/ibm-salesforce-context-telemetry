@@ -100,13 +100,9 @@ async function main() {
 	console.log(`📊 Connecting to ${envName} database...`);
 	console.log(`   ${maskUrl(dbUrl)}\n`);
 
-	// Determine SSL configuration securely (avoid URL parsing vulnerabilities)
-	const isInternalUrl = Boolean(process.env.DATABASE_INTERNAL_URL);
-	const useSSL = isInternalUrl ? false : (process.env.DATABASE_SSL === 'true' ? {rejectUnauthorized: false} : false);
-
 	const pool = new Pool({
 		connectionString: dbUrl,
-		ssl: useSSL
+		ssl: dbUrl.includes('sslmode=require') || dbUrl.includes('render.com')? {rejectUnauthorized: false}: (process.env.DATABASE_SSL === 'true' ? {rejectUnauthorized: false} : false)
 	});
 
 	try {
@@ -186,6 +182,6 @@ async function main() {
 }
 
 main().catch(error => {
-	console.error('❌ Unhandled error:', error.message);
+	console.error('❌ Unhandled error:', error);
 	process.exit(1);
 });

@@ -5,7 +5,6 @@ import express from 'express';
 import session from 'express-session';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
-import helmet from 'helmet';
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
 import rateLimit from 'express-rate-limit';
@@ -28,19 +27,6 @@ const globalRateLimiter = rateLimit({
 	legacyHeaders: false,
 	windowMs: 60 * 1000, // 1 minute
 	max: isDevelopment ? 1000 : 100, // limit each IP to 1000 requests/min in dev, 100 in production
-	message: {
-		status: 'error',
-		message: 'Too many requests. Please try again later.'
-	}
-});
-
-// Rate limiter for POST requests to prevent abuse
-// More restrictive than GET requests due to higher impact potential
-const postRateLimiter = rateLimit({
-	standardHeaders: true,
-	legacyHeaders: false,
-	windowMs: 60 * 1000, // 1 minute
-	max: isDevelopment ? 60 : 10, // limit each IP to 60 requests/min in dev, 10 in production
 	message: {
 		status: 'error',
 		message: 'Too many requests. Please try again later.'
@@ -102,7 +88,7 @@ async function processTeamLogo(buffer, mimeType) {
 			converted: needsFormatConversion
 		};
 	} catch (error) {
-		console.error('Error processing team logo:', error.message);
+		console.error('Error processing team logo:', error);
 		throw new Error(`Failed to process image: ${  error.message}`);
 	}
 }
@@ -148,78 +134,14 @@ const ajv = new Ajv({allErrors: Boolean(process.env.REST_DEBUG), strict: false})
 addFormats(ajv); // Add support for date-time and other formats
 const validate = ajv.compile(schema);
 
-// CORS configuration - restrict to prevent cross-origin attacks
-const corsOptions = {
-	origin: function(origin, callback) {
-		// Allow requests with no origin (mobile apps, Postman, etc.)
-		if (!origin) {
-			return callback(null, true);
-		}
-
-		// Allow localhost for development
-		if (isDevelopment && (
-			origin.startsWith('http://localhost:') ||
-			origin.startsWith('http://127.0.0.1:') ||
-			origin.includes('localhost')
-		)) {
-			return callback(null, true);
-		}
-
-		// Allow specific domains (add your production domains here)
-		const allowedOrigins = [
-			// Add your production domain here, e.g.:
-			// 'https://yourdomain.com',
-			// 'https://www.yourdomain.com'
-		];
-
-		if (allowedOrigins.includes(origin)) {
-			return callback(null, true);
-		}
-
-		// Reject all other origins
-		return callback(new Error('Not allowed by CORS'), false);
-	},
-	credentials: true, // Allow cookies and authentication headers
-	methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-	allowedHeaders: [
-		'Content-Type',
-		'Authorization',
-		'X-CSRF-Token',
-		'X-Requested-With'
-	],
-	maxAge: 86400 // Cache preflight response for 24 hours
-};
-
-app.use(cors(corsOptions));
+// Middleware
+app.use(cors()); // Allow requests from any origin
 app.use(cookieParser()); // Parse cookies
-// Security headers
-app.use(helmet({
-	contentSecurityPolicy: {
-		directives: {
-			defaultSrc: ["'self'"],
-			styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-			fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
-			imgSrc: ["'self'", "data:", "https:", "blob:"],
-			scriptSrc: ["'self'"],
-			connectSrc: ["'self'"],
-			objectSrc: ["'none'"],
-			upgradeInsecureRequests: isDevelopment ? null : []
-		}
-	},
-	hsts: {
-		maxAge: 31536000, // 1 year
-		includeSubDomains: true,
-		preload: true
-	},
-	noSniff: true,
-	xssFilter: true,
-	referrerPolicy: {policy: "strict-origin-when-cross-origin"}
-}));
-
 app.use(express.json({limit: '10mb'})); // Parse JSON request bodies with size limit
 app.use(express.urlencoded({extended: true, limit: '10mb'})); // Parse URL-encoded bodies (for login form)
 
-// Apply rate limiting for both GET and POST requests
+// Apply global rate limiter only to GET requests, excluding static assets and authenticated API endpoints
+// Authenticated endpoints already have auth protection, so rate limiting is less critical
 app.use((req, res, next) => {
 	if (req.method === 'GET') {
 		// Exclude static assets from rate limiting (JS, CSS, fonts, images, vendor files)
@@ -241,49 +163,24 @@ app.use((req, res, next) => {
 		if (!isStaticAsset && !isApiEndpoint) {
 			return globalRateLimiter(req, res, next);
 		}
-	} else if (req.method === 'POST') {
-		// Apply stricter rate limiting to POST requests to prevent abuse
-		// Exclude file upload endpoints that already have size limits
-		const isFileUpload = req.path.includes('/upload') || req.path.includes('/import');
-
-		// File uploads already have size limits and are less frequent
-		if (!isFileUpload) {
-			return postRateLimiter(req, res, next);
-		}
 	}
 	next();
 });
 
-// Enhanced file upload security with magic number validation
+// Configure multer for file uploads (team logos)
 const upload = multer({
 	storage: multer.memoryStorage(),
 	limits: {
-		fileSize: 2 * 1024 * 1024, // 2MB max for originals (will be processed)
-		files: 1 // Only allow 1 file per request
+		fileSize: 2 * 1024 * 1024 // 2MB max for originals (will be processed)
 	},
 	fileFilter: (req, file, cb) => {
 		// Accept common image formats that will be converted to WebP
 		const allowedMimes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/gif', 'image/bmp'];
-
-		// Validate MIME type
-		if (!allowedMimes.includes(file.mimetype)) {
-			return cb(new Error('Invalid file type. Only image files are allowed.'), false);
+		if (allowedMimes.includes(file.mimetype)) {
+			cb(null, true);
+		} else {
+			cb(new Error('Invalid file type. Only image files are allowed.'), false);
 		}
-
-		// Validate file extension to prevent path traversal
-		const allowedExtensions = ['.png', '.jpg', '.jpeg', '.webp', '.gif', '.bmp'];
-		const fileExtension = file.originalname.toLowerCase().substring(file.originalname.lastIndexOf('.'));
-		if (!allowedExtensions.includes(fileExtension)) {
-			return cb(new Error('Invalid file extension. Only image files are allowed.'), false);
-		}
-
-		// Validate filename (prevent path traversal and dangerous characters)
-		const sanitizedFilename = file.originalname.replace(/[^\w.-]/g, '_');
-		if (sanitizedFilename !== file.originalname) {
-			return cb(new Error('Filename contains invalid characters.'), false);
-		}
-
-		cb(null, true);
 	}
 });
 
@@ -404,7 +301,7 @@ app.use(async (req, res, next) => {
 					res.clearCookie(cookieName);
 				}
 			} catch (error) {
-				console.error('Error restoring session from remember token:', error.message);
+				console.error('Error restoring session from remember token:', error);
 				// Clear invalid cookie
 				res.clearCookie(cookieName);
 			}
@@ -633,7 +530,7 @@ app.post('/telemetry', (req, res) => {
 				successCount++;
 
 			} catch (error) {
-				console.error(`Error processing telemetry event ${eventIndex}:`, error.message);
+				console.error(`Error processing telemetry event ${eventIndex}:`, error);
 				results.push({
 					index: eventIndex,
 					status: 'error',
@@ -670,7 +567,7 @@ app.post('/telemetry', (req, res) => {
 		});
 
 	} catch (error) {
-		console.error('Error processing telemetry:', error.message);
+		console.error('Error processing telemetry:', error);
 		res.status(500).json({
 			status: 'error',
 			message: 'Internal server error'
@@ -729,7 +626,7 @@ app.get('/health', async (req, res) => {
 				}
 			} catch (error) {
 				dbStatus = 'error';
-				console.error('Database health check failed:', error.message);
+				console.error('Database health check failed:', error);
 			}
 
 			// Determine overall health status
@@ -757,7 +654,7 @@ app.get('/health', async (req, res) => {
 
 			res.status(isHealthy ? 200 : 503).json(healthData);
 		} catch (error) {
-			console.error('Health check error:', error.message);
+			console.error('Health check error:', error);
 			res.status(503).json({
 				status: 'unhealthy',
 				timestamp: new Date().toISOString(),
@@ -826,7 +723,7 @@ app.get('/healthz', async (req, res) => {
 				}
 			} catch (error) {
 				dbStatus = 'error';
-				console.error('Database health check failed:', error.message);
+				console.error('Database health check failed:', error);
 			}
 
 			// Determine overall health status
@@ -854,7 +751,7 @@ app.get('/healthz', async (req, res) => {
 
 			res.status(isHealthy ? 200 : 503).json(healthData);
 		} catch (error) {
-			console.error('Health check error:', error.message);
+			console.error('Health check error:', error);
 			res.status(503).json({
 				status: 'unhealthy',
 				timestamp: new Date().toISOString(),
@@ -949,7 +846,7 @@ app.post('/login', auth.requireGuest, async (req, res) => {
 						});
 					}
 				} catch (error) {
-					console.error('Error creating remember token:', error.message);
+					console.error('Error creating remember token:', error);
 					// Don't fail login if remember token creation fails
 				}
 			}
@@ -1004,7 +901,7 @@ app.post('/login', auth.requireGuest, async (req, res) => {
 
 
 	} catch (error) {
-		console.error('Login error:', error.message);
+		console.error('Login error:', error);
 
 		// If it's a form submission, redirect back with error
 		if (req.headers['content-type']?.includes('application/x-www-form-urlencoded')) {
@@ -1030,7 +927,7 @@ app.post('/logout', async (req, res) => {
 				await db.revokeRememberToken(tokenData.tokenId);
 			}
 		} catch (error) {
-			console.error('Error revoking remember token on logout:', error.message);
+			console.error('Error revoking remember token on logout:', error);
 		}
 		// Clear remember token cookie
 		res.clearCookie(cookieName);
@@ -1070,7 +967,7 @@ app.get('/api/users', auth.requireAuth, auth.requireRole('administrator'), async
 			users: users
 		});
 	} catch (error) {
-		console.error('Error fetching users:', error.message);
+		console.error('Error fetching users:', error);
 		res.status(500).json({
 			status: 'error',
 			message: 'Failed to fetch users'
@@ -1117,7 +1014,7 @@ app.post('/api/users', auth.requireAuth, auth.requireRole('administrator'), asyn
 			}
 		});
 	} catch (error) {
-		console.error('Error creating user:', error.message);
+		console.error('Error creating user:', error);
 		res.status(500).json({
 			status: 'error',
 			message: 'Failed to create user'
@@ -1150,7 +1047,7 @@ app.delete('/api/users/:username', auth.requireAuth, auth.requireRole('administr
 			message: 'User deleted successfully'
 		});
 	} catch (error) {
-		console.error('Error deleting user:', error.message);
+		console.error('Error deleting user:', error);
 		res.status(500).json({
 			status: 'error',
 			message: 'Failed to delete user'
@@ -1187,7 +1084,7 @@ app.put('/api/users/:username/password', auth.requireAuth, auth.requireRole('adm
 			message: 'Password updated successfully'
 		});
 	} catch (error) {
-		console.error('Error updating password:', error.message);
+		console.error('Error updating password:', error);
 		res.status(500).json({
 			status: 'error',
 			message: 'Failed to update password'
@@ -1227,7 +1124,7 @@ app.put('/api/users/:username/role', auth.requireAuth, auth.requireRole('adminis
 			role: normalizedRole
 		});
 	} catch (error) {
-		console.error('Error updating user role:', error.message);
+		console.error('Error updating user role:', error);
 		res.status(500).json({
 			status: 'error',
 			message: 'Failed to update role'
@@ -1244,7 +1141,7 @@ app.get('/api/people', auth.requireAuth, auth.requireRole('administrator'), asyn
 			people: people
 		});
 	} catch (error) {
-		console.error('Error fetching people:', error.message);
+		console.error('Error fetching people:', error);
 		res.status(500).json({
 			status: 'error',
 			message: 'Failed to fetch people'
@@ -1271,7 +1168,7 @@ app.post('/api/people', auth.requireAuth, auth.requireRole('administrator'), asy
 			message: 'Person created successfully'
 		});
 	} catch (error) {
-		console.error('Error creating person:', error.message);
+		console.error('Error creating person:', error);
 		res.status(500).json({
 			status: 'error',
 			message: error.message || 'Failed to create person'
@@ -1302,7 +1199,7 @@ app.get('/api/people/:id', auth.requireAuth, auth.requireRole('administrator'), 
 			person
 		});
 	} catch (error) {
-		console.error('Error fetching person:', error.message);
+		console.error('Error fetching person:', error);
 		res.status(500).json({
 			status: 'error',
 			message: 'Failed to fetch person'
@@ -1347,7 +1244,7 @@ app.put('/api/people/:id', auth.requireAuth, auth.requireRole('administrator'), 
 			message: 'Person updated successfully'
 		});
 	} catch (error) {
-		console.error('Error updating person:', error.message);
+		console.error('Error updating person:', error);
 		res.status(500).json({
 			status: 'error',
 			message: error.message || 'Failed to update person'
@@ -1382,7 +1279,7 @@ app.delete('/api/people/:id', auth.requireAuth, auth.requireRole('administrator'
 			message: 'Person deleted successfully'
 		});
 	} catch (error) {
-		console.error('Error deleting person:', error.message);
+		console.error('Error deleting person:', error);
 		res.status(500).json({
 			status: 'error',
 			message: error.message || 'Failed to delete person'
@@ -1417,7 +1314,7 @@ app.get('/api/people/:id/usernames', auth.requireAuth, auth.requireRole('adminis
 			usernames: usernames
 		});
 	} catch (error) {
-		console.error('Error getting person usernames:', error.message);
+		console.error('Error getting person usernames:', error);
 		res.status(500).json({
 			status: 'error',
 			message: 'Failed to get person usernames'
@@ -1462,7 +1359,7 @@ app.post('/api/people/:id/usernames', auth.requireAuth, auth.requireRole('admini
 			message: 'Username added successfully'
 		});
 	} catch (error) {
-		console.error('Error adding username to person:', error.message);
+		console.error('Error adding username to person:', error);
 
 		// Handle unique constraint violations
 		if (error.message && error.message.includes('already associated')) {
@@ -1494,7 +1391,7 @@ app.get('/api/settings/org-team-mappings', auth.requireAuth, async (req, res) =>
 					mappings = [];
 				}
 			} catch (error) {
-				console.error('Error parsing org-team mappings from database:', error.message);
+				console.error('Error parsing org-team mappings from database:', error);
 				mappings = [];
 			}
 		}
@@ -1504,7 +1401,7 @@ app.get('/api/settings/org-team-mappings', auth.requireAuth, async (req, res) =>
 			mappings: mappings
 		});
 	} catch (error) {
-		console.error('Error fetching org-team mappings:', error.message);
+		console.error('Error fetching org-team mappings:', error);
 		res.status(500).json({
 			status: 'error',
 			message: 'Failed to fetch org-team mappings'
@@ -1540,7 +1437,7 @@ app.post('/api/settings/org-team-mappings', auth.requireAuth, auth.requireRole('
 			message: 'Org-team mappings saved successfully'
 		});
 	} catch (error) {
-		console.error('Error saving org-team mappings:', error.message);
+		console.error('Error saving org-team mappings:', error);
 		res.status(500).json({
 			status: 'error',
 			message: 'Failed to save org-team mappings'
@@ -1609,7 +1506,7 @@ app.get('/api/events', auth.requireAuth, auth.requireRole('advanced'), async (re
 
 		res.json(result);
 	} catch (error) {
-		console.error('Error fetching events:', error.message);
+		console.error('Error fetching events:', error);
 		res.status(500).json({
 			status: 'error',
 			message: 'Failed to fetch events'
@@ -1643,7 +1540,7 @@ app.get('/api/events/:id', auth.requireAuth, auth.requireRole('advanced'), async
 			event: event
 		});
 	} catch (error) {
-		console.error('Error fetching event:', error.message);
+		console.error('Error fetching event:', error);
 		res.status(500).json({
 			status: 'error',
 			message: 'Failed to fetch event'
@@ -1671,7 +1568,7 @@ app.get('/api/stats', auth.requireAuth, async (req, res) => {
 
 		res.json(stats);
 	} catch (error) {
-		console.error('Error fetching stats:', error.message);
+		console.error('Error fetching stats:', error);
 		res.status(500).json({
 			status: 'error',
 			message: 'Failed to fetch statistics'
@@ -1697,7 +1594,7 @@ app.get('/api/event-types', auth.requireAuth, auth.requireRole('advanced'), asyn
 		});
 		res.json(stats);
 	} catch (error) {
-		console.error('Error fetching event type stats:', error.message);
+		console.error('Error fetching event type stats:', error);
 		res.status(500).json({
 			status: 'error',
 			message: 'Failed to fetch event type statistics'
@@ -1748,7 +1645,7 @@ app.get('/api/sessions', auth.requireAuth, auth.requireRole('advanced'), async (
 
 		res.json(sessions);
 	} catch (error) {
-		console.error('Error fetching sessions:', error.message);
+		console.error('Error fetching sessions:', error);
 		console.error('Error stack:', error.stack);
 		console.error('Request query:', req.query);
 		console.error('User:', req.user);
@@ -1833,7 +1730,7 @@ app.get('/api/user-login-logs', auth.requireAuth, auth.requireRole('god'), async
 			offset: options.offset
 		});
 	} catch (error) {
-		console.error('Error fetching user login logs:', error.message);
+		console.error('Error fetching user login logs:', error);
 		res.status(500).json({
 			status: 'error',
 			message: 'Failed to fetch login logs'
@@ -1866,7 +1763,7 @@ app.get('/api/user-info/:username', auth.requireAuth, auth.requireRole('administ
 			last_login: user.last_login
 		});
 	} catch (error) {
-		console.error('Error getting user info:', error.message);
+		console.error('Error getting user info:', error);
 		res.status(500).json({error: 'Failed to get user info'});
 	}
 });
@@ -1901,7 +1798,7 @@ app.post('/api/manage-user', auth.requireAuth, auth.requireRole('administrator')
 
 		return res.status(400).json({error: 'Invalid action'});
 	} catch (error) {
-		console.error('Error managing user:', error.message);
+		console.error('Error managing user:', error);
 		res.status(500).json({error: 'Failed to manage user'});
 	}
 });
@@ -1954,7 +1851,7 @@ app.post('/api/create-user', auth.requireAuth, auth.requireRole('administrator')
 			user: {id: userId, username, role}
 		});
 	} catch (error) {
-		console.error('Error creating user:', error.message);
+		console.error('Error creating user:', error);
 		res.status(500).json({error: 'Failed to create user'});
 	}
 });
@@ -1970,7 +1867,7 @@ app.get('/api/daily-stats', auth.requireAuth, async (req, res) => {
 
 		res.json(stats);
 	} catch (error) {
-		console.error('Error fetching daily stats:', error.message);
+		console.error('Error fetching daily stats:', error);
 		res.status(500).json({
 			status: 'error',
 			message: 'Failed to fetch daily statistics'
@@ -1985,7 +1882,7 @@ app.get('/api/tool-usage-stats', auth.requireAuth, async (req, res) => {
 		const tools = await db.getToolUsageStats(days);
 		res.json({tools, days});
 	} catch (error) {
-		console.error('Error fetching tool usage stats:', error.message);
+		console.error('Error fetching tool usage stats:', error);
 		res.status(500).json({
 			status: 'error',
 			message: 'Failed to fetch tool usage statistics'
@@ -2002,7 +1899,7 @@ app.get('/api/top-users-today', auth.requireAuth, async (req, res) => {
 		const users = await db.getTopUsersLastDays(limit, days);
 		res.json({users, days});
 	} catch (error) {
-		console.error('Error fetching top users for the selected window:', error.message);
+		console.error('Error fetching top users for the selected window:', error);
 		res.status(500).json({
 			status: 'error',
 			message: 'Failed to fetch top users for the selected window'
@@ -2030,7 +1927,7 @@ app.get('/api/top-teams-today', auth.requireAuth, async (req, res) => {
 		const teams = await db.getTopTeamsLastDays(orgTeamMappings, limit, days);
 		res.json({teams, days});
 	} catch (error) {
-		console.error('Error fetching top teams for the selected window:', error.message);
+		console.error('Error fetching top teams for the selected window:', error);
 		res.status(500).json({
 			status: 'error',
 			message: 'Failed to fetch top teams for the selected window'
@@ -2055,7 +1952,7 @@ app.get('/api/team-stats', auth.requireAuth, auth.requireRole('advanced'), async
 		const teams = await db.getTeamStats(mappings);
 		res.json({teams});
 	} catch (error) {
-		console.error('Error fetching team stats:', error.message);
+		console.error('Error fetching team stats:', error);
 		res.status(500).json({
 			status: 'error',
 			message: 'Failed to fetch team stats'
@@ -2072,7 +1969,7 @@ app.get('/api/teams', auth.requireAuth, auth.requireRole('advanced'), async (req
 			teams
 		});
 	} catch (error) {
-		console.error('Error fetching teams:', error.message);
+		console.error('Error fetching teams:', error);
 		res.status(500).json({
 			status: 'error',
 			message: 'Failed to fetch teams'
@@ -2103,7 +2000,7 @@ app.get('/api/teams/:id', auth.requireAuth, auth.requireRole('advanced'), async 
 			team
 		});
 	} catch (error) {
-		console.error('Error fetching team:', error.message);
+		console.error('Error fetching team:', error);
 		res.status(500).json({
 			status: 'error',
 			message: 'Failed to fetch team'
@@ -2179,7 +2076,7 @@ app.post('/api/teams', auth.requireAuth, auth.requireRole('administrator'), (req
 			team
 		});
 	} catch (error) {
-		console.error('Error creating team:', error.message);
+		console.error('Error creating team:', error);
 		if (error.message.includes('already exists')) {
 			return res.status(409).json({
 				status: 'error',
@@ -2284,7 +2181,7 @@ app.put('/api/teams/:id', auth.requireAuth, auth.requireRole('administrator'), (
 			team
 		});
 	} catch (error) {
-		console.error('Error updating team:', error.message);
+		console.error('Error updating team:', error);
 		if (error.message.includes('already exists')) {
 			return res.status(409).json({
 				status: 'error',
@@ -2320,7 +2217,7 @@ app.get('/api/teams/:id/logo', auth.requireAuth, async (req, res) => {
 		res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache for 1 hour
 		res.send(logo.data);
 	} catch (error) {
-		console.error('Error fetching team logo:', error.message);
+		console.error('Error fetching team logo:', error);
 		res.status(500).json({
 			status: 'error',
 			message: 'Failed to fetch team logo'
@@ -2351,7 +2248,7 @@ app.delete('/api/teams/:id', auth.requireAuth, auth.requireRole('administrator')
 			message: 'Team deleted successfully'
 		});
 	} catch (error) {
-		console.error('Error deleting team:', error.message);
+		console.error('Error deleting team:', error);
 		res.status(500).json({
 			status: 'error',
 			message: 'Failed to delete team'
@@ -2368,7 +2265,7 @@ app.get('/api/orgs', auth.requireAuth, auth.requireRole('advanced'), async (req,
 			orgs
 		});
 	} catch (error) {
-		console.error('Error fetching orgs:', error.message);
+		console.error('Error fetching orgs:', error);
 		res.status(500).json({
 			status: 'error',
 			message: 'Failed to fetch orgs'
@@ -2399,7 +2296,7 @@ app.post('/api/orgs', auth.requireAuth, auth.requireRole('administrator'), async
 			org
 		});
 	} catch (error) {
-		console.error('Error creating/updating org:', error.message);
+		console.error('Error creating/updating org:', error);
 		res.status(500).json({
 			status: 'error',
 			message: 'Failed to create/update org'
@@ -2426,7 +2323,7 @@ app.put('/api/orgs/:id', auth.requireAuth, auth.requireRole('administrator'), as
 			org
 		});
 	} catch (error) {
-		console.error('Error updating org:', error.message);
+		console.error('Error updating org:', error);
 		res.status(500).json({
 			status: 'error',
 			message: 'Failed to update org'
@@ -2460,7 +2357,7 @@ app.post('/api/orgs/:id/move', auth.requireAuth, auth.requireRole('administrator
 			message: 'Org moved successfully'
 		});
 	} catch (error) {
-		console.error('Error moving org:', error.message);
+		console.error('Error moving org:', error);
 		res.status(500).json({
 			status: 'error',
 			message: 'Failed to move org'
@@ -2503,7 +2400,7 @@ app.post('/api/users/:id/assign-team', auth.requireAuth, auth.requireRole('admin
 			message: 'User assigned to team successfully'
 		});
 	} catch (error) {
-		console.error('Error assigning user to team:', error.message);
+		console.error('Error assigning user to team:', error);
 		res.status(500).json({
 			status: 'error',
 			message: 'Failed to assign user to team'
@@ -2522,7 +2419,7 @@ app.get('/api/event-users', auth.requireAuth, auth.requireRole('advanced'), asyn
 			users: userNames
 		});
 	} catch (error) {
-		console.error('Error fetching event user names:', error.message);
+		console.error('Error fetching event user names:', error);
 		res.status(500).json({
 			status: 'error',
 			message: 'Failed to fetch event users'
@@ -2553,7 +2450,7 @@ app.post('/api/teams/:teamId/event-users', auth.requireAuth, auth.requireRole('a
 		const result = await db.addEventUserToTeam(teamId, user_name.trim());
 		res.json(result);
 	} catch (error) {
-		console.error('Error adding event user to team:', error.message);
+		console.error('Error adding event user to team:', error);
 		res.status(500).json({
 			status: 'error',
 			message: 'Failed to add event user to team'
@@ -2584,7 +2481,7 @@ app.delete('/api/teams/:teamId/event-users/:userName', auth.requireAuth, auth.re
 		const result = await db.removeEventUserFromTeam(teamId, userName);
 		res.json(result);
 	} catch (error) {
-		console.error('Error removing event user from team:', error.message);
+		console.error('Error removing event user from team:', error);
 		res.status(500).json({
 			status: 'error',
 			message: 'Failed to remove event user from team'
@@ -2622,7 +2519,7 @@ app.get('/api/telemetry-users', auth.requireAuth, auth.requireRole('advanced'), 
 
 		res.json(userStats);
 	} catch (error) {
-		console.error('Error fetching user event stats:', error.message);
+		console.error('Error fetching user event stats:', error);
 		res.status(500).json({
 			status: 'error',
 			message: 'Failed to fetch user event stats'
@@ -2655,7 +2552,7 @@ app.get('/api/database-size', auth.requireAuth, auth.requireRole('advanced'), as
 			displayText: maxSize? `${percentage}% (${sizeFormatted} / ${maxSizeFormatted})`: sizeFormatted
 		});
 	} catch (error) {
-		console.error('Error fetching database size:', error.message);
+		console.error('Error fetching database size:', error);
 		res.status(500).json({
 			status: 'error',
 			message: 'Failed to fetch database size'
@@ -2785,7 +2682,7 @@ app.get('/api/pg-stat-statements', auth.requireAuth, auth.requireRole('advanced'
 			}))
 		});
 	} catch (error) {
-		console.error('Error fetching pg_stat_statements:', error.message);
+		console.error('Error fetching pg_stat_statements:', error);
 		res.status(500).json({
 			status: 'error',
 			message: error.message || 'Failed to fetch query statistics'
@@ -2913,7 +2810,7 @@ app.get('/api/export/logs', auth.requireAuth, auth.requireRole('advanced'), asyn
 		res.setHeader('Cache-Control', 'no-cache'); // Don't cache exports
 		res.send(formattedLogs);
 	} catch (error) {
-		console.error('Error exporting logs:', error.message);
+		console.error('Error exporting logs:', error);
 		res.status(500).json({
 			status: 'error',
 			message: 'Failed to export logs'
@@ -2951,7 +2848,7 @@ app.delete('/api/events/:id', auth.requireAuth, auth.requireRole('advanced'), as
 			});
 		}
 	} catch (error) {
-		console.error('Error deleting event:', error.message);
+		console.error('Error deleting event:', error);
 		res.status(500).json({
 			status: 'error',
 			message: 'Failed to delete event'
@@ -2987,7 +2884,7 @@ app.delete('/api/events', auth.requireAuth, auth.requireRole('advanced'), async 
 			deletedCount
 		});
 	} catch (error) {
-		console.error('Error deleting events:', error.message);
+		console.error('Error deleting events:', error);
 		res.status(500).json({
 			status: 'error',
 			message: 'Failed to delete events'
@@ -3025,7 +2922,7 @@ app.patch('/api/events/:id/recover', auth.requireAuth, auth.requireRole('advance
 			eventId
 		});
 	} catch (error) {
-		console.error('Error recovering event:', error.message);
+		console.error('Error recovering event:', error);
 		res.status(500).json({
 			status: 'error',
 			message: 'Failed to recover event'
@@ -3064,7 +2961,7 @@ app.delete('/api/events/:id/permanent', auth.requireAuth, auth.requireRole('admi
 			eventId
 		});
 	} catch (error) {
-		console.error('Error permanently deleting event:', error.message);
+		console.error('Error permanently deleting event:', error);
 		res.status(500).json({
 			status: 'error',
 			message: 'Failed to permanently delete event'
@@ -3096,7 +2993,7 @@ app.get('/api/events/deleted', auth.requireAuth, auth.requireRole('advanced'), a
 			offset: result.offset
 		});
 	} catch (error) {
-		console.error('Error getting deleted events:', error.message);
+		console.error('Error getting deleted events:', error);
 		res.status(500).json({
 			status: 'error',
 			message: 'Failed to get deleted events'
@@ -3114,7 +3011,7 @@ app.delete('/api/events/deleted', auth.requireAuth, auth.requireRole('advanced')
 			deletedCount
 		});
 	} catch (error) {
-		console.error('Error emptying trash:', error.message);
+		console.error('Error emptying trash:', error);
 		res.status(500).json({
 			status: 'error',
 			message: 'Failed to empty trash'
@@ -3146,7 +3043,7 @@ app.delete('/api/events/deleted/cleanup', auth.requireAuth, auth.requireRole('ad
 			daysOld
 		});
 	} catch (error) {
-		console.error('Error cleaning up deleted events:', error.message);
+		console.error('Error cleaning up deleted events:', error);
 		res.status(500).json({
 			status: 'error',
 			message: 'Failed to cleanup deleted events'
@@ -3167,7 +3064,7 @@ app.get('/api/database/export', auth.requireAuth, auth.requireRole('administrato
 		res.setHeader('Cache-Control', 'no-cache');
 		res.json(exportData);
 	} catch (error) {
-		console.error('Error exporting database:', error.message);
+		console.error('Error exporting database:', error);
 		res.status(500).json({
 			status: 'error',
 			message: `Failed to export database: ${  error.message}`
@@ -3202,7 +3099,7 @@ app.post('/api/database/import', auth.requireAuth, auth.requireRole('administrat
 			errors: results.errors
 		});
 	} catch (error) {
-		console.error('Error importing database:', error.message);
+		console.error('Error importing database:', error);
 		res.status(500).json({
 			status: 'error',
 			message: `Failed to import database: ${  error.message}`
@@ -3235,7 +3132,7 @@ async function startServer() {
 			console.log(`${'='.repeat(60)  }\n`);
 		});
 	} catch (error) {
-		console.error('Failed to initialize database:', error.message);
+		console.error('Failed to initialize database:', error);
 		process.exit(1);
 	}
 }
