@@ -1236,6 +1236,8 @@ function showTeamFormModal(team = null) {
 				showToast('Team created successfully', 'success');
 			}
 			closeModal();
+			// Update cache buster to invalidate logo cache after modification
+			teamsCacheBuster = Date.now();
 			await loadTeams();
 			if (currentView === 'detail' && isEdit) {
 				const detailContent = await renderTeamDetail(team.id);
@@ -1267,6 +1269,8 @@ async function showDeleteTeamConfirm(team) {
 		await deleteTeam(team.id);
 		showToast('Team deleted successfully', 'success');
 		currentView = 'list';
+		// Update cache buster to invalidate logo cache after deletion
+		teamsCacheBuster = Date.now();
 		await loadTeams();
 		const listContent = renderTeamsList();
 		await transitionTeamsContent(listContent);
@@ -1572,6 +1576,8 @@ async function handleTeamEditFormSubmit(teamId) {
 		await updateTeamWithLogo(teamId, {name, color}, logoInput?.files[0] || null, shouldRemoveLogo);
 		showToast('Team updated successfully', 'success');
 
+		// Update cache buster to invalidate logo cache after modification
+		teamsCacheBuster = Date.now();
 		// Reload team data and refresh the detail view
 		await loadTeams();
 		const detailContent = await renderTeamDetail(teamId);
@@ -1708,8 +1714,8 @@ window.refreshTeams = async function refreshTeams(event) {
 async function loadTeams() {
 	try {
 		teams = await fetchTeams();
-		// Update cache buster when teams data changes to ensure logos refresh
-		teamsCacheBuster = Date.now();
+		// Note: We don't update teamsCacheBuster here to allow browser caching.
+		// Cache buster is only updated when teams are actually modified (create/update/delete/refresh).
 	} catch (error) {
 		console.error('Error loading teams:', error);
 		showToast('Failed to load teams', 'error');
