@@ -218,9 +218,13 @@ async function main() {
 	console.log(`📊 Connecting to ${envName} database...`);
 	console.log(`   ${maskUrl(dbUrl)}\n`);
 
+	// Determine SSL configuration securely (avoid URL parsing vulnerabilities)
+	const isInternalUrl = Boolean(process.env.DATABASE_INTERNAL_URL);
+	const useSSL = isInternalUrl ? false : (process.env.DATABASE_SSL === 'true' ? {rejectUnauthorized: false} : false);
+
 	const pool = new Pool({
 		connectionString: dbUrl,
-		ssl: dbUrl.includes('sslmode=require') || dbUrl.includes('render.com')? {rejectUnauthorized: false}: (process.env.DATABASE_SSL === 'true' ? {rejectUnauthorized: false} : false)
+		ssl: useSSL
 	});
 
 	try {
