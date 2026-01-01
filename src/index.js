@@ -33,6 +33,19 @@ const globalRateLimiter = rateLimit({
 	}
 });
 
+// Rate limiter for POST requests to prevent abuse
+// More restrictive than GET requests due to higher impact potential
+const postRateLimiter = rateLimit({
+	standardHeaders: true,
+	legacyHeaders: false,
+	windowMs: 60 * 1000, // 1 minute
+	max: isDevelopment ? 60 : 10, // limit each IP to 60 requests/min in dev, 10 in production
+	message: {
+		status: 'error',
+		message: 'Too many requests. Please try again later.'
+	}
+});
+
 // Sharp imported at top
 
 // Process team logo image - only resize if larger than target, always convert to WebP
@@ -140,8 +153,7 @@ app.use(cookieParser()); // Parse cookies
 app.use(express.json({limit: '10mb'})); // Parse JSON request bodies with size limit
 app.use(express.urlencoded({extended: true, limit: '10mb'})); // Parse URL-encoded bodies (for login form)
 
-// Apply global rate limiter only to GET requests, excluding static assets and authenticated API endpoints
-// Authenticated endpoints already have auth protection, so rate limiting is less critical
+// Apply rate limiting for both GET and POST requests
 app.use((req, res, next) => {
 	if (req.method === 'GET') {
 		// Exclude static assets from rate limiting (JS, CSS, fonts, images, vendor files)
@@ -162,6 +174,15 @@ app.use((req, res, next) => {
 
 		if (!isStaticAsset && !isApiEndpoint) {
 			return globalRateLimiter(req, res, next);
+		}
+	} else if (req.method === 'POST') {
+		// Apply stricter rate limiting to POST requests to prevent abuse
+		// Exclude file upload endpoints that already have size limits
+		const isFileUpload = req.path.includes('/upload') || req.path.includes('/import');
+
+		// File uploads already have size limits and are less frequent
+		if (!isFileUpload) {
+			return postRateLimiter(req, res, next);
 		}
 	}
 	next();
