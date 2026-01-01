@@ -42,6 +42,7 @@
 	);
 
 	let isNavigating = false;
+	let navigationQueue = []; // Queue for pending navigations
 	let currentPath = window.location.pathname; // Source of truth for current page path
 
 	/**
@@ -268,15 +269,26 @@
 		}
 	}
 
-	async function softNavigate(targetPath, {replace = false} = {}) {
-		if (isNavigating) {
-			// Cancel any ongoing transition to prevent race conditions
-			timerRegistry.clearTimeout('navigation.transition');
-			isNavigating = false;
+	function processNavigationQueue() {
+		if (navigationQueue.length === 0 || isNavigating) {
+			return;
 		}
+		const nextNavigation = navigationQueue.shift();
+		softNavigate(nextNavigation.targetPath, nextNavigation.options);
+	}
+
+	async function softNavigate(targetPath, {replace = false} = {}) {
+		// If already navigating to this path, ignore
 		if (currentPath === targetPath && !replace) {
 			return;
 		}
+
+		// If navigation is in progress, queue this navigation
+		if (isNavigating) {
+			navigationQueue.push({targetPath, options: {replace}});
+			return;
+		}
+
 		if (!SUPPORTED_PATHS.includes(targetPath)) {
 			window.location.href = targetPath;
 			return;
@@ -459,6 +471,8 @@
 			window.location.href = targetPath;
 		} finally {
 			isNavigating = false;
+			// Process next navigation in queue if any
+			processNavigationQueue();
 		}
 	}
 
@@ -471,6 +485,14 @@
 			return;
 		}
 		event.preventDefault();
+
+		// Prevent multiple rapid clicks by checking if navigation is in progress
+		// or if there's already a pending navigation to the same path
+		const hasPendingNavigation = navigationQueue.some(nav => nav.targetPath === targetPath);
+		if (isNavigating || hasPendingNavigation) {
+			return;
+		}
+
 		softNavigate(targetPath);
 	}
 
@@ -484,6 +506,9 @@
 			const targetPath = window.location.pathname;
 			// Only do soft navigation if the pathname actually changed (not just the hash)
 			if (targetPath !== currentPath) {
+				// For browser navigation (back/forward), we want to replace the current navigation
+				// Clear any pending navigations and navigate immediately
+				navigationQueue.length = 0;
 				softNavigate(targetPath, {replace: true});
 			}
 			// If only the hash changed, let the page-specific popstate handlers deal with it

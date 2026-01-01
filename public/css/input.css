@@ -1184,6 +1184,11 @@
     height: 100% !important;
   }
 
+  .chart-visible {
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+
   .chart-legend-overlay {
     position: absolute;
     /* left: 50%; */
@@ -3254,11 +3259,15 @@
     height: auto;
     visibility: visible;
     position: relative;
-    overflow: hidden;
+    /* overflow: hidden; */
   }
 
   .session-activity-card.hidden {
     visibility: hidden;
+  }
+
+  .session-activity-card #sessionActivityContent {
+    border-radius: 8px;
   }
 
   #sessionActivityChart {
@@ -3277,6 +3286,7 @@
     z-index: 1000;
     pointer-events: none;
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(255, 255, 255, 0.72) 60%, rgba(255, 255, 255, 0));
+    border-radius: 10px;
   }
 
   html.dark .session-activity-card .session-activity-header-floating {
@@ -3579,6 +3589,7 @@
 
   .logs-table thead {
     display: table-header-group;
+    font-size: 13px;
   }
 
   html.dark .logs-table thead {

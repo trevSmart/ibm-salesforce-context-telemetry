@@ -1372,7 +1372,6 @@ async function showAddOrgModal(teamId) {
 			if (selectedOrg) {
 				document.getElementById('newOrgIdInput').value = selectedOrg.id;
 				document.getElementById('newOrgAliasInput').value = selectedOrg.alias || '';
-				document.getElementById('newOrgColorInput').value = selectedOrg.color || '';
 			}
 		};
 		existingSelect.addEventListener('change', (e) => handleExistingOrgChange(e.target.value));

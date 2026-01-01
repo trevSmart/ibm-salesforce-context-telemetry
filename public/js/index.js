@@ -609,8 +609,7 @@ function revealDashboardShell() {
 	// Only reveal the chart area when ready
 	const chartEl = document.getElementById('eventsChart');
 	if (chartEl) {
-		chartEl.style.visibility = 'visible';
-		chartEl.style.opacity = '1';
+		chartEl.classList.add('chart-visible');
 	}
 }
 
@@ -810,7 +809,7 @@ async function initChart() {
 	if (!chartEl) {
 		return null;
 	}
-	
+
 	// Wait for ECharts to load if not available yet
 	await awaitECharts();
 
@@ -1989,7 +1988,7 @@ async function resumeDashboardPage() {
 		if (chartEl) {
 			// Wait for ECharts to load if not available yet
 			await awaitECharts();
-			
+
 			// Initialize new chart instance
 			chart = safeInit(chartEl);
 			if (chart) {
