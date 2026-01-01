@@ -223,6 +223,56 @@ if (isDevelopment) {
 	}
 }
 
+/**
+ * Validates and sanitizes a URL string
+ * @param {string} urlString - The URL string to validate
+ * @returns {string|null} - The sanitized URL or null if invalid
+ */
+function validateAndSanitizeUrl(urlString) {
+	if (!urlString || typeof urlString !== 'string') {
+		return null;
+	}
+
+	// Trim whitespace
+	const trimmedUrl = urlString.trim();
+
+	// Check if empty after trimming
+	if (!trimmedUrl) {
+		return null;
+	}
+
+	try {
+		// Parse the URL to validate format
+		const url = new URL(trimmedUrl);
+
+		// Only allow http and https protocols
+		if (!['http:', 'https:'].includes(url.protocol)) {
+			return null;
+		}
+
+		// Basic sanitization: reconstruct URL to ensure it's properly formatted
+		// This removes any potentially malicious characters in the URL
+		const sanitizedUrl = url.toString();
+
+		// Additional security checks
+		// Prevent URLs that could be used for SSRF or other attacks
+		if (sanitizedUrl.includes('localhost') || sanitizedUrl.includes('127.0.0.1') ||
+		    sanitizedUrl.includes('::1') || sanitizedUrl.includes('0.0.0.0')) {
+			return null;
+		}
+
+		// Limit URL length to prevent abuse
+		if (sanitizedUrl.length > 2048) {
+			return null;
+		}
+
+		return sanitizedUrl;
+	} catch (error) {
+		// Invalid URL format
+		return null;
+	}
+}
+
 // Temporary placeholder for session middleware - will be replaced after database init
 // This allows us to register routes early while deferring session store configuration
 // Use the same SESSION_SECRET from auth module to ensure session continuity
@@ -2063,6 +2113,18 @@ app.post('/api/teams', auth.requireAuth, auth.requireRole('administrator'), (req
 			});
 		}
 
+		// Validate and sanitize logo_url if provided
+		let sanitizedLogoUrl = null;
+		if (logo_url) {
+			sanitizedLogoUrl = validateAndSanitizeUrl(logo_url);
+			if (!sanitizedLogoUrl) {
+				return res.status(400).json({
+					status: 'error',
+					message: 'Invalid logo URL format'
+				});
+			}
+		}
+
 		let logoData = null;
 		let logoMime = null;
 		if (req.file) {
@@ -2070,7 +2132,7 @@ app.post('/api/teams', auth.requireAuth, auth.requireRole('administrator'), (req
 			logoMime = req.file.mimetype;
 		}
 
-		const team = await db.createTeam(name.trim(), color || null, logo_url || null, logoData, logoMime);
+		const team = await db.createTeam(name.trim(), color || null, sanitizedLogoUrl, logoData, logoMime);
 		res.status(201).json({
 			status: 'ok',
 			team
@@ -2148,7 +2210,22 @@ app.put('/api/teams/:id', auth.requireAuth, auth.requireRole('administrator'), (
 		const updates = {};
 		if (name !== undefined) {updates.name = name;}
 		if (color !== undefined) {updates.color = color;}
-		if (logo_url !== undefined) {updates.logo_url = logo_url;}
+
+		// Validate and sanitize logo_url if provided
+		if (logo_url !== undefined) {
+			if (logo_url) {
+				const sanitizedLogoUrl = validateAndSanitizeUrl(logo_url);
+				if (!sanitizedLogoUrl) {
+					return res.status(400).json({
+						status: 'error',
+						message: 'Invalid logo URL format'
+					});
+				}
+				updates.logo_url = sanitizedLogoUrl;
+			} else {
+				updates.logo_url = null;
+			}
+		}
 
 		// Handle logo file upload
 		if (req.file) {
