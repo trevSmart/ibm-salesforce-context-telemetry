@@ -1304,24 +1304,6 @@ function safeShowToast(message, type = 'info') {
 			const queryString = params.toString();
 			const cacheKey = `sessions_${queryString || 'default'}`;
 
-			// Check if we have fresh cached data and no filters applied
-		let sessions;
-		if (window.isCacheFresh(cacheKey) && params.toString() === '') {
-			sessions = window.__globalDataCache.sessions;
-			} else {
-				const url = queryString ? `/api/sessions?${queryString}` : '/api/sessions';
-				const response = await fetch(url, {
-					credentials: 'include' // Ensure cookies are sent
-				});
-				const validResponse = await handleApiResponse(response);
-				if (!validResponse) {return;}
-				sessions = await validResponse.json();
-
-				// Cache the data if no filters were applied
-				if (params.toString() === '') {
-					window.updateCache('sessions', sessions);
-				}
-			}
 			const sessionList = document.getElementById('sessionList');
 
 			if (!sessionList) {
@@ -1336,7 +1318,36 @@ function safeShowToast(message, type = 'info') {
 				return;
 			}
 
-			// Clear the scrollable list (All Sessions is now separate)
+			// Show loading state while fetching sessions
+			sessionList.innerHTML = `
+				<li class="session-loading">
+					<div class="flex items-center justify-center py-4">
+						<div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+						<span class="ml-2 text-sm text-gray-500 dark:text-gray-400">Loading sessions...</span>
+					</div>
+				</li>
+			`;
+
+			// Fetch sessions data
+			let sessions;
+			if (window.isCacheFresh(cacheKey) && params.toString() === '') {
+				sessions = window.__globalDataCache.sessions;
+			} else {
+				const url = queryString ? `/api/sessions?${queryString}` : '/api/sessions';
+				const response = await fetch(url, {
+					credentials: 'include' // Ensure cookies are sent
+				});
+				const validResponse = await handleApiResponse(response);
+				if (!validResponse) {return;}
+				sessions = await validResponse.json();
+
+				// Cache the data if no filters were applied
+				if (params.toString() === '') {
+					window.updateCache('sessions', sessions);
+				}
+			}
+
+			// Clear loading state and populate with sessions
 			sessionList.innerHTML = '';
 
 			// Reset keyboard navigation for sessions when sessions are reloaded
