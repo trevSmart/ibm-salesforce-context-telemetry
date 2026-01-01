@@ -1688,11 +1688,11 @@ window.refreshTeams = async function refreshTeams(event) {
 		icon.classList.add('rotating');
 	}
 	try {
+		// Update cache buster when manually refreshing to ensure any logo changes are visible
+		teamsCacheBuster = Date.now();
 		await loadTeams();
 		const listContent = renderTeamsList();
 		await transitionTeamsContent(listContent);
-		// Update cache buster when manually refreshing to ensure any logo changes are visible
-		teamsCacheBuster = Date.now();
 	} catch (error) {
 		console.error('Error refreshing teams:', error);
 		showToast('Failed to refresh teams', 'error');
