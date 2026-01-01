@@ -696,7 +696,6 @@ function solveNormalEquations(X, Y) {
 	for (let i = 0; i < n; i++) {
 		coefficients.push(A[i][n]);
 	}
-
 	return coefficients;
 }
 
