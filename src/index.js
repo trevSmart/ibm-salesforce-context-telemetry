@@ -5,6 +5,7 @@ import express from 'express';
 import session from 'express-session';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
+import helmet from 'helmet';
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
 import rateLimit from 'express-rate-limit';
@@ -147,9 +148,74 @@ const ajv = new Ajv({allErrors: Boolean(process.env.REST_DEBUG), strict: false})
 addFormats(ajv); // Add support for date-time and other formats
 const validate = ajv.compile(schema);
 
-// Middleware
-app.use(cors()); // Allow requests from any origin
+// CORS configuration - restrict to prevent cross-origin attacks
+const corsOptions = {
+	origin: function(origin, callback) {
+		// Allow requests with no origin (mobile apps, Postman, etc.)
+		if (!origin) {
+			return callback(null, true);
+		}
+
+		// Allow localhost for development
+		if (isDevelopment && (
+			origin.startsWith('http://localhost:') ||
+			origin.startsWith('http://127.0.0.1:') ||
+			origin.includes('localhost')
+		)) {
+			return callback(null, true);
+		}
+
+		// Allow specific domains (add your production domains here)
+		const allowedOrigins = [
+			// Add your production domain here, e.g.:
+			// 'https://yourdomain.com',
+			// 'https://www.yourdomain.com'
+		];
+
+		if (allowedOrigins.includes(origin)) {
+			return callback(null, true);
+		}
+
+		// Reject all other origins
+		return callback(new Error('Not allowed by CORS'), false);
+	},
+	credentials: true, // Allow cookies and authentication headers
+	methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+	allowedHeaders: [
+		'Content-Type',
+		'Authorization',
+		'X-CSRF-Token',
+		'X-Requested-With'
+	],
+	maxAge: 86400 // Cache preflight response for 24 hours
+};
+
+app.use(cors(corsOptions));
 app.use(cookieParser()); // Parse cookies
+// Security headers
+app.use(helmet({
+	contentSecurityPolicy: {
+		directives: {
+			defaultSrc: ["'self'"],
+			styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+			fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
+			imgSrc: ["'self'", "data:", "https:", "blob:"],
+			scriptSrc: ["'self'"],
+			connectSrc: ["'self'"],
+			objectSrc: ["'none'"],
+			upgradeInsecureRequests: isDevelopment ? null : []
+		}
+	},
+	hsts: {
+		maxAge: 31536000, // 1 year
+		includeSubDomains: true,
+		preload: true
+	},
+	noSniff: true,
+	xssFilter: true,
+	referrerPolicy: {policy: "strict-origin-when-cross-origin"}
+}));
+
 app.use(express.json({limit: '10mb'})); // Parse JSON request bodies with size limit
 app.use(express.urlencoded({extended: true, limit: '10mb'})); // Parse URL-encoded bodies (for login form)
 
@@ -188,20 +254,36 @@ app.use((req, res, next) => {
 	next();
 });
 
-// Configure multer for file uploads (team logos)
+// Enhanced file upload security with magic number validation
 const upload = multer({
 	storage: multer.memoryStorage(),
 	limits: {
-		fileSize: 2 * 1024 * 1024 // 2MB max for originals (will be processed)
+		fileSize: 2 * 1024 * 1024, // 2MB max for originals (will be processed)
+		files: 1 // Only allow 1 file per request
 	},
 	fileFilter: (req, file, cb) => {
 		// Accept common image formats that will be converted to WebP
 		const allowedMimes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/gif', 'image/bmp'];
-		if (allowedMimes.includes(file.mimetype)) {
-			cb(null, true);
-		} else {
-			cb(new Error('Invalid file type. Only image files are allowed.'), false);
+
+		// Validate MIME type
+		if (!allowedMimes.includes(file.mimetype)) {
+			return cb(new Error('Invalid file type. Only image files are allowed.'), false);
 		}
+
+		// Validate file extension to prevent path traversal
+		const allowedExtensions = ['.png', '.jpg', '.jpeg', '.webp', '.gif', '.bmp'];
+		const fileExtension = file.originalname.toLowerCase().substring(file.originalname.lastIndexOf('.'));
+		if (!allowedExtensions.includes(fileExtension)) {
+			return cb(new Error('Invalid file extension. Only image files are allowed.'), false);
+		}
+
+		// Validate filename (prevent path traversal and dangerous characters)
+		const sanitizedFilename = file.originalname.replace(/[^\w.-]/g, '_');
+		if (sanitizedFilename !== file.originalname) {
+			return cb(new Error('Filename contains invalid characters.'), false);
+		}
+
+		cb(null, true);
 	}
 });
 
@@ -2583,7 +2665,7 @@ app.get('/api/database-size', auth.requireAuth, auth.requireRole('advanced'), as
 
 app.get('/api/pg-stat-statements', auth.requireAuth, auth.requireRole('advanced'), async (req, res) => {
 	// Only allow in local development - never in production
-	const isProduction = 
+	const isProduction =
 		process.env.ENVIRONMENT === 'production' ||
 		process.env.NODE_ENV === 'production' ||
 		(process.env.DATABASE_URL && (
