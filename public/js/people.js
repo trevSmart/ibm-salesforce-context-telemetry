@@ -16,6 +16,19 @@ function escapeHtml(text) {
 	return div.innerHTML;
 }
 
+// Escape HTML attribute values to prevent XSS via attribute injection
+function escapeAttr(text) {
+	if (!text) {
+		return '';
+	}
+	return String(text)
+		.replace(/&/g, '&amp;')
+		.replace(/"/g, '&quot;')
+		.replace(/'/g, '&#39;')
+		.replace(/</g, '&lt;')
+		.replace(/>/g, '&gt;');
+}
+
 /**
  * Show a confirmation dialog using Tailwind modal
  * @param {Object} options - Configuration options
@@ -257,7 +270,7 @@ async function renderPersonDetail(personId) {
 		${initials}
 	</span>`;
 
-	contentContainer.querySelector('#personDetailName').innerHTML = `<span class="text-gray-900 dark:text-white" style="display: flex; align-items: center;">${logoOrAvatar}${person.name}</span>`;
+	contentContainer.querySelector('#personDetailName').innerHTML = `<span class="text-gray-900 dark:text-white" style="display: flex; align-items: center;">${logoOrAvatar}${escapeHtml(person.name)}</span>`;
 
 	const detailContent = contentContainer.querySelector('#personDetailContent');
 	detailContent.innerHTML = `
@@ -294,15 +307,15 @@ async function renderPersonDetail(personId) {
     <div class="space-y-3">
       <div>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name</label>
-        <input type="text" id="personNameInput" value="${person.name || ''}" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-gray-100">
+        <input type="text" id="personNameInput" value="${escapeAttr(person.name || '')}" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-gray-100">
       </div>
       <div>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
-        <input type="email" id="personEmailInput" value="${person.email || ''}" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-gray-100">
+        <input type="email" id="personEmailInput" value="${escapeAttr(person.email || '')}" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-gray-100">
       </div>
       <div>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Initials</label>
-        <input type="text" id="personInitialsInput" value="${person.initials || ''}" maxlength="3" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-gray-100">
+        <input type="text" id="personInitialsInput" value="${escapeAttr(person.initials || '')}" maxlength="3" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-gray-100">
       </div>
       <div>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Created</label>
@@ -408,17 +421,17 @@ function showPersonFormModal(person = null) {
       <div style="display: flex; flex-direction: column; gap: 12px;">
         <label>
           <div style="margin-bottom: 4px; font-weight: 500;">Name *</div>
-          <input type="text" id="personNameInput" value="${person ? person.name : ''}"
+          <input type="text" id="personNameInput" value="${person ? escapeAttr(person.name) : ''}"
                  class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-gray-100">
         </label>
         <label>
           <div style="margin-bottom: 4px; font-weight: 500;">Email (optional)</div>
-          <input type="email" id="personEmailInput" value="${person ? person.email || '' : ''}"
+          <input type="email" id="personEmailInput" value="${person ? escapeAttr(person.email || '') : ''}"
                  class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-gray-100">
         </label>
         <label>
           <div style="margin-bottom: 4px; font-weight: 500;">Initials (optional)</div>
-          <input type="text" id="personInitialsInput" value="${person ? person.initials || '' : ''}" maxlength="3" placeholder="e.g. JD, ABC"
+          <input type="text" id="personInitialsInput" value="${person ? escapeAttr(person.initials || '') : ''}" maxlength="3" placeholder="e.g. JD, ABC"
                  class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-gray-100">
         </label>
       </div>
