@@ -46,7 +46,7 @@ async function updateAdminRole() {
 		// Close database connection
 		await close();
 	} catch (error) {
-		console.error('Error updating admin role:', error);
+		console.error('Error updating admin role:', error.message);
 		process.exit(1);
 	}
 }

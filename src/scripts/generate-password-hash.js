@@ -20,7 +20,7 @@ async function generateHash() {
 		console.log('\nAdd this to your .env file:');
 		console.log(`ADMIN_PASSWORD_HASH=${hash}\n`);
 	} catch (error) {
-		console.error('Error generating hash:', error);
+		console.error('Error generating hash:', error.message);
 		process.exit(1);
 	}
 }

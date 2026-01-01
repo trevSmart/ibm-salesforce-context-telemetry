@@ -286,7 +286,7 @@ async function ensureEventTypesInitialized() {
 			console.log(`Initialized ${insertedCount} new event types`);
 		}
 	} catch (error) {
-		console.error('Error initializing event types:', error);
+		console.error('Error initializing event types:', error.message);
 	}
 }
 
@@ -665,7 +665,7 @@ async function upsertOrgCompanyName(serverId, companyName) {
 		`, [serverId, companyName, now, now]);
 	} catch (error) {
 		// Log error but don't fail the event storage
-		console.error('Error upserting org company name:', error);
+		console.error('Error upserting org company name:', error.message);
 	}
 }
 
@@ -1043,7 +1043,7 @@ async function storeDiscardedEvent(rawPayload, reason = 'discarded', receivedAt 
 		return true;
 	} catch (error) {
 		// Log error but don't throw - we don't want discarded event storage to fail the main flow
-		console.error('Error storing discarded event:', error);
+		console.error('Error storing discarded event:', error.message);
 		return false;
 	}
 }
@@ -1708,7 +1708,7 @@ async function getDatabaseSize() {
 			maxSize: maxSize
 		};
 	} catch (error) {
-		console.error('Error getting database size:', error);
+		console.error('Error getting database size:', error.message);
 		return null;
 	}
 }
@@ -1954,7 +1954,7 @@ async function getOrgCompanyName(serverId) {
 		const result = await db.query('SELECT company_name FROM orgs WHERE server_id = $1', [serverId]);
 		return result.rows.length > 0 ? result.rows[0].company_name : null;
 	} catch (error) {
-		console.error('Error getting org company name:', error);
+		console.error('Error getting org company name:', error.message);
 		return null;
 	}
 }
@@ -1972,7 +1972,7 @@ async function getAllOrgs() {
 		const result = await db.query('SELECT server_id, company_name, created_at, updated_at FROM orgs ORDER BY updated_at DESC');
 		return result.rows;
 	} catch (error) {
-		console.error('Error getting all orgs:', error);
+		console.error('Error getting all orgs:', error.message);
 		return [];
 	}
 }
@@ -1992,7 +1992,7 @@ async function updateEventData(id, data) {
 		const result = await db.query('UPDATE telemetry_events SET data = $1 WHERE id = $2', [data, id]);
 		return result.rowCount > 0;
 	} catch (error) {
-		console.error('Error updating event data:', error);
+		console.error('Error updating event data:', error.message);
 		return false;
 	}
 }
@@ -2338,7 +2338,7 @@ async function getOrgTeamMappingsFromTeamsTable() {
 				active: true
 			}));
 	} catch (error) {
-		console.error('Error building org-team mappings from teams table:', error);
+		console.error('Error building org-team mappings from teams table:', error.message);
 	}
 
 	return [];
@@ -2671,7 +2671,7 @@ async function getSetting(key) {
 		const result = await db.query('SELECT value FROM settings WHERE key = $1', [key]);
 		return result.rows.length > 0 ? result.rows[0].value : null;
 	} catch (error) {
-		console.error(`Error getting setting ${key}:`, error);
+		console.error(`Error getting setting ${key}:`, error.message);
 		return null;
 	}
 }
@@ -2694,7 +2694,7 @@ async function saveSetting(key, value) {
 			DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()
 		`, [key, value]);
 	} catch (error) {
-		console.error(`Error saving setting ${key}:`, error);
+		console.error(`Error saving setting ${key}:`, error.message);
 	}
 }
 
@@ -2747,7 +2747,7 @@ async function getAllTeams() {
 			user_count: Number.parseInt(team.user_count, 10) || 0
 		}));
 	} catch (error) {
-		console.error('Error getting all teams:', error);
+		console.error('Error getting all teams:', error.message);
 		throw error;
 	}
 }
@@ -2828,7 +2828,7 @@ async function getTeamById(teamId) {
 			}))
 		};
 	} catch (error) {
-		console.error('Error getting team by ID:', error);
+		console.error('Error getting team by ID:', error.message);
 		throw error;
 	}
 }
@@ -2853,7 +2853,7 @@ async function addEventUserToTeam(teamId, userName) {
 
 		return {status: 'ok', message: 'Event user added to team successfully'};
 	} catch (error) {
-		console.error('Error adding event user to team:', error);
+		console.error('Error adding event user to team:', error.message);
 		throw error;
 	}
 }
@@ -2877,7 +2877,7 @@ async function removeEventUserFromTeam(teamId, userName) {
 
 		return {status: 'ok', message: 'Event user removed from team successfully'};
 	} catch (error) {
-		console.error('Error removing event user from team:', error);
+		console.error('Error removing event user from team:', error.message);
 		throw error;
 	}
 }
@@ -2909,7 +2909,7 @@ async function getEventUserNames(limit = 1000) {
 
 		return result.rows.map(u => u.user_label);
 	} catch (error) {
-		console.error('Error getting event user names:', error);
+		console.error('Error getting event user names:', error.message);
 		throw error;
 	}
 }
@@ -2928,7 +2928,7 @@ async function getPersonById(personId) {
 		const result = await db.query('SELECT id, name, email, initials, created_at FROM people WHERE id = $1', [personId]);
 		return result.rows[0] || null;
 	} catch (error) {
-		console.error('Error getting person by ID:', error);
+		console.error('Error getting person by ID:', error.message);
 		throw error;
 	}
 }
@@ -2946,7 +2946,7 @@ async function getAllPeople() {
 		const result = await db.query('SELECT id, name, email, initials, created_at FROM people ORDER BY name ASC');
 		return result.rows;
 	} catch (error) {
-		console.error('Error getting all people:', error);
+		console.error('Error getting all people:', error.message);
 		throw error;
 	}
 }
@@ -2973,7 +2973,7 @@ async function createPerson(name, email = null, initials = null) {
 		);
 		return result.rows[0];
 	} catch (error) {
-		console.error('Error creating person:', error);
+		console.error('Error creating person:', error.message);
 		throw error;
 	}
 }
@@ -3010,7 +3010,7 @@ async function updatePerson(personId, name, email = null, initials = null) {
 
 		return result.rows[0];
 	} catch (error) {
-		console.error('Error updating person:', error);
+		console.error('Error updating person:', error.message);
 		throw error;
 	}
 }
@@ -3037,7 +3037,7 @@ async function deletePerson(personId) {
 			throw new Error('Person not found');
 		}
 	} catch (error) {
-		console.error('Error deleting person:', error);
+		console.error('Error deleting person:', error.message);
 		throw error;
 	}
 }
@@ -3065,7 +3065,7 @@ async function getPersonUsernames(personId) {
 		`, [personId]);
 		return result.rows;
 	} catch (error) {
-		console.error('Error getting person usernames:', error);
+		console.error('Error getting person usernames:', error.message);
 		throw error;
 	}
 }
@@ -3102,7 +3102,7 @@ async function addUsernameToPerson(personId, username, orgId = null) {
 		if (error.message && error.message.includes('UNIQUE constraint failed')) {
 			throw new Error('This username is already associated with this person');
 		}
-		console.error('Error adding username to person:', error);
+		console.error('Error adding username to person:', error.message);
 		throw error;
 	}
 }
@@ -3133,7 +3133,7 @@ async function removeUsernameFromPerson(personId, username) {
 		`, [personId, username.trim()]);
 		return result.rowCount > 0;
 	} catch (error) {
-		console.error('Error removing username from person:', error);
+		console.error('Error removing username from person:', error.message);
 		throw error;
 	}
 }
@@ -3169,7 +3169,7 @@ async function createTeam(name, color = null, logoUrl = null, logoData = null, l
 		if (error.message.includes('UNIQUE constraint') || error.message.includes('duplicate key')) {
 			throw new Error('Team name already exists');
 		}
-		console.error('Error creating team:', error);
+		console.error('Error creating team:', error.message);
 		throw error;
 	}
 }
@@ -3238,7 +3238,7 @@ async function updateTeam(teamId, updates) {
 		if (error.message.includes('UNIQUE constraint') || error.message.includes('duplicate key')) {
 			throw new Error('Team name already exists');
 		}
-		console.error('Error updating team:', error);
+		console.error('Error updating team:', error.message);
 		throw error;
 	}
 }
@@ -3269,7 +3269,7 @@ async function getTeamLogo(teamId) {
 			mime: result.rows[0].logo_mime
 		};
 	} catch (error) {
-		console.error('Error getting team logo:', error);
+		console.error('Error getting team logo:', error.message);
 		throw error;
 	}
 }
@@ -3292,7 +3292,7 @@ async function deleteTeam(teamId) {
 		const result = await db.query('DELETE FROM teams WHERE id = $1', [teamId]);
 		return result.rowCount > 0;
 	} catch (error) {
-		console.error('Error deleting team:', error);
+		console.error('Error deleting team:', error.message);
 		throw error;
 	}
 }
@@ -3337,7 +3337,7 @@ async function getAllOrgsWithTeams() {
 			updated_at: org.updated_at
 		}));
 	} catch (error) {
-		console.error('Error getting all orgs with teams:', error);
+		console.error('Error getting all orgs with teams:', error.message);
 		throw error;
 	}
 }
@@ -3374,7 +3374,7 @@ async function upsertOrg(orgId, orgData = {}) {
 
 		return result.rows[0];
 	} catch (error) {
-		console.error('Error upserting org:', error);
+		console.error('Error upserting org:', error.message);
 		throw error;
 	}
 }
@@ -3401,7 +3401,7 @@ async function moveOrgToTeam(orgId, teamId) {
 		}
 		return result.rowCount > 0;
 	} catch (error) {
-		console.error('Error moving org to team:', error);
+		console.error('Error moving org to team:', error.message);
 		throw error;
 	}
 }
@@ -3421,7 +3421,7 @@ async function assignUserToTeam(userId, teamId) {
 		const result = await db.query('UPDATE users SET team_id = $1 WHERE id = $2', [teamId || null, userId]);
 		return result.rowCount > 0;
 	} catch (error) {
-		console.error('Error assigning user to team:', error);
+		console.error('Error assigning user to team:', error.message);
 		throw error;
 	}
 }
@@ -3466,7 +3466,7 @@ async function ensureCopilotUser() {
 		await createUser(copilotUsername, passwordHash, copilotRole);
 		console.log(`✅ Created Copilot user "${copilotUsername}" with role "${copilotRole}"`);
 	} catch (error) {
-		console.error('Error ensuring Copilot user:', error);
+		console.error('Error ensuring Copilot user:', error.message);
 		// Don't throw - this is a convenience feature, not critical
 	}
 }
@@ -3498,7 +3498,7 @@ async function createRememberToken(userId, expiresAt, userAgent = null, ipAddres
 		);
 		return {token, id: result.rows[0].id};
 	} catch (error) {
-		console.error('Error creating remember token:', error);
+		console.error('Error creating remember token:', error.message);
 		throw error;
 	}
 }
@@ -3526,7 +3526,7 @@ async function validateRememberToken(token) {
 		);
 		return result.rows.length > 0 ? {userId: result.rows[0].user_id, tokenId: result.rows[0].id} : null;
 	} catch (error) {
-		console.error('Error validating remember token:', error);
+		console.error('Error validating remember token:', error.message);
 		return null;
 	}
 }
@@ -3545,7 +3545,7 @@ async function revokeRememberToken(tokenId) {
 		const result = await db.query('UPDATE remember_tokens SET revoked_at = NOW() WHERE id = $1', [tokenId]);
 		return result.rowCount > 0;
 	} catch (error) {
-		console.error('Error revoking remember token:', error);
+		console.error('Error revoking remember token:', error.message);
 		return false;
 	}
 }
@@ -3564,7 +3564,7 @@ async function revokeAllRememberTokensForUser(userId) {
 		const result = await db.query('UPDATE remember_tokens SET revoked_at = NOW() WHERE user_id = $1 AND revoked_at IS NULL', [userId]);
 		return result.rowCount;
 	} catch (error) {
-		console.error('Error revoking all remember tokens for user:', error);
+		console.error('Error revoking all remember tokens for user:', error.message);
 		return 0;
 	}
 }
@@ -3603,7 +3603,7 @@ async function cleanupExpiredRememberTokens() {
 		const result = await db.query('DELETE FROM remember_tokens WHERE expires_at < NOW()');
 		return result.rowCount;
 	} catch (error) {
-		console.error('Error cleaning up expired remember tokens:', error);
+		console.error('Error cleaning up expired remember tokens:', error.message);
 		return 0;
 	}
 }
@@ -3629,7 +3629,7 @@ async function getActiveRememberTokensCount(userId) {
 		);
 		return result.rows.length > 0 ? Number.parseInt(result.rows[0].count, 10) : 0;
 	} catch (error) {
-		console.error('Error getting active remember tokens count:', error);
+		console.error('Error getting active remember tokens count:', error.message);
 		return 0;
 	}
 }
@@ -3674,7 +3674,7 @@ async function exportDatabase() {
 
 		return exportData;
 	} catch (error) {
-		console.error('Error exporting database:', error);
+		console.error('Error exporting database:', error.message);
 		throw new Error(`Failed to export database: ${error.message}`);
 	}
 }
@@ -3924,7 +3924,7 @@ async function importDatabase(importData) {
 
 		return results;
 	} catch (error) {
-		console.error('Error importing database:', error);
+		console.error('Error importing database:', error.message);
 		throw new Error(`Failed to import database: ${error.message}`);
 	}
 }
@@ -4116,7 +4116,7 @@ async function recalculateTeamIdsForOrg(orgId) {
 		const result = await db.query('UPDATE telemetry_events SET team_id = $1 WHERE org_id = $2', [teamId, orgId]);
 		return result.rowCount;
 	} catch (error) {
-		console.error('Error recalculating team_ids for org %s:', orgId, error);
+		console.error('Error recalculating team_ids for org %s:', orgId, error.message);
 		throw new Error(`Failed to recalculate team_ids: ${error.message}`);
 	}
 }

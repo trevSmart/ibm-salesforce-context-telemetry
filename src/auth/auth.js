@@ -236,7 +236,7 @@ async function authenticate(username, password) {
 				return {success: false};
 			}
 		} catch (error) {
-			console.error('Error authenticating from database:', error);
+			console.error('Error authenticating from database:', error.message);
 			// Fall through to environment variable authentication
 		}
 	}

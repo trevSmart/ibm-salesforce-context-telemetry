@@ -66,7 +66,7 @@ async function main() {
 		console.log(`\n\n📊 Total: ${result.rows.length} indexes`);
 
 	} catch (error) {
-		console.error('❌ Error listing indexes:', error);
+		console.error('❌ Error listing indexes:', error.message);
 		process.exit(1);
 	} finally {
 		// Close database connection
@@ -77,7 +77,7 @@ async function main() {
 // Run the script
 if (import.meta.url === `file://${process.argv[1]}`) {
 	main().catch(error => {
-		console.error('❌ Unhandled error:', error);
+		console.error('❌ Unhandled error:', error.message);
 		process.exit(1);
 	});
 }

@@ -49,7 +49,7 @@ async function createUserScript() {
 		// Close database connection
 		await close();
 	} catch (error) {
-		console.error('Error creating user:', error);
+		console.error('Error creating user:', error.message);
 		process.exit(1);
 	}
 }

@@ -53,7 +53,7 @@ async function updateUserRole() {
 		// Close database connection
 		await db.close();
 	} catch (error) {
-		console.error('Error updating user role:', error);
+		console.error('Error updating user role:', error.message);
 		process.exit(1);
 	}
 }

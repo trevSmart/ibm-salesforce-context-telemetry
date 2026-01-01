@@ -722,7 +722,7 @@ async function generateTestData(targetDay, shouldDeleteExisting, skipHttpFlag = 
 		await db.close();
 		process.exit(0);
 	} catch (error) {
-		console.error('❌ Error generating test data:', error);
+		console.error('❌ Error generating test data:', error.message);
 		process.exit(1);
 	}
 })();

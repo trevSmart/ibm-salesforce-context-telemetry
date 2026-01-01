@@ -43,7 +43,7 @@ async function main() {
 		console.log('\n🎉 Cleanup completed successfully!');
 
 	} catch (error) {
-		console.error('❌ Error during cleanup:', error);
+		console.error('❌ Error during cleanup:', error.message);
 		process.exit(1);
 	} finally {
 		// Close database connection
@@ -54,7 +54,7 @@ async function main() {
 // Run the cleanup
 if (require.main === module) {
 	main().catch(error => {
-		console.error('❌ Unhandled error:', error);
+		console.error('❌ Unhandled error:', error.message);
 		process.exit(1);
 	});
 }

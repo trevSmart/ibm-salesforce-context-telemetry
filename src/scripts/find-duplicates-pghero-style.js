@@ -129,7 +129,7 @@ async function main() {
 		}
 
 	} catch (error) {
-		console.error('❌ Error finding duplicate indexes:', error);
+		console.error('❌ Error finding duplicate indexes:', error.message);
 		process.exit(1);
 	} finally {
 		// Close database connection
@@ -140,7 +140,7 @@ async function main() {
 // Run the script
 if (import.meta.url === `file://${process.argv[1]}`) {
 	main().catch(error => {
-		console.error('❌ Unhandled error:', error);
+		console.error('❌ Unhandled error:', error.message);
 		process.exit(1);
 	});
 }
