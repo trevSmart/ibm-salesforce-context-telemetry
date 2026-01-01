@@ -6,6 +6,32 @@
 	let commandList = null;
 	let isOpen = false;
 
+	// Utility function to escape HTML special characters for safe output in innerHTML
+	function escapeHtml(unsafe) {
+		if (!unsafe) {
+			return '';
+		}
+		return String(unsafe)
+			.replace(/&/g, '&amp;')
+			.replace(/</g, '&lt;')
+			.replace(/>/g, '&gt;')
+			.replace(/"/g, '&quot;')
+			.replace(/'/g, '&#39;');
+	}
+
+	// Escape HTML attribute values to prevent XSS via attribute injection
+	function escapeAttr(text) {
+		if (!text) {
+			return '';
+		}
+		return String(text)
+			.replace(/&/g, '&amp;')
+			.replace(/"/g, '&quot;')
+			.replace(/'/g, '&#39;')
+			.replace(/</g, '&lt;')
+			.replace(/>/g, '&gt;');
+	}
+
 	// Define available commands
 	const commands = [
 		// Navigation commands
@@ -163,13 +189,13 @@
 	 */
 	function renderCommandItems(commandsToRender) {
 		return commandsToRender.map(command => `
-      <a href="#" class="command-item group flex cursor-default items-center rounded-md px-3 py-2 select-none focus:outline-hidden aria-selected:bg-gray-900/5 aria-selected:text-gray-900" data-command-id="${command.id}" data-command-type="${command.type}">
+      <a href="#" class="command-item group flex cursor-default items-center rounded-md px-3 py-2 select-none focus:outline-hidden aria-selected:bg-gray-900/5 aria-selected:text-gray-900" data-command-id="${escapeAttr(command.id)}" data-command-type="${escapeAttr(command.type)}">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" data-slot="icon" aria-hidden="true" class="size-6 flex-none text-gray-900/40 group-aria-selected:text-gray-900">
           <path stroke-linecap="round" stroke-linejoin="round" d="${getIconPath(command.icon)}" />
         </svg>
-        <span class="ml-3 flex-auto truncate">${command.title}</span>
+        <span class="ml-3 flex-auto truncate">${escapeHtml(command.title)}</span>
         <span class="ml-3 flex-none text-xs font-semibold text-gray-500 group-aria-selected:inline">
-          ${command.shortcut ? `<kbd class="font-sans">${command.shortcut}</kbd>` : ''}
+          ${command.shortcut ? `<kbd class="font-sans">${escapeHtml(command.shortcut)}</kbd>` : ''}
         </span>
       </a>
     `).join('');
