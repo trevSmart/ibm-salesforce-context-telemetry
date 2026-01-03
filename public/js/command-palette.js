@@ -706,7 +706,7 @@
 				window.location.href = `/people#person-${personId}`;
 			}
 			hideCommandPalette();
-			
+
 		}
 	}
 

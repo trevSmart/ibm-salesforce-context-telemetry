@@ -42,7 +42,7 @@
 	);
 
 	let isNavigating = false;
-	let navigationQueue = []; // Queue for pending navigations
+	const navigationQueue = []; // Queue for pending navigations
 	let currentPath = window.location.pathname; // Source of truth for current page path
 
 	/**
@@ -311,9 +311,7 @@
 
 			// Clone container for caching before notifying listeners.
 			// Listeners can mutate the clone without changing what the user sees.
-			const cachedOutgoingContainer = oldPath && SUPPORTED_PATHS.includes(oldPath)
-				? container.cloneNode(true)
-				: null;
+			const cachedOutgoingContainer = oldPath && SUPPORTED_PATHS.includes(oldPath)? container.cloneNode(true): null;
 
 			// Notify that page has been cloned for caching (for invisible updates)
 			dispatchPageCached(oldPath, cachedOutgoingContainer);
@@ -351,16 +349,8 @@
 				doc = domParser.parseFromString(html, 'text/html');
 				nextContent = doc.querySelector('.container-content');
 
-				// Check if we got redirected to login page (session expired)
-				// or if the response doesn't have the expected container structure
-				const hasLoginCard = doc.querySelector('.login-card');
-				const hasContainerContent = !!nextContent;
-
-				if (!hasContainerContent || hasLoginCard) {
-					// Either redirected to login or got unexpected page structure
-					// Fall back to full page navigation
-					window.location.href = targetPath;
-					return;
+				if (!nextContent) {
+					throw new Error('Target page missing container-content');
 				}
 
 				// Keep nav, search, and container shell styling consistent across pages
