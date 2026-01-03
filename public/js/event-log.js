@@ -2311,13 +2311,13 @@ function safeShowToast(message, type = 'info') {
 			<div class="bg-white dark:bg-white/5 px-3 pt-2.5 pb-1.5 outline-1 -outline-offset-1 outline-gray-300 dark:outline-gray-700 -mr-px">
 				<label class="block text-xs font-medium text-gray-900 dark:text-white mb-1.5">Area</label>
 				<div class="flex items-center">
-					<span class="${getLevelBadgeClass(payload.area)}">${formatValue(payload.area)}</span>
+					<span class="${getLevelBadgeClass(event.area)}">${formatValue(event.area)}</span>
 				</div>
 			</div>
 			<div class="bg-white dark:bg-white/5 px-3 pt-2.5 pb-1.5 outline-1 -outline-offset-1 outline-gray-300 dark:outline-gray-700">
 				<label class="block text-xs font-medium text-gray-900 dark:text-white mb-1.5">Event</label>
 				<div class="flex items-center">
-					<span class="${getEventBadgeClass(payload.event, payload.success)}">${formatValue(payload.event)}</span>
+					<span class="${getEventBadgeClass(event.event, event.success)}">${formatValue(event.event)}</span>
 				</div>
 			</div>
 		`;
@@ -2366,7 +2366,7 @@ function safeShowToast(message, type = 'info') {
 					id="event-schema-version-${event.id}"
 					name="telemetry_schema_version"
 					type="text"
-					value="${formatValue(payload.telemetry_schema_version).replace(/"/g, '&quot;')}"
+					value="${formatValue(event.telemetry_schema_version).replace(/"/g, '&quot;')}"
 					placeholder="Request schema version"
 					aria-label="Request schema version"
 					readonly
@@ -2377,7 +2377,7 @@ function safeShowToast(message, type = 'info') {
 			<div class="bg-white dark:bg-white/5 px-3 pt-2.5 pb-1.5 outline-1 -outline-offset-1 outline-gray-300 dark:outline-gray-700">
 				<label class="block text-xs font-medium text-gray-900 dark:text-white mb-1.5">Success</label>
 				<div class="flex items-center">
-					${payload.success === true || payload.success === 'true'? '<img src="/resources/ok.png" alt="OK" class="status-indicator ok" loading="lazy">': '<img src="/resources/ko.png" alt="KO" class="status-indicator ko" loading="lazy">'}
+					${event.success === true || event.success === 'true'? '<img src="/resources/ok.png" alt="OK" class="status-indicator ok" loading="lazy">': '<img src="/resources/ko.png" alt="KO" class="status-indicator ko" loading="lazy">'}
 				</div>
 			</div>
 		`;
