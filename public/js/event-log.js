@@ -1265,7 +1265,7 @@ function safeShowToast(message, type = 'info') {
 
 			const eventId = row.getAttribute('data-event-id');
 			if (eventId) {
-				toggleRowExpand(Number.parseInt(eventId, 10));
+				toggleRowExpand(Number.parseInt(eventId, 10)).catch(console.error);
 			}
 		};
 
@@ -2198,7 +2198,7 @@ function safeShowToast(message, type = 'info') {
 
 
 
-	function toggleRowExpand(eventId) {
+	async function toggleRowExpand(eventId) {
 		const expandedRow = document.getElementById(`expanded-${eventId}`);
 		const mainRow = document.querySelector(`tr[data-event-id="${eventId}"]`);
 		const expandBtn = document.getElementById(`expand-btn-${eventId}`);
@@ -2213,7 +2213,59 @@ function safeShowToast(message, type = 'info') {
 			expandBtn.classList.remove('expanded');
 			mainRow.classList.remove('expanded');
 		} else {
-			// Expand
+			// Expand - First check if we need to load the payload data
+			if (!expandedRow.hasAttribute('data-loaded')) {
+				// Show loading state
+				expandedRow.innerHTML = `
+					<td colspan="11" class="log-description-expanded px-3 py-4">
+						<div class="flex items-center justify-center py-8">
+							<div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+							<span class="ml-2 text-gray-600 dark:text-gray-400">Loading event details...</span>
+						</div>
+					</td>
+				`;
+
+				try {
+					// Load the complete event data including payload
+					const response = await fetch(`/api/events/${eventId}`);
+					const validResponse = await handleApiResponse(response);
+					if (!validResponse) {
+						throw new Error('Failed to load event data');
+					}
+					const eventData = await validResponse.json();
+
+					// Find the event in our cached events and update it with the payload data
+					const eventIndex = allLoadedEvents.findIndex(e => e.id === eventId);
+					if (eventIndex !== -1) {
+						// Merge the payload data into the existing event object
+						Object.assign(allLoadedEvents[eventIndex], {
+							data: eventData.event.data
+						});
+					}
+
+					// Generate the form HTML with the now available data
+					const event = allLoadedEvents[eventIndex];
+					expandedRow.innerHTML = `
+						<td colspan="11" class="log-description-expanded px-3 py-4">
+							${createEventDetailsFormHTML(event)}
+						</td>
+					`;
+					expandedRow.setAttribute('data-loaded', 'true');
+
+				} catch (error) {
+					console.error('Error loading event details:', error);
+					expandedRow.innerHTML = `
+						<td colspan="11" class="log-description-expanded px-3 py-4">
+							<div class="text-center text-red-600 dark:text-red-400 py-8">
+								Failed to load event details. Please try again.
+							</div>
+						</td>
+					`;
+					return;
+				}
+			}
+
+			// Show the expanded row
 			expandedRow.classList.add('expanded');
 			expandBtn.classList.add('expanded');
 			mainRow.classList.add('expanded');
@@ -2287,7 +2339,7 @@ function safeShowToast(message, type = 'info') {
 		};
 
 
-		let formHTML = '<div style="max-width: 700px; margin: 0 auto; padding-left: 30px; padding-right: 30px;">';
+		let formHTML = '<div style="max-width: 700px; padding-left: 30px; padding-right: 30px;">';
 
 		// Event Information fieldset
 		formHTML += '<fieldset>';
@@ -2484,7 +2536,7 @@ function safeShowToast(message, type = 'info') {
 
 			row.innerHTML = `
 				<td class="${borderClass} pl-2 pr-1 text-center font-medium text-gray-500 dark:text-gray-400" style="height: 46px; vertical-align: middle;">
-					<button type="button" id="expand-btn-${event.id}" class="expand-btn" onclick="toggleRowExpand(${event.id})" style="background: none; border: none; cursor: pointer; padding: 4px;">
+					<button type="button" id="expand-btn-${event.id}" class="expand-btn" onclick="toggleRowExpand(${event.id}).catch(console.error)" style="background: none; border: none; cursor: pointer; padding: 4px;">
 						<i class="fa-solid fa-chevron-right text-gray-400"></i>
 					</button>
 				</td>
@@ -3463,18 +3515,30 @@ function safeShowToast(message, type = 'info') {
 
 	async function copyEventPayload(eventId) {
 		try {
-			// Fetch the complete event (including payload) from the API
-			const response = await fetch(`/api/events/${eventId}`);
-			if (!response.ok) {
-				throw new Error(`HTTP ${response.status}: ${response.statusText || 'Unable to load event'}`);
-			}
-			const data = await response.json();
-			if (!data?.event) {
-				throw new Error('Event payload not available');
-			}
+			let payload;
 
-			// data.event.data now contains the original payload exactly as received
-			const payload = data.event.data || {};
+			// First check if we already have the payload data loaded from expanding the row
+			const eventIndex = allLoadedEvents.findIndex(e => e.id === eventId);
+			if (eventIndex !== -1 && allLoadedEvents[eventIndex].data) {
+				payload = allLoadedEvents[eventIndex].data;
+			} else {
+				// Fetch the complete event (including payload) from the API
+				const response = await fetch(`/api/events/${eventId}`);
+				if (!response.ok) {
+					throw new Error(`HTTP ${response.status}: ${response.statusText || 'Unable to load event'}`);
+				}
+				const data = await response.json();
+				if (!data?.event) {
+					throw new Error('Event payload not available');
+				}
+				// data.event.data now contains the original payload exactly as received
+				payload = data.event.data || {};
+
+				// Cache the payload data for future use
+				if (eventIndex !== -1) {
+					allLoadedEvents[eventIndex].data = payload;
+				}
+			}
 
 			// Format as beautified JSON with proper indentation (2 spaces)
 			const beautifiedPayload = JSON.stringify(payload, null, 2);
@@ -4705,17 +4769,30 @@ function safeShowToast(message, type = 'info') {
 	// Load and display event payload in a modal
 	async function loadEventPayload(eventId) {
 		try {
-			// Fetch the complete event (including payload) from the API
-			const response = await fetch(`/api/events/${eventId}`);
-			if (!response.ok) {
-				throw new Error(`HTTP ${response.status}: ${response.statusText || 'Unable to load event'}`);
+			let payload;
+
+			// First check if we already have the payload data loaded from expanding the row
+			const eventIndex = allLoadedEvents.findIndex(e => e.id === eventId);
+			if (eventIndex !== -1 && allLoadedEvents[eventIndex].data) {
+				payload = allLoadedEvents[eventIndex].data;
+			} else {
+				// Fetch the complete event (including payload) from the API
+				const response = await fetch(`/api/events/${eventId}`);
+				if (!response.ok) {
+					throw new Error(`HTTP ${response.status}: ${response.statusText || 'Unable to load event'}`);
+				}
+				const data = await response.json();
+				if (!data?.event) {
+					throw new Error('Event payload not available');
+				}
+				// data.event.data now contains the original payload exactly as received
+				payload = data.event.data || {};
+
+				// Cache the payload data for future use
+				if (eventIndex !== -1) {
+					allLoadedEvents[eventIndex].data = payload;
+				}
 			}
-			const data = await response.json();
-			if (!data?.event) {
-				throw new Error('Event payload not available');
-			}
-			// data.event.data now contains the original payload exactly as received
-			const payload = data.event.data || {};
 
 			// Show payload in modal
 			showPayloadModal(payload, eventId);
