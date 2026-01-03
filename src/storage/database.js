@@ -2945,7 +2945,13 @@ async function getAllPeople() {
 	}
 
 	try {
-		const result = await db.query('SELECT id, name, email, initials, created_at FROM people ORDER BY name ASC');
+		const result = await db.query(`
+			SELECT p.id, p.name, p.email, p.initials, p.created_at, COUNT(pu.username) as username_count
+			FROM people p
+			LEFT JOIN person_usernames pu ON p.id = pu.person_id
+			GROUP BY p.id, p.name, p.email, p.initials, p.created_at
+			ORDER BY p.name ASC
+		`);
 		return result.rows;
 	} catch (error) {
 		console.error('Error getting all people:', error);
