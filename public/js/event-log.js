@@ -2332,7 +2332,7 @@ function safeShowToast(message, type = 'info') {
 					id="event-timestamp-${event.id}"
 					name="timestamp"
 					type="text"
-					value="${formatDateForForm(payload.timestamp).replace(/"/g, '&quot;')}"
+					value="${formatDateForForm(event.timestamp).replace(/"/g, '&quot;')}"
 					placeholder="Timestamp"
 					aria-label="Timestamp"
 					readonly
@@ -2346,7 +2346,7 @@ function safeShowToast(message, type = 'info') {
 					id="event-received-at-${event.id}"
 					name="received_at"
 					type="text"
-					value="${formatDateForForm(payload.received_at).replace(/"/g, '&quot;')}"
+					value="${formatDateForForm(event.received_at).replace(/"/g, '&quot;')}"
 					placeholder="Received At"
 					aria-label="Received At"
 					readonly
@@ -2392,7 +2392,7 @@ function safeShowToast(message, type = 'info') {
 					id="event-version-${event.id}"
 					name="version"
 					type="text"
-					value="${formatValue(payload.version).replace(/"/g, '&quot;')}"
+					value="${formatValue(event.version).replace(/"/g, '&quot;')}"
 					placeholder="Server version"
 					aria-label="Server version"
 					readonly
@@ -2406,7 +2406,7 @@ function safeShowToast(message, type = 'info') {
 					id="event-error-message-${event.id}"
 					name="error_message"
 					type="text"
-					value="${formatValue(payload.error_message).replace(/"/g, '&quot;')}"
+					value="${formatValue(event.error_message).replace(/"/g, '&quot;')}"
 					placeholder="Error Message"
 					aria-label="Error Message"
 					readonly
