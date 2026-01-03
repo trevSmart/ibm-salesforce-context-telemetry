@@ -2299,7 +2299,7 @@ function safeShowToast(message, type = 'info') {
 			`event-id-${event.id}`,
 			'id',
 			'Request ID',
-			payload.id,
+			event.id,
 			'Request ID',
 			'text',
 			'rounded-t-md'
