@@ -3632,33 +3632,26 @@ function safeShowToast(message, type = 'info') {
 		// Update delete button visibility
 		updateDeleteSelectedButton();
 
-		// Reload sessions to ensure checkboxes exist in DOM, then animate
-		(async () => {
-			if (!selectionMode) {
-				// If exiting selection mode, animate out first before reloading
-				const checkboxes = document.querySelectorAll('.session-checkbox');
-				checkboxes.forEach((checkbox) => {
-					checkbox.classList.remove('show');
-				});
-				// Wait for animation to complete before reloading (reduced to match faster transition)
-				await new Promise(resolve => setTimeout(resolve, 120));
-			}
-			await loadSessions();
-			// Use requestAnimationFrame to ensure DOM is ready, then trigger transitions
-			requestAnimationFrame(() => {
-				requestAnimationFrame(() => {
-					if (selectionMode) {
-						// Show checkboxes only for selected sessions
-						selectedSessionsForDeletion.forEach(sessionId => {
-							const checkbox = document.getElementById(`session-checkbox-${escapeHtml(sessionId)}`);
-							if (checkbox && !checkbox.classList.contains('show')) {
-								checkbox.classList.add('show');
-							}
-						});
-					}
-				});
+		// Toggle checkbox visibility without reloading sessions
+		const checkboxes = document.querySelectorAll('.session-checkbox');
+		if (selectionMode) {
+			// Entering selection mode - show all checkboxes
+			checkboxes.forEach((checkbox) => {
+				checkbox.classList.add('show');
 			});
-		})();
+			// Also show checkboxes for any previously selected sessions
+			selectedSessionsForDeletion.forEach(sessionId => {
+				const checkbox = document.getElementById(`session-checkbox-${escapeHtml(sessionId)}`);
+				if (checkbox && !checkbox.classList.contains('show')) {
+					checkbox.classList.add('show');
+				}
+			});
+		} else {
+			// Exiting selection mode - hide all checkboxes
+			checkboxes.forEach((checkbox) => {
+				checkbox.classList.remove('show');
+			});
+		}
 	}
 
 	function selectSessionRange(startSessionId, endSessionId) {
@@ -4500,7 +4493,7 @@ function safeShowToast(message, type = 'info') {
 		cleanupSessionActivityChart();
 	}
 
-	async function resumeEventLogPage() {
+	async function resumeEventLogPage(fromCache = false) {
 		// Resume intervals if they were active before pausing
 		// Note: We don't re-fetch data here since the UI is preserved
 		// Only restart intervals that should be running
@@ -4508,8 +4501,15 @@ function safeShowToast(message, type = 'info') {
 			updateAutoRefreshInterval();
 		}
 
-		// Re-bind event listeners for session list items that may have been lost during soft navigation
-		await loadSessions();
+		// Only reload sessions if this is not a cache restoration
+		// When fromCache=true, the DOM is preserved so sessions are already there
+		if (!fromCache) {
+			// Re-bind event listeners for session list items that may have been lost during soft navigation
+			await loadSessions();
+		}
+
+		// Always re-bind search input since event listeners are lost during soft navigation
+		bindSearchInput();
 		// Restart last updated interval if it was running
 		const lastUpdatedEl = document.querySelector('.last-updated-text');
 		if (lastUpdatedEl && !timerRegistry.has('eventLog.lastUpdated')) {
@@ -4537,7 +4537,7 @@ function safeShowToast(message, type = 'info') {
 		}
 	}
 
-	function initializeApp() {
+	function initializeApp(forceLogsPage = false) {
 		runSafeInitStep('notification button state', updateNotificationButtonState);
 		runSafeInitStep('theme initialization', initTheme);
 		runSafeInitStep('user menu structure', ensureUserMenuStructure);
@@ -4552,11 +4552,12 @@ function safeShowToast(message, type = 'info') {
 		runSafeInitStep('people list delegation', setupPeopleListDelegation); // Event delegation for people
 		runSafeInitStep('teams list delegation', setupTeamsListDelegation); // Event delegation for teams
 		runSafeInitStep('table row delegation', setupTableRowDelegation); // Event delegation for table rows
+		runSafeInitStep('search input binding', bindSearchInput);
 		runSafeAsyncInitStep('event type stats', () => loadEventTypeStats(selectedSession));
 		runSafeAsyncInitStep('sessions list', () => {
 			// Only load sessions list if we're on the logs page and DOM is ready
-			const currentPath = window.location.pathname;
-			if (currentPath === '/logs' || currentPath === '/logs/') {
+			const shouldLoadSessions = forceLogsPage || window.location.pathname === '/logs' || window.location.pathname === '/logs/';
+			if (shouldLoadSessions) {
 				if (document.readyState === 'loading') {
 					window.addEventListener('DOMContentLoaded', () => loadSessions());
 				} else {
@@ -4611,11 +4612,16 @@ function safeShowToast(message, type = 'info') {
 	}
 
 	// Expose a re-initializer so soft navigation can rebuild the page
-	window.initializeEventLogApp = function({resetState = false} = {}) {
+	window.initializeEventLogApp = function({resetState = false, forceLogsPage = false} = {}) {
 		if (resetState) {
-			resetEventLogState();
+			// Don't reset state if we already have sessions loaded (preserves user selections)
+			const sessionList = document.getElementById('sessionList');
+			const hasSessionsLoaded = sessionList && sessionList.children.length > 0;
+			if (!hasSessionsLoaded) {
+				resetEventLogState();
+			}
 		}
-		initializeApp();
+		initializeApp(forceLogsPage);
 	};
 
 	// Expose pause/resume hooks for soft navigation
@@ -4634,10 +4640,10 @@ function safeShowToast(message, type = 'info') {
 			const fromCache = event?.detail?.fromCache === true;
 			if (fromCache) {
 				// Page was restored from cache - resume intervals and restore chart
-				await resumeEventLogPage();
+				await resumeEventLogPage(true);
 			} else {
 				// New page load - full initialization
-				window.initializeEventLogApp({resetState: true});
+				window.initializeEventLogApp({resetState: true, forceLogsPage: true});
 			}
 		}
 	});

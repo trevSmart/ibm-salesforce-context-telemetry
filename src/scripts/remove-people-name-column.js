@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 
 /**
  * Migration script to remove the name column from the people table.
@@ -6,7 +5,7 @@
  * references to the name field.
  */
 
-const { init } = require('../storage/database');
+const {init} = require('../storage/database');
 
 async function removePeopleNameColumn() {
 	try {
