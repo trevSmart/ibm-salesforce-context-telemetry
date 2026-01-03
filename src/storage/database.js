@@ -1204,7 +1204,7 @@ async function getEvents(options = {}) {
 	const eventsQuery = `
 		SELECT
 			e.id, et.name as event, e.timestamp, e.server_id, e.version, e.session_id, e.parent_session_id,
-			e.user_id, e.received_at, e.created_at, e.user_name, e.tool_name, e.company_name,
+			e.user_id, e.data, e.received_at, e.created_at, e.user_name, e.tool_name, e.company_name,
 			e.error_message, e.area
 		FROM telemetry_events e
 		JOIN event_types et ON e.event_id = et.id
