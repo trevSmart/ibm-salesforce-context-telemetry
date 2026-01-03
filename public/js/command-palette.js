@@ -590,12 +590,11 @@
 
 			// Filter people
 			filteredPeople = peopleData.filter(person =>
-				person.name.toLowerCase().includes(lowerQuery) ||
 				(person.email && person.email.toLowerCase().includes(lowerQuery))
 			).map(person => ({
 				id: `person-${person.id}`,
 				type: 'person',
-				title: person.name,
+				title: `Person #${person.id}`,
 				description: person.email || 'Person',
 				icon: 'user-group',
 				action: () => navigateTo('/people'),

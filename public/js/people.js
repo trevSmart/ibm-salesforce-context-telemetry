@@ -276,7 +276,7 @@ async function renderPersonDetail(personId) {
 		${initials}
 	</span>`;
 
-	contentContainer.querySelector('#personDetailName').innerHTML = `<span class="text-gray-900 dark:text-white" style="display: flex; align-items: center;">${logoOrAvatar}${escapeHtml(person.name)}</span>`;
+	contentContainer.querySelector('#personDetailName').innerHTML = `<span class="text-gray-900 dark:text-white" style="display: flex; align-items: center;">${logoOrAvatar}Person #${person.id}</span>`;
 
 	const detailContent = contentContainer.querySelector('#personDetailContent');
 	detailContent.innerHTML = `
@@ -311,10 +311,6 @@ async function renderPersonDetail(personId) {
 	const personInfo = contentContainer.querySelector('#personInfo');
 	personInfo.innerHTML = `
     <div class="space-y-3">
-      <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name</label>
-        <input type="text" id="personNameInput" value="${escapeAttr(person.name || '')}" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-gray-100">
-      </div>
       <div>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
         <input type="email" id="personEmailInput" value="${escapeAttr(person.email || '')}" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-gray-100">
@@ -390,7 +386,7 @@ window.showDeletePersonConfirm = async function(person) {
 	try {
 		const confirmed = await showConfirmDialog({
 			title: 'Delete person',
-			message: `Are you sure you want to delete "${person.name}" and all their associated usernames?`,
+			message: `Are you sure you want to delete Person #${person.id} and all their associated usernames?`,
 			confirmText: 'Delete person',
 			cancelText: 'Cancel',
 			destructive: true
@@ -401,7 +397,7 @@ window.showDeletePersonConfirm = async function(person) {
 			return;
 		}
 
-		await deletePerson(person.id, person.name);
+		await deletePerson(person.id);
 		showToast('Person deleted successfully', 'success');
 		currentView = 'list';
 		_currentPersonId = null;
@@ -425,11 +421,6 @@ function showPersonFormModal(person = null) {
     <h2 style="margin: 0 0 16px 0;">${isEdit ? 'Edit Person' : 'Create Person'}</h2>
     <form id="personForm" enctype="multipart/form-data">
       <div style="display: flex; flex-direction: column; gap: 12px;">
-        <label>
-          <div style="margin-bottom: 4px; font-weight: 500;">Name *</div>
-          <input type="text" id="personNameInput" value="${person ? escapeAttr(person.name) : ''}"
-                 class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-gray-100">
-        </label>
         <label>
           <div style="margin-bottom: 4px; font-weight: 500;">Email (optional)</div>
           <input type="email" id="personEmailInput" value="${person ? escapeAttr(person.email || '') : ''}"
@@ -493,21 +484,15 @@ function showPersonFormModal(person = null) {
 
 	document.getElementById('personForm')?.addEventListener('submit', async (e) => {
 		e.preventDefault();
-		const name = document.getElementById('personNameInput').value.trim();
 		const email = document.getElementById('personEmailInput').value.trim() || null;
 		const initials = document.getElementById('personInitialsInput').value.trim() || null;
 
-		if (!name) {
-			showToast('Person name is required', 'error');
-			return;
-		}
-
 		try {
 			if (isEdit) {
-				await updatePerson(person.id, {name, email, initials});
+				await updatePerson(person.id, {email, initials});
 				showToast('Person updated successfully', 'success');
 			} else {
-				await createPerson({name, email, initials});
+				await createPerson({email, initials});
 				showToast('Person created successfully', 'success');
 			}
 			closeModal();
@@ -674,22 +659,16 @@ async function loadPeople() {
 	}
 }
 
-// Function to get person initials (custom or auto-generated)
+// Function to get person initials (custom or auto-generated from ID)
 function getPersonInitials(person) {
 	// If custom initials are defined, use them
 	if (person.initials && person.initials.trim()) {
 		return person.initials.trim().toUpperCase();
 	}
 
-	// Otherwise, auto-generate from name (first 2 words or first word)
-	const nameParts = person.name.trim().split(/\s+/);
-	if (nameParts.length >= 2) {
-		// Take first letter of first two words
-		return (nameParts[0].charAt(0) + nameParts[1].charAt(0)).toUpperCase();
-	}
-		// Take first letter of single word
-		return nameParts[0].charAt(0).toUpperCase();
-
+	// Otherwise, use first two digits of ID
+	const idStr = person.id.toString();
+	return idStr.length >= 2 ? idStr.substring(0, 2) : idStr;
 }
 
 function renderPeopleList() {
@@ -742,7 +721,7 @@ function renderPeopleList() {
         <div class="mt-8 space-y-2">
           <h3 class="text-base font-semibold text-gray-900 dark:text-white">
             <span aria-hidden="true" class="absolute inset-0"></span>
-            ${person.name}
+            Person #${person.id}
           </h3>
           <div class="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
             <span class="inline-flex items-center gap-1.5">
@@ -1145,20 +1124,13 @@ async function savePersonChanges() {
 			return;
 		}
 
-		const nameInput = document.getElementById('personNameInput');
 		const emailInput = document.getElementById('personEmailInput');
 		const initialsInput = document.getElementById('personInitialsInput');
 
 		const personData = {
-			name: nameInput?.value?.trim() || '',
 			email: emailInput?.value?.trim() || null,
 			initials: initialsInput?.value?.trim() || null
 		};
-
-		if (!personData.name) {
-			showToast('Please enter a name', 'error');
-			return;
-		}
 
 		await updatePerson(personId, personData);
 

@@ -126,7 +126,6 @@ async function init() {
 
 		CREATE TABLE IF NOT EXISTS people (
 			id SERIAL PRIMARY KEY,
-			name TEXT NOT NULL,
 			email TEXT,
 			initials TEXT,
 			created_at TIMESTAMPTZ DEFAULT NOW()
@@ -2927,7 +2926,7 @@ async function getPersonById(personId) {
 	}
 
 	try {
-		const result = await db.query('SELECT id, name, email, initials, created_at FROM people WHERE id = $1', [personId]);
+		const result = await db.query('SELECT id, email, initials, created_at FROM people WHERE id = $1', [personId]);
 		return result.rows[0] || null;
 	} catch (error) {
 		console.error('Error getting person by ID:', error);
@@ -2946,11 +2945,11 @@ async function getAllPeople() {
 
 	try {
 		const result = await db.query(`
-			SELECT p.id, p.name, p.email, p.initials, p.created_at, COUNT(pu.username) as username_count
+			SELECT p.id, p.email, p.initials, p.created_at, COUNT(pu.username) as username_count
 			FROM people p
 			LEFT JOIN person_usernames pu ON p.id = pu.person_id
-			GROUP BY p.id, p.name, p.email, p.initials, p.created_at
-			ORDER BY p.name ASC
+			GROUP BY p.id, p.email, p.initials, p.created_at
+			ORDER BY p.id ASC
 		`);
 		return result.rows;
 	} catch (error) {
@@ -2965,19 +2964,15 @@ async function getAllPeople() {
  * @param {string|null} email - Person's email (optional)
  * @returns {Promise<object>} Created person object
  */
-async function createPerson(name, email = null, initials = null) {
+async function createPerson(email = null, initials = null) {
 	if (!db) {
 		throw new Error('Database not initialized. Call init() first.');
 	}
 
-	if (!name || name.trim() === '') {
-		throw new Error('Name is required');
-	}
-
 	try {
 		const result = await db.query(
-			'INSERT INTO people (name, email, initials) VALUES ($1, $2, $3) RETURNING id, name, email, initials, created_at',
-			[name.trim(), email, initials]
+			'INSERT INTO people (email, initials) VALUES ($1, $2) RETURNING id, email, initials, created_at',
+			[email, initials]
 		);
 		return result.rows[0];
 	} catch (error) {
@@ -2993,7 +2988,7 @@ async function createPerson(name, email = null, initials = null) {
  * @param {string|null} email - Person's email (optional)
  * @returns {Promise<object>} Updated person object
  */
-async function updatePerson(personId, name, email = null, initials = null) {
+async function updatePerson(personId, email = null, initials = null) {
 	if (!db) {
 		throw new Error('Database not initialized. Call init() first.');
 	}
@@ -3002,14 +2997,10 @@ async function updatePerson(personId, name, email = null, initials = null) {
 		throw new Error('Valid person ID is required');
 	}
 
-	if (!name || name.trim() === '') {
-		throw new Error('Name is required');
-	}
-
 	try {
 		const result = await db.query(
-			'UPDATE people SET name = $1, email = $2, initials = $3 WHERE id = $4 RETURNING id, name, email, initials, created_at',
-			[name.trim(), email, initials, personId]
+			'UPDATE people SET email = $1, initials = $2 WHERE id = $3 RETURNING id, email, initials, created_at',
+			[email, initials, personId]
 		);
 
 		if (result.rows.length === 0) {

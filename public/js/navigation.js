@@ -351,8 +351,16 @@
 				doc = domParser.parseFromString(html, 'text/html');
 				nextContent = doc.querySelector('.container-content');
 
-				if (!nextContent) {
-					throw new Error('Target page missing container-content');
+				// Check if we got redirected to login page (session expired)
+				// or if the response doesn't have the expected container structure
+				const hasLoginCard = doc.querySelector('.login-card');
+				const hasContainerContent = !!nextContent;
+
+				if (!hasContainerContent || hasLoginCard) {
+					// Either redirected to login or got unexpected page structure
+					// Fall back to full page navigation
+					window.location.href = targetPath;
+					return;
 				}
 
 				// Keep nav, search, and container shell styling consistent across pages

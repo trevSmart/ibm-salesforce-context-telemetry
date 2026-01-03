@@ -1151,16 +1151,9 @@ app.get('/api/people', auth.requireAuth, auth.requireRole('administrator'), asyn
 
 app.post('/api/people', auth.requireAuth, auth.requireRole('administrator'), async (req, res) => {
 	try {
-		const {name, email, initials} = req.body;
+		const {email, initials} = req.body;
 
-		if (!name || name.trim() === '') {
-			return res.status(400).json({
-				status: 'error',
-				message: 'Name is required'
-			});
-		}
-
-		const person = await db.createPerson(name, email || null, initials || null);
+		const person = await db.createPerson(email || null, initials || null);
 
 		res.status(201).json({
 			status: 'ok',
@@ -1217,14 +1210,7 @@ app.put('/api/people/:id', auth.requireAuth, auth.requireRole('administrator'), 
 			});
 		}
 
-		const {name, email, initials} = req.body;
-
-		if (!name || name.trim() === '') {
-			return res.status(400).json({
-				status: 'error',
-				message: 'Name is required'
-			});
-		}
+		const {email, initials} = req.body;
 
 		// Verify person exists
 		const people = await db.getAllPeople();
@@ -1236,7 +1222,7 @@ app.put('/api/people/:id', auth.requireAuth, auth.requireRole('administrator'), 
 			});
 		}
 
-		const updatedPerson = await db.updatePerson(personId, name, email || null, initials || null);
+		const updatedPerson = await db.updatePerson(personId, email || null, initials || null);
 
 		res.json({
 			status: 'ok',
