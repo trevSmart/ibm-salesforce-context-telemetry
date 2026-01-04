@@ -854,3 +854,8 @@ window.addEventListener('softNav:pageMounted', async (event) => {
 		}
 	}
 });
+
+// Listen for theme changes to refresh chart colors
+document.addEventListener('themeChange', () => {
+	refreshTheme();
+});

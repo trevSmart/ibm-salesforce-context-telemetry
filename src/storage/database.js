@@ -126,10 +126,13 @@ async function init() {
 
 		CREATE TABLE IF NOT EXISTS people (
 			id SERIAL PRIMARY KEY,
-			email TEXT,
+			name TEXT,
 			initials TEXT,
 			created_at TIMESTAMPTZ DEFAULT NOW()
 		);
+
+		ALTER TABLE people ADD COLUMN IF NOT EXISTS name TEXT;
+		ALTER TABLE people DROP COLUMN IF EXISTS email;
 
 		CREATE TABLE IF NOT EXISTS person_usernames (
 			id SERIAL PRIMARY KEY,
@@ -1714,6 +1717,104 @@ async function getDatabaseSize() {
 	}
 }
 
+async function deleteAllDeletedEvents() {
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
+
+	try {
+		const result = await db.query('DELETE FROM telemetry_events WHERE deleted_at IS NOT NULL RETURNING id');
+		return result.rowCount;
+	} catch (error) {
+		console.error('Error deleting all deleted events:', error);
+		throw error;
+	}
+}
+
+async function deleteAllTeams() {
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
+
+	try {
+		const result = await db.query('DELETE FROM teams RETURNING id');
+		return result.rowCount;
+	} catch (error) {
+		console.error('Error deleting all teams:', error);
+		throw error;
+	}
+}
+
+async function deleteAllOrgs() {
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
+
+	try {
+		const result = await db.query('DELETE FROM orgs RETURNING server_id');
+		return result.rowCount;
+	} catch (error) {
+		console.error('Error deleting all orgs:', error);
+		throw error;
+	}
+}
+
+async function deleteAllUserEventStats() {
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
+
+	try {
+		const result = await db.query('DELETE FROM user_event_stats RETURNING user_id');
+		return result.rowCount;
+	} catch (error) {
+		console.error('Error deleting all user event stats:', error);
+		throw error;
+	}
+}
+
+async function deleteAllOrgEventStats() {
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
+
+	try {
+		const result = await db.query('DELETE FROM org_event_stats RETURNING org_id');
+		return result.rowCount;
+	} catch (error) {
+		console.error('Error deleting all org event stats:', error);
+		throw error;
+	}
+}
+
+async function deleteAllPeople() {
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
+
+	try {
+		const result = await db.query('DELETE FROM people RETURNING id');
+		return result.rowCount;
+	} catch (error) {
+		console.error('Error deleting all people:', error);
+		throw error;
+	}
+}
+
+async function deleteAllTeamEventUsers() {
+	if (!db) {
+		throw new Error('Database not initialized. Call init() first.');
+	}
+
+	try {
+		const result = await db.query('DELETE FROM team_event_users RETURNING id');
+		return result.rowCount;
+	} catch (error) {
+		console.error('Error deleting all team event users:', error);
+		throw error;
+	}
+}
+
 
 /**
  * Close database connection
@@ -2788,7 +2889,6 @@ async function getTeamById(teamId) {
           server_id,
           company_name,
           alias,
-          color,
           team_id,
           created_at,
           updated_at
@@ -2926,7 +3026,7 @@ async function getPersonById(personId) {
 	}
 
 	try {
-		const result = await db.query('SELECT id, email, initials, created_at FROM people WHERE id = $1', [personId]);
+		const result = await db.query('SELECT id, name, initials, created_at FROM people WHERE id = $1', [personId]);
 		return result.rows[0] || null;
 	} catch (error) {
 		console.error('Error getting person by ID:', error);
@@ -2945,10 +3045,10 @@ async function getAllPeople() {
 
 	try {
 		const result = await db.query(`
-			SELECT p.id, p.email, p.initials, p.created_at, COUNT(pu.username) as username_count
+			SELECT p.id, p.name, p.initials, p.created_at, COUNT(pu.username) as username_count
 			FROM people p
 			LEFT JOIN person_usernames pu ON p.id = pu.person_id
-			GROUP BY p.id, p.email, p.initials, p.created_at
+			GROUP BY p.id, p.name, p.initials, p.created_at
 			ORDER BY p.id ASC
 		`);
 		return result.rows;
@@ -2960,19 +3060,17 @@ async function getAllPeople() {
 
 /**
  * Create a new person
- * @param {string} name - Person's name
- * @param {string|null} email - Person's email (optional)
  * @returns {Promise<object>} Created person object
  */
-async function createPerson(email = null, initials = null) {
+async function createPerson(name, initials = null) {
 	if (!db) {
 		throw new Error('Database not initialized. Call init() first.');
 	}
 
 	try {
 		const result = await db.query(
-			'INSERT INTO people (email, initials) VALUES ($1, $2) RETURNING id, email, initials, created_at',
-			[email, initials]
+			'INSERT INTO people (name, initials) VALUES ($1, $2) RETURNING id, name, initials, created_at',
+			[name, initials]
 		);
 		return result.rows[0];
 	} catch (error) {
@@ -2984,11 +3082,9 @@ async function createPerson(email = null, initials = null) {
 /**
  * Update a person's information
  * @param {number} personId - Person ID
- * @param {string} name - Person's name
- * @param {string|null} email - Person's email (optional)
  * @returns {Promise<object>} Updated person object
  */
-async function updatePerson(personId, email = null, initials = null) {
+async function updatePerson(personId, name, initials = null) {
 	if (!db) {
 		throw new Error('Database not initialized. Call init() first.');
 	}
@@ -2999,8 +3095,8 @@ async function updatePerson(personId, email = null, initials = null) {
 
 	try {
 		const result = await db.query(
-			'UPDATE people SET email = $1, initials = $2 WHERE id = $3 RETURNING id, email, initials, created_at',
-			[email, initials, personId]
+			'UPDATE people SET name = $1, initials = $2 WHERE id = $3 RETURNING id, name, initials, created_at',
+			[name, initials, personId]
 		);
 
 		if (result.rows.length === 0) {
@@ -4204,6 +4300,13 @@ export {
 	getTeamStats,
 	deleteEvent,
 	deleteAllEvents,
+	deleteAllDeletedEvents,
+	deleteAllTeams,
+	deleteAllOrgs,
+	deleteAllUserEventStats,
+	deleteAllOrgEventStats,
+	deleteAllPeople,
+	deleteAllTeamEventUsers,
 	deleteEventsBySession,
 	recoverEvent,
 	permanentlyDeleteEvent,

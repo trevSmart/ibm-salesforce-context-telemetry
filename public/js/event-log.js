@@ -2177,7 +2177,7 @@ function safeShowToast(message, type = 'info') {
 	function getEventBadgeClass(eventType, eventSuccess) {
 		// Si success és false, sempre usa colors vermells
 		if (eventSuccess === false) {
-			return `event-badge bg-red-50 text-red-700 inset-ring-red-600/10`;
+			return `event-badge red`;
 		}
 
 		// Assigna colors aleatòriament però consistentment basat en el tipus d'event
@@ -4540,7 +4540,7 @@ function safeShowToast(message, type = 'info') {
 	function initializeApp(forceLogsPage = false) {
 		runSafeInitStep('notification button state', updateNotificationButtonState);
 		runSafeInitStep('theme initialization', initTheme);
-		runSafeInitStep('user menu structure', ensureUserMenuStructure);
+		// runSafeInitStep('user menu structure', ensureUserMenuStructure); // Commented out to avoid duplicate initialization with user-menu.js
 		// Note: setupUserMenuHover is now auto-initialized in user-menu.js
 		runSafeInitStep('level filters setup', setupLevelFilters);
 		runSafeInitStep('sidebar resizer setup', setupSidebarResizer);

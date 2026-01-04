@@ -1149,11 +1149,42 @@ app.get('/api/people', auth.requireAuth, auth.requireRole('administrator'), asyn
 	}
 });
 
+function deriveInitialsFromName(name) {
+	const trimmedName = name.trim();
+	if (!trimmedName) {
+		return null;
+	}
+
+	const parts = trimmedName.split(/\s+/).filter(Boolean);
+	if (parts.length === 0) {
+		return null;
+	}
+
+	let initials = '';
+	if (parts.length === 1) {
+		initials = parts[0].slice(0, 3);
+	} else {
+		initials = parts.slice(0, 3).map(part => part[0]).join('');
+	}
+
+	return initials.toUpperCase();
+}
+
 app.post('/api/people', auth.requireAuth, auth.requireRole('administrator'), async (req, res) => {
 	try {
-		const {email, initials} = req.body;
+		const {name, initials} = req.body;
+		const normalizedName = typeof name === 'string' ? name.trim() : '';
+		if (!normalizedName) {
+			return res.status(400).json({
+				status: 'error',
+				message: 'Name is required'
+			});
+		}
 
-		const person = await db.createPerson(email || null, initials || null);
+		const normalizedInitials = typeof initials === 'string' ? initials.trim().slice(0, 3) : '';
+		const resolvedInitials = normalizedInitials || deriveInitialsFromName(normalizedName);
+
+		const person = await db.createPerson(normalizedName, resolvedInitials || null);
 
 		res.status(201).json({
 			status: 'ok',
@@ -1210,7 +1241,14 @@ app.put('/api/people/:id', auth.requireAuth, auth.requireRole('administrator'), 
 			});
 		}
 
-		const {email, initials} = req.body;
+		const {name, initials} = req.body;
+		const normalizedName = typeof name === 'string' ? name.trim() : '';
+		if (!normalizedName) {
+			return res.status(400).json({
+				status: 'error',
+				message: 'Name is required'
+			});
+		}
 
 		// Verify person exists
 		const people = await db.getAllPeople();
@@ -1222,7 +1260,10 @@ app.put('/api/people/:id', auth.requireAuth, auth.requireRole('administrator'), 
 			});
 		}
 
-		const updatedPerson = await db.updatePerson(personId, email || null, initials || null);
+		const normalizedInitials = typeof initials === 'string' ? initials.trim().slice(0, 3) : '';
+		const resolvedInitials = normalizedInitials || deriveInitialsFromName(normalizedName);
+
+		const updatedPerson = await db.updatePerson(personId, normalizedName, resolvedInitials || null);
 
 		res.json({
 			status: 'ok',

@@ -142,7 +142,7 @@
           </button>
           ${secondaryButtonHTML}
           <div class="inline-flex rounded-md shadow-xs mr-2 button-group">
-            <button type="button" class="relative inline-flex items-center rounded-l-md bg-[var(--button-bg)] px-2 py-2 text-gray-400 inset-ring-1 inset-ring-gray-300 hover:bg-gray-50 focus:z-10" style="padding-left: 10px; --radius-md: 99px;" data-action="open-settings" aria-label="Settings" data-tooltip="Settings" data-tooltip-position="top">
+            <button type="button" class="relative inline-flex items-center rounded-l-md bg-[var(--button-bg)] px-2 py-2 text-gray-400 hover:bg-gray-50 focus:z-10" style="padding-left: 10px; --radius-md: 99px;" data-action="open-settings" aria-label="Settings" data-tooltip="Settings" data-tooltip-position="top">
               <span class="sr-only">Settings</span>
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="var(--text-regular)" stroke-width="1.5" aria-hidden="true" class="size-[18px]">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z" />
@@ -150,7 +150,7 @@
               </svg>
             </button>
             <el-dropdown class="user-menu-container inline-block -ml-px">
-              <button class="relative inline-flex items-center rounded-r-md bg-[var(--button-bg)] px-3 py-2 text-sm text-gray-900 inset-ring-1 inset-ring-gray-300 hover:bg-gray-50 focus:z-10" style="--radius-md: 99px;" onclick="showUserMenu(event)">
+              <button class="relative inline-flex items-center rounded-r-md bg-[var(--button-bg)] px-3 py-2 text-gray-900 hover:bg-gray-50 focus:z-10" style="--radius-md: 99px;" onclick="showUserMenu(event)">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="var(--text-regular)" width="18" height="18" aria-hidden="true" class="size-[18px]">
                   <path fill-rule="evenodd" d="M12 2.25a5.25 5.25 0 0 0-3.717 8.966 8.252 8.252 0 0 0-4.367 7.284.75.75 0 0 0 1.5 0 6.75 6.75 0 1 1 13.5 0 .75.75 0 0 0 1.5 0 8.252 8.252 0 0 0-4.366-7.284A5.25 5.25 0 0 0 12 2.25Zm0 1.5a3.75 3.75 0 1 1 0 7.5 3.75 3.75 0 0 1 0-7.5Z" clip-rule="evenodd"></path>
                 </svg>
@@ -158,7 +158,7 @@
                   <path d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" fill-rule="evenodd" />
                 </svg>
               </button>
-              <el-menu id="userMenu" anchor="bottom end" popover class="	origin-top-right divide-y divide-gray-100 rounded-md bg-white/70 dark:bg-gray-800/70 text-gray-900 shadow-lg outline-1 outline-black/5 dark:outline-white/10 backdrop-blur-sm backdrop-filter transition transition-discrete dark:divide-white/10 dark:text-gray-50 [--anchor-gap:--spacing(2)] data-closed:-translate-y-2 data-closed:scale-95 data-closed:transform data-closed:opacity-0 data-enter:duration-250 data-enter:ease-out data-leave:duration-200 data-leave:ease-in"></el-menu>
+              <el-menu id="userMenu" anchor="bottom end" popover class="rigin-top-right divide-y divide-gray-500/10 rounded-md bg-white/70 dark:bg-gray-800/70 text-gray-900 shadow-lg outline-1 outline-black/5 dark:outline-white/10 backdrop-blur-sm backdrop-filter transition transition-discrete dark:divide-white/10 dark:text-gray-50 [--anchor-gap:--spacing(2)] data-closed:-translate-y-2 data-closed:scale-95 data-closed:transform data-closed:opacity-0 data-enter:duration-250 data-enter:ease-out data-leave:duration-200 data-leave:ease-in"></el-menu>
             </el-dropdown>
           </div>
         </div>
@@ -207,6 +207,8 @@
 			console.warn('No header placeholder or existing nav found');
 
 		}
+
+		window.dispatchEvent(new CustomEvent('header:rendered'));
 
 		// Initialize navigation animation positions
 		initNavAnimation();

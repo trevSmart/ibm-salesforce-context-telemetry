@@ -10,7 +10,50 @@ let currentView = 'list'; // 'list' or 'detail'
 let teams = [];
 // Cache busting timestamp for team logos - updated when teams data changes
 let teamsCacheBuster = Date.now();
-let teamsNavResetHandler = null;
+
+// Input error handling functions
+function showInputError(inputId, errorMessage) {
+	const input = document.getElementById(inputId);
+	const errorElement = document.getElementById(`${inputId}-error`);
+
+	if (!input || !errorElement) return;
+
+	// Add error classes to input
+	input.classList.remove(
+		'outline-gray-300', 'dark:outline-gray-600', 'focus:outline-blue-600', 'dark:focus:outline-blue-400',
+		'text-gray-900', 'dark:text-gray-100', 'bg-gray-50', 'dark:bg-white/5', 'placeholder:text-gray-400'
+	);
+	input.classList.add(
+		'text-red-900', 'dark:text-red-400', 'outline-red-300', 'dark:outline-red-500',
+		'placeholder:text-red-300', 'dark:placeholder:text-red-400', 'focus:outline-red-600', 'dark:focus:outline-red-400'
+	);
+	input.setAttribute('aria-invalid', 'true');
+
+	// Show error message
+	errorElement.textContent = errorMessage;
+	errorElement.classList.remove('hidden');
+}
+
+function clearInputError(inputId) {
+	const input = document.getElementById(inputId);
+	const errorElement = document.getElementById(`${inputId}-error`);
+
+	if (!input || !errorElement) return;
+
+	// Remove error classes from input
+	input.classList.remove(
+		'text-red-900', 'dark:text-red-400', 'outline-red-300', 'dark:outline-red-500/50',
+		'placeholder:text-red-300', 'dark:placeholder:text-red-400/70', 'focus:outline-red-600', 'dark:focus:outline-red-400'
+	);
+	input.classList.add(
+		'text-gray-900', 'dark:text-gray-100', 'outline-gray-300', 'dark:outline-gray-600',
+		'bg-gray-50', 'dark:bg-white/5', 'placeholder:text-gray-400', 'focus:outline-blue-600', 'dark:focus:outline-blue-400'
+	);
+	input.removeAttribute('aria-invalid');
+
+	// Hide error message
+	errorElement.classList.add('hidden');
+}
 
 // Transition functions
 async function transitionTeamsContent(newContent) {
@@ -114,14 +157,6 @@ function escapeHtml(text) {
 	const div = document.createElement('div');
 	div.textContent = text;
 	return div.innerHTML;
-}
-
-function toggleNewTeamButton(isVisible) {
-	const newTeamBtn = document.getElementById('newTeamBtn');
-	if (!newTeamBtn) {
-		return;
-	}
-	newTeamBtn.style.display = isVisible ? '' : 'none';
 }
 
 /**
@@ -303,16 +338,6 @@ function sanitizeCssColor(color) {
 	return null;
 }
 
-function validateColorInput(value) {
-	const trimmedValue = typeof value === 'string' ? value.trim() : '';
-	if (!trimmedValue) {
-		return {isValid: true, sanitized: null};
-	}
-
-	const sanitized = sanitizeCssColor(trimmedValue);
-	return {isValid: Boolean(sanitized), sanitized};
-}
-
 // User menu functions (showUserMenu, handleLogout) are now in user-menu.js
 
 /**
@@ -332,8 +357,8 @@ function showConfirmDialog({title, message, confirmText = 'Confirm', cancelText 
 
 		// Create dialog HTML using native <dialog> element
 		const dialogHtml = `
-			<div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" id="${dialogId}-backdrop" style="z-index: 10001; opacity: 0; transition: opacity 0.2s ease;">
-				<div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6 transform transition-all" id="${dialogId}-panel" style="opacity: 0; transform: translateY(8px) scale(0.98); transition: opacity 0.2s ease, transform 0.2s ease;">
+			<div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" id="${dialogId}-backdrop">
+				<div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6 transform transition-all">
 					<div class="flex items-start">
 						<div class="mx-auto flex shrink-0 items-center justify-center rounded-full ${destructive ? (isDark ? 'bg-red-500/10' : 'bg-red-100') : (isDark ? 'bg-green-500/10' : 'bg-green-100')} sm:mx-0 sm:size-10" style="width: 3rem; height: 3rem;">
 							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="size-6 ${destructive ? (isDark ? 'text-red-400' : 'text-red-600') : (isDark ? 'text-green-400' : 'text-green-600')}">
@@ -364,17 +389,13 @@ function showConfirmDialog({title, message, confirmText = 'Confirm', cancelText 
 		const backdrop = document.getElementById(`${dialogId}-backdrop`);
 		const confirmBtn = container.querySelector('[data-action="confirm"]');
 		const cancelBtn = container.querySelector('[data-action="cancel"]');
-		const panel = document.getElementById(`${dialogId}-panel`);
 
 		let resolved = false;
 
 		// Cleanup function
 		const cleanup = () => {
+			// Add fade out animation
 			backdrop.style.opacity = '0';
-			if (panel) {
-				panel.style.opacity = '0';
-				panel.style.transform = 'translateY(8px) scale(0.98)';
-			}
 			timerRegistry.setTimeout('modal.fadeOut', () => {
 				container.remove();
 			}, 200);
@@ -420,10 +441,6 @@ function showConfirmDialog({title, message, confirmText = 'Confirm', cancelText 
 		// Animate in
 		requestAnimationFrame(() => {
 			backdrop.style.opacity = '1';
-			if (panel) {
-				panel.style.opacity = '1';
-				panel.style.transform = 'translateY(0) scale(1)';
-			}
 		});
 	});
 }
@@ -550,18 +567,15 @@ async function createTeamWithLogo(name, color, logoFile) {
 
 		if (!response.ok) {
 			const data = await response.json();
-			if (response.status === 409) {
-				throw new Error(data.message || 'Team name already exists');
-			}
-			throw new Error(data.message || `HTTP ${response.status}`);
+			const error = new Error(data.message || `HTTP ${response.status}`);
+			error.status = response.status;
+			throw error;
 		}
 
 		const data = await response.json();
 		return data.team;
 	} catch (error) {
-		if (!/already exists/i.test(error?.message || '')) {
-			console.error('Error creating team:', error);
-		}
+		console.error('Error creating team:', error);
 		throw error;
 	}
 }
@@ -592,18 +606,15 @@ async function updateTeamWithLogo(teamId, updates, logoFile, removeLogo) {
 
 		if (!response.ok) {
 			const data = await response.json();
-			if (response.status === 409) {
-				throw new Error(data.message || 'Team name already exists');
-			}
-			throw new Error(data.message || `HTTP ${response.status}`);
+			const error = new Error(data.message || `HTTP ${response.status}`);
+			error.status = response.status;
+			throw error;
 		}
 
 		const data = await response.json();
 		return data.team;
 	} catch (error) {
-		if (!/already exists/i.test(error?.message || '')) {
-			console.error('Error updating team:', error);
-		}
+		console.error('Error updating team:', error);
 		throw error;
 	}
 }
@@ -652,7 +663,9 @@ async function moveOrgToTeam(orgId, teamId) {
 
 		if (!response.ok) {
 			const data = await response.json();
-			throw new Error(data.message || `HTTP ${response.status}`);
+			const error = new Error(data.message || `HTTP ${response.status}`);
+			error.status = response.status;
+			throw error;
 		}
 
 		return true;
@@ -674,7 +687,9 @@ async function addEventUserToTeam(userName, teamId) {
 
 		if (!response.ok) {
 			const data = await response.json();
-			throw new Error(data.message || `HTTP ${response.status}`);
+			const error = new Error(data.message || `HTTP ${response.status}`);
+			error.status = response.status;
+			throw error;
 		}
 
 		return true;
@@ -696,7 +711,9 @@ async function upsertOrg(orgId, orgData) {
 
 		if (!response.ok) {
 			const data = await response.json();
-			throw new Error(data.message || `HTTP ${response.status}`);
+			const error = new Error(data.message || `HTTP ${response.status}`);
+			error.status = response.status;
+			throw error;
 		}
 
 		const data = await response.json();
@@ -709,7 +726,6 @@ async function upsertOrg(orgId, orgData) {
 
 // UI rendering functions
 function renderTeamsList() {
-	toggleNewTeamButton(true);
 	const container = document.createElement('div');
 	container.innerHTML = `
     <div class="teams-list-container">
@@ -792,10 +808,9 @@ function renderTeamsList() {
 }
 
 async function renderTeamDetail(teamId) {
-	toggleNewTeamButton(false);
 	const contentContainer = document.createElement('div');
 	contentContainer.innerHTML = `
-    <div class="teams-detail-container">
+    <div>
       <div id="teamDetailHeader" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
         <div style="display: flex; align-items: center; gap: 12px;">
           <button id="backToTeamsBtn" style="background: none; border: none; padding: 4px; cursor: pointer; color: inherit; display: flex; align-items: center; justify-content: center; transition: opacity 0.2s; opacity: 0.7; width: 28px;" aria-label="Back to teams" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">
@@ -854,56 +869,45 @@ async function renderTeamDetail(teamId) {
         <div class="px-4 py-5 sm:p-6">
           <form id="teamEditForm" class="space-y-4">
             <div>
-              <label class="block">
-                <div class="block text-sm/6 font-medium text-gray-900 dark:text-white">Team Name *</div>
-                <div class="mt-2 grid grid-cols-1">
-                  <input type="text" id="teamNameInput" value="${escapeHtml(team.name)}"
-                         class="col-start-1 row-start-1 block w-full rounded-md bg-white dark:bg-white/5 py-1.5 pr-10 pl-3 text-gray-900 dark:text-white outline-1 -outline-offset-1 outline-gray-300 dark:outline-white/10 placeholder:text-gray-400 dark:placeholder:text-white/40 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:pr-9 sm:text-sm/6">
-                  <svg id="teamNameErrorIcon" viewBox="0 0 16 16" fill="currentColor" data-slot="icon" aria-hidden="true" class="pointer-events-none col-start-1 row-start-1 mr-3 size-5 self-center justify-self-end text-red-500 dark:text-red-400 sm:size-4" style="display: none;">
-                    <path d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14ZM8 4a.75.75 0 0 1 .75.75v3a.75.75 0 0 1-1.5 0v-3A.75.75 0 0 1 8 4Zm0 8a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clip-rule="evenodd" fill-rule="evenodd" />
-                  </svg>
-                </div>
-                <p id="teamNameError" class="mt-2 text-sm text-red-600 dark:text-red-400" style="display: none;"></p>
-              </label>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Team Name *</label>
+              <input type="text" id="teamNameInput" value="${escapeHtml(team.name)}"
+                     class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-gray-100">
             </div>
             <div>
-              <label class="block">
-                <div class="block text-sm/6 font-medium text-gray-900 dark:text-white">Color</div>
-                <div class="mt-2 input-color">
-                  <button class="color-preview-btn" style="--preview-color: ${team.color || '#0077b6'}"></button>
-                  <input type="text" id="teamColorInput" value="${escapeHtml(team.color || '')}" placeholder="#0077b6"
-                         class="block w-full rounded-md bg-white dark:bg-white/5 py-1.5 pr-10 pl-10 text-gray-900 dark:text-white outline-1 -outline-offset-1 outline-gray-300 dark:outline-white/10 placeholder:text-gray-400 dark:placeholder:text-white/40 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6 coloris"
-                         data-coloris autocomplete="off">
-                  <svg id="teamColorErrorIcon" viewBox="0 0 16 16" fill="currentColor" data-slot="icon" aria-hidden="true" class="pointer-events-none absolute right-3 top-1/2 size-5 -translate-y-1/2 text-red-500 dark:text-red-400 sm:size-4" style="display: none;">
-                    <path d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14ZM8 4a.75.75 0 0 1 .75.75v3a.75.75 0 0 1-1.5 0v-3A.75.75 0 0 1 8 4Zm0 8a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clip-rule="evenodd" fill-rule="evenodd" />
-                  </svg>
-                </div>
-                <p id="teamColorError" class="mt-2 text-sm text-red-600 dark:text-red-400" style="display: none;"></p>
-              </label>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Color</label>
+              <div class="input-color">
+                <button class="color-preview-btn" style="--preview-color: ${team.color || '#0077b6'}"></button>
+                <input type="text" id="teamColorInput" value="${escapeHtml(team.color || '')}" placeholder="#0077b6"
+                       class="p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-gray-100 coloris"
+                       data-coloris autocomplete="off">
+              </div>
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Logo</label>
               <div class="space-y-2">
-                <div id="logoFilledContainer" class="bg-gray-50 dark:bg-gray-700/50 flex items-center gap-3 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600/50 transition-colors" style="${team.has_logo ? '' : 'display: none;'}">
-                  <img id="logoPreview" src="${team.has_logo ? `/api/teams/${team.id}/logo?t=${teamsCacheBuster}` : ''}" alt="Current logo" class="team-logo-modal" style="width: 48px; height: 48px;">
-                  <div style="flex: 1;">
-                    <div style="font-size: 0.875rem; color: var(--text-secondary);">Click to change logo</div>
+                ${team.has_logo ? `
+                  <div id="currentLogoContainer" class="bg-gray-50 dark:bg-gray-700/50 flex items-center gap-3 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600/50 transition-colors">
+                    <img src="/api/teams/${team.id}/logo?t=${teamsCacheBuster}" alt="Current logo" class="team-logo-modal" style="width: 48px; height: 48px;">
+                    <div style="flex: 1;">
+                      <div style="font-size: 0.875rem; color: var(--text-secondary);">Click to change logo</div>
+                    </div>
+                    <button type="button" id="removeLogoBtn" class="top-users-action" onclick="event.stopPropagation();" title="Remove logo">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                      </svg>
+                    </button>
                   </div>
-                  <button type="button" id="removeLogoBtn" class="top-users-action" onclick="event.stopPropagation();" title="Remove logo">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
-                    </svg>
-                  </button>
-                </div>
-                <div id="logoEmptyContainer" class="bg-gray-50 dark:bg-gray-700/50 flex items-center justify-center p-6 border border-dashed border-gray-300 dark:border-gray-600 rounded-md cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600/50 transition-colors" style="${team.has_logo ? 'display: none;' : ''}">
-                  <div class="text-center">
-                    <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
-                      <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                    </svg>
-                    <div class="mt-2 text-sm text-gray-500 dark:text-gray-400">Click to upload logo</div>
-                    <div class="text-xs text-gray-400 dark:text-gray-500">PNG, JPEG, or WebP (max 500KB)</div>
+                ` : `
+                  <div id="currentLogoContainer" class="bg-gray-50 dark:bg-gray-700/50 flex items-center justify-center p-6 border border-dashed border-gray-300 dark:border-gray-600 rounded-md cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600/50 transition-colors">
+                    <div class="text-center">
+                      <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
+                        <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                      </svg>
+                      <div class="mt-2 text-sm text-gray-500 dark:text-gray-400">Click to upload logo</div>
+                      <div class="text-xs text-gray-400 dark:text-gray-500">PNG, JPEG, or WebP (max 500KB)</div>
+                    </div>
                   </div>
-                </div>
+                `}
                 <input type="file" id="teamLogoInput" accept="image/png,image/jpeg,image/jpg,image/webp" style="display: none;">
                 <div id="logoPreviewNew" style="display: none; margin-top: 8px;">
                   <div class="bg-gray-50 dark:bg-gray-700/50 flex items-center gap-3 p-3 border border-gray-300 dark:border-gray-600 rounded-md">
@@ -1009,39 +1013,18 @@ async function renderTeamDetail(teamId) {
 	});
 
 	// Logo container click to select file
-	const logoFilledContainer = contentContainer.querySelector('#logoFilledContainer');
-	const logoEmptyContainer = contentContainer.querySelector('#logoEmptyContainer');
+	const logoContainer = contentContainer.querySelector('#currentLogoContainer');
 	const logoInput = contentContainer.querySelector('#teamLogoInput');
-	if (logoFilledContainer && logoInput) {
-		logoFilledContainer.addEventListener('click', (event) => {
-			event.preventDefault();
-			event.stopPropagation();
-			logoInput.click();
-		});
-	}
-	if (logoEmptyContainer && logoInput) {
-		logoEmptyContainer.addEventListener('click', (event) => {
-			event.preventDefault();
-			event.stopPropagation();
+	if (logoContainer && logoInput) {
+		logoContainer.addEventListener('click', () => {
 			logoInput.click();
 		});
 	}
 
 	// Logo preview for new uploads
 	if (logoInput) {
-		const logoPreviewNew = contentContainer.querySelector('#logoPreviewNew');
-		const logoPreviewImg = contentContainer.querySelector('#logoPreviewImg');
-		const logoPreview = contentContainer.querySelector('#logoPreview');
-		const removeLogoBtn = contentContainer.querySelector('#removeLogoBtn');
 		logoInput.addEventListener('change', (e) => {
-			handleLogoFileChange(e.target, {
-				logoPreviewNew,
-				logoPreviewImg,
-				logoPreview,
-				removeLogoBtn,
-				logoFilledContainer,
-				logoEmptyContainer
-			});
+			handleLogoFileChange(e.target);
 		});
 	}
 
@@ -1049,10 +1032,10 @@ async function renderTeamDetail(teamId) {
 	const removeLogoBtn = contentContainer.querySelector('#removeLogoBtn');
 	if (removeLogoBtn) {
 		removeLogoBtn.dataset.removeLogo = 'false';
-	removeLogoBtn.addEventListener('click', async (e) => {
-		e.stopPropagation(); // Prevent triggering logo container click
-		await handleRemoveLogo(teamId);
-	});
+		removeLogoBtn.addEventListener('click', async (e) => {
+			e.stopPropagation(); // Prevent triggering logo container click
+			await handleRemoveLogo(teamId);
+		});
 	}
 
 	return contentContainer.firstElementChild;
@@ -1081,53 +1064,50 @@ function showTeamFormModal(team = null) {
     <h2 style="margin: 0 0 16px 0;">${isEdit ? 'Edit Team' : 'Create Team'}</h2>
     <form id="teamForm" enctype="multipart/form-data">
       <div style="display: flex; flex-direction: column; gap: 12px;">
-        <label class="block">
-          <div class="block text-sm/6 font-medium text-gray-900 dark:text-white">Team Name *</div>
+        <div>
+          <label for="teamNameInput" class="block text-sm/6 font-medium text-gray-900 dark:text-white">Team Name *</label>
           <div class="mt-2 grid grid-cols-1">
-            <input type="text" id="teamNameInput" value="${team ? escapeHtml(team.name) : ''}"
-                   class="col-start-1 row-start-1 block w-full rounded-md bg-white dark:bg-white/5 py-1.5 pr-10 pl-3 text-gray-900 dark:text-white outline-1 -outline-offset-1 outline-gray-300 dark:outline-white/10 placeholder:text-gray-400 dark:placeholder:text-white/40 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:pr-9 sm:text-sm/6">
-            <svg id="teamNameErrorIcon" viewBox="0 0 16 16" fill="currentColor" data-slot="icon" aria-hidden="true" class="pointer-events-none col-start-1 row-start-1 mr-3 size-5 self-center justify-self-end text-red-500 dark:text-red-400 sm:size-4" style="display: none;">
-              <path d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14ZM8 4a.75.75 0 0 1 .75.75v3a.75.75 0 0 1-1.5 0v-3A.75.75 0 0 1 8 4Zm0 8a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clip-rule="evenodd" fill-rule="evenodd" />
-            </svg>
+            <input type="text" id="teamNameInput" name="teamName" value="${team ? escapeHtml(team.name) : ''}"
+                   class="col-start-1 row-start-1 block w-full rounded-md py-1.5 pr-3 pl-3 text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-white/5 outline-1 outline-gray-300 dark:outline-gray-600 placeholder:text-gray-400 focus:outline-2 focus:outline-blue-600 dark:focus:outline-blue-400 sm:text-sm/6"
+                   aria-describedby="teamName-error">
           </div>
-          <p id="teamNameError" class="mt-2 text-sm text-red-600 dark:text-red-400" style="display: none;"></p>
-        </label>
-        <label class="block">
-          <div class="block text-sm/6 font-medium text-gray-900 dark:text-white">Color</div>
-          <div class="mt-2 input-color">
+          <p id="teamName-error" class="mt-2 text-sm text-red-600 dark:text-red-400 hidden"></p>
+        </div>
+        <label>
+          <div style="margin-bottom: 4px; font-weight: 500;">Color</div>
+          <div class="input-color">
             <button class="color-preview-btn" style="--preview-color: ${team ? (team.color || '#0077b6') : '#0077b6'}"></button>
             <input type="text" id="teamColorInput" value="${team ? escapeHtml(team.color || '') : '#0077b6'}" placeholder="#0077b6"
-                   class="block w-full rounded-md bg-white dark:bg-white/5 py-1.5 pr-10 pl-10 text-gray-900 dark:text-white outline-1 -outline-offset-1 outline-gray-300 dark:outline-white/10 placeholder:text-gray-400 dark:placeholder:text-white/40 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6 coloris"
+                   class="p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-gray-100 coloris"
                    data-coloris autocomplete="off">
-            <svg id="teamColorErrorIcon" viewBox="0 0 16 16" fill="currentColor" data-slot="icon" aria-hidden="true" class="pointer-events-none absolute right-3 top-1/2 size-5 -translate-y-1/2 text-red-500 dark:text-red-400 sm:size-4" style="display: none;">
-              <path d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14ZM8 4a.75.75 0 0 1 .75.75v3a.75.75 0 0 1-1.5 0v-3A.75.75 0 0 1 8 4Zm0 8a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clip-rule="evenodd" fill-rule="evenodd" />
-            </svg>
           </div>
-          <p id="teamColorError" class="mt-2 text-sm text-red-600 dark:text-red-400" style="display: none;"></p>
         </label>
         <label>
           <div style="margin-bottom: 4px; font-weight: 500;">Logo</div>
           <div style="display: flex; flex-direction: column; gap: 8px;">
-            <div id="logoFilledContainer" class="bg-gray-50 dark:bg-gray-700/50 flex items-center gap-3 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600/50 transition-colors" style="${logoPreviewUrl ? '' : 'display: none;'}">
-              <img id="logoPreview" src="${logoPreviewUrl || ''}" alt="Current logo" class="team-logo-modal" style="width: 48px; height: 48px;">
-              <div style="flex: 1;">
-                <div style="font-size: 0.875rem; color: var(--text-secondary);">Click to change logo</div>
+            ${logoPreviewUrl ? `
+              <div id="currentLogoContainer" class="bg-gray-50 dark:bg-gray-700/50 flex items-center gap-3 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600/50 transition-colors">
+                <img id="logoPreview" src="${logoPreviewUrl}" alt="Current logo" class="team-logo-modal" style="width: 48px; height: 48px;">
+                <div style="flex: 1;">
+                  <div style="font-size: 0.875rem; color: var(--text-secondary);">Click to change logo</div>
+                </div>
+                <button type="button" id="removeLogoBtn" class="top-users-action" onclick="event.stopPropagation();" title="Remove logo">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                  </svg>
+                </button>
               </div>
-              <button type="button" id="removeLogoBtn" class="top-users-action" onclick="event.stopPropagation();" title="Remove logo">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
-                </svg>
-              </button>
-            </div>
-            <div id="logoEmptyContainer" class="bg-gray-50 dark:bg-gray-700/50 flex items-center justify-center p-6 border border-dashed border-gray-300 dark:border-gray-600 rounded-md cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600/50 transition-colors" style="${logoPreviewUrl ? 'display: none;' : ''}">
-              <div class="text-center">
-                <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
-                  <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                </svg>
-                <div class="mt-2 text-sm text-gray-500 dark:text-gray-400">Click to upload logo</div>
-                <div class="text-xs text-gray-400 dark:text-gray-500">PNG, JPEG, or WebP (max 500KB)</div>
+            ` : `
+              <div id="currentLogoContainer" class="bg-gray-50 dark:bg-gray-700/50 flex items-center justify-center p-6 border border-dashed border-gray-300 dark:border-gray-600 rounded-md cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600/50 transition-colors">
+                <div class="text-center">
+                  <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
+                    <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                  <div class="mt-2 text-sm text-gray-500 dark:text-gray-400">Click to upload logo</div>
+                  <div class="text-xs text-gray-400 dark:text-gray-500">PNG, JPEG, or WebP (max 500KB)</div>
+                </div>
               </div>
-            </div>
+            `}
             <input type="file" id="teamLogoInput" accept="image/png,image/jpeg,image/jpg,image/webp" style="display: none;">
             <div id="logoPreviewNew" style="display: none; margin-top: 8px;">
               <div class="bg-gray-50 dark:bg-gray-700/50 flex items-center gap-3 p-3 border border-gray-300 dark:border-gray-600 rounded-md">
@@ -1169,6 +1149,21 @@ function showTeamFormModal(team = null) {
 
 	function closeModal() {
 		document.removeEventListener('keydown', handleKeydown);
+		// Remove input event listeners to prevent accumulation
+		const teamNameInput = document.getElementById('teamNameInput');
+		if (teamNameInput && teamNameInput._inputHandler) {
+			teamNameInput.removeEventListener('input', teamNameInput._inputHandler);
+			delete teamNameInput._inputHandler;
+		}
+		if (teamNameInput && teamNameInput._blurHandler) {
+			teamNameInput.removeEventListener('blur', teamNameInput._blurHandler);
+			delete teamNameInput._blurHandler;
+		}
+		const teamForm = document.getElementById('teamForm');
+		if (teamForm && teamForm._submitHandler) {
+			teamForm.removeEventListener('submit', teamForm._submitHandler);
+			delete teamForm._submitHandler;
+		}
 		const handleTransitionEnd = () => {
 			backdrop.removeEventListener('transitionend', handleTransitionEnd);
 			backdrop.remove();
@@ -1198,33 +1193,29 @@ function showTeamFormModal(team = null) {
 		if (e.target === backdrop) {closeModal();}
 	});
 
-	// Handle logo container click
-	const logoFilledContainer = modal.querySelector('#logoFilledContainer');
-	const logoEmptyContainer = modal.querySelector('#logoEmptyContainer');
-	const logoInput = modal.querySelector('#teamLogoInput');
-	const logoPreviewNew = modal.querySelector('#logoPreviewNew');
-	const logoPreviewImg = modal.querySelector('#logoPreviewImg');
-	const removeLogoBtn = modal.querySelector('#removeLogoBtn');
+	// Define variables for logo handling
 	let removeLogo = false;
 
-	const bindLogoClick = (container) => {
-		if (!container || !logoInput) {
-			return;
-		}
-		const existingHandler = container._logoClickHandler;
+	// Handle logo container click
+	const logoContainer = document.getElementById('currentLogoContainer');
+	logoInput = document.getElementById('teamLogoInput');
+	const logoPreviewNew = document.getElementById('logoPreviewNew');
+	const logoPreviewImg = document.getElementById('logoPreviewImg');
+
+	if (logoContainer && logoInput) {
+		// Remove any existing click handler to prevent duplicates
+		const existingHandler = logoContainer._logoClickHandler;
 		if (existingHandler) {
-			container.removeEventListener('click', existingHandler);
+			logoContainer.removeEventListener('click', existingHandler);
 		}
-		const clickHandler = (event) => {
-			event.preventDefault();
-			event.stopPropagation();
+
+		// Create and store the click handler
+		const clickHandler = () => {
 			logoInput.click();
 		};
-		container._logoClickHandler = clickHandler;
-		container.addEventListener('click', clickHandler);
-	};
-	bindLogoClick(logoFilledContainer);
-	bindLogoClick(logoEmptyContainer);
+		logoContainer._logoClickHandler = clickHandler;
+		logoContainer.addEventListener('click', clickHandler);
+	}
 
 	if (logoInput) {
 		// Remove any existing change handler to prevent duplicates
@@ -1235,16 +1226,39 @@ function showTeamFormModal(team = null) {
 
 		// Create and store the change handler
 		const changeHandler = (e) => {
-			handleLogoFileChange(e.target, {
-				logoPreviewNew,
-				logoPreviewImg,
-				logoPreview: modal.querySelector('#logoPreview'),
-				removeLogoBtn,
-				logoFilledContainer,
-				logoEmptyContainer
-			});
-			if (e.target.files[0]) {
+			const file = e.target.files[0];
+			if (file) {
+				// Validate file size (500KB max)
+				if (file.size > 500 * 1024) {
+					showToast('Logo file is too large. Maximum size is 500KB.', 'error');
+					// Clear input after a short delay to prevent re-triggering change event
+					timerRegistry.setTimeout('logo.clearSizeError', () => {
+						if (logoInput) {logoInput.value = '';}
+					}, 100);
+					return;
+				}
+
+				// Validate file type
+				const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+				if (!allowedTypes.includes(file.type)) {
+					showToast('Invalid file type. Only PNG, JPEG, and WebP images are allowed.', 'error');
+					// Clear input after a short delay to prevent re-triggering change event
+					timerRegistry.setTimeout('logo.clearTypeError', () => {
+						if (logoInput) {logoInput.value = '';}
+					}, 100);
+					return;
+				}
+
+				// Show preview
+				const reader = new FileReader();
+				reader.addEventListener('load', (event) => {
+					logoPreviewImg.src = event.target.result;
+					logoPreviewNew.style.display = 'block';
+				});
+				reader.readAsDataURL(file);
 				removeLogo = false;
+			} else {
+				logoPreviewNew.style.display = 'none';
 			}
 		};
 		logoInput._logoChangeHandler = changeHandler;
@@ -1252,140 +1266,73 @@ function showTeamFormModal(team = null) {
 	}
 
 	// Handle remove logo button
+	const removeLogoBtn = document.getElementById('removeLogoBtn');
 	if (removeLogoBtn) {
-		removeLogoBtn.addEventListener('click', async (event) => {
-			event.stopPropagation();
+		removeLogoBtn.addEventListener('click', async () => {
 			const confirmed = await showConfirmDialog({
 				title: 'Remove logo',
 				message: 'Remove the current logo?',
 				confirmText: 'Remove',
 				cancelText: 'Cancel',
-				destructive: true
+				destructive: false
 			});
 
 			if (confirmed) {
 				removeLogo = true;
-				if (logoFilledContainer) {
-					logoFilledContainer.style.display = 'none';
-				}
-				if (logoEmptyContainer) {
-					logoEmptyContainer.style.display = 'flex';
+				const logoPreview = document.getElementById('logoPreview');
+				const logoPreviewContainer = logoPreview?.closest('div');
+				if (logoPreviewContainer) {
+					logoPreviewContainer.style.display = 'none';
 				}
 				if (logoInput) {
 					logoInput.value = '';
-				}
-				const logoPreview = modal.querySelector('#logoPreview');
-				if (logoPreview) {
-					logoPreview.src = '';
 				}
 				logoPreviewNew.style.display = 'none';
 			}
 		});
 	}
 
+	// Clear input error when user starts typing
 	const teamNameInput = document.getElementById('teamNameInput');
-	const teamNameError = document.getElementById('teamNameError');
-	const teamNameErrorIcon = document.getElementById('teamNameErrorIcon');
-	const teamNameInputBaseClass = 'col-start-1 row-start-1 block w-full rounded-md bg-white dark:bg-white/5 py-1.5 pr-10 pl-3 text-gray-900 dark:text-white outline-1 -outline-offset-1 outline-gray-300 dark:outline-white/10 placeholder:text-gray-400 dark:placeholder:text-white/40 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:pr-9 sm:text-sm/6';
-	const teamNameInputErrorClass = 'text-red-900 dark:text-red-400 outline-red-300 dark:outline-red-500/50 placeholder:text-red-300 dark:placeholder:text-red-400/70 focus:outline-red-600 dark:focus:outline-red-400';
-	const teamColorInput = document.getElementById('teamColorInput');
-	const teamColorError = document.getElementById('teamColorError');
-	const teamColorErrorIcon = document.getElementById('teamColorErrorIcon');
-	const teamColorInputBaseClass = 'block w-full rounded-md bg-white dark:bg-white/5 py-1.5 pr-10 pl-10 text-gray-900 dark:text-white outline-1 -outline-offset-1 outline-gray-300 dark:outline-white/10 placeholder:text-gray-400 dark:placeholder:text-white/40 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6 coloris';
-	const teamColorInputErrorClass = 'text-red-900 dark:text-red-400 outline-red-300 dark:outline-red-500/50 placeholder:text-red-300 dark:placeholder:text-red-400/70 focus:outline-red-600 dark:focus:outline-red-400';
+	if (teamNameInput) {
+		const inputHandler = () => {
+			clearInputError('teamNameInput');
+		};
+		teamNameInput.addEventListener('input', inputHandler);
+		teamNameInput._inputHandler = inputHandler;
 
-	const setTeamNameError = (message) => {
-		if (!teamNameInput || !teamNameError || !teamNameErrorIcon) {
-			return;
-		}
+		const blurHandler = () => {
+			const input = document.getElementById('teamNameInput');
+			const value = input.value.trim();
+			if (!value) {
+				showInputError('teamNameInput', 'Team name is required');
+			}
+		};
+		teamNameInput.addEventListener('blur', blurHandler);
+		teamNameInput._blurHandler = blurHandler;
+	}
 
-		if (message) {
-			teamNameInput.className = `${teamNameInputBaseClass} ${teamNameInputErrorClass}`;
-			teamNameInput.setAttribute('aria-invalid', 'true');
-			teamNameInput.setAttribute('aria-describedby', 'teamNameError');
-			teamNameError.textContent = message;
-			teamNameError.style.display = 'block';
-			teamNameErrorIcon.style.display = 'block';
-			return;
-		}
-
-		teamNameInput.className = teamNameInputBaseClass;
-		teamNameInput.removeAttribute('aria-invalid');
-		teamNameInput.removeAttribute('aria-describedby');
-		teamNameError.textContent = '';
-		teamNameError.style.display = 'none';
-		teamNameErrorIcon.style.display = 'none';
-	};
-
-	const setTeamColorError = (message) => {
-		if (!teamColorInput || !teamColorError || !teamColorErrorIcon) {
-			return;
-		}
-
-		if (message) {
-			teamColorInput.className = `${teamColorInputBaseClass} ${teamColorInputErrorClass}`;
-			teamColorInput.setAttribute('aria-invalid', 'true');
-			teamColorInput.setAttribute('aria-describedby', 'teamColorError');
-			teamColorError.textContent = message;
-			teamColorError.style.display = 'block';
-			teamColorErrorIcon.style.display = 'block';
-			return;
-		}
-
-		teamColorInput.className = teamColorInputBaseClass;
-		teamColorInput.removeAttribute('aria-invalid');
-		teamColorInput.removeAttribute('aria-describedby');
-		teamColorError.textContent = '';
-		teamColorError.style.display = 'none';
-		teamColorErrorIcon.style.display = 'none';
-	};
-
-	teamNameInput?.addEventListener('input', () => setTeamNameError(''));
-	teamColorInput?.addEventListener('input', () => {
-		const {isValid} = validateColorInput(teamColorInput.value);
-		if (!teamColorInput.value.trim() || isValid) {
-			setTeamColorError('');
-			return;
-		}
-		setTeamColorError('Color must be a valid hex code or CSS color name.');
-	});
-
-	document.getElementById('teamForm')?.addEventListener('submit', async (e) => {
+	const teamForm = document.getElementById('teamForm');
+	if (teamForm) {
+		const submitHandler = async (e) => {
 		e.preventDefault();
 		const name = document.getElementById('teamNameInput').value.trim();
-		const colorInputValue = document.getElementById('teamColorInput').value.trim();
+		const color = document.getElementById('teamColorInput').value.trim() || null;
 
-		setTeamNameError('');
-		setTeamColorError('');
+		// Clear any previous input errors
+		clearInputError('teamNameInput');
+
 		if (!name) {
-			setTeamNameError('Team name cannot be blank.');
-			return;
-		}
-
-		const {isValid, sanitized: sanitizedColor} = validateColorInput(colorInputValue);
-		if (!isValid) {
-			setTeamColorError('Color must be a valid hex code or CSS color name.');
-			return;
-		}
-
-		const normalizedName = name.toLowerCase();
-		const duplicate = teams.some((existingTeam) => {
-			if (isEdit && existingTeam.id === team.id) {
-				return false;
-			}
-			return existingTeam.name.trim().toLowerCase() === normalizedName;
-		});
-		if (duplicate) {
-			setTeamNameError('Team name already exists.');
+			showInputError('teamNameInput', 'Team name is required');
 			return;
 		}
 
 		try {
 			if (isEdit) {
-				await updateTeamWithLogo(team.id, {name, color: sanitizedColor}, logoInput?.files[0] || null, removeLogo);
+				await updateTeamWithLogo(team.id, {name, color}, logoInput?.files[0] || null, removeLogo);
 				showToast('Team updated successfully', 'success');
 			} else {
-				await createTeamWithLogo(name, sanitizedColor, logoInput?.files[0] || null);
+				await createTeamWithLogo(name, color, logoInput?.files[0] || null);
 				showToast('Team created successfully', 'success');
 			}
 			closeModal();
@@ -1398,14 +1345,16 @@ function showTeamFormModal(team = null) {
 				await transitionTeamsContent(listContent);
 			}
 		} catch (error) {
-			const message = error?.message || 'Failed to save team';
-			if (/already exists/i.test(message)) {
-				setTeamNameError('Team name already exists.');
-				return;
+			// Handle specific error types
+			if (error.status === 409 && error.message.includes('already exists')) {
+				showInputError('teamNameInput', 'Team name already exists');
+			} else {
+				showToast(error.message || 'Failed to save team', 'error');
 			}
-			showToast(message, 'error');
 		}
-	});
+		};
+		teamForm.addEventListener('submit', submitHandler);
+		teamForm._submitHandler = submitHandler;
 }
 
 async function showDeleteTeamConfirm(team) {
@@ -1694,16 +1643,16 @@ async function removeUserFromTeam(userName, teamId) {
 	}
 
 	try {
-		const headers = await buildCsrfHeaders(true);
 		const response = await fetch(`/api/teams/${teamId}/event-users/${encodeURIComponent(userName)}`, {
 			method: 'DELETE',
-			headers,
 			credentials: 'same-origin'
 		});
 
 		if (!response.ok) {
 			const data = await response.json();
-			throw new Error(data.message || `HTTP ${response.status}`);
+			const error = new Error(data.message || `HTTP ${response.status}`);
+			error.status = response.status;
+			throw error;
 		}
 
 		showToast('User removed successfully', 'success');
@@ -1715,103 +1664,13 @@ async function removeUserFromTeam(userName, teamId) {
 
 // Inline team edit form handlers
 async function handleTeamEditFormSubmit(teamId) {
-	const teamNameInput = document.getElementById('teamNameInput');
-	const teamColorInput = document.getElementById('teamColorInput');
-	const name = teamNameInput?.value.trim() || '';
-	const colorInputValue = teamColorInput?.value.trim() || '';
+	const name = document.getElementById('teamNameInput').value.trim();
+	const color = document.getElementById('teamColorInput').value.trim() || null;
 	const logoInput = document.getElementById('teamLogoInput');
 	const removeLogoBtn = document.getElementById('removeLogoBtn');
 
-	const teamNameError = document.getElementById('teamNameError');
-	const teamNameErrorIcon = document.getElementById('teamNameErrorIcon');
-	const teamColorError = document.getElementById('teamColorError');
-	const teamColorErrorIcon = document.getElementById('teamColorErrorIcon');
-	const teamNameInputBaseClass = 'col-start-1 row-start-1 block w-full rounded-md bg-white dark:bg-white/5 py-1.5 pr-10 pl-3 text-gray-900 dark:text-white outline-1 -outline-offset-1 outline-gray-300 dark:outline-white/10 placeholder:text-gray-400 dark:placeholder:text-white/40 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:pr-9 sm:text-sm/6';
-	const teamNameInputErrorClass = 'text-red-900 dark:text-red-400 outline-red-300 dark:outline-red-500/50 placeholder:text-red-300 dark:placeholder:text-red-400/70 focus:outline-red-600 dark:focus:outline-red-400';
-	const teamColorInputBaseClass = 'block w-full rounded-md bg-white dark:bg-white/5 py-1.5 pr-10 pl-10 text-gray-900 dark:text-white outline-1 -outline-offset-1 outline-gray-300 dark:outline-white/10 placeholder:text-gray-400 dark:placeholder:text-white/40 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6 coloris';
-	const teamColorInputErrorClass = 'text-red-900 dark:text-red-400 outline-red-300 dark:outline-red-500/50 placeholder:text-red-300 dark:placeholder:text-red-400/70 focus:outline-red-600 dark:focus:outline-red-400';
-
-	const setTeamNameError = (message) => {
-		if (!teamNameInput || !teamNameError || !teamNameErrorIcon) {
-			return;
-		}
-
-		if (message) {
-			teamNameInput.className = `${teamNameInputBaseClass} ${teamNameInputErrorClass}`;
-			teamNameInput.setAttribute('aria-invalid', 'true');
-			teamNameInput.setAttribute('aria-describedby', 'teamNameError');
-			teamNameError.textContent = message;
-			teamNameError.style.display = 'block';
-			teamNameErrorIcon.style.display = 'block';
-			return;
-		}
-
-		teamNameInput.className = teamNameInputBaseClass;
-		teamNameInput.removeAttribute('aria-invalid');
-		teamNameInput.removeAttribute('aria-describedby');
-		teamNameError.textContent = '';
-		teamNameError.style.display = 'none';
-		teamNameErrorIcon.style.display = 'none';
-	};
-
-	const setTeamColorError = (message) => {
-		if (!teamColorInput || !teamColorError || !teamColorErrorIcon) {
-			return;
-		}
-
-		if (message) {
-			teamColorInput.className = `${teamColorInputBaseClass} ${teamColorInputErrorClass}`;
-			teamColorInput.setAttribute('aria-invalid', 'true');
-			teamColorInput.setAttribute('aria-describedby', 'teamColorError');
-			teamColorError.textContent = message;
-			teamColorError.style.display = 'block';
-			teamColorErrorIcon.style.display = 'block';
-			return;
-		}
-
-		teamColorInput.className = teamColorInputBaseClass;
-		teamColorInput.removeAttribute('aria-invalid');
-		teamColorInput.removeAttribute('aria-describedby');
-		teamColorError.textContent = '';
-		teamColorError.style.display = 'none';
-		teamColorErrorIcon.style.display = 'none';
-	};
-
-	if (teamNameInput && !teamNameInput._clearErrorHandler) {
-		teamNameInput._clearErrorHandler = () => setTeamNameError('');
-		teamNameInput.addEventListener('input', teamNameInput._clearErrorHandler);
-	}
-
-	if (teamColorInput && !teamColorInput._clearErrorHandler) {
-		teamColorInput._clearErrorHandler = () => {
-			const {isValid} = validateColorInput(teamColorInput.value);
-			if (!teamColorInput.value.trim() || isValid) {
-				setTeamColorError('');
-				return;
-			}
-			setTeamColorError('Color must be a valid hex code or CSS color name.');
-		};
-		teamColorInput.addEventListener('input', teamColorInput._clearErrorHandler);
-	}
-
-	setTeamNameError('');
-	setTeamColorError('');
-
 	if (!name) {
-		setTeamNameError('Team name cannot be blank.');
-		return;
-	}
-
-	const {isValid, sanitized: sanitizedColor} = validateColorInput(colorInputValue);
-	if (!isValid) {
-		setTeamColorError('Color must be a valid hex code or CSS color name.');
-		return;
-	}
-
-	const normalizedName = name.toLowerCase();
-	const duplicate = teams.some((existingTeam) => existingTeam.id !== teamId && existingTeam.name.trim().toLowerCase() === normalizedName);
-	if (duplicate) {
-		setTeamNameError('Team name already exists.');
+		showToast('Team name is required', 'error');
 		return;
 	}
 
@@ -1819,7 +1678,7 @@ async function handleTeamEditFormSubmit(teamId) {
 		// Check if remove logo was clicked
 		const shouldRemoveLogo = removeLogoBtn && removeLogoBtn.dataset.removeLogo === 'true';
 
-		await updateTeamWithLogo(teamId, {name, color: sanitizedColor}, logoInput?.files[0] || null, shouldRemoveLogo);
+		await updateTeamWithLogo(teamId, {name, color}, logoInput?.files[0] || null, shouldRemoveLogo);
 		showToast('Team updated successfully', 'success');
 
 		// Reload team data and refresh the detail view
@@ -1827,71 +1686,46 @@ async function handleTeamEditFormSubmit(teamId) {
 		const detailContent = await renderTeamDetail(teamId);
 		await transitionTeamsContent(detailContent);
 	} catch (error) {
-		const message = error?.message || 'Failed to update team';
-		if (/already exists/i.test(message)) {
-			setTeamNameError('Team name already exists.');
-			return;
-		}
-		showToast(message, 'error');
+		showToast(error.message || 'Failed to update team', 'error');
 	}
 }
 
-function handleLogoFileChange(fileInput, options = {}) {
+function handleLogoFileChange(fileInput) {
 	const file = fileInput.files[0];
-	const logoPreviewNew = options.logoPreviewNew || document.getElementById('logoPreviewNew');
-	const logoPreviewImg = options.logoPreviewImg || document.getElementById('logoPreviewImg');
-	const logoPreview = options.logoPreview || document.getElementById('logoPreview');
-	const logoFilledContainer = options.logoFilledContainer || document.getElementById('logoFilledContainer');
-	const logoEmptyContainer = options.logoEmptyContainer || document.getElementById('logoEmptyContainer');
+	const logoPreviewNew = document.getElementById('logoPreviewNew');
+	const logoPreviewImg = document.getElementById('logoPreviewImg');
 
-	if (!file) {
-		return;
-	}
-
-	// Validate file size (500KB max)
-	if (file.size > 500 * 1024) {
-		showToast('Logo file is too large. Maximum size is 500KB.', 'error');
-		fileInput.value = '';
-		return;
-	}
-
-	// Validate file type
-	const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
-	if (!allowedTypes.includes(file.type)) {
-		showToast('Invalid file type. Only PNG, JPEG, and WebP images are allowed.', 'error');
-		fileInput.value = '';
-		return;
-	}
-
-	// Show preview
-	const reader = new FileReader();
-	reader.addEventListener('load', (event) => {
-		if (logoPreview) {
-			logoPreview.src = event.target.result;
-			if (logoFilledContainer) {
-				logoFilledContainer.style.display = 'flex';
-			}
-			if (logoPreviewNew) {
-				logoPreviewNew.style.display = 'none';
-			}
+	if (file) {
+		// Validate file size (500KB max)
+		if (file.size > 500 * 1024) {
+			showToast('Logo file is too large. Maximum size is 500KB.', 'error');
+			fileInput.value = '';
 			return;
 		}
-		if (logoPreviewImg) {
-			logoPreviewImg.src = event.target.result;
-		}
-		if (logoPreviewNew) {
-			logoPreviewNew.style.display = 'block';
-		}
-	});
-	reader.readAsDataURL(file);
-	if (logoEmptyContainer) {
-		logoEmptyContainer.style.display = 'none';
-	}
 
-	// Reset remove logo flag
-	const removeLogoBtn = options.removeLogoBtn || document.getElementById('removeLogoBtn');
-	if (removeLogoBtn) {
-		removeLogoBtn.dataset.removeLogo = 'false';
+		// Validate file type
+		const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+		if (!allowedTypes.includes(file.type)) {
+			showToast('Invalid file type. Only PNG, JPEG, and WebP images are allowed.', 'error');
+			fileInput.value = '';
+			return;
+		}
+
+		// Show preview
+		const reader = new FileReader();
+		reader.addEventListener('load', (event) => {
+			logoPreviewImg.src = event.target.result;
+			logoPreviewNew.style.display = 'block';
+		});
+		reader.readAsDataURL(file);
+
+		// Reset remove logo flag
+		const removeLogoBtn = document.getElementById('removeLogoBtn');
+		if (removeLogoBtn) {
+			removeLogoBtn.dataset.removeLogo = 'false';
+		}
+	} else {
+		logoPreviewNew.style.display = 'none';
 	}
 }
 
@@ -1901,7 +1735,7 @@ async function handleRemoveLogo(_teamId) {
 		message: 'Remove the current logo?',
 		confirmText: 'Remove',
 		cancelText: 'Cancel',
-		destructive: true
+		destructive: false
 	});
 
 	if (confirmed) {
@@ -1911,18 +1745,10 @@ async function handleRemoveLogo(_teamId) {
 			removeLogoBtn.dataset.removeLogo = 'true';
 		}
 
-		// Hide current logo preview and show empty state
-		const logoFilledContainer = document.getElementById('logoFilledContainer');
-		const logoEmptyContainer = document.getElementById('logoEmptyContainer');
-		if (logoFilledContainer) {
-			logoFilledContainer.style.display = 'none';
-		}
-		if (logoEmptyContainer) {
-			logoEmptyContainer.style.display = 'flex';
-		}
-		const logoPreview = document.getElementById('logoPreview');
-		if (logoPreview) {
-			logoPreview.src = '';
+		// Hide current logo preview
+		const logoContainer = removeLogoBtn.closest('.bg-gray-50');
+		if (logoContainer) {
+			logoContainer.style.display = 'none';
 		}
 
 		// Clear file input
@@ -2000,63 +1826,6 @@ async function loadTeams() {
 	}
 }
 
-async function showTeamsList({updateHistory = true} = {}) {
-	currentView = 'list';
-	toggleNewTeamButton(true);
-
-	if (!teams || teams.length === 0) {
-		await loadTeams();
-	}
-
-	const listContent = renderTeamsList();
-	await transitionTeamsContent(listContent);
-
-	if (updateHistory && window.location.hash) {
-		window.history.pushState({view: 'list'}, '', window.location.pathname);
-	}
-}
-
-function bindTeamsNavReset() {
-	if (teamsNavResetHandler) {
-		return;
-	}
-
-	teamsNavResetHandler = (event) => {
-		const link = event.target?.closest?.('a.top-nav-link');
-		if (!link) {
-			return;
-		}
-
-		if (link.getAttribute('href') !== '/teams') {
-			return;
-		}
-
-		if (window.location.pathname !== '/teams' || !window.location.hash) {
-			return;
-		}
-
-		if (currentView !== 'detail') {
-			return;
-		}
-
-		event.preventDefault();
-		event.stopPropagation();
-		event.stopImmediatePropagation();
-		showTeamsList();
-	};
-
-	document.addEventListener('click', teamsNavResetHandler, true);
-}
-
-function unbindTeamsNavReset() {
-	if (!teamsNavResetHandler) {
-		return;
-	}
-
-	document.removeEventListener('click', teamsNavResetHandler, true);
-	teamsNavResetHandler = null;
-}
-
 async function init() {
 	try {
 		const container = document.getElementById('teamsContent');
@@ -2082,7 +1851,6 @@ async function init() {
 			teamsContent.innerHTML = '';
 			teamsContent.appendChild(listContent);
 		}
-		bindTeamsNavReset();
 	} catch (error) {
 		console.error('Error initializing teams page:', error);
 		const container = document.getElementById('teamsContent');
@@ -2106,14 +1874,12 @@ if (document.readyState === 'loading') {
 function pauseTeamsPage() {
 	// Clear all timers (just in case any timeouts/intervals were added)
 	timerRegistry.clearAll();
-	unbindTeamsNavReset();
 }
 
 async function resumeTeamsPage() {
 	// Teams page doesn't have intervals to resume
 	// But we need to ensure event listeners are re-bound when returning from other pages
 	await loadTeams();
-	bindTeamsNavReset();
 }
 
 // Initialize Coloris color picker
@@ -2241,22 +2007,6 @@ window.addEventListener('softNav:pageMounted', async (event) => {
 			// Replace content without transition (navigation.js already handles the page-level fade)
 			teamsContent.innerHTML = '';
 			teamsContent.appendChild(listContent);
-
-			// Force layout recalculation to ensure scrollbar appears properly
-			// This is needed because soft navigation replaces content without full page reflow
-			requestAnimationFrame(() => {
-				const teamsList = teamsContent.querySelector('#teamsList');
-				if (teamsList) {
-					// Force a layout recalculation by accessing offsetHeight
-					// eslint-disable-next-line no-unused-expressions
-					teamsList.offsetHeight;
-					// Trigger another reflow to ensure proper scrollbar calculation
-					requestAnimationFrame(() => {
-						// eslint-disable-next-line no-unused-expressions
-						teamsList.offsetHeight;
-					});
-				}
-			});
 		}
 
 		// Check for team ID in URL hash and show details if present

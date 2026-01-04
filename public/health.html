@@ -516,8 +516,9 @@
 
 				const memoryMB = (data.memory?.used || 0) / (1024 * 1024);
 				const memoryTotalMB = (data.memory?.total || 0) / (1024 * 1024);
-				document.getElementById('memoryUsage').textContent = memoryMB.toFixed(1);
-				document.getElementById('memoryUnit').textContent = `MB / ${memoryTotalMB.toFixed(1)} MB`;
+				const memoryPercentage = memoryTotalMB > 0 ? (memoryMB / memoryTotalMB * 100).toFixed(1) : 0;
+				document.getElementById('memoryUsage').textContent = `${memoryPercentage}%`;
+				document.getElementById('memoryUnit').textContent = `${memoryMB.toFixed(1)} MB / ${memoryTotalMB.toFixed(1)} MB`;
 
 				// Update system info
 				document.getElementById('version').textContent = data.version || 'Unknown';
@@ -528,14 +529,19 @@
 				document.getElementById('dbStatus').textContent = dbStatus;
 				const dbStatusIndicator = document.getElementById('dbStatusIndicator');
 				const dbStatusTag = document.getElementById('dbStatusTag');
+				const isDark = document.documentElement.classList.contains('dark');
 				if (dbStatus.toLowerCase() === 'connected') {
-					dbStatusIndicator.className = 'flex-none rounded-full bg-green-100 p-1 text-green-500';
-					dbStatusTag.className = 'flex-none rounded-full bg-green-50 px-2 py-1 text-xs font-medium text-green-700 inset-ring inset-ring-green-700/10';
+					dbStatusIndicator.className = isDark ? 'flex-none rounded-full bg-green-400/20 p-1 text-green-400' : 'flex-none rounded-full bg-green-100 p-1 text-green-500';
+					dbStatusTag.className = isDark ?
+						'flex-none rounded-full bg-green-400/10 px-2 py-1 text-xs font-medium text-green-400 inset-ring inset-ring-green-500/20' :
+						'flex-none rounded-full bg-green-50 px-2 py-1 text-xs font-medium text-green-700 inset-ring inset-ring-green-700/10';
 					dbStatusTag.textContent = 'Connected';
 					dbStatusTag.style.display = 'block';
 				} else {
-					dbStatusIndicator.className = 'flex-none rounded-full bg-rose-100 p-1 text-rose-500';
-					dbStatusTag.className = 'flex-none rounded-full bg-rose-50 px-2 py-1 text-xs font-medium text-rose-700 inset-ring inset-ring-rose-700/10';
+					dbStatusIndicator.className = isDark ? 'flex-none rounded-full bg-red-400/20 p-1 text-red-400' : 'flex-none rounded-full bg-rose-100 p-1 text-rose-500';
+					dbStatusTag.className = isDark ?
+						'flex-none rounded-full bg-red-400/10 px-2 py-1 text-xs font-medium text-red-400 inset-ring inset-ring-red-400/20' :
+						'flex-none rounded-full bg-rose-50 px-2 py-1 text-xs font-medium text-rose-700 inset-ring inset-ring-rose-700/10';
 					dbStatusTag.textContent = 'Disconnected';
 					dbStatusTag.style.display = 'block';
 				}
@@ -547,11 +553,15 @@
 				document.getElementById('environment').textContent = environment;
 				const environmentTag = document.getElementById('environmentTag');
 				if (environment.toLowerCase() === 'production') {
-					environmentTag.className = 'flex-none rounded-full bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-700 inset-ring inset-ring-indigo-700/10';
+					environmentTag.className = isDark ?
+						'flex-none rounded-full bg-indigo-400/10 px-2 py-1 text-xs font-medium text-indigo-400 inset-ring inset-ring-indigo-400/30' :
+						'flex-none rounded-full bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-700 inset-ring inset-ring-indigo-700/10';
 					environmentTag.textContent = 'Production';
 					environmentTag.style.display = 'block';
 				} else if (environment.toLowerCase() === 'development') {
-					environmentTag.className = 'flex-none rounded-full bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 inset-ring inset-ring-gray-500/10';
+					environmentTag.className = isDark ?
+						'flex-none rounded-full bg-gray-400/10 px-2 py-1 text-xs font-medium text-gray-400 inset-ring inset-ring-gray-400/20' :
+						'flex-none rounded-full bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 inset-ring inset-ring-gray-500/10';
 					environmentTag.textContent = 'Development';
 					environmentTag.style.display = 'block';
 				} else {

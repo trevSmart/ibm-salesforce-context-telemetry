@@ -9,9 +9,30 @@ export function awaitECharts() {
 	if (typeof echarts !== 'undefined') {
 		return Promise.resolve();
 	}
-	return new Promise((resolve) => {
+	if (window.__echartsLoadingPromise) {
+		return window.__echartsLoadingPromise;
+	}
+
+	window.__echartsLoadingPromise = new Promise((resolve) => {
+		const existingScript = document.querySelector('script[src="/vendor/echarts/echarts.min.js"]');
+		if (!existingScript) {
+			// Load ECharts on-demand for soft navigation paths.
+			const script = document.createElement('script');
+			script.src = '/vendor/echarts/echarts.min.js';
+			script.async = true;
+			script.onload = () => {
+				window.dispatchEvent(new CustomEvent('echartsLoaded'));
+				resolve();
+			};
+			script.onerror = () => {
+				console.warn('Failed to load ECharts library');
+				resolve();
+			};
+			document.head.appendChild(script);
+		}
 		window.addEventListener('echartsLoaded', resolve, {once: true});
 	});
+	return window.__echartsLoadingPromise;
 }
 
 /**

@@ -18,6 +18,8 @@ export function toggleTheme() {
  * @param {string} theme - 'light' or 'dark'
  */
 export function applyTheme(theme) {
+    const previousTheme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+
     document.documentElement.classList.remove('light', 'dark');
     document.documentElement.classList.add(theme);
 
@@ -25,6 +27,13 @@ export function applyTheme(theme) {
     const metaThemeColor = document.querySelector('meta[name="theme-color"]');
     if (metaThemeColor) {
         metaThemeColor.setAttribute('content', theme === 'dark' ? '#1f2937' : '#ffffff');
+    }
+
+    // Emit theme change event if theme actually changed
+    if (previousTheme !== theme) {
+        document.dispatchEvent(new CustomEvent('themeChange', {
+            detail: { theme, previousTheme }
+        }));
     }
 }
 

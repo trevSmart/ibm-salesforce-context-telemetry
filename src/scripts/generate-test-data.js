@@ -288,7 +288,7 @@ function generateSessionEnd(sessionId, userId, serverId, version, timestamp, pro
  */
 function generateSession(userId, project, startDate, endDate) {
 	const sessionId = uuidv4();
-	const serverId = `server-${project.orgId}-${randomInt(1000, 9999)}`;
+	const serverId = project.orgId;
 	const version = VERSIONS[randomInt(0, VERSIONS.length - 1)];
 
 	const events = [];
@@ -354,18 +354,6 @@ function generateInitials(name) {
 	return name.substring(0, 2).toUpperCase();
 }
 
-/**
- * Generate email from a name
- */
-function generateEmail(name, orgId) {
-	const normalized = name
-		.toLowerCase()
-		.normalize('NFD')
-		.replace(/[\u0300-\u036f]/g, '')
-		.replace(/\s+/g, '.');
-	const domain = `${orgId.replace('org-', '').replace('-dev', '')}.example.com`;
-	return `${normalized}@${domain}`;
-}
 
 /**
  * Send events to telemetry endpoint via HTTP using batch mode
@@ -438,6 +426,20 @@ async function generateTestData(targetDay, shouldDeleteExisting, skipHttpFlag = 
 		console.log('🗑️  Deleting all existing data...');
 		const deletedCount = await db.deleteAllEvents();
 		console.log(`   Deleted ${deletedCount} existing events\n`);
+		const deletedTrash = await db.deleteAllDeletedEvents();
+		console.log(`   Deleted ${deletedTrash} trashed events`);
+		const deletedUserStats = await db.deleteAllUserEventStats();
+		console.log(`   Deleted ${deletedUserStats} user_event_stats rows`);
+		const deletedOrgStats = await db.deleteAllOrgEventStats();
+		console.log(`   Deleted ${deletedOrgStats} org_event_stats rows`);
+		const deletedTeamUsers = await db.deleteAllTeamEventUsers();
+		console.log(`   Deleted ${deletedTeamUsers} team event user entries`);
+		const deletedPeople = await db.deleteAllPeople();
+		console.log(`   Deleted ${deletedPeople} people`);
+		const deletedOrgs = await db.deleteAllOrgs();
+		console.log(`   Deleted ${deletedOrgs} orgs`);
+		const deletedTeams = await db.deleteAllTeams();
+		console.log(`   Deleted ${deletedTeams} teams\n`);
 	} else {
 		console.log('🗂️  Keeping existing data (no delete requested)\n');
 	}
@@ -574,7 +576,12 @@ async function generateTestData(targetDay, shouldDeleteExisting, skipHttpFlag = 
 			teamsMap.set(project.orgId, team.id);
 			console.log(`   Created team: ${teamName} (ID: ${team.id})`);
 
-			// Assign org to team
+			// Ensure org exists with team mapping, then recalc existing events
+			await db.upsertOrg(project.orgId, {
+				alias: project.name,
+				team_id: team.id,
+				company_name: project.companyName
+			});
 			await db.moveOrgToTeam(project.orgId, team.id);
 			console.log(`   Assigned org ${project.orgId} to team ${teamName}`);
 		} catch (error) {
@@ -584,6 +591,11 @@ async function generateTestData(targetDay, shouldDeleteExisting, skipHttpFlag = 
 				const existingTeam = allTeams.find(t => t.name === teamName);
 				if (existingTeam) {
 					teamsMap.set(project.orgId, existingTeam.id);
+					await db.upsertOrg(project.orgId, {
+						alias: project.name,
+						team_id: existingTeam.id,
+						company_name: project.companyName
+					});
 					await db.moveOrgToTeam(project.orgId, existingTeam.id);
 					console.log(`   Using existing team: ${teamName} (ID: ${existingTeam.id})`);
 				} else {
@@ -602,43 +614,42 @@ async function generateTestData(targetDay, shouldDeleteExisting, skipHttpFlag = 
 	const peopleMap = new Map();
 
 	for (let userIndex = 0; userIndex < USER_IDS.length; userIndex++) {
-		const userName = USER_IDS[userIndex];
-		const initials = generateInitials(userName);
+		const personName = USER_IDS[userIndex];
+		const initials = generateInitials(personName);
 
 		// Find which project(s) this user belongs to
 		const userProjects = PROJECTS.filter(p => p.users.includes(userIndex));
 
 		try {
 			// Create person
-			const email = generateEmail(userName, userProjects[0]?.orgId || 'default');
-			const person = await db.createPerson(userName, email, initials);
-			peopleMap.set(userName, person.id);
-			console.log(`   Created person: ${userName} (ID: ${person.id}, ${initials})`);
+			const person = await db.createPerson(personName, initials);
+			peopleMap.set(personName, person.id);
+			console.log(`   Created person: ${personName} (ID: ${person.id}, ${initials})`);
 
 			// Associate username with person for each project
 			for (const project of userProjects) {
 				try {
-					await db.addUsernameToPerson(person.id, userName, project.orgId);
-					console.log(`     Associated username "${userName}" with org ${project.orgId}`);
+					await db.addUsernameToPerson(person.id, personName, project.orgId);
+					console.log(`     Associated username "${personName}" with org ${project.orgId}`);
 
 					// Assign username to team
 					const teamId = teamsMap.get(project.orgId);
 					if (teamId) {
-						await db.addEventUserToTeam(teamId, userName);
+						await db.addEventUserToTeam(teamId, personName);
 						const projectName = project.name.replace('Project ', '');
 						const teamName = `${projectName} Team`;
-						console.log(`     Assigned username "${userName}" to team ${teamName}`);
+						console.log(`     Assigned username "${personName}" to team ${teamName}`);
 					}
 				} catch (error) {
 					if (error.message && error.message.includes('already associated')) {
-						console.log(`     Username "${userName}" already associated with org ${project.orgId}`);
+						console.log(`     Username "${personName}" already associated with org ${project.orgId}`);
 					} else {
-						console.error(`     ⚠️  Error associating username "${userName}" with org ${project.orgId}: ${error.message}`);
+						console.error(`     ⚠️  Error associating username "${personName}" with org ${project.orgId}: ${error.message}`);
 					}
 				}
 			}
 		} catch (error) {
-			console.error(`   ⚠️  Error creating person ${userName}: ${error.message}`);
+			console.error(`   ⚠️  Error creating person ${personName}: ${error.message}`);
 		}
 	}
 
@@ -726,4 +737,3 @@ async function generateTestData(targetDay, shouldDeleteExisting, skipHttpFlag = 
 		process.exit(1);
 	}
 })();
-

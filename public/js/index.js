@@ -102,6 +102,25 @@ function setServerStatsVersion() {
 	}
 }
 
+function bindTimeRangeSelector() {
+	const timeRangeSelect = document.getElementById('timeRangeSelect');
+	if (!timeRangeSelect || timeRangeSelect._dashboardTimeRangeHandler) {
+		return;
+	}
+
+	const handleTimeRangeChange = (e) => {
+		const days = Number.parseInt(e.target.value, 10);
+		const resolvedDays = Number.isFinite(days) ? days : currentDays;
+		// Save selected time range to localStorage
+		localStorage.setItem('dashboardTimeRange', resolvedDays.toString());
+		loadChartData(resolvedDays);
+	};
+
+	timeRangeSelect._dashboardTimeRangeHandler = handleTimeRangeChange;
+	timeRangeSelect.addEventListener('change', handleTimeRangeChange);
+	timeRangeSelect.addEventListener('input', handleTimeRangeChange);
+}
+
 function resetServerStatsUi() {
 	serverStatsLastFetchTime = null;
 	timerRegistry.clearInterval('dashboard.serverStatsUpdate');
@@ -333,20 +352,7 @@ async function initializeDashboardPage({resetState = false} = {}) {
 			console.warn('Failed to load database size:', error);
 		}
 
-		// Set up time range selector (guard against duplicate listeners)
-		const timeRangeSelect = document.getElementById('timeRangeSelect');
-		if (timeRangeSelect && timeRangeSelect.dataset.dashboardInitialized !== 'true') {
-			const handleTimeRangeChange = (e) => {
-				const days = Number.parseInt(e.target.value, 10);
-				const resolvedDays = Number.isFinite(days) ? days : currentDays;
-				// Save selected time range to localStorage
-				localStorage.setItem('dashboardTimeRange', resolvedDays.toString());
-				loadChartData(resolvedDays);
-			};
-			timeRangeSelect.addEventListener('change', handleTimeRangeChange);
-			timeRangeSelect.addEventListener('input', handleTimeRangeChange);
-			timeRangeSelect.dataset.dashboardInitialized = 'true';
-		}
+		bindTimeRangeSelector();
 	} catch (error) {
 		console.error('Auth check failed:', error);
 		window.location.href = '/login';
@@ -485,7 +491,7 @@ function ensureUserMenuStructure() {
 if (document.readyState === 'loading') {
 	document.addEventListener('DOMContentLoaded', () => {
 		initializeTheme();
-		ensureUserMenuStructure();
+		// ensureUserMenuStructure(); // Commented out to avoid duplicate initialization with user-menu.js
 		setupIconButtonsGroupHover();
 	});
 } else {
@@ -2017,6 +2023,9 @@ async function resumeDashboardPage() {
 		// No saved option, load chart data normally
 		await loadChartData();
 	}
+
+	// Rebind time range selector after cache restore (clone drops listeners)
+	bindTimeRangeSelector();
 }
 
 // Expose pause/resume hooks
@@ -2042,6 +2051,14 @@ window.addEventListener('softNav:pageMounted', async (event) => {
 			// New page load - full initialization
 			initializeDashboardPage({resetState: true});
 		}
+	}
+});
+
+// Listen for theme changes to refresh chart colors
+document.addEventListener('themeChange', () => {
+	if (chart && typeof chart.setOption === 'function') {
+		// Get current data and re-render with new theme colors
+		refreshDashboard();
 	}
 });
 

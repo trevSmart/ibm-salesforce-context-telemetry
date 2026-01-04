@@ -9,6 +9,7 @@ const PEOPLE_TRANSITION_DURATION_MS = 150;
 let currentView = 'list'; // 'list' or 'detail'
 let people = [];
 let _currentPersonId = null;
+let peopleNavResetHandler = null;
 
 function escapeHtml(text) {
 	if (!text) {
@@ -20,6 +21,14 @@ function escapeHtml(text) {
 		.replace(/>/g, '&gt;')
 		.replace(/"/g, '&quot;')
 		.replace(/'/g, '&#39;');
+}
+
+function toggleNewPersonButton(isVisible) {
+	const newPersonBtn = document.getElementById('newPersonBtn');
+	if (!newPersonBtn) {
+		return;
+	}
+	newPersonBtn.style.display = isVisible ? '' : 'none';
 }
 
 // Escape HTML attribute values to prevent XSS via attribute injection
@@ -231,10 +240,69 @@ async function transitionPeopleContent(newContent) {
 	});
 }
 
+async function showPeopleList({updateHistory = true} = {}) {
+	currentView = 'list';
+	_currentPersonId = null;
+	toggleNewPersonButton(true);
+
+	if (!people || people.length === 0) {
+		await loadPeople();
+	}
+
+	const listContent = renderPeopleList();
+	await transitionPeopleContent(listContent);
+
+	if (updateHistory && window.location.hash) {
+		window.history.pushState({view: 'list'}, '', window.location.pathname);
+	}
+}
+
+function bindPeopleNavReset() {
+	if (peopleNavResetHandler) {
+		return;
+	}
+
+	peopleNavResetHandler = (event) => {
+		const link = event.target?.closest?.('a.top-nav-link');
+		if (!link) {
+			return;
+		}
+
+		if (link.getAttribute('href') !== '/people') {
+			return;
+		}
+
+		if (window.location.pathname !== '/people' || !window.location.hash) {
+			return;
+		}
+
+		if (currentView !== 'detail') {
+			return;
+		}
+
+		event.preventDefault();
+		event.stopPropagation();
+		event.stopImmediatePropagation();
+		showPeopleList();
+	};
+
+	document.addEventListener('click', peopleNavResetHandler, true);
+}
+
+function unbindPeopleNavReset() {
+	if (!peopleNavResetHandler) {
+		return;
+	}
+
+	document.removeEventListener('click', peopleNavResetHandler, true);
+	peopleNavResetHandler = null;
+}
+
 async function renderPersonDetail(personId) {
+	toggleNewPersonButton(false);
 	const contentContainer = document.createElement('div');
 	contentContainer.innerHTML = `
-    <div>
+    <div class="people-detail-container">
       <div id="personDetailHeader" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
         <div style="display: flex; align-items: center; gap: 12px;">
           <button id="backToPeopleBtn" style="background: none; border: none; padding: 4px; cursor: pointer; color: inherit; display: flex; align-items: center; justify-content: center; transition: opacity 0.2s; opacity: 0.7; width: 28px;" aria-label="Back to people" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">
@@ -276,7 +344,8 @@ async function renderPersonDetail(personId) {
 		${initials}
 	</span>`;
 
-	contentContainer.querySelector('#personDetailName').innerHTML = `<span class="text-gray-900 dark:text-white" style="display: flex; align-items: center;">${logoOrAvatar}Person #${person.id}</span>`;
+	const personTitle = person.name && person.name.trim() ? escapeHtml(person.name.trim()) : `Person #${person.id}`;
+	contentContainer.querySelector('#personDetailName').innerHTML = `<span class="text-gray-900 dark:text-white" style="display: flex; align-items: center;">${logoOrAvatar}${personTitle}</span>`;
 
 	const detailContent = contentContainer.querySelector('#personDetailContent');
 	detailContent.innerHTML = `
@@ -312,8 +381,8 @@ async function renderPersonDetail(personId) {
 	personInfo.innerHTML = `
     <div class="space-y-3">
       <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
-        <input type="email" id="personEmailInput" value="${escapeAttr(person.email || '')}" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-gray-100">
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name</label>
+        <input type="text" id="personNameInput" value="${escapeAttr(person.name || '')}" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-gray-100" required>
       </div>
       <div>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Initials</label>
@@ -422,8 +491,8 @@ function showPersonFormModal(person = null) {
     <form id="personForm" enctype="multipart/form-data">
       <div style="display: flex; flex-direction: column; gap: 12px;">
         <label>
-          <div style="margin-bottom: 4px; font-weight: 500;">Email (optional)</div>
-          <input type="email" id="personEmailInput" value="${person ? escapeAttr(person.email || '') : ''}"
+          <div style="margin-bottom: 4px; font-weight: 500;">Name *</div>
+          <input type="text" id="personNameInput" value="${person ? escapeAttr(person.name || '') : ''}" required
                  class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-gray-100">
         </label>
         <label>
@@ -484,15 +553,19 @@ function showPersonFormModal(person = null) {
 
 	document.getElementById('personForm')?.addEventListener('submit', async (e) => {
 		e.preventDefault();
-		const email = document.getElementById('personEmailInput').value.trim() || null;
-		const initials = document.getElementById('personInitialsInput').value.trim() || null;
+		const name = document.getElementById('personNameInput').value.trim();
+		if (!name) {
+			showToast('Name is required', 'error');
+			return;
+		}
+		const initials = normalizeInitialsInput(document.getElementById('personInitialsInput').value);
 
 		try {
 			if (isEdit) {
-				await updatePerson(person.id, {email, initials});
+				await updatePerson(person.id, {name, initials});
 				showToast('Person updated successfully', 'success');
 			} else {
-				await createPerson({email, initials});
+				await createPerson({name, initials});
 				showToast('Person created successfully', 'success');
 			}
 			closeModal();
@@ -508,6 +581,19 @@ function showPersonFormModal(person = null) {
 			showToast(error.message || 'Failed to save person', 'error');
 		}
 	});
+}
+
+function normalizeInitialsInput(value) {
+	if (!value) {
+		return null;
+	}
+
+	const trimmed = value.trim();
+	if (!trimmed) {
+		return null;
+	}
+
+	return trimmed.slice(0, 3);
 }
 
 async function createPerson(personData) {
@@ -596,6 +682,7 @@ async function initPeoplePage() {
 			peopleContent.innerHTML = '';
 			peopleContent.appendChild(listContent);
 		}
+		bindPeopleNavReset();
 		// Reset scroll position to top after initial load
 		window.scrollTo({top: 0, behavior: 'auto'});
 	} catch (error) {
@@ -617,7 +704,6 @@ async function loadPeople() {
 				{
 					id: 1,
 					name: 'Marc Pla',
-					email: 'marc@example.com',
 					initials: 'MP',
 					username_count: 2,
 					created_at: '2025-12-23T15:30:00Z'
@@ -625,7 +711,6 @@ async function loadPeople() {
 				{
 					id: 2,
 					name: 'Test User',
-					email: 'test@example.com',
 					initials: null, // Will auto-generate to 'TU'
 					username_count: 1,
 					created_at: '2025-12-23T14:20:00Z'
@@ -633,7 +718,6 @@ async function loadPeople() {
 				{
 					id: 3,
 					name: 'Another Person',
-					email: null,
 					initials: 'AP',
 					username_count: 0,
 					created_at: '2025-12-23T13:10:00Z'
@@ -666,12 +750,22 @@ function getPersonInitials(person) {
 		return person.initials.trim().toUpperCase();
 	}
 
-	// Otherwise, use first two digits of ID
+	// Otherwise, derive from name if available
+	if (person.name && person.name.trim()) {
+		const parts = person.name.trim().split(/\s+/).filter(Boolean);
+		if (parts.length === 1) {
+			return parts[0].slice(0, 3).toUpperCase();
+		}
+		return parts.slice(0, 3).map(part => part[0]).join('').toUpperCase();
+	}
+
+	// Fallback to first two digits of ID
 	const idStr = person.id.toString();
 	return idStr.length >= 2 ? idStr.substring(0, 2) : idStr;
 }
 
 function renderPeopleList() {
+	toggleNewPersonButton(true);
 	const container = document.createElement('div');
 	container.innerHTML = `
     <div class="people-list-container">
@@ -721,7 +815,7 @@ function renderPeopleList() {
         <div class="mt-8 space-y-2">
           <h3 class="text-base font-semibold text-gray-900 dark:text-white">
             <span aria-hidden="true" class="absolute inset-0"></span>
-            Person #${person.id}
+            ${person.name && person.name.trim() ? escapeHtml(person.name.trim()) : `Person #${person.id}`}
           </h3>
           <div class="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
             <span class="inline-flex items-center gap-1.5">
@@ -729,12 +823,6 @@ function renderPeopleList() {
                 <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
               </svg>
               ${person.username_count || 0} username${(person.username_count || 0) !== 1 ? 's' : ''}
-            </span>
-            <span class="inline-flex items-center gap-1.5">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" class="size-4">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
-              </svg>
-              ${person.email ? 'Has email' : 'No email'}
             </span>
           </div>
         </div>
@@ -811,6 +899,23 @@ window.addEventListener('softNav:pageMounted', async (event) => {
 			// Replace content without transition (navigation.js already handles the page-level fade)
 			peopleContent.innerHTML = '';
 			peopleContent.appendChild(listContent);
+
+			// Force layout recalculation to ensure scrollbar appears properly
+			// This is needed because soft navigation replaces content without full page reflow
+			requestAnimationFrame(() => {
+				const peopleList = peopleContent.querySelector('.people-list');
+				if (peopleList) {
+					// Force a layout recalculation by accessing offsetHeight
+					// eslint-disable-next-line no-unused-expressions
+					peopleList.offsetHeight;
+					// Trigger another reflow to ensure proper scrollbar calculation
+					requestAnimationFrame(() => {
+						// eslint-disable-next-line no-unused-expressions
+						peopleList.offsetHeight;
+					});
+				}
+			});
+
 			// Reset scroll position to top after initial load
 			window.scrollTo({top: 0, behavior: 'auto'});
 		}
@@ -914,8 +1019,9 @@ function renderUsernamesList(usernames, contentContainer) {
 	}
 
 	const usernamesHTML = usernames.map(username => {
-		const isPrimaryBadge = username.is_primary ? '<span class="inline-flex items-center rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10">Primary</span>' : '';
-		const orgBadge = username.org_id ? `<span class="inline-flex items-center rounded-md bg-gray-50 px-2 py-1 text-xs font-medium text-gray-700 ring-1 ring-inset ring-gray-700/10">${username.org_id}</span>` : '';
+		const isDark = document.documentElement.classList.contains('dark');
+		const isPrimaryBadge = username.is_primary ? `<span class="inline-flex items-center rounded-md ${isDark ? 'bg-blue-400/10 text-blue-400 ring-1 ring-inset ring-blue-400/30' : 'bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-700/10'} px-2 py-1 text-xs font-medium">Primary</span>` : '';
+		const orgBadge = username.org_id ? `<span class="inline-flex items-center rounded-md ${isDark ? 'bg-gray-400/10 text-gray-400 ring-1 ring-inset ring-gray-400/20' : 'bg-gray-50 text-gray-700 ring-1 ring-inset ring-gray-700/10'} px-2 py-1 text-xs font-medium">${username.org_id}</span>` : '';
 
 		return `
 		<div class="flex items-center justify-between py-2 px-3 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-md">
@@ -1124,12 +1230,18 @@ async function savePersonChanges() {
 			return;
 		}
 
-		const emailInput = document.getElementById('personEmailInput');
 		const initialsInput = document.getElementById('personInitialsInput');
+		const nameInput = document.getElementById('personNameInput');
+
+		const name = nameInput?.value?.trim() || '';
+		if (!name) {
+			showToast('Name is required', 'error');
+			return;
+		}
 
 		const personData = {
-			email: emailInput?.value?.trim() || null,
-			initials: initialsInput?.value?.trim() || null
+			name,
+			initials: normalizeInitialsInput(initialsInput?.value)
 		};
 
 		await updatePerson(personId, personData);
@@ -1193,12 +1305,14 @@ function refreshPeople(event) {
 function pausePeoplePage() {
 	// Clear all timers (just in case any timeouts/intervals were added)
 	timerRegistry.clearAll();
+	unbindPeopleNavReset();
 }
 
 async function resumePeoplePage() {
 	// People page doesn't have intervals to resume
 	// But we need to ensure event listeners are re-bound when returning from other pages
 	await loadPeople();
+	bindPeopleNavReset();
 }
 
 // Export functions to window for global access
